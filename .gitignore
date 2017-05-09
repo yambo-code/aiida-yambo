@@ -1,0 +1,7 @@
+.*pyc
+.git
+gw
+parser
+setup.json
+setup.py
+yambo.egg-info
