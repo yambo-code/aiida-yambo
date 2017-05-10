@@ -80,23 +80,32 @@ class YamboRestartWf(WorkChain):
         ctx.yambo_pks = []
         ctx.yambo_pks.append(future.pid)
         ctx.restart = 0 
-        return ResultToContext(yambo=future)
+        #return ResultToContext(yambo=future)
 
     def yambo_should_restart(self, ctx):
-        # This needs to restart calculations, within limits, 
         # should restart a calculation if it satisfies either
         # 1. It hasnt been restarted  2 times already.
         # 2. It hasnt produced output.
         # 3. Submission failed.
         # 
-        if ctx.restart > 5:
+        if ctx.restart >= 5:
             return False
+
         calc = load_node(ctx.yambo_pks[-1])
+        max_input_seconds = self.inputs.calculation_set.get_dict()['max_wallclock_seconds']
+        last_time = calc.get_outputs_dict()['output_parameters'].get_dict()['last_time']  
+ 
+        if calc.get_state() == calc_states.FAILED and (max_input_seconds-last_time)/max_input_seconds*100 < 1:   
+            max_input_seconds = int( max_input_seconds * 1.3)
+            calculation_set = self.inputs.calculation_set.get_dict() 
+            calculation_set['max_wallclock_seconds'] = max_input_seconds
+            self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
+            return True
+            
         if calc.get_state() == calc_states.SUBMISSIONFAILED\
                    or calc.get_state() == calc_states.FAILED\
                    or 'output_parameters' not in calc.get_outputs_dict():
             return True
-            
         return False
 
     def yambo_restart(self, ctx):
@@ -107,7 +116,7 @@ class YamboRestartWf(WorkChain):
         parent_folder = calc.out.remote_folder
         inputs = generate_yambo_input_params(
              self.inputs.precode,self.inputs.yambocode,
-             parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set, self.inputs.settings )
+             parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set, self.inputs.settings)
         future = self.submit(YamboProcess, inputs)
         ctx.yambo_pks.append(future.pid)
         ctx.restart += 1

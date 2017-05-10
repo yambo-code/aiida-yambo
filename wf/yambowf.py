@@ -40,7 +40,6 @@ YamboProcess = YamboCalculation.process()
 
 class YamboWorkflow(WorkChain):
     """
-    Converge to minimum using Newton's algorithm on the first derivative of the energy (minus the pressure).
     """
 
     @classmethod
