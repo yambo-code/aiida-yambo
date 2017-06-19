@@ -56,6 +56,7 @@ class PwRestartWf(WorkChain):
         spec.input("gamma", valid_type=SimpleData, default=False)
         spec.input("parameters", valid_type=ParameterData)
         spec.input("parameters_nscf", valid_type=ParameterData, default=False)
+        spec.input("parent_folder", valid_type=RemoteData,default=False)
         spec.outline(
             cls.pwbegin,
             while_(cls.pw_should_continue)(
@@ -69,9 +70,14 @@ class PwRestartWf(WorkChain):
         """
         start SCF/NSCF 
         """
+        if self.inputs.parent_folder != None:
+            if not isinstance(self.inputs.parent_folder, RemoteData):
+                raise InputValidationError("parent_calc_folder must be of"
+                                       " type RemoteData")
+ 
         parameters = self.inputs.parameters
         inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
-                     self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, None)
+                     self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, self.inputs.parent_folder)
         future = self.submit(PwProcess, inputs)
         ctx.pw_pks = []
         ctx.pw_pks.append(future.pid)

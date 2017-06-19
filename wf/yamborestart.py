@@ -31,7 +31,7 @@ from aiida.orm.calculation.job.yambo  import YamboCalculation
 #import sys,os
 #sys.path.append(os.path.realpath(__file__))
 #from  aiida.parsers.yambo_utils import  generate_yambo_input_params
-from aiida.workflows.user.cnr_nano.yambo_utils import generate_yambo_input_params 
+from aiida.workflows.user.cnr_nano.yambo_utils import generate_yambo_input_params, reduce_parallelism 
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
@@ -84,23 +84,62 @@ class YamboRestartWf(WorkChain):
 
     def yambo_should_restart(self, ctx):
         # should restart a calculation if it satisfies either
-        # 1. It hasnt been restarted  2 times already.
+        # 1. It hasnt been restarted  X times already.
         # 2. It hasnt produced output.
         # 3. Submission failed.
-        # 
+        # 4. Failed: a) Memory problems
+        #            b) 
         if ctx.restart >= 5:
             return False
 
         calc = load_node(ctx.yambo_pks[-1])
+        if calc.get_state() == calc_states.SUBMISSIONFAILED:
+                   #or calc.get_state() == calc_states.FAILED\
+                   #or 'output_parameters' not in calc.get_outputs_dict():
+            return False
+
         max_input_seconds = self.inputs.calculation_set.get_dict()['max_wallclock_seconds']
-        last_time = calc.get_outputs_dict()['output_parameters'].get_dict()['last_time']  
+
+        last_time = 30 # seconds default value:
+        try:
+            last_time = calc.get_outputs_dict()['output_parameters'].get_dict()['last_time']  
+        except Exception:
+            pass  # Likely no logs were produced 
  
-        if calc.get_state() == calc_states.FAILED and (max_input_seconds-last_time)/max_input_seconds*100 < 1:   
+        if calc.get_state() == calc_states.FAILED and (float(max_input_seconds)-float(last_time))/float(max_input_seconds)*100.0 < 1:   
             max_input_seconds = int( max_input_seconds * 1.3)
             calculation_set = self.inputs.calculation_set.get_dict() 
             calculation_set['max_wallclock_seconds'] = max_input_seconds
             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
+            #print ("max seconds is set  to {} ".format(max_input_seconds))
             return True
+
+        if 'errors' in calc.get_outputs_dict()['output_parameters'].get_dict().keys() and calc.get_state() == calc_states.FAILED:
+            print(" one ")
+            if len(calc.get_outputs_dict()['output_parameters'].get_dict()['errors']) < 1:
+                print("no errors")
+                # No errors, We  check for memory issues, indirectly
+                if 'last_memory_time' in calc.get_outputs_dict()['output_parameters'].get_dict().keys():
+                    # check if the last alloc happened close to the end:
+                    last_mem_time = calc.get_outputs_dict()['output_parameters'].get_dict()['last_memory_time']
+                    if  abs(last_time - last_mem_time) < 3: # 3 seconds  selected arbitrarily,
+                        # this is (based on a simple heuristic guess, a memory related problem)
+                        # change the parallelization to account for this before continuing, warn user too.
+                        print("parallelism to be  adjusted")
+                        params = self.inputs.parameters.get_dict() 
+                        X_all_q_CPU = params.pop('X_all_q_CPU','')
+                        X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','') 
+                        SE_CPU = params.pop('SE_CPU','')
+                        SE_ROLEs = params.pop('SE_ROLEs','')
+                        calculation_set = self.inputs.calculation_set.get_dict()
+                        params['X_all_q_CPU'],calculation_set =   reduce_parallelism('X_all_q_CPU', X_all_q_ROLEs,  X_all_q_CPU, calculation_set )
+                        params['SE_CPU'], calculation_set=  reduce_parallelism('SE_CPU', SE_ROLEs,  SE_CPU,  calculation_set )
+                        self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set)
+                        self.inputs.parameters = DataFactory('parameter')(dict=params)
+                        return True 
+                    else:
+                        pass
+                        #print ("not adjusting parallism")
             
         if calc.get_state() == calc_states.SUBMISSIONFAILED\
                    or calc.get_state() == calc_states.FAILED\
@@ -111,7 +150,16 @@ class YamboRestartWf(WorkChain):
     def yambo_restart(self, ctx):
         # restart if neccessary
         # get inputs from prior calculation ctx.yambo_pks
+        # should be able to handle submission failed, by possibly going to parent?
+        print("YamboRestartWF restarting from:  ", ctx.yambo_pks[-1],) 
         calc = load_node(ctx.yambo_pks[-1])
+        if  calc.get_state() == calc_states.SUBMISSIONFAILED:
+            calc = self.get_last_submitted(calc.pk)
+            if not calc: 
+                raise ValidationError("restart calculations can not start from"
+                                       "calculations in SUBMISSIONFAILED state")
+                return        
+
         parameters = calc.get_inputs_dict()['parameters'].get_dict()
         parent_folder = calc.out.remote_folder
         inputs = generate_yambo_input_params(
@@ -120,6 +168,18 @@ class YamboRestartWf(WorkChain):
         future = self.submit(YamboProcess, inputs)
         ctx.yambo_pks.append(future.pid)
         ctx.restart += 1
+
+    def get_last_submitted(self, pk):
+        submited = False
+        depth = 0
+        while not submited and depth <4:
+            calc = load_node(pk)
+            if  calc.get_state() == calc_states.SUBMISSIONFAILED:
+                pk = load_node(calc.inp.parent_calc_folder.inp.remote_folder.pk).pk
+            else:
+                submited = calc
+            depth+=1
+        return  submited
 
     def report(self,ctx):
         """

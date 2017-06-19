@@ -68,6 +68,7 @@ class YamboWorkflow(WorkChain):
         spec.input("parameters_pw_nscf", valid_type=ParameterData,default=False)
         spec.input("parameters_p2y", valid_type=ParameterData)
         spec.input("parameters_yambo", valid_type=ParameterData)
+        spec.input("parent_folder", valid_type=RemoteData,default=False)
         spec.outline(
             cls.start_workflow,
             while_(cls.can_continue)(
@@ -84,6 +85,7 @@ class YamboWorkflow(WorkChain):
         ctx.yambo_pks = [] 
         ctx.pw_pks  = [] 
         ctx.done = False
+        
     def can_continue(self, ctx):
         if ctx.done == True:
             return False
@@ -131,7 +133,8 @@ class YamboWorkflow(WorkChain):
             pw_wf_result = run(PwRestartWf, codename = self.inputs.codename_pw, pseudo_family = self.inputs.pseudo_family, 
                         calculation_set = self.inputs.calculation_set_pw, settings=self.inputs.settings_pw, 
                         inpt=self.inputs.input_pw, kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
-                        structure = self.inputs.structure, parameters = self.inputs.parameters_pw,parameters_nscf=self.inputs.parameters_pw_nscf)
+                        structure = self.inputs.structure, parameters = self.inputs.parameters_pw,parameters_nscf=self.inputs.parameters_pw_nscf,
+                        parent_folder=self.inputs.parent_folder)
             ctx.pw_wf_res = pw_wf_result["pw"]
             ctx.pw_pks.append(pw_wf_result["pw"].get_dict()["nscf_pk"]) 
             ctx.last_step_kind = 'pw'                    
