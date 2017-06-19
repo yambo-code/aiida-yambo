@@ -1,4 +1,5 @@
 import sys
+import copy
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
 if not is_dbenv_loaded():
@@ -104,3 +105,91 @@ def generate_pw_input_params(structure, codename, pseudo_family,parameters, calc
     return  inputs
 
 
+def reduce_parallelism(typ, roles,  values,calc_set):
+    """
+                        X_all_q_CPU = params.pop('X_all_q_CPU','')
+                        X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','')
+                        SE_CPU = params.pop('SE_CPU','')
+                        SE_ROLEs = params.pop('SE_ROLEs','')
+                        calculation_set_yambo ={'resources':  {"num_machines": 8,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200,
+                             'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                             '  environment_variables': {"OMP_NUM_THREADS": "2" }  
+                             }
+    """
+    calculation_set = copy.deepcopy(calc_set)
+    # the latter needs to be reduced, we can either increase the former or leave it untouched.
+    # lets reduce it by  50% if its >=2, else increase num_machines, holding it constant at 1
+    num_machines = calculation_set['resources']['num_machines']    
+    num_mpiprocs_per_machine = calculation_set['resources']['num_mpiprocs_per_machine']
+    num_mpiprocs_per_machine=int(num_mpiprocs_per_machine/2)
+    if num_mpiprocs_per_machine < 1:
+        num_mpiprocs_per_machine = 1 
+        num_machines = num_machines * 2
+    # adjust the X_all_q_CPU and SE_CPU
+    mpi_task = num_mpiprocs_per_machine*num_machines 
+    if typ == 'X_all_q_CPU':
+        #X_all_q_CPU = "1 1 96 32"
+        #X_all_q_ROLEs = "q k c v"
+        X_para = [ int(it) for it in values.strip().split(' ') if it ]
+        try:
+            c_index = roles.strip().split(' ').index("c")
+            v_index = roles.strip().split(' ').index("v")
+            c = X_para[c_index] or 1
+            v = X_para[v_index] or 1
+        except ValueError:
+            c_index = v_index = 0
+            c = 1
+            v = 1
+        if c_index and v_index:
+            pass
+            #print("c {}  v {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(c, v, X_para[c_index],X_para[v_index], num_machines, num_mpiprocs_per_machine ))
+        if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1:
+            v = v/2 
+        if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v == 1:
+            c = c/2 
+        if num_machines > calculation_set['resources']['num_machines']: 
+            c = c*2 
+        if c_index and v_index:
+            X_para[c_index] = c  
+            X_para[v_index] = v
+        X_string = " ".join([str(it) for it in X_para])
+        calculation_set['resources']['num_machines'] = num_machines
+        calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
+        if c_index and v_index:
+            pass
+            #print("c {}  v {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(c, v, X_para[c_index],X_para[v_index], num_machines, num_mpiprocs_per_machine ))
+        return X_string , calculation_set
+            
+    if typ == 'SE_CPU':
+        #SE_ROLEs = "q qp b"
+        #SE_CPU = "1 32 96"
+        SE_para  = [ int(it) for it in values.strip().split(' ') if it ]
+        try:
+            qp_index = roles.strip().split(' ').index("qp")
+            b_index = roles.strip().split(' ').index("b")
+            qp = SE_para[qp_index] or  1
+            b  = SE_para[b_index] or 1  
+        except ValueError:
+            qp_index = b_index = 0
+            qp =1
+            b  =1  
+        if qp_index and b_index: 
+            pass
+            #print("qp {}  b {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(qp, b, SE_para[qp_index],SE_para[b_index], num_machines, num_mpiprocs_per_machine ))
+        if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and qp >1:
+             qp = qp/2 
+        if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and qp == 1:
+            qp = qp/2 
+        if num_machines > calculation_set['resources']['num_machines']: 
+            b = b*2 
+        if qp_index and b_index: 
+            SE_para[qp_index] = qp  
+            SE_para[b_index] = b
+        SE_string = " ".join([str(it) for it in SE_para])
+        calculation_set['resources']['num_machines'] = num_machines
+        calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
+        if qp_index and b_index: 
+            pass
+            #print("qp {}  b {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(qp, b, SE_para[qp_index],SE_para[b_index], num_machines, num_mpiprocs_per_machine ))
+        return SE_string, calculation_set
+    
