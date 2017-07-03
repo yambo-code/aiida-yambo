@@ -5,6 +5,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
+from aiida.common.exceptions import InputValidationError,ValidationError, WorkflowInputValidationError
 from aiida.orm import load_node
 from aiida.orm.data.upf import get_pseudos_from_structure
 from collections import defaultdict
@@ -96,6 +97,7 @@ def generate_pw_input_params(structure, codename, pseudo_family,parameters, calc
         inputs._label = label
     if parent_folder:
         inputs.parent_folder = parent_folder
+        print("parent folder set")
     inputs.kpoints=kpoints
     inputs.parameters = parameters  
     inputs.pseudo = get_pseudo(structure, str(pseudo_family))
@@ -121,10 +123,16 @@ def reduce_parallelism(typ, roles,  values,calc_set):
     # lets reduce it by  50% if its >=2, else increase num_machines, holding it constant at 1
     num_machines = calculation_set['resources']['num_machines']    
     num_mpiprocs_per_machine = calculation_set['resources']['num_mpiprocs_per_machine']
+    omp_threads=1
+    if 'environment_variables' in calculation_set.keys():
+        omp_threads = calculation_set['environment_variables'].pop('OMP_NUM_THREADS',1)
     num_mpiprocs_per_machine=int(num_mpiprocs_per_machine/2)
+    omp_threads= omp_threads*2 
     if num_mpiprocs_per_machine < 1:
         num_mpiprocs_per_machine = 1 
         num_machines = num_machines * 2
+    calculation_set['environment_variables']['OMP_NUM_THREADS'] = omp_threads
+    calculation_set['environment_variables']['NUM_CORES_PER_MPIPROC'] = omp_threads
     # adjust the X_all_q_CPU and SE_CPU
     mpi_task = num_mpiprocs_per_machine*num_machines 
     if typ == 'X_all_q_CPU':
@@ -142,7 +150,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             v = 1
         if c_index and v_index:
             pass
-            #print("c {}  v {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(c, v, X_para[c_index],X_para[v_index], num_machines, num_mpiprocs_per_machine ))
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1:
             v = v/2 
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v == 1:
@@ -157,7 +164,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
         calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
         if c_index and v_index:
             pass
-            #print("c {}  v {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(c, v, X_para[c_index],X_para[v_index], num_machines, num_mpiprocs_per_machine ))
         return X_string , calculation_set
             
     if typ == 'SE_CPU':
@@ -175,7 +181,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             b  =1  
         if qp_index and b_index: 
             pass
-            #print("qp {}  b {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(qp, b, SE_para[qp_index],SE_para[b_index], num_machines, num_mpiprocs_per_machine ))
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and qp >1:
              qp = qp/2 
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and qp == 1:
@@ -190,6 +195,44 @@ def reduce_parallelism(typ, roles,  values,calc_set):
         calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
         if qp_index and b_index: 
             pass
-            #print("qp {}  b {}   and {}  {}:  num_machines {} , num_mpiprocs_per_machine {}".format(qp, b, SE_para[qp_index],SE_para[b_index], num_machines, num_mpiprocs_per_machine ))
         return SE_string, calculation_set
-    
+   
+
+"""
+  - BndsRnXp 
+  - GbndRnge   
+  - BSEBands 
+  - PPAPntXp [OK]
+  - NGsBlkXp [OK]
+  - BSENGBlk [OK]
+  - BSENGexx [OK]
+"""
+default_step_size = {
+               'PPAPntXp': .2,   
+               'NGsBlkXp': .1,   
+               'BSENGBlk': .1,  
+               'BSENGexx': .2,
+               'BndsRnXp': .2, 
+               'GbndRnge': .2,
+               'BSEBands': 2, # 
+                }
+
+def update_parameter_field( field, starting_point, update_delta):
+    if update_delta < 2:
+       update_delta = 2 
+    if field in ['PPAPntXp','NGsBlkXp','BSENGBlk','BSENGexx']: # single numbers
+        new_field_value =  starting_point  + update_delta 
+        return new_field_value
+    elif field == 'BndsRnXp':
+        new_field_value =  starting_point[-1]  + update_delta 
+        return (1, new_field_value)
+    elif field == 'GbndRnge':
+        new_field_value =  starting_point[-1]  + update_delta 
+        return (1, new_field_value)
+    elif field == 'BSEBands':  # Will be useful when we support BSE calculations
+        hi =  starting_point[-1] +   2
+        low  =  starting_point[0]  -  2
+        return ( low, hi )
+    else:
+        raise WorkflowInputValidationError("convergences the field {} are not supported".format(field))
+
