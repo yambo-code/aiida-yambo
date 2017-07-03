@@ -44,12 +44,13 @@ class YamboRestartWf(WorkChain):
     """
 
     @classmethod
-    def _define(cls, spec):
+    def define(cls, spec):
         """
         Workfunction definition
         """
-        spec.input("precode", valid_type=BaseType)
-        spec.input("yambocode", valid_type=BaseType)
+        super(YamboRestartWf, cls).define(spec)
+        spec.input("precode", valid_type=Str)
+        spec.input("yambocode", valid_type=Str)
         spec.input("calculation_set", valid_type=ParameterData)
         spec.input("settings", valid_type=ParameterData)
         spec.input("parent_folder", valid_type=RemoteData)
@@ -63,7 +64,7 @@ class YamboRestartWf(WorkChain):
         )
         spec.dynamic_output()
 
-    def yambobegin(self, ctx):
+    def yambobegin(self):
         """
         Run the  pw-> yambo conversion, init and yambo run
         #  precodename,yambocodename, parent_folder, parameters,  calculation_set=None, settings
@@ -73,26 +74,27 @@ class YamboRestartWf(WorkChain):
             raise InputValidationError("parent_calc_folder must be of"
                                        " type RemoteData")        
         parameters = self.inputs.parameters
+
         inputs = generate_yambo_input_params(
              self.inputs.precode,self.inputs.yambocode,
-            self.inputs.parent_folder, parameters, self.inputs.calculation_set, self.inputs.settings )
-        future = self.submit(YamboProcess, inputs)
-        ctx.yambo_pks = []
-        ctx.yambo_pks.append(future.pid)
-        ctx.restart = 0 
-        #return ResultToContext(yambo=future)
+             self.inputs.parent_folder, parameters, self.inputs.calculation_set, self.inputs.settings )
+        future = submit(YamboProcess, **inputs)
+        self.ctx.yambo_pks = []
+        self.ctx.yambo_pks.append(future.pid)
+        self.ctx.restart = 0 
+        return  ResultToContext(yambo=future)
 
-    def yambo_should_restart(self, ctx):
+    def yambo_should_restart(self):
         # should restart a calculation if it satisfies either
         # 1. It hasnt been restarted  X times already.
         # 2. It hasnt produced output.
         # 3. Submission failed.
         # 4. Failed: a) Memory problems
         #            b) 
-        if ctx.restart >= 5:
+        if self.ctx.restart >= 5:
             return False
 
-        calc = load_node(ctx.yambo_pks[-1])
+        calc = load_node(self.ctx.yambo_pks[-1])
         if calc.get_state() == calc_states.SUBMISSIONFAILED:
                    #or calc.get_state() == calc_states.FAILED\
                    #or 'output_parameters' not in calc.get_outputs_dict():
@@ -147,12 +149,12 @@ class YamboRestartWf(WorkChain):
             return True
         return False
 
-    def yambo_restart(self, ctx):
+    def yambo_restart(self):
         # restart if neccessary
         # get inputs from prior calculation ctx.yambo_pks
         # should be able to handle submission failed, by possibly going to parent?
-        print("YamboRestartWF restarting from:  ", ctx.yambo_pks[-1],) 
-        calc = load_node(ctx.yambo_pks[-1])
+        print("YamboRestartWF restarting from:  ", self.ctx.yambo_pks[-1],) 
+        calc = load_node(self.ctx.yambo_pks[-1])
         if  calc.get_state() == calc_states.SUBMISSIONFAILED:
             calc = self.get_last_submitted(calc.pk)
             if not calc: 
@@ -165,9 +167,10 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_input_params(
              self.inputs.precode,self.inputs.yambocode,
              parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set, self.inputs.settings)
-        future = self.submit(YamboProcess, inputs)
-        ctx.yambo_pks.append(future.pid)
-        ctx.restart += 1
+        future = submit(YamboProcess, **inputs)
+        self.ctx.yambo_pks.append(future.pid)
+        self.ctx.restart += 1
+        return ResultToContext(yambo_restart=future)
 
     def get_last_submitted(self, pk):
         submited = False
@@ -181,15 +184,15 @@ class YamboRestartWf(WorkChain):
             depth+=1
         return  submited
 
-    def report(self,ctx):
+    def report(self):
         """
         Output final quantities
         return information that may be used to figure out
         the status of the calculation.
         """
         from aiida.orm import DataFactory
-        success = load_node(ctx.yambo_pks[-1]).get_state()== 'FINISHED' 
-        self.out("gw", DataFactory('parameter')(dict={ "yambo_pk":   ctx.yambo_pks[-1], "success": success }))
+        success = load_node(self.ctx.yambo_pks[-1]).get_state()== 'FINISHED' 
+        self.out("gw", DataFactory('parameter')(dict={ "yambo_pk":   self.ctx.yambo_pks[-1], "success": success }))
 
 if __name__ == "__main__":
     pass
