@@ -25,7 +25,6 @@ except ImportError:
     from aiida.workflows2.fragmented_wf import FragmentedWorkfunction as WorkChain
     from aiida.workflows2.fragmented_wf import ( ResultToContext, while_)
 
-from aiida.workflows.user.epfl_theos.quantumespresso.pw import PwWorkflow
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.code import Code

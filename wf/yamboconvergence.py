@@ -179,7 +179,7 @@ class YamboConvergenceWorkflow(WorkChain):
         from aiida.orm import DataFactory
         self.out("result", DataFactory('parameter')(dict={
             "parameters": self.inputs.parameters.get_dict(),
-            "last_calc_pk": self.ctx.r3.out.gw.get_dict()['yambo_pk']
+            "last_calc_pk": self.ctx.r0.out.gw.get_dict()['yambo_pk']
             }))
 
 if __name__ == "__main__":

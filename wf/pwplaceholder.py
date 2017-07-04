@@ -97,6 +97,7 @@ class PwRestartWf(WorkChain):
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
                 self.ctx.scf_pk = calc.pk 
+                #print ("set scf_pk in bpw begin")
 
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state() != 'FINISHED':#  starting from failed SCF
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
@@ -104,6 +105,7 @@ class PwRestartWf(WorkChain):
                 
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED':# next nscf
                 self.ctx.nscf_pk = calc.pk # NSCF is done, we should exit  
+                #print ("set nscf_pk")
         else:
            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
@@ -128,6 +130,7 @@ class PwRestartWf(WorkChain):
         calc = load_node(self.ctx.pw_pks[-1])
         if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state()== 'FINISHED':
             self.ctx.scf_pk = self.ctx.pw_pks[-1] 
+            #print ("set scf_pk again in should continue")
             return True 
         if calc.get_state() == calc_states.SUBMISSIONFAILED or calc.get_state() == calc_states.FAILED\
             or 'output_parameters' not in calc.get_outputs_dict()  and  self.ctx.restart < 4:
@@ -152,6 +155,7 @@ class PwRestartWf(WorkChain):
             scf = 'nscf'
             parent_folder = calc.out.remote_folder
             self.ctx.scf_pk = self.ctx.pw_pks[-1] 
+            #print ("set scf_pk again in continue")
         if parameters['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED': 
             self.ctx.nscf_pk = self.ctx.pw_pks[-1] 
             self.ctx.success = True
