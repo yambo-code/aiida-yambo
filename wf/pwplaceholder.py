@@ -52,7 +52,6 @@ class PwRestartWf(WorkChain):
         spec.input("pseudo_family", valid_type=Str)
         spec.input("calculation_set", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
         spec.input("settings", valid_type=ParameterData)
-        spec.input("inpt", valid_type=ParameterData)
         spec.input("structure", valid_type=StructureData)
         spec.input("kpoints", valid_type=KpointsData)
         spec.input("gamma", valid_type=Bool, default=Bool(0))
@@ -113,6 +112,8 @@ class PwRestartWf(WorkChain):
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart = 0 
         self.ctx.success = False
+        self.ctx.scf_pk = None 
+        self.ctx.nscf_pk = None
         return ResultToContext(first_pk=future  )
 
     def pw_should_continue(self):
@@ -186,10 +187,7 @@ class PwRestartWf(WorkChain):
         the status of the calculation.
         """
         from aiida.orm import DataFactory
-        if  len(self.ctx.pw_pks) ==0:
-            self.out("pw", DataFactory('parameter')(dict= {"scf_pk": None , "nscf_pk": self.ctx.nscf_pk, 'success': "NA" }))
-        else:
-            self.out("pw", DataFactory('parameter')(dict= {"scf_pk": self.ctx.scf_pk , "nscf_pk": self.ctx.nscf_pk, 'success': self.ctx.success }) ) 
+        self.out("pw", DataFactory('parameter')(dict= {"scf_pk": self.ctx.scf_pk , "nscf_pk": self.ctx.nscf_pk, 'success': self.ctx.success }) ) 
 
 if __name__ == "__main__":
     pass
