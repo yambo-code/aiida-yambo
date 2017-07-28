@@ -17,7 +17,6 @@ from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
 
 ParameterData = DataFactory("parameter")
 
-
 def generate_yambo_input_params(precodename,yambocodename, parent_folder, parameters,  calculation_set, settings):
     inputs = YamboCalculation.process().get_inputs_template()
     inputs.preprocessing_code = Code.get_from_string(precodename.value)
@@ -42,11 +41,28 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     label = calculation_set.pop('label',None)
     if label:
         inputs._label = label 
-    inputs.parameters = parameters
     inputs.parent_folder = parent_folder
     inputs.settings =  settings 
-    #inputs.settings =  ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
-    #              'r-*','o-*','l-*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC']})
+    # Get defaults:
+    edit_parameters = parameters.get_dict()
+    calc = parent_folder.get_inputs_dict()['remote_folder'].inp.parent_calc_folder.get_inputs_dict()['remote_folder'].inp.parent_calc_folder.get_inputs_dict()['remote_folder']
+    is_pw = False
+    if isinstance(calc,PwCalculation):
+       is_pw = True
+       nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+       bndsrnxp = gbndrnge = nelec * 2
+       ngsblxpp = calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4   # ev to ry then 1/4 
+       nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
+       if 'BndsRnXp' not in edit_parameters.keys():
+            edit_parameters['BndsRnXp'] = (1.0,bndsrnxp*5)
+       if 'GbndRnge' not in edit_parameters.keys():
+            edit_parameters['GbndRnge'] = (1.0, gbndrnge*5) 
+       if 'NGsBlkXp' not in edit_parameters.keys():
+            edit_parameters['NGsBlkXp'] = ngsblxpp
+       if 'QPkrange' not in edit_parameters.keys():
+            edit_parameters['QPkrange'] = [(1,nkpts,6*int(nelec/2), 6*int(nelec/2)+4 )]
+    
+    inputs.parameters = ParameterData(dict=edit_parameters) 
     return  inputs
 
 def get_pseudo(structure, pseudo_family):
@@ -97,7 +113,6 @@ def generate_pw_input_params(structure, codename, pseudo_family,parameters, calc
         inputs._label = label
     if parent_folder:
         inputs.parent_folder = parent_folder
-        print("parent folder set")
     inputs.kpoints=kpoints
     inputs.parameters = parameters  
     inputs.pseudo = get_pseudo(structure, str(pseudo_family))
@@ -198,15 +213,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
         return SE_string, calculation_set
    
 
-"""
-  - BndsRnXp 
-  - GbndRnge   
-  - BSEBands 
-  - PPAPntXp [OK]
-  - NGsBlkXp [OK]
-  - BSENGBlk [OK]
-  - BSENGexx [OK]
-"""
 default_step_size = {
                'PPAPntXp': .2,   
                'NGsBlkXp': .1,   
@@ -225,14 +231,37 @@ def update_parameter_field( field, starting_point, update_delta):
         return new_field_value
     elif field == 'BndsRnXp':
         new_field_value =  starting_point[-1]  + update_delta 
-        return (1, new_field_value)
+        return (starting_point[0], new_field_value)
     elif field == 'GbndRnge':
         new_field_value =  starting_point[-1]  + update_delta 
-        return (1, new_field_value)
+        return (starting_point[0], new_field_value)
     elif field == 'BSEBands':  # Will be useful when we support BSE calculations
         hi =  starting_point[-1] +   2
         low  =  starting_point[0]  -  2
         return ( low, hi )
+    elif field == 'QPkrange':
+        hi = starting_point[1] + update_delta
+        return [(starting_point[0], hi, starting_point[-2], starting_point[-1] )]
     else:
         raise WorkflowInputValidationError("convergences the field {} are not supported".format(field))
 
+
+def set_default_qp_param(parameter=ParameterData(dict={})):
+    """
+    """
+    edit_param = parameter.get_dict()
+    if 'ppa' not in edit_param.keys():
+        edit_param['ppa'] = True
+    if 'gw0' not in edit_param.keys():
+        edit_param['gw0'] = True
+    if 'HF_and_locXC' not in edit_param.keys():
+        edit_param['HF_and_locXC'] = True
+    if 'em1d' not in edit_param.keys():
+        edit_param['em1d'] = True
+    if 'DysSolver' not in edit_param.keys():
+        edit_param['DysSolver'] = "n"
+    if 'Chimod' not in edit_param.keys():
+        edit_param['Chimod'] = "Hartree"
+    if 'LongDrXp' not in edit_param.keys():
+        edit_param['LongDrXp'] = (1.000000,0.000000, 0.000000)
+    return ParameterData(dict=edit_param)

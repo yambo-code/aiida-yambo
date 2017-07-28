@@ -113,13 +113,10 @@ class YamboRestartWf(WorkChain):
             calculation_set = self.inputs.calculation_set.get_dict() 
             calculation_set['max_wallclock_seconds'] = max_input_seconds
             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
-            #print ("max seconds is set  to {} ".format(max_input_seconds))
             return True
 
         if 'errors' in calc.get_outputs_dict()['output_parameters'].get_dict().keys() and calc.get_state() == calc_states.FAILED:
-            print(" one ")
             if len(calc.get_outputs_dict()['output_parameters'].get_dict()['errors']) < 1:
-                print("no errors")
                 # No errors, We  check for memory issues, indirectly
                 if 'last_memory_time' in calc.get_outputs_dict()['output_parameters'].get_dict().keys():
                     # check if the last alloc happened close to the end:
@@ -127,7 +124,6 @@ class YamboRestartWf(WorkChain):
                     if  abs(last_time - last_mem_time) < 3: # 3 seconds  selected arbitrarily,
                         # this is (based on a simple heuristic guess, a memory related problem)
                         # change the parallelization to account for this before continuing, warn user too.
-                        print("parallelism to be  adjusted")
                         params = self.inputs.parameters.get_dict() 
                         X_all_q_CPU = params.pop('X_all_q_CPU','')
                         X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','') 
@@ -141,7 +137,6 @@ class YamboRestartWf(WorkChain):
                         return True 
                     else:
                         pass
-                        #print ("not adjusting parallism")
             
         if calc.get_state() == calc_states.SUBMISSIONFAILED\
                    or calc.get_state() == calc_states.FAILED\

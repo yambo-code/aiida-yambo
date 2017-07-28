@@ -61,7 +61,6 @@ class YamboWorkflow(WorkChain):
         spec.input("settings_pw", valid_type=ParameterData)
         spec.input("settings_p2y", valid_type=ParameterData)
         spec.input("settings_yambo", valid_type=ParameterData)
-        spec.input("input_pw", valid_type=ParameterData)
         spec.input("structure", valid_type=StructureData)
         spec.input("kpoint_pw", valid_type=KpointsData)
         spec.input("gamma_pw", valid_type=Bool, default=Bool(0) )
@@ -80,6 +79,8 @@ class YamboWorkflow(WorkChain):
         spec.dynamic_output()
 
     def start_workflow(self):
+        self.ctx.pw_wf_res = DataFactory('parameter')(dict={})
+        self.ctx.yambo_res = DataFactory('parameter')(dict={})
         self.ctx.last_step_pw_wf = None
         self.ctx.last_step_kind = None
         self.ctx.can_cont  = 0
@@ -143,13 +144,13 @@ class YamboWorkflow(WorkChain):
             if 'parent_folder' in self.inputs.keys():
                 pw_wf_result = run(PwRestartWf, codename = self.inputs.codename_pw, pseudo_family = self.inputs.pseudo_family, 
                         calculation_set = self.inputs.calculation_set_pw, settings=self.inputs.settings_pw, 
-                        inpt=self.inputs.input_pw, kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
+                        kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
                         structure = self.inputs.structure, parameters = self.inputs.parameters_pw,parameters_nscf=self.inputs.parameters_pw_nscf,
                         parent_folder=self.inputs.parent_folder)
             else:
                 pw_wf_result = run(PwRestartWf, codename = self.inputs.codename_pw, pseudo_family = self.inputs.pseudo_family, 
                         calculation_set = self.inputs.calculation_set_pw, settings=self.inputs.settings_pw, 
-                        inpt=self.inputs.input_pw, kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
+                        kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
                         structure = self.inputs.structure, parameters = self.inputs.parameters_pw,parameters_nscf=self.inputs.parameters_pw_nscf,
                         )
             print("pw_wf_result", pw_wf_result)
