@@ -10,19 +10,11 @@ from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
 from aiida.orm.utils import DataFactory
-
-try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType 
-    from aiida.work.workchain import WorkChain, while_
-    from aiida.work.workchain import ToContext as ResultToContext
-    from aiida.work.run import legacy_workflow
-    from aiida.work.run import run, submit
-except ImportError:
-    from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData 
-    from aiida.workflows2.db_types import  SimpleData  as BaseType
-    from aiida.workflows2.run import run 
-    from aiida.workflows2.fragmented_wf import FragmentedWorkfunction as WorkChain
-    from aiida.workflows2.fragmented_wf import ( ResultToContext, while_)
+from aiida.orm.data.base import Float, Str, NumericType, BaseType 
+from aiida.work.workchain import WorkChain, while_ , Outputs
+from aiida.work.workchain import ToContext as ResultToContext
+from aiida.work.run import legacy_workflow
+from aiida.work.run import run, submit
 
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
@@ -74,15 +66,15 @@ class YamboRestartWf(WorkChain):
             raise InputValidationError("parent_calc_folder must be of"
                                        " type RemoteData")        
         parameters = self.inputs.parameters
-
+        print("yambo begin")
         inputs = generate_yambo_input_params(
-             self.inputs.precode,self.inputs.yambocode,
-             self.inputs.parent_folder, parameters, self.inputs.calculation_set, self.inputs.settings )
-        future = submit(YamboProcess, **inputs)
+             self.inputs.precode.copy(),self.inputs.yambocode.copy(),
+             self.inputs.parent_folder, parameters, self.inputs.calculation_set.copy(), self.inputs.settings.copy() )
+        future =  submit(YamboProcess, **inputs)
         self.ctx.yambo_pks = []
         self.ctx.yambo_pks.append(future.pid)
         self.ctx.restart = 0 
-        return  ResultToContext(yambo=future)
+        return  ResultToContext(yambo= Outputs(future))
 
     def yambo_should_restart(self):
         # should restart a calculation if it satisfies either
@@ -115,28 +107,32 @@ class YamboRestartWf(WorkChain):
             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
             return True
 
-        if 'errors' in calc.get_outputs_dict()['output_parameters'].get_dict().keys() and calc.get_state() == calc_states.FAILED:
-            if len(calc.get_outputs_dict()['output_parameters'].get_dict()['errors']) < 1:
-                # No errors, We  check for memory issues, indirectly
-                if 'last_memory_time' in calc.get_outputs_dict()['output_parameters'].get_dict().keys():
-                    # check if the last alloc happened close to the end:
-                    last_mem_time = calc.get_outputs_dict()['output_parameters'].get_dict()['last_memory_time']
-                    if  abs(last_time - last_mem_time) < 3: # 3 seconds  selected arbitrarily,
-                        # this is (based on a simple heuristic guess, a memory related problem)
-                        # change the parallelization to account for this before continuing, warn user too.
-                        params = self.inputs.parameters.get_dict() 
-                        X_all_q_CPU = params.pop('X_all_q_CPU','')
-                        X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','') 
-                        SE_CPU = params.pop('SE_CPU','')
-                        SE_ROLEs = params.pop('SE_ROLEs','')
-                        calculation_set = self.inputs.calculation_set.get_dict()
-                        params['X_all_q_CPU'],calculation_set =   reduce_parallelism('X_all_q_CPU', X_all_q_ROLEs,  X_all_q_CPU, calculation_set )
-                        params['SE_CPU'], calculation_set=  reduce_parallelism('SE_CPU', SE_ROLEs,  SE_CPU,  calculation_set )
-                        self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set)
-                        self.inputs.parameters = DataFactory('parameter')(dict=params)
-                        return True 
-                    else:
-                        pass
+        if calc.get_state != calc_states.PARSINGFAILED: # special case for parallelization needed
+            output_p = {}
+            if 'output_parameters'  in  calc.get_outputs_dict(): # calc.get_outputs_dict()['output_parameters'].get_dict().keys() 
+                output_p = calc.get_outputs_dict()['output_parameters'].get_dict()
+            if 'errors' in output_p.keys() and calc.get_state() == calc_states.FAILED:
+                if len(calc.get_outputs_dict()['output_parameters'].get_dict()['errors']) < 1:
+                    # No errors, We  check for memory issues, indirectly
+                    if 'last_memory_time' in calc.get_outputs_dict()['output_parameters'].get_dict().keys():
+                        # check if the last alloc happened close to the end:
+                        last_mem_time = calc.get_outputs_dict()['output_parameters'].get_dict()['last_memory_time']
+                        if  abs(last_time - last_mem_time) < 3: # 3 seconds  selected arbitrarily,
+                            # this is (based on a simple heuristic guess, a memory related problem)
+                            # change the parallelization to account for this before continuing, warn user too.
+                            params = self.inputs.parameters.get_dict() 
+                            X_all_q_CPU = params.pop('X_all_q_CPU','')
+                            X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','') 
+                            SE_CPU = params.pop('SE_CPU','')
+                            SE_ROLEs = params.pop('SE_ROLEs','')
+                            calculation_set = self.inputs.calculation_set.get_dict()
+                            params['X_all_q_CPU'],calculation_set =   reduce_parallelism('X_all_q_CPU', X_all_q_ROLEs,  X_all_q_CPU, calculation_set )
+                            params['SE_CPU'], calculation_set=  reduce_parallelism('SE_CPU', SE_ROLEs,  SE_CPU,  calculation_set )
+                            self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set)
+                            self.inputs.parameters = DataFactory('parameter')(dict=params)
+                            return True 
+                        else:
+                            pass
             
         if calc.get_state() == calc_states.SUBMISSIONFAILED\
                    or calc.get_state() == calc_states.FAILED\
@@ -160,12 +156,12 @@ class YamboRestartWf(WorkChain):
         parameters = calc.get_inputs_dict()['parameters'].get_dict()
         parent_folder = calc.out.remote_folder
         inputs = generate_yambo_input_params(
-             self.inputs.precode,self.inputs.yambocode,
-             parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set, self.inputs.settings)
-        future = submit(YamboProcess, **inputs)
+             self.inputs.precode.copy(),self.inputs.yambocode.copy(),
+             parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set.copy(), self.inputs.settings.copy())
+        future =  submit (YamboProcess, **inputs)
         self.ctx.yambo_pks.append(future.pid)
         self.ctx.restart += 1
-        return ResultToContext(yambo_restart=future)
+        return ResultToContext(yambo_restart= Outputs(future))
 
     def get_last_submitted(self, pk):
         submited = False
