@@ -151,7 +151,6 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.inputs.parameters_pw = set_default_pw_param() 
                 if 'parameters' not in self.inputs.keys():
                     self.inputs.parameters = set_default_qp_param()
-
                       
         else:
             if 'kpoints' in self.inputs.converge_parameters:
@@ -209,9 +208,9 @@ class YamboConvergenceWorkflow(WorkChain):
                     p2y_res =  async  (YamboRestartWf,
                                 precode= self.inputs.precode.copy(),
                                 yambocode=self.inputs.yambocode.copy(),
-                                parameters = self.inputs.parameters.copy(),
+                                parameters = self.inputs.parameters_p2y.copy(),
                                 calculation_set= self.inputs.calculation_set_p2y.copy(),
-                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings.copy() ).result()
+                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y.copy() ).result()
                     p2y_parent = load_node(p2y_res["gw"].get_dict()["yambo_pk"])
                     self.ctx.p2y_parent_folder = p2y_parent.out.remote_folder
                 future =  async  (YamboRestartWf,
