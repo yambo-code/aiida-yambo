@@ -302,7 +302,7 @@ def set_default_qp_param(parameter=None):
         edit_param['SE_ROLEs']= "q qp b"
     if 'X_all_q_CPU' not in  edit_param.keys():
         edit_param['X_all_q_CPU']= ""
-        edit_param['X_all_q_ROLEs'] ="q k c v",
+        edit_param['X_all_q_ROLEs'] ="q k c v"
     return ParameterData(dict=edit_param)
 
 
