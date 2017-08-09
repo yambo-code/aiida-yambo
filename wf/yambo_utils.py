@@ -70,7 +70,7 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
             edit_parameters['SE_ROLEs']= "q qp b"
         if 'X_all_q_CPU' not in  edit_parameters.keys():
             edit_parameters['X_all_q_CPU']= ""
-            edit_parameters['X_all_q_ROLEs'] ="q k c v",
+            edit_parameters['X_all_q_ROLEs'] ="q k c v"
     
     inputs.parameters = ParameterData(dict=edit_parameters) 
     return  inputs
@@ -177,6 +177,10 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             c_index = v_index = 0
             c = 1
             v = 1
+        except IndexError:
+            c_index = v_index = 0
+            c = 1
+            v = 1
         if c_index and v_index:
             pass
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1:
@@ -206,6 +210,10 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             qp = SE_para[qp_index] or  1
             b  = SE_para[b_index] or 1  
         except ValueError:
+            qp_index = b_index = 0
+            qp =1
+            b  =1  
+        except IndexError:
             qp_index = b_index = 0
             qp =1
             b  =1  
