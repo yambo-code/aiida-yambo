@@ -1,1 +1,0 @@
-* I WOULD REMOTELY COPY FILES/DIRS FROM COMPUTER theospc15 (UUID 8a25c626-5593-4248-a6d7-bcb2f2dd1a16) FROM /scratch/marrazzo/aiida_run/11/3f/f4fe-559e-4530-b9bd-1c621f2b414b/./out/* TO ./out/
