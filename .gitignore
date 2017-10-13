@@ -1,4 +1,5 @@
-.*pyc
+*.*pyc
+*.*py~
 wf/.git
 gw/.git
 parser/.git
