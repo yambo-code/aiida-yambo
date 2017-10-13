@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import re
 from setuptools import setup, find_packages
 import json
 
@@ -11,6 +11,7 @@ if __name__ == '__main__':
         setup_requires=[
             'reentry'
         ],
-        packages=find_packages(exclude['aiida']),
+        reentry_register=True,
+        packages=find_packages(exclude=['aiida']),
         **kwargs
     )
