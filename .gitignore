@@ -1,7 +1,6 @@
-.*pyc
+*.*pyc
+*.*py~
 wf/.git
-gw
-parser
-setup.json
-setup.py
+gw/.git
+parser/.git
 yambo.egg-info
