@@ -19,10 +19,10 @@
     "keywords": "yambo aiida workflows",
     "entry_points": {
         "aiida.calculations": [
-            "yambo.gw =  gw:YamboCalculation"
+            "yambo.gw =  aiida_yambo.calculations.yambo:YamboCalculation"
         ],
         "aiida.parsers": [
-            "yambo.parser = parser:YamboParser"
+            "yambo.parser = aiida_yambo.parsers.yambo:YamboParser"
         ],
         "aiida.data":[]
     }
