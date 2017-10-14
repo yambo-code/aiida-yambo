@@ -64,13 +64,13 @@ yambo_parameters = {'ppa': True,
                                  'HF_and_locXC': True,
                                  'NLogCPUs': 0,
                                  'em1d': True,
-                                 'X_all_q_CPU': "",
-                                 'X_all_q_ROLEs': "",
+                                 #'X_all_q_CPU': "1 1 16 8",
+                                 #'X_all_q_ROLEs': "q k c v",
                                  'X_all_q_nCPU_invert':0,
                                  'X_Threads':  0 ,
                                  'DIP_Threads': 0 ,
-                                 'SE_CPU': "",
-                                 'SE_ROLEs': "",
+                                 #'SE_CPU': "1 8 16",
+                                 #'SE_ROLEs': "q qp b",
                                  'SE_Threads':  32,
                                  'EXXRLvcs': 789569,
                                  'EXXRLvcs_units': 'RL',
@@ -89,7 +89,7 @@ yambo_parameters = {'ppa': True,
                                  'QPkrange': [(1,16,30,31)],
                                  }
 
-calculation_set_pw ={'resources':  {"num_machines": 16,"num_mpiprocs_per_machine": 36}, 'max_wallclock_seconds': 3*60*60, 
+calculation_set_pw ={'resources':  {"num_machines": 4,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
                   'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
@@ -97,18 +97,18 @@ calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine
                   'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 8,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200, 
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200, 
                   'max_memory_kb': 1*86*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
 #calculation_set_pw ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine":  16}, 'max_wallclock_seconds': 3*60*60, 
 #                  'max_memory_kb': 1*92*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n#PBS -q s3par8cv3" ,
 #                  'environment_variables': {"OMP_NUM_THREADS": "2" }  }
-#
+
 #calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
 #                  'max_memory_kb': 1*92*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n#PBS -q s3par8cv3" ,
 #                  'environment_variables': {"OMP_NUM_THREADS": "1" }  }
-#
+
 #calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds': 200, 
 #                  'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n#PBS -q s3par8cv3" ,
 #                  'environment_variables': {"OMP_NUM_THREADS": "2" }  }

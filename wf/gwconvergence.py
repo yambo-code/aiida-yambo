@@ -62,6 +62,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("calculation_set", valid_type=ParameterData)
+        spec.input("calculation_set_pw", valid_type=ParameterData,required=False)
         spec.outline(
           cls.start,
           while_(cls.is_not_converged)(
@@ -81,6 +82,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
             self.inputs.parent_scf_folder = False
         if 'structure' not in self.inputs.keys():
             self.inputs.structure = False
+        if 'calculation_set_pw' not in self.inputs.keys():
+            self.inputs.calculation_set_pw = self.inputs.calculation_set.copy()  
         # if input calc has to be SCF not NSCF
 
     def start(self):
@@ -111,7 +114,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
     def step_1(self,f=False):
         starting_points = List()
-        starting_points.extend([2])
+        starting_points.extend([16])
         converge_parameters = List()
         converge_parameters.extend(['kpoints'])
         extra={}
@@ -127,6 +130,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         precode= self.inputs.precode.copy(),
                         yambocode=self.inputs.yambocode.copy(),
                         calculation_set= self.inputs.calculation_set.copy(),
+                        calculation_set_pw = self.inputs.calculation_set_pw.copy(),
                         converge_parameters= converge_parameters,
                         pseudo = self.inputs.pseudo.copy(),
                         threshold = Float(0.01), starting_points = starting_points,
@@ -148,7 +152,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
     def step_2(self,f=False):
         starting_points = List()
-        starting_points.extend([2,2])
+        starting_points.extend([16,16])
         converge_parameters = List()
         converge_parameters.extend(['BndsRnXp','GbndRnge'])
         extra={}
@@ -183,7 +187,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
     def step_3(self,f=False):
         starting_points = List()
-        starting_points.extend([2,2])
+        starting_points.extend([16,16])
         converge_parameters = List()
         converge_parameters.extend(['NGsBlkXp'])
         extra={}

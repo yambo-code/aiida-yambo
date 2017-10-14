@@ -84,6 +84,7 @@ class YamboWorkflow(WorkChain):
             parent_calc = self.inputs.parent_folder.get_inputs_dict()['remote_folder']
             if isinstance(parent_calc, YamboCalculation):
                 self.ctx.last_step_kind = 'yambo' 
+                self.ctx.yambo_res = DataFactory('parameter')(dict={"yambo_pk": parent_calc.pk } )
             if isinstance(parent_calc, PwCalculation):
                 self.ctx.last_step_kind = 'pw'
                 self.ctx.pw_wf_res = None  
@@ -100,12 +101,12 @@ class YamboWorkflow(WorkChain):
         print (" at perform next in yambowf", self.ctx.last_step_kind, self.ctx.pw_wf_res)
         if self.ctx.last_step_kind == 'yambo' or self.ctx.last_step_kind == 'yambo_p2y' :
             print (" last step kind ",  self.ctx.last_step_kind, load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() )
-            if load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() == 'FINISHED':
+            if load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() == u'FINISHED':
                 print(" at qp")
                 if self.inputs.to_set_qpkrange  and 'QPkrange' not in self.inputs.parameters_yambo.get_dict().keys():
                     self.inputs.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.get_dict()["nscf_pk"], self.inputs.parameters_yambo)
                 is_initialize = load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
-                print(" at qp")
+                print(" at qp is_initialize ", is_initialize)
                 if is_initialize: # after init we run yambo 
                     parentcalc = load_node(self.ctx.yambo_res.get_dict()["yambo_pk"])
                     parent_folder = parentcalc.out.remote_folder 
@@ -118,10 +119,13 @@ class YamboWorkflow(WorkChain):
                     if p2y_result["gw"].get_dict()["success"] == True:
                         self.ctx.done = True
                     return  #ResultToContext( yambo_res= p2y_result["pw"])
-                else:  # Possibly a restart, 
+                else:  # Possibly a restart,  after some type of failure, why was is not handled by YamboRestartWf? 
+                    print ("possible lost codepath kind: ", self.ctx.last_step_kind  )
                     pass 
-            if load_node(self.ctx.yambo_pks[-1]).get_state() == 'FAILED':  # Needs a resubmit depending on the error.
-                pass
+            if len(self.ctx.yambo_pks) > 0:
+                 print("state ".format( load_node(self.ctx.yambo_pks[-1] ).get_state() ))
+                 if load_node(self.ctx.yambo_pks[-1] ).get_state() == u'FAILED':  # Needs a resubmit depending on the error.
+                    pass
 
         if  self.ctx.last_step_kind == 'pw' and  self.ctx.pw_wf_res :
             if self.ctx.pw_wf_res.get_dict()['success'] == True:

@@ -75,7 +75,7 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("precode", valid_type=BaseType)
         spec.input("pwcode", valid_type=BaseType, required=False)
         spec.input("yambocode", valid_type=BaseType)
-        spec.input("pseudo", valid_type=BaseType,required=False)
+        spec.input("pseudo", valid_type=BaseType,required=True)
         spec.input("calculation_set_pw", valid_type=ParameterData, required=False)
         spec.input("calculation_set_p2y", valid_type=ParameterData,required=False)
         spec.input("calculation_set", valid_type=ParameterData )
@@ -140,7 +140,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     if 'structure' not in self.inputs.keys():
                         self.inputs.structure = parent_calc.inp.structure
                     if 'pseudo' not in self.inputs.keys():
-                        self.inputs.pseudo = parent_calc.inp.pseudo
+                        raise InputValidationError("Pseudo should be provided")
                     if 'parameters' not in self.inputs.keys():
                         self.inputs.parameters = set_default_qp_param()
 
@@ -166,6 +166,8 @@ class YamboConvergenceWorkflow(WorkChain):
                 raise InputValidationError("Pseudo should be provided if parent PW calculation is not given when converging kpoints")
             if 'pwcode' not in self.inputs.keys():
                 raise InputValidationError("PW code  should be provided when converging kpoints")
+            if 'kpoints' not in self.inputs.converge_parameters and 'parent_nscf_folder' not in self.inputs.keys:
+                raise InputValidationError("Parent nscf folder should be provided when not converging kpoints")
         if 'parent_nscf_folder' in  self.inputs.keys(): 
               parent_calc = self.inputs.parent_nscf_folder.get_inputs_dict()['remote_folder']
               if isinstance(parent_calc, PwCalculation):
