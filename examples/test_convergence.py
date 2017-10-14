@@ -54,7 +54,7 @@ calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine
                   'max_memory_kb': 1*80*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds':  2*60*60, 
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  2*60*60, 
                   'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "16" }  }
 
@@ -88,6 +88,8 @@ if __name__ == "__main__":
                         help='The structure  to use')
     parser.add_argument('--parent', type=int, dest='parent', required=True,
                         help='The parent  to use')
+    parser.add_argument('--parent_nscf', type=int, dest='parent_nscf', required=True,
+                        help='The parent nscf  to use')
 
     converge_parameters = List()
     #converge_parameters.extend(['PPAPntXp'])
@@ -101,15 +103,20 @@ if __name__ == "__main__":
     structure = load_node(int(args.structure))
     parentcalc = load_node(int(args.parent))
     parent_folder_ = parentcalc.out.remote_folder
+    parentnscfcalc = load_node(int(args.parent_nscf))
+    parent_nscf_folder_ = parentnscfcalc.out.remote_folder
     p2y_result =run(YamboConvergenceWorkflow, 
                     precode= Str( args.precode), 
                     yambocode=Str(args.yambocode),
                     calculation_set= ParameterData(dict=calculation_set_yambo),
                     settings = settings_yambo,
-                    parent_folder = parent_folder_, 
+                    parent_scf_folder = parent_folder_, 
+                    parent_nscf_folder = parent_nscf_folder_, 
                     parameters = ParameterData(dict=yambo_parameters), 
                     converge_parameters= converge_parameters,
                     starting_points= starting_points,
+                    structure = structure , 
+                    pseudo = Str(args.pseudo),
                     #default_step_size = default_step_size, 
                     threshold= threshold,
                     )

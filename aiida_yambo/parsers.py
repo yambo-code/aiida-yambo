@@ -164,6 +164,11 @@ class YamboParser(Parser):
                        break
                    else:
                        output_params['errors'].extend(result.errors)
+            if  hasattr(result, 'para_error'):
+                if result.para_error == True:
+                    output_params['para_error'] = True
+                else:
+                    output_params['para_error'] = False
             if  hasattr(result, 'game_over'):
                 if result.game_over == True:
                     successful = True 

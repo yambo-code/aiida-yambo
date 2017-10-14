@@ -63,13 +63,14 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
              edit_parameters['GbndRnge'] = (1.0, gbndrnge*2) 
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
+             edit_parameters['NGsBlkXp_units'] =  'eV'
         if 'QPkrange' not in edit_parameters.keys():
              edit_parameters['QPkrange'] = [(1,1,int(nelec/2), int(nelec/2)+1 )]
         if 'SE_CPU' not in  edit_parameters.keys():
-            edit_parameters['SE_CPU'] ="" 
+            edit_parameters['SE_CPU'] ="1 8 16" 
             edit_parameters['SE_ROLEs']= "q qp b"
         if 'X_all_q_CPU' not in  edit_parameters.keys():
-            edit_parameters['X_all_q_CPU']= ""
+            edit_parameters['X_all_q_CPU']= "1 1 16 8"
             edit_parameters['X_all_q_ROLEs'] ="q k c v"
     
     inputs.parameters = ParameterData(dict=edit_parameters) 
@@ -298,10 +299,10 @@ def set_default_qp_param(parameter=None):
         edit_param['PPAPntXp'] =  10
         edit_param['PPAPntXp_units'] =  'eV'
     if 'SE_CPU' not in  edit_param.keys():
-        edit_param['SE_CPU'] ="" 
+        edit_param['SE_CPU'] ="1 8 16" 
         edit_param['SE_ROLEs']= "q qp b"
     if 'X_all_q_CPU' not in  edit_param.keys():
-        edit_param['X_all_q_CPU']= ""
+        edit_param['X_all_q_CPU']= "1 1 16 8"
         edit_param['X_all_q_ROLEs'] ="q k c v"
     return ParameterData(dict=edit_param)
 
@@ -351,5 +352,5 @@ def default_qpkrange(calc_pk, parameters):
        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():
-            edit_parameters['QPkrange'] = [(1,1,int(nelec/2), int(nelec/2)+4 )]
+            edit_parameters['QPkrange'] = [(1,nkpts/2 , int(nelec*3) , int(nelec*3)+1 )]
     return ParameterData(dict=edit_parameters)

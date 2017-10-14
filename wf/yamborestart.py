@@ -107,10 +107,26 @@ class YamboRestartWf(WorkChain):
             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
             return True
 
-        if calc.get_state != calc_states.PARSINGFAILED: # special case for parallelization needed
+        if calc.get_state() != calc_states.PARSINGFAILED and calc.get_state != calc_states.FINISHED : # special case for parallelization needed
             output_p = {}
+            print ("failure ", )
             if 'output_parameters'  in  calc.get_outputs_dict(): # calc.get_outputs_dict()['output_parameters'].get_dict().keys() 
                 output_p = calc.get_outputs_dict()['output_parameters'].get_dict()
+            if 'para_error' in output_p.keys(): 
+                print ("para error  ", output_p['para_error'])
+                if output_p['para_error'] == True:  # Change parallelism or add some
+                    params = self.inputs.parameters.get_dict() 
+                    X_all_q_CPU = params.pop('X_all_q_CPU','')
+                    X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','') 
+                    SE_CPU = params.pop('SE_CPU','')
+                    SE_ROLEs = params.pop('SE_ROLEs','')
+                    calculation_set = self.inputs.calculation_set.get_dict()
+                    params['X_all_q_CPU'],calculation_set =   reduce_parallelism('X_all_q_CPU', X_all_q_ROLEs,  X_all_q_CPU, calculation_set )
+                    params['SE_CPU'], calculation_set=  reduce_parallelism('SE_CPU', SE_ROLEs,  SE_CPU,  calculation_set )
+                    self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set)
+                    self.inputs.parameters = DataFactory('parameter')(dict=params)
+                    print ("returning true for para_error  ", output_p['para_error'])
+                    return True 
             if 'errors' in output_p.keys() and calc.get_state() == calc_states.FAILED:
                 if len(calc.get_outputs_dict()['output_parameters'].get_dict()['errors']) < 1:
                     # No errors, We  check for memory issues, indirectly

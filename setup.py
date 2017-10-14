@@ -12,6 +12,6 @@ if __name__ == '__main__':
             'reentry'
         ],
         reentry_register=True,
-        packages=find_packages(exclude=['aiida']),
+        packages=find_packages(where='.', exclude=( "gw.*", "parser.*","gw*","parser*")),
         **kwargs
     )
