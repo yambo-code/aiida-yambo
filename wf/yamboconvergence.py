@@ -8,23 +8,23 @@ from aiida.orm import load_node
 from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.exceptions import InputValidationError,ValidationError
 from collections import defaultdict
-from aiida.orm.utils import DataFactory
+from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.data.base import Float, Str, NumericType, BaseType, List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.work.run import run, submit, async
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.orm.calculation.job.yambo  import YamboCalculation
 from aiida.workflows.user.cnr_nano.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
                default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings
 from aiida.workflows.user.cnr_nano.yamborestart  import YamboRestartWf
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.orm.calculation.job.yambo  import YamboCalculation
 from aiida.workflows.user.cnr_nano.yambowf  import YamboWorkflow
 from aiida.orm.data.remote import RemoteData
+from aiida_quantumespresso.calculations.pw import PwCalculation
 import numpy as np 
 from scipy.optimize import  curve_fit 
+
+#PwCalculation = CalculationFactory('quantumespresso.pw')
+YamboCalculation = CalculationFactory('yambo.yambo')
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
@@ -183,7 +183,7 @@ class YamboConvergenceWorkflow(WorkChain):
     def start(self):
         # for kpoints, we will need to have the scf step, and  use YamboWorkflow not YamboRestartWf
         # 
-        print("start")
+        print("yamboconvergence.py:  start() ")
         outs = self.iterate([0,1,2,3])
         print ("outs", outs.keys() )
         #return ToContext( **outs )
@@ -196,7 +196,7 @@ class YamboConvergenceWorkflow(WorkChain):
         #return ToContext(r0=outs['r1'] , r1=outs['r2']  , r2=outs['r3'] , r3=outs['r4']  )
 
     def iterate(self, loop_items):
-        print("iterate", loop_items, 'kpoints' not in  self.inputs.converge_parameters)
+        print("yamboconvergence.py :  iterate() ", loop_items )
         outs={}
         if 'kpoints' not in self.inputs.converge_parameters:
             for num in loop_items: # includes 0 because of starting point
@@ -223,6 +223,7 @@ class YamboConvergenceWorkflow(WorkChain):
                             parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings.copy())
                 outs[ 'r'+str(num) ] =  future
             for num in loop_items: # includes 0 because of starting point
+                print ("yamboconvergence.py: waiting  for result of YamboRestartWf ")
                 outs[ 'r'+str(num) ] = outs['r'+str(num)].result() 
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
@@ -253,12 +254,13 @@ class YamboConvergenceWorkflow(WorkChain):
                    **extra)
                 outs[ 'r'+str(num) ] = future
             for num in loop_items: # includes 0 because of starting point
+                print ("yamboconvergence.py: waiting  for result of YamboWorkflow ")
                 outs[ 'r'+str(num) ] = outs['r'+str(num)].result() 
              
         return outs 
 
     def interstep(self):
-        print("pass", self.ctx.r0)
+        print("yamboconvergence.py: pass", self.ctx.r0)
         return
 
     def update_parameters(self, paging):
@@ -269,6 +271,7 @@ class YamboConvergenceWorkflow(WorkChain):
              update_delta = np.ceil( self.inputs.default_step_size.get_dict()[field]*paging*starting_point) 
              params[field] = update_parameter_field( field, params[field] ,  update_delta ) 
              self.ctx.conv_elem[field].append(params[field])
+        print("yamboconvergence.py update_parameters {}".format(self.ctx.conv_elem))
         self.inputs.parameters = DataFactory('parameter')(dict= params)
 
 
@@ -289,7 +292,7 @@ class YamboConvergenceWorkflow(WorkChain):
         self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
         if 'scf_pk' in self.ctx.r3["gw"].get_dict() and 'parent_scf_folder' not in self.inputs.keys():
             self.inputs.parent_scf_folder =  load_node(self.ctx.r3["gw"].get_dict()['scf_pk']).out.remote_folder
-
+        print("yamboconvergence.py: is_not_converged() {}".format(self.ctx.en_diffs))
         if len(self.ctx.en_diffs) > 16: # no more than 16 calcs
             return False
         if len(self.ctx.en_diffs) > 4:
@@ -321,7 +324,9 @@ class YamboConvergenceWorkflow(WorkChain):
             fit_data = func(independent, a,b)      
             deviations = np.abs(dependent[:4] - fit_data[:4])  # deviation of last four from extrapolated values at those points
             converged_fit = np.allclose(deviations, np.linspace(0.01,0.01, 4), atol=self.inputs.threshold) # last four are within 0.01 of predicted value
+            print("yamboconvergence.py: fitting_deviation: converged_fit {}".format(converged_fit))
             return converged_fit
+        print("yamboconvergence.py: fitting_deviation: False {}".format(False))
         return False
 
     def get_total_range(self,node_id):
@@ -329,21 +334,46 @@ class YamboConvergenceWorkflow(WorkChain):
         #         bands listed in the QPkrange, on the first kpoint selected,
         #         i.e. for 'QPkrange': [(1,16,30,31)] , will find width between 
         #         kpoint 1  band 30 and kpoint  1 band 31. 
+        print(node_id, " yamboconvergence.py :  node_id in get_total_range() ")
         calc = load_node(node_id)
         table=calc.out.array_qp.get_array('qp_table')
-        lowest_k = calc.inp.parameters.get_dict()['QPkrange'][0][0] # first kpoint listed, 
-        lowest_b = calc.inp.parameters.get_dict()['QPkrange'][0][-2] # first band on first kpoint listed,
-        highest_b = calc.inp.parameters.get_dict()['QPkrange'][0][-1]  # last band on first kpoint listed,
+        try:
+            qprange = calc.inp.parameters.get_dict()['QPkrange']
+        except KeyError: 
+            parent_calc =  calc.inp.parent_calc_folder.inp.remote_folder
+            if isinstance(parent_calc, YamboCalculation):
+                has_found_nelec = False
+                while (not has_found_nelec):
+                    try:
+                        nelec = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
+                        has_found_nelec = True
+                    except AttributeError:
+                        parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+                    except KeyError:
+                        parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+            elif isinstance(parent_calc, PwCalculation):
+                nelec  = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
+            qprange =  [ ( 1, 1 , int(nelec*2) , int(nelec*2)+1 ) ]
+        lowest_k = qprange[0][0] # first kpoint listed, 
+        lowest_b = qprange[0][-2] # first band on first kpoint listed,
+        highest_b= qprange[0][-1]  # last band on first kpoint listed,
         argwlk = np.argwhere(table[:,0]==float(lowest_k))  # indexes for lowest kpoint
         argwlb = np.argwhere(table[:,1]==float(lowest_b))  # indexes for lowest band
         argwhb = np.argwhere(table[:,1]==float(highest_b)) # indexes for highest band
+        if len(argwlk)< 1:
+            argwlk = np.array([0])
+        if len(argwhb) < 1:
+            argwhb = np.argwhere(table[:,1]== table[:,1][np.argmax(table[:,1])])
+            argwlb = np.argwhere(table[:,1]== table[:,1][np.argmax(table[:,1])]-1 )
         arglb = np.intersect1d(argwlk,argwlb)              # index for lowest kpoints' lowest band
         arghb = np.intersect1d(argwlk,argwhb)              # index for lowest kpoint's highest band
         e_m_eo = calc.out.array_qp.get_array('E_minus_Eo') 
         eo = calc.out.array_qp.get_array('Eo')
         corrected = eo+e_m_eo
+        print( arglb, arghb , " arglb, arghb")
         corrected_lb = corrected[arglb]
         corrected_hb = corrected[arghb]
+        print(corrected_hb,corrected_hb, corrected_hb- corrected_lb, " :corrected_hb,corrected_hb, corrected_hb- corrected_lb ")
         return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
 
     def report(self):

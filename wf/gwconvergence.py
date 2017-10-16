@@ -113,6 +113,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
             self.ctx.first_run = False
 
     def step_1(self,f=False):
+        print ("gwconvergence.pw:  YamboFullConvergenceWorkflow: step 1 ")
         starting_points = List()
         starting_points.extend([16])
         converge_parameters = List()
@@ -136,7 +137,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         threshold = Float(0.01), starting_points = starting_points,
                         **extra
                         )
-        print (p2y_result, "  convergence")
+        print (p2y_result, "  YamboFullConvergenceWorkflow  from YamboConvergenceWorkflow")
         self.ctx.scf_calc = p2y_result["convergence"].get_dict()["scf_pk"]
         self.ctx.nscf_calc = p2y_result["convergence"].get_dict()["nscf_pk"]
         if self.ctx.first_run:
@@ -151,8 +152,9 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
 
     def step_2(self,f=False):
+        print("gwconvergence.pw:  YamboFullConvergenceWorkflow : step2 ")
         starting_points = List()
-        starting_points.extend([16,16])
+        starting_points.extend([8,8])
         converge_parameters = List()
         converge_parameters.extend(['BndsRnXp','GbndRnge'])
         extra={}
@@ -169,14 +171,16 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         precode= self.inputs.precode.copy(),
                         yambocode=self.inputs.yambocode.copy(),
                         calculation_set= self.inputs.calculation_set.copy(),
+                        calculation_set_pw = self.inputs.calculation_set_pw.copy(),
                         converge_parameters= converge_parameters,
                         parent_nscf_folder = load_node(self.ctx.nscf_calc).out.remote_folder, 
                         pseudo = self.inputs.pseudo.copy(),
                         threshold = Float(0.01),starting_points = starting_points, 
                         **extra
                         )
+        print (p2y_result, "  YamboFullConvergenceWorkflow  from YamboConvergenceWorkflow")
 
-        if f:
+        if p2y_result:
             self.ctx.step2_1_res = p2y_result 
             self.ctx.last_step = 'step_2_1'
         else:
@@ -186,6 +190,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.step2_res = p2y_result 
 
     def step_3(self,f=False):
+        print ("gwconvergence.pw:  YamboFullConvergenceWorkflow step 3 ")
         starting_points = List()
         starting_points.extend([16,16])
         converge_parameters = List()
@@ -202,6 +207,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         precode= self.inputs.precode.copy() ,
                         yambocode=self.inputs.yambocode.copy() ,
                         calculation_set= self.inputs.calculation_set.copy() ,
+                        calculation_set_pw = self.inputs.calculation_set_pw.copy(),
                         converge_parameters= converge_parameters,
                         parent_nscf_folder = load_node(self.ctx.nscf_calc).out.remote_folder, 
                         pseudo = self.inputs.pseudo.copy(),
@@ -210,7 +216,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         **extra
                         )
 
-        if f:
+        print (p2y_result, "gwconvergence.pw:  YamboFullConvergenceWorkflow  from YamboConvergenceWorkflow")
+        if p2y_result:
             self.ctx.step3_1_res = p2y_result 
             self.ctx.last_step = 'step_3_1'
         else:

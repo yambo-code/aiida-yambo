@@ -9,7 +9,7 @@ from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
-from aiida.orm.utils import DataFactory
+from aiida.orm.utils import DataFactory, CalculationFactory
 import itertools
 from aiida.orm.data.base import Float, Str, NumericType, BaseType, Bool
 from aiida.work.workchain import WorkChain, while_
@@ -25,9 +25,10 @@ from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.workflows.user.cnr_nano.yamborestart  import YamboRestartWf
 from aiida.workflows.user.cnr_nano.pwplaceholder  import PwRestartWf
-from aiida.orm.calculation.job.yambo  import YamboCalculation
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation 
+from aiida_quantumespresso.calculations.pw import PwCalculation
 
+#PwCalculation = CalculationFactory('quantumespresso.pw')
+YamboCalculation = CalculationFactory('yambo.yambo')
 ParameterData = DataFactory("parameter")
 
 class YamboWorkflow(WorkChain):
@@ -98,15 +99,15 @@ class YamboWorkflow(WorkChain):
         return True
  
     def perform_next(self):
-        print (" at perform next in yambowf", self.ctx.last_step_kind, self.ctx.pw_wf_res)
+        print ("yambowf perform_next() ")
         if self.ctx.last_step_kind == 'yambo' or self.ctx.last_step_kind == 'yambo_p2y' :
-            print (" last step kind ",  self.ctx.last_step_kind, load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() )
+            #print (" last step kind ",  self.ctx.last_step_kind, load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() )
             if load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() == u'FINISHED':
-                print(" at qp")
+                #print(" at qp")
                 if self.inputs.to_set_qpkrange  and 'QPkrange' not in self.inputs.parameters_yambo.get_dict().keys():
                     self.inputs.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.get_dict()["nscf_pk"], self.inputs.parameters_yambo)
                 is_initialize = load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
-                print(" at qp is_initialize ", is_initialize)
+                print(" yambowf perform_next() is_initialize: ", is_initialize)
                 if is_initialize: # after init we run yambo 
                     parentcalc = load_node(self.ctx.yambo_res.get_dict()["yambo_pk"])
                     parent_folder = parentcalc.out.remote_folder 
@@ -120,16 +121,16 @@ class YamboWorkflow(WorkChain):
                         self.ctx.done = True
                     return  #ResultToContext( yambo_res= p2y_result["pw"])
                 else:  # Possibly a restart,  after some type of failure, why was is not handled by YamboRestartWf? 
-                    print ("possible lost codepath kind: ", self.ctx.last_step_kind  )
+                    print ("yambowf perform_next()  possible lost codepath kind: ", self.ctx.last_step_kind  )
                     pass 
             if len(self.ctx.yambo_pks) > 0:
-                 print("state ".format( load_node(self.ctx.yambo_pks[-1] ).get_state() ))
+                 #print("state ".format( load_node(self.ctx.yambo_pks[-1] ).get_state() ))
                  if load_node(self.ctx.yambo_pks[-1] ).get_state() == u'FAILED':  # Needs a resubmit depending on the error.
                     pass
 
         if  self.ctx.last_step_kind == 'pw' and  self.ctx.pw_wf_res :
             if self.ctx.pw_wf_res.get_dict()['success'] == True:
-                print(" at p2y")
+                print(" yambowf perform_next() aft p2y, ")
                 parentcalc = load_node(self.ctx.pw_wf_res.get_dict()["nscf_pk"])
                 parent_folder = parentcalc.out.remote_folder 
                 p2y_result = run (YamboRestartWf, precode= self.inputs.codename_p2y.copy(), yambocode=self.inputs.codename_yambo.copy(),
@@ -145,6 +146,7 @@ class YamboWorkflow(WorkChain):
 
         if  self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res :# this is likely  the very begining, we can start with the scf/nscf here
             extra = {}
+            print(" yambowf perform_next() b4 PwRestart, ")
             if 'parameters_pw_nscf' in self.inputs.keys():
                 extra['parameters_nscf'] = self.inputs.parameters_pw_nscf.copy() 
             if 'parent_folder' in self.inputs.keys():

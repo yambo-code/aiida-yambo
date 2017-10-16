@@ -9,12 +9,13 @@ from aiida.common.exceptions import InputValidationError,ValidationError, Workfl
 from aiida.orm import load_node
 from aiida.orm.data.upf import get_pseudos_from_structure
 from collections import defaultdict
-from aiida.orm.utils import DataFactory
+from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.orm.calculation.job.yambo  import YamboCalculation
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
+from aiida_quantumespresso.calculations.pw import PwCalculation
 
+#PwCalculation = CalculationFactory('quantumespresso.pw')
+YamboCalculation = CalculationFactory('yambo.yambo')
 ParameterData = DataFactory("parameter")
 
 def generate_yambo_input_params(precodename,yambocodename, parent_folder, parameters,  calculation_set, settings):
@@ -352,5 +353,5 @@ def default_qpkrange(calc_pk, parameters):
        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():
-            edit_parameters['QPkrange'] = [(1,nkpts/2 , int(nelec*3) , int(nelec*3)+1 )]
+            edit_parameters['QPkrange'] = [(1,nkpts/2 , int(nelec*2) , int(nelec*2)+1 )]
     return ParameterData(dict=edit_parameters)
