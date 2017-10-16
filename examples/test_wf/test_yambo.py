@@ -2,10 +2,10 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from from aiida_yambo.workflows.yamboconvergence  import  YamboConvergenceWorkflow
+from  from aiida_yambo.workflows.yamborestart  import YamboRestartWf
  
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
+    from aiida.orm.data.base import Float, Str, NumericType, BaseType
     from aiida.work.run import run, submit
 except ImportError:
     from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
@@ -29,34 +29,31 @@ yambo_parameters = {'ppa': True,
                                  'SE_CPU': "",
                                  'SE_ROLEs': "",
                                  'SE_Threads':  32,
-                                 #'EXXRLvcs': 789569,
-                                 'EXXRLvcs': 7895,
+                                 'EXXRLvcs': 789569,
                                  'EXXRLvcs_units': 'RL',
-                                 #'BndsRnXp': (1,60),
-                                 'BndsRnXp': (1,10),
-                                 'NGsBlkXp': 2,
+                                 'BndsRnXp': (1,60),
+                                 'NGsBlkXp': 3,
                                  'NGsBlkXp_units': 'Ry',
                                  'PPAPntXp': 2000000,
                                  'PPAPntXp_units': 'eV',
-                                 #'GbndRnge': (1,60),
-                                 'GbndRnge': (1,10),
+                                 'GbndRnge': (1,60),
                                  'GDamping': 0.1,
                                  'GDamping_units': 'eV',
                                  'dScStep': 0.1,
                                  'dScStep_units': 'eV',
                                  'GTermKind': "none",
                                  'DysSolver': "n",
-                                 'QPkrange': [(1,2,30,31)],
+                                 'QPkrange': [(1,16,30,31)],
                                  }
 
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*80*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
-                  'environment_variables': {"omp_num_threads": "1" }  }
+                  'max_memory_kb': 1*88*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  2*60*60, 
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
-                  'environment_variables': {"omp_num_threads": "16" }  }
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  60*60, 
+                  'max_memory_kb': 1*10*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
 settings_pw =  ParameterData(dict= {'cmdline':['-npool', '2' , '-ndiag', '8', '-ntg', '2' ]})
 
@@ -88,37 +85,16 @@ if __name__ == "__main__":
                         help='The structure  to use')
     parser.add_argument('--parent', type=int, dest='parent', required=True,
                         help='The parent  to use')
-    parser.add_argument('--parent_nscf', type=int, dest='parent_nscf', required=True,
-                        help='The parent nscf  to use')
 
-    converge_parameters = List()
-    #converge_parameters.extend(['PPAPntXp'])
-    converge_parameters.extend(['NGsBlkXp'])
-    starting_points = List()
-    starting_points.extend([4])
-    #default_step_size = List()
-    #default_step_size.extend([50000])
-    threshold = Float(0.1)
     args = parser.parse_args()
     structure = load_node(int(args.structure))
     parentcalc = load_node(int(args.parent))
     parent_folder_ = parentcalc.out.remote_folder
-    parentnscfcalc = load_node(int(args.parent_nscf))
-    parent_nscf_folder_ = parentnscfcalc.out.remote_folder
-    p2y_result =run(YamboConvergenceWorkflow, 
+    p2y_result =run(YamboRestartWf, 
                     precode= Str( args.precode), 
                     yambocode=Str(args.yambocode),
+                    parameters = ParameterData(dict=yambo_parameters) , 
                     calculation_set= ParameterData(dict=calculation_set_yambo),
-                    settings = settings_yambo,
-                    parent_scf_folder = parent_folder_, 
-                    parent_nscf_folder = parent_nscf_folder_, 
-                    parameters = ParameterData(dict=yambo_parameters), 
-                    converge_parameters= converge_parameters,
-                    starting_points= starting_points,
-                    structure = structure , 
-                    pseudo = Str(args.pseudo),
-                    #default_step_size = default_step_size, 
-                    threshold= threshold,
-                    )
+                    parent_folder = parent_folder_, settings = settings_yambo)
 
     print ("Resutls", p2y_result)
