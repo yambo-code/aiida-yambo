@@ -37,7 +37,7 @@ class YamboCalculation(JobCalculation):
         self._OUTPUT_FILE_NAME = 'aiida'
     
         # Default output parser provided by AiiDA
-        self._default_parser = 'yambo'
+        self._default_parser = 'yambo.yambo'
         
         # Default input and output files
         self._DEFAULT_INPUT_FILE = 'aiida.in'
