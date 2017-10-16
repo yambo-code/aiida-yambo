@@ -14,10 +14,8 @@ from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
 
 
-#codename = 'pw_6.1@fidis' #'pw_6.2_2Dcode@marconi_knl' 
 
 
-#code = Code.get_from_string(codename)
 
 StructureData = DataFactory('structure')
 
@@ -35,13 +33,14 @@ ParameterData = DataFactory('parameter')
     
 parameters = ParameterData(dict={
               'CONTROL': {
-                  'calculation': 'scf',
+                  'calculation': 'nscf',
                   'restart_mode': 'from_scratch',
                   'wf_collect': True,
                   'verbosity' :'high',
                   },
               'SYSTEM': {
                   'ecutwfc': 20.,
+                  'nbnd':50,
                   },
               'ELECTRONS': {
                   'conv_thr': 1.e-8,
@@ -67,18 +66,19 @@ inputs['_options'] = {'max_wallclock_seconds':30*60,
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='SCF calculation.')
+    parser = argparse.ArgumentParser(description='NSCF calculation.')
     parser.add_argument('--code', type=str, dest='codename', required=True,
                         help='The pw codename to use')
     #parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
     #                    help='The pesudo  to use')
     #parser.add_argument('--structure', type=int, dest='structure', required=True,
     #                    help='The structure  to use')
-    #parser.add_argument('--parent', type=int, dest='parent', required=True,
-    #                    help='The parent  to use')
+    parser.add_argument('--parent', type=int, dest='parent', required=True,
+                        help='The parent  to use')
     args = parser.parse_args()
     code = Code.get_from_string(args.codename)
     inputs['code'] = code
+    inputs['parent_folder'] = load_node(args.parent).out.remote_folder
     process = PwCalculation.process()
     running = submit(process, **inputs)
     print "Created calculation; with pid={}".format(running.pid)
