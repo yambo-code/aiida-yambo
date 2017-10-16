@@ -9,7 +9,7 @@ from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
-from aiida.orm.utils import DataFactory
+from aiida.orm.utils import DataFactory, CalculationFactory
 
 try:
     from aiida.orm.data.base import Float, Str, NumericType, BaseType ,Bool
@@ -19,25 +19,18 @@ try:
     from aiida.work.run import run, submit
 except ImportError:
      pass
-#    from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData 
-#    from aiida.workflows2.db_types import  SimpleData  as BaseType
-#    from aiida.workflows2.run import run 
-#    from aiida.workflows2.fragmented_wf import FragmentedWorkfunction as WorkChain
-#    from aiida.workflows2.fragmented_wf import ( ResultToContext, while_)
 
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.orm.calculation.job.quantumespresso.pw import PwCalculation
-from aiida.orm.calculation.job.yambo  import YamboCalculation
-#import sys,os
-#sys.path.append(os.path.realpath(__file__))
 from aiida.workflows.user.cnr_nano.yambo_utils import generate_pw_input_params 
+from aiida_quantumespresso.calculations.pw import PwCalculation
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
+#PwCalculation = CalculationFactory('quantumespresso.pw')
 PwProcess = PwCalculation.process()
-
+YamboCalculation = CalculationFactory('yambo.yambo')
 
 class PwRestartWf(WorkChain):
     """

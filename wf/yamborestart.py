@@ -9,7 +9,7 @@ from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
-from aiida.orm.utils import DataFactory
+from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.data.base import Float, Str, NumericType, BaseType 
 from aiida.work.workchain import WorkChain, while_ , Outputs
 from aiida.work.workchain import ToContext as ResultToContext
@@ -19,11 +19,11 @@ from aiida.work.run import run, submit
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.orm.calculation.job.yambo  import YamboCalculation
-#import sys,os
-#sys.path.append(os.path.realpath(__file__))
-#from  aiida.parsers.yambo_utils import  generate_yambo_input_params
 from aiida.workflows.user.cnr_nano.yambo_utils import generate_yambo_input_params, reduce_parallelism 
+from aiida_quantumespresso.calculations.pw import PwCalculation
+
+#PwCalculation = CalculationFactory('quantumespresso.pw')
+YamboCalculation = CalculationFactory('yambo.yambo')
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
@@ -66,7 +66,7 @@ class YamboRestartWf(WorkChain):
             raise InputValidationError("parent_calc_folder must be of"
                                        " type RemoteData")        
         parameters = self.inputs.parameters
-        print("yambo begin")
+        print("yamborestart: yambobegin() ")
         inputs = generate_yambo_input_params(
              self.inputs.precode.copy(),self.inputs.yambocode.copy(),
              self.inputs.parent_folder, parameters, self.inputs.calculation_set.copy(), self.inputs.settings.copy() )
@@ -83,6 +83,7 @@ class YamboRestartWf(WorkChain):
         # 3. Submission failed.
         # 4. Failed: a) Memory problems
         #            b) 
+        print("yamborestart: yambo_should_restart() ")
         if self.ctx.restart >= 5:
             return False
 
@@ -109,11 +110,10 @@ class YamboRestartWf(WorkChain):
 
         if calc.get_state() != calc_states.PARSINGFAILED and calc.get_state != calc_states.FINISHED : # special case for parallelization needed
             output_p = {}
-            print ("failure ", )
             if 'output_parameters'  in  calc.get_outputs_dict(): # calc.get_outputs_dict()['output_parameters'].get_dict().keys() 
                 output_p = calc.get_outputs_dict()['output_parameters'].get_dict()
             if 'para_error' in output_p.keys(): 
-                print ("para error  ", output_p['para_error'])
+                print ("yamborestart: yambo_should_restart:  parallelism error  ", output_p['para_error'])
                 if output_p['para_error'] == True:  # Change parallelism or add some
                     params = self.inputs.parameters.get_dict() 
                     X_all_q_CPU = params.pop('X_all_q_CPU','')
@@ -160,7 +160,7 @@ class YamboRestartWf(WorkChain):
         # restart if neccessary
         # get inputs from prior calculation ctx.yambo_pks
         # should be able to handle submission failed, by possibly going to parent?
-        print("YamboRestartWF restarting from:  ", self.ctx.yambo_pks[-1],) 
+        print("yamborestart: yambo_restart():  YamboRestartWF restarting from:  ", self.ctx.yambo_pks[-1],) 
         calc = load_node(self.ctx.yambo_pks[-1])
         if  calc.get_state() == calc_states.SUBMISSIONFAILED:
             calc = self.get_last_submitted(calc.pk)
