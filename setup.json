@@ -4,7 +4,7 @@
     "author_email": "m.atambo@nano.cnr.it",
     "description": "YAMBO code Plugin for AiiDA",
     "url": "https://bitbucket.org/prandini/yambo_input",
-    "license": "TBD",
+    "license": "MIT",
     "classifiers": [
         "Programming Language :: Python",
         "Environment :: Plugins",
