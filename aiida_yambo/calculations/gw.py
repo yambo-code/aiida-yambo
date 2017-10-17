@@ -117,13 +117,6 @@ class YamboCalculation(JobCalculation):
         remote_copy_list = []
         remote_symlink_list = []
         
-        try:
-            parameters = inputdict.pop(self.get_linkname('parameters'))
-        except KeyError:
-            raise InputValidationError("No parameters specified for this calculation")
-        if not isinstance(parameters, ParameterData):
-            raise InputValidationError("parameters is not of type ParameterData")
-
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
         settings = inputdict.pop(self.get_linkname('settings'),None)
@@ -136,6 +129,20 @@ class YamboCalculation(JobCalculation):
             # Settings converted to uppercase
             settings_dict = _uppercase_dict(settings.get_dict(),
                                             dict_name='settings')
+        initialise = settings_dict.pop('INITIALISE', None)
+        if initialise is not None:
+            if not isinstance(initialise, bool):
+                raise InputValidationError("INITIALISE must be "
+                                       " a boolean")
+        try:
+            parameters = inputdict.pop(self.get_linkname('parameters'))
+        except KeyError:
+            if not initialise:
+                raise InputValidationError("No parameters specified for this calculation")
+            else:    
+                pass
+        if not isinstance(parameters, ParameterData):
+            raise InputValidationError("parameters is not of type ParameterData")
 
         parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         if parent_calc_folder is None:
@@ -195,11 +202,6 @@ class YamboCalculation(JobCalculation):
         if input_cmdline is not None: 
             precode_params_list = precode_params_list + input_cmdline
         
-        initialise = settings_dict.pop('INITIALISE', None)
-        if initialise is not None:
-            if not isinstance(initialise, bool):
-                raise InputValidationError("INITIALISE must be "
-                                       " a boolean")
         # TODO: remotedata must be on the same computer 
 
         ##############################
