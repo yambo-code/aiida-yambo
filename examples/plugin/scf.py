@@ -62,8 +62,9 @@ inputs['pseudo'] = get_pseudos_from_structure(structure, 'SSSP_efficiency_v0.95'
 inputs['_options'] = {'max_wallclock_seconds':30*60, 
                       'resources':{
                                   "num_machines": 1,
-                                  "num_mpiprocs_per_machine":28,
-                                  }}
+                                  "num_mpiprocs_per_machine":64},
+                       'custom_scheduler_commands':u"#PBS -A Pra15_3963",
+                                  }
 
 if __name__ == "__main__":
     import argparse
