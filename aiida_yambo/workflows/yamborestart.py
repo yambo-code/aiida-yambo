@@ -71,11 +71,12 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_input_params(
              self.inputs.precode.copy(),self.inputs.yambocode.copy(),
              self.inputs.parent_folder, parameters, self.inputs.calculation_set.copy(), self.inputs.settings.copy() )
-        future =  submit(YamboProcess, **inputs)
+        future =  run(YamboProcess, **inputs)
+        print(future['remote_folder'])
         self.ctx.yambo_pks = []
-        self.ctx.yambo_pks.append(future.pid)
+        self.ctx.yambo_pks.append( future['remote_folder'].inp.remote_folder.pk )
         self.ctx.restart = 0 
-        return  ResultToContext(yambo= Outputs(future))
+        return  #ResultToContext(yambo= Outputs(future))
 
     def yambo_should_restart(self):
         # should restart a calculation if it satisfies either
@@ -175,10 +176,10 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_input_params(
              self.inputs.precode.copy(),self.inputs.yambocode.copy(),
              parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set.copy(), self.inputs.settings.copy())
-        future =  submit (YamboProcess, **inputs)
-        self.ctx.yambo_pks.append(future.pid)
+        future =   run (YamboProcess, **inputs)
+        self.ctx.yambo_pks.append( future['remote_folder'].inp.remote_folder.pk )
         self.ctx.restart += 1
-        return ResultToContext(yambo_restart= Outputs(future))
+        return #ResultToContext(yambo_restart= Outputs(future))
 
     def get_last_submitted(self, pk):
         submited = False
