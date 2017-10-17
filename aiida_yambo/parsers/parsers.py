@@ -107,11 +107,10 @@ class YamboParser(Parser):
         # check whether the yambo calc was an initialisation (p2y) 
         try:
             settings_dict = self._calc.inp.settings.get_dict()
-            settings_dict = _uppercase_dict(settings.get_dict(),
-                                            dict_name='settings')
+            settings_dict = _uppercase_dict(settings_dict, dict_name='settings')
         except AttributeError:
             settings_dict = {}
-
+ 
         initialise = settings_dict.pop('INITIALISE', None)
 
         # select the folder object

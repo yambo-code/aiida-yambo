@@ -141,8 +141,9 @@ class YamboCalculation(JobCalculation):
                 raise InputValidationError("No parameters specified for this calculation")
             else:    
                 pass
-        if not isinstance(parameters, ParameterData):
-            raise InputValidationError("parameters is not of type ParameterData")
+        if not initialise:
+            if not isinstance(parameters, ParameterData):
+                raise InputValidationError("parameters is not of type ParameterData")
 
         parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         if parent_calc_folder is None:
