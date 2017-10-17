@@ -13,9 +13,10 @@ from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_yambo.calculations.gw  import YamboCalculation
 
 #PwCalculation = CalculationFactory('quantumespresso.pw')
-YamboCalculation = CalculationFactory('yambo.yambo')
+#YamboCalculation = CalculationFactory('yambo.yambo')
 ParameterData = DataFactory("parameter")
 
 def generate_yambo_input_params(precodename,yambocodename, parent_folder, parameters,  calculation_set, settings):

@@ -17,18 +17,19 @@ from aiida.work.workchain import ToContext as ResultToContext
 from aiida.work.run import legacy_workflow
 from aiida.work.run import run, submit
 
-from aiida.workflows.user.cnr_nano.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
+from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
                default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.workflows.user.cnr_nano.yamborestart  import YamboRestartWf
-from aiida.workflows.user.cnr_nano.pwplaceholder  import PwRestartWf
+from aiida_yambo.workflows.yamborestart  import YamboRestartWf
+from aiida_yambo.workflows.pwplaceholder  import PwRestartWf
+from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 #PwCalculation = CalculationFactory('quantumespresso.pw')
-YamboCalculation = CalculationFactory('yambo.yambo')
+#YamboCalculation = CalculationFactory('yambo.yambo')
 ParameterData = DataFactory("parameter")
 
 class YamboWorkflow(WorkChain):

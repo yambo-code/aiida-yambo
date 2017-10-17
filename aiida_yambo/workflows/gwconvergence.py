@@ -14,7 +14,7 @@ from aiida.work.run import run, submit, async
 from aiida.work.workchain import WorkChain, while_, ToContext
 import numpy as np 
 from scipy.optimize import  curve_fit 
-from aiida.workflows.user.cnr_nano.yamboconvergence  import  YamboConvergenceWorkflow
+from aiida_yambo.workflows.yamboconvergence  import  YamboConvergenceWorkflow
 from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
 from aiida.work.run import run, submit
 from aiida.orm.utils import DataFactory
@@ -211,7 +211,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         converge_parameters= converge_parameters,
                         parent_nscf_folder = load_node(self.ctx.nscf_calc).out.remote_folder, 
                         pseudo = self.inputs.pseudo.copy(),
-                        parameters = self.ctx.step2_res["convergence"].get_dict()['parameters'],
+                        #parameters = self.ctx.step2_res["convergence"].get_dict()['parameters'],
                         threshold = Float(0.01),starting_points = starting_points, 
                         **extra
                         )

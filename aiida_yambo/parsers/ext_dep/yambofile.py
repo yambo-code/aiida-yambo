@@ -306,9 +306,9 @@ class YamboFile():
 
         para_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
         paralle = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[ERROR\](?=\s+)?Impossible(?=\s+)?(?=[a-zA-Z0-9\s.()\[\]]+)?')
+        self.errors.extend ([ line for line in self.lines if ( para_error.match(line) and paralle.match(line))  ])
         for line in self.lines:
             if para_error.match(line):
-                self.errors.extend( line )        
                 if paralle.match(line):
                     self.para_error = True
 

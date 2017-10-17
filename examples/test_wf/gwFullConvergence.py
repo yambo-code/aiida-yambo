@@ -2,7 +2,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from from aiida_yambo.workflows.gwconvergence  import  YamboFullConvergenceWorkflow
+from aiida_yambo.workflows.gwconvergence  import  YamboFullConvergenceWorkflow
 from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
 from aiida.work.run import run, submit
 from aiida.orm.utils import DataFactory
