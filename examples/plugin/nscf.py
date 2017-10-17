@@ -24,7 +24,7 @@ parameters = ParameterData(dict={
                   'verbosity' :'high',
                   },
               'SYSTEM': {
-                  'ecutwfc': 20.,
+                  'ecutwfc': 50.,
                   'nbnd':50,
                   'force_symmorphic':True,
                   },
@@ -45,9 +45,9 @@ inputs['parameters'] = parameters
 inputs['_options'] = {'max_wallclock_seconds':10*60, 
                       'resources':{
                                   "num_machines": 1,
-                                  "num_mpiprocs_per_machine":16,
-                                  },
-                       'custom_scheduler_commands':u"#PBS -A Pra15_3963",
+                                  #"num_mpiprocs_per_machine":16,
+                                   },
+                       #'custom_scheduler_commands':u"#PBS -A Pra15_3963",
                     }
 
 if __name__ == "__main__":

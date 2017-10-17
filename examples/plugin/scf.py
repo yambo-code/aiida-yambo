@@ -36,7 +36,7 @@ parameters = ParameterData(dict={
                   'verbosity' :'high',
                   },
               'SYSTEM': {
-                  'ecutwfc': 20.,
+                  'ecutwfc': 50.,
                   },
               'ELECTRONS': {
                   'conv_thr': 1.e-8,
@@ -47,17 +47,18 @@ parameters = ParameterData(dict={
 
 KpointsData = DataFactory('array.kpoints')
 kpoints = KpointsData() 
-kpoints.set_kpoints_mesh([4,4,4])
+kpoints.set_kpoints_mesh([8,8,8])
     
 inputs = {}
 inputs['structure'] = structure
 inputs['kpoints'] = kpoints
 inputs['parameters'] = parameters
-inputs['_options'] = {'max_wallclock_seconds':10*60, 
+inputs['_options'] = {'max_wallclock_seconds':30*60, 
                       'resources':{
                                   "num_machines": 1,
-                                  "num_mpiprocs_per_machine":2},
-                       'custom_scheduler_commands':u"#PBS -A Pra15_3963",
+                                  #"num_mpiprocs_per_machine":2
+                                   },
+                       #'custom_scheduler_commands':u"#PBS -A Pra15_3963",
                                   }
 
 if __name__ == "__main__":
