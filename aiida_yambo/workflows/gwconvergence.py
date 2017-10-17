@@ -10,7 +10,7 @@ from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.remote import RemoteData
 from aiida.common.exceptions import InputValidationError,ValidationError
-from aiida.work.run import run, submit, async
+from aiida.work.run import run, submit
 from aiida.work.workchain import WorkChain, while_, ToContext
 import numpy as np 
 from scipy.optimize import  curve_fit 
@@ -67,13 +67,16 @@ class YamboFullConvergenceWorkflow(WorkChain):
           cls.start,
           while_(cls.is_not_converged)(
               cls.run_next_update,
+              cls.keep_step_data,
               ),
-          cls.report
+          cls.report_wf
         )
         spec.dynamic_output()
 
     def init_parameters(self):
         self.ctx.first_run = True
+        self.ctx.first_runs2 = True
+        self.ctx.first_runs3 = True
         self.ctx.last_step = ''
         self.ctx.step_1_done =False 
         self.ctx.step_2_done = False 
@@ -85,10 +88,12 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if 'calculation_set_pw' not in self.inputs.keys():
             self.inputs.calculation_set_pw = self.inputs.calculation_set.copy()  
         # if input calc has to be SCF not NSCF
+        self.report("gwconvergence.pw:  YamboFullConvergenceWorkflow:  init_parameters done")
 
     def start(self):
         # check that one of structure or parent_scf_calc have been provided.
         if 'parent_scf_folder' not in  self.inputs.keys() and 'structure' not in self.inputs.keys():
+            self.report("gwconvergence.pw:  start: ERROR: Either the structure or parent SCF calculation should be provided")
            raise InputValidationError("Either the structure or parent SCF calculation should be provided")
         
         self.init_parameters()
@@ -112,8 +117,18 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.first_run:
             self.ctx.first_run = False
 
+    def keep_step_data(self):
+        if self.ctx.last_step == 'step_1_1':
+            self.ctx.scf_calc = self.ctx.step1_res.out.convergence.get_dict()["scf_pk"]
+            self.ctx.nscf_calc = self.ctx.step1_res.out.convergence.get_dict()["nscf_pk"]
+
+        elif self.ctx.last_step == 'step_2_1':
+        elif self.ctx.last_step == 'step_3_1':
+        elif self.ctx.last_step == 'step_2_1':
+
+
+
     def step_1(self,f=False):
-        print ("gwconvergence.pw:  YamboFullConvergenceWorkflow: step 1 ")
         starting_points = List()
         starting_points.extend([16])
         converge_parameters = List()
@@ -126,6 +141,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_2_2':
              extra['parameters'] = self.ctx.step2_res["convergence"].get_dict()['parameters'] 
 
+        self.report("gwconvergence.pw:  YamboFullConvergenceWorkflow: step 1, converging K-points ")
         p2y_result =run(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode.copy(),
                         precode= self.inputs.precode.copy(),
@@ -137,9 +153,6 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         threshold = Float(0.01), starting_points = starting_points,
                         **extra
                         )
-        print (p2y_result, "  YamboFullConvergenceWorkflow  from YamboConvergenceWorkflow")
-        self.ctx.scf_calc = p2y_result["convergence"].get_dict()["scf_pk"]
-        self.ctx.nscf_calc = p2y_result["convergence"].get_dict()["nscf_pk"]
         if self.ctx.first_run:
             self.ctx.step1_1_res = p2y_result 
             self.ctx.last_step = 'step_1_1'
@@ -152,7 +165,6 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
 
     def step_2(self,f=False):
-        print("gwconvergence.pw:  YamboFullConvergenceWorkflow : step2 ")
         starting_points = List()
         starting_points.extend([8,8])
         converge_parameters = List()
@@ -163,10 +175,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.inputs.structure:
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_3_1':
-             extra['parameters'] = ParameterData(dict=self.ctx.step3_res["convergence"].get_dict()['parameters'] )
+             extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
         if self.ctx.last_step == 'step_1_1':
-             extra['parameters'] = ParameterData(dict=self.ctx.step1_res["convergence"].get_dict()['parameters'] )
-        p2y_result =run(YamboConvergenceWorkflow,
+             extra['parameters'] = ParameterData(dict=self.ctx.step1_res.out.convergence.get_dict()['parameters'] )
+        self.report("gwconvergence.pw:  YamboFullConvergenceWorkflow: step 2, converging  BndsRnXp, GbndRnge")
+        p2y_result =submit (YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode.copy(),
                         precode= self.inputs.precode.copy(),
                         yambocode=self.inputs.yambocode.copy(),
@@ -178,11 +191,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         threshold = Float(0.01),starting_points = starting_points, 
                         **extra
                         )
-        print (p2y_result, "  YamboFullConvergenceWorkflow  from YamboConvergenceWorkflow")
 
-        if p2y_result:
+        if self.ctx.first_runs2:
             self.ctx.step2_1_res = p2y_result 
             self.ctx.last_step = 'step_2_1'
+            self.ctx.first_runs2 = False 
         else:
             self.ctx.step2_2_res = p2y_result 
             self.ctx.last_step = 'step_2_2'
@@ -190,7 +203,6 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.step2_res = p2y_result 
 
     def step_3(self,f=False):
-        print ("gwconvergence.pw:  YamboFullConvergenceWorkflow step 3 ")
         starting_points = List()
         starting_points.extend([16,16])
         converge_parameters = List()
@@ -201,7 +213,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.inputs.structure:
              extra['structure'] = self.inputs.structure.copy()
         if self.ctx.last_step == 'step_2_1':
-             extra['parameters'] = ParameterData(dict=self.ctx.step2_res["convergence"].get_dict()['parameters'] )
+             extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+        self.report("gwconvergence.pw:  YamboFullConvergenceWorkflow: step 3, converging  NGsBlkXp")
         p2y_result =run(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode.copy(),
                         precode= self.inputs.precode.copy() ,
@@ -216,10 +229,10 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         **extra
                         )
 
-        print (p2y_result, "gwconvergence.pw:  YamboFullConvergenceWorkflow  from YamboConvergenceWorkflow")
-        if p2y_result:
+        if self.ctx.first_runs3:
             self.ctx.step3_1_res = p2y_result 
             self.ctx.last_step = 'step_3_1'
+            self.ctx.first_runs3 = False 
         else:
             self.ctx.step3_2_res = p2y_result 
             self.ctx.last_step = 'step_3_2'
@@ -229,20 +242,22 @@ class YamboFullConvergenceWorkflow(WorkChain):
     def is_not_converged(self):
         # check we are not complete. 
         if self.ctx.step_1_done and self.ctx.step_2_done and self.ctx.step_3_done:
+            self.report("gwconvergence.pw:  YamboFullConvergenceWorkflow:  no convergence reached yet")
             return False 
         else:
+            self.report("gwconvergence.pw:  YamboFullConvergenceWorkflow:  convergene achieved")
             return True 
 
 
-    def report(self):
+    def report_wf(self):
         """
         Output final quantities
         """
         from aiida.orm import DataFactory
         self.out("result", DataFactory('parameter')(dict={
-             "kpoints": self.ctx.step1_res["convergence"].get_dict(),
-             "BndsRnXp,GbndRnge": self.ctx.step2_res["convergence"].get_dict(),
-             "NGsBlkXp": self.ctx.step3_res["convergence"].get_dict(),
+             "kpoints": self.ctx.step1_res.out.convergence.get_dict(),
+             "BndsRnXp,GbndRnge": self.ctx.step2_res.out.convergence.get_dict(),
+             "NGsBlkXp": self.ctx.step3_res.out.convergence.get_dict(),
             }))
 
 if __name__ == "__main__":

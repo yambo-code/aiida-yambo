@@ -140,7 +140,7 @@ settings_p2y =   ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
                   'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':True})
 
 settings_yambo =  ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
-                  'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'] })
+                  'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':False })
 
 KpointsData = DataFactory('array.kpoints')
 kpoints = KpointsData()
@@ -192,5 +192,5 @@ if __name__ == "__main__":
           }
     if parent_calc:
           kwargs["parent_folder"] =  parent_calc.out.remote_folder
-    full_result = run(YamboWorkflow, **kwargs )
+    full_result = submit(YamboWorkflow, **kwargs )
     print ("Resutls", full_result)
