@@ -13,9 +13,9 @@ from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
 
+account = 'Pra15_3963'
 
 ParameterData = DataFactory('parameter')
-parameters = ParameterData(dict={})
     
 inputs = {}
 inputs['settings'] = ParameterData(dict={'initialise': True})
@@ -25,8 +25,8 @@ inputs['_options'] = {
                                   "num_machines": 1,
                                   "num_mpiprocs_per_machine":1,
                                   },
-                      #'custom_scheduler_commands':u"#SBATCH  --partition=debug",
-                      }
+                       'custom_scheduler_commands':u"#PBS -A" + account,
+                       }
 
 if __name__ == "__main__":
     import argparse
