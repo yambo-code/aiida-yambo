@@ -13,21 +13,6 @@ from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
 
-
-
-
-
-StructureData = DataFactory('structure')
-
-a = 5.367 * pymatgen.core.units.bohr_to_ang
-structure_pmg = pymatgen.Structure(
-            lattice=[[-a, 0, a], [0, a, a], [-a, a, 0]],
-            species=['Ga', 'As'],
-            coords=[[0] * 3, [0.25] * 3]
-        )
-structure = StructureData()
-structure.set_pymatgen_structure(structure_pmg)
-
  
 ParameterData = DataFactory('parameter')
     
@@ -41,42 +26,44 @@ parameters = ParameterData(dict={
               'SYSTEM': {
                   'ecutwfc': 20.,
                   'nbnd':50,
+                  'force_symmorphic':True,
                   },
               'ELECTRONS': {
                   'conv_thr': 1.e-8,
                   'electron_maxstep ': 50,
-                  'mixing_mode': 'plain',
+                  'diago_full_acc': True,
                   'mixing_beta' : 0.7,
                   }})
 
 KpointsData = DataFactory('array.kpoints')
 kpoints = KpointsData() 
-kpoints.set_kpoints_mesh([4,4,4])
+kpoints.set_kpoints_mesh([6,6,6])
     
 inputs = {}
-inputs['structure'] = structure
 inputs['kpoints'] = kpoints
 inputs['parameters'] = parameters
-inputs['pseudo'] = get_pseudos_from_structure(structure, 'SSSP_efficiency_v0.95' )
-inputs['_options'] = {'max_wallclock_seconds':30*60, 
+inputs['_options'] = {'max_wallclock_seconds':10*60, 
                       'resources':{
                                   "num_machines": 1,
-                                  "num_mpiprocs_per_machine":28,
-                                  }}
+                                  "num_mpiprocs_per_machine":16,
+                                  },
+                       'custom_scheduler_commands':u"#PBS -A Pra15_3963",
+                    }
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='NSCF calculation.')
     parser.add_argument('--code', type=str, dest='codename', required=True,
                         help='The pw codename to use')
-    #parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
-    #                    help='The pesudo  to use')
-    #parser.add_argument('--structure', type=int, dest='structure', required=True,
-    #                    help='The structure  to use')
+    parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
+                        help='The pseudo family to use')
     parser.add_argument('--parent', type=int, dest='parent', required=True,
                         help='The parent  to use')
     args = parser.parse_args()
     code = Code.get_from_string(args.codename)
+    structure = load_node(args.parent).inp.structure
+    inputs['structure'] = structure
+    inputs['pseudo'] = get_pseudos_from_structure(structure, args.pseudo )
     inputs['code'] = code
     inputs['parent_folder'] = load_node(args.parent).out.remote_folder
     process = PwCalculation.process()
