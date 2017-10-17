@@ -103,14 +103,25 @@ class YamboParser(Parser):
         # suppose at the start that the job is unsuccessful, unless proven otherwise
         successful = False  
         
+        # check whether the yambo calc was an initialisation (p2y) 
+        settings = inputdict.pop(self.get_linkname('settings'),None)
+        if settings is None:
+            settings_dict = {}
+        initialise = settings_dict.pop('INITIALISE', None)
+
         # select the folder object
         out_folder = self._calc.get_retrieved_node()
         
         # check what is inside the folder
         list_of_files = out_folder.get_folder_list()
         
-        input_params = self._calc.inp.parameters.get_dict()
-        
+        try:
+            input_params = self._calc.inp.parameters.get_dict()
+        except AttributeError:
+            if not initialise:
+                raise ParsingError("Input parameters not found!")
+            else:
+                input_params = {}
         # retrieve the cell: if parent_calc is a YamboCalculation we must find the original PwCalculation
         # going back through the graph tree.
         parent_calc = self._calc.inp.parent_calc_folder.inp.remote_folder
