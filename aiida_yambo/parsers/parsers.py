@@ -20,6 +20,7 @@ from aiida_yambo.parsers.ext_dep.yambofolder  import  YamboFolder
 from aiida_yambo.calculations.gw import YamboCalculation
 #PwCalculation = CalculationFactory('quantumespresso.pw')
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.calculations import  get_input_data_text,_lowercase_dict,_uppercase_dict
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -104,9 +105,13 @@ class YamboParser(Parser):
         successful = False  
         
         # check whether the yambo calc was an initialisation (p2y) 
-        settings = inputdict.pop(self.get_linkname('settings'),None)
-        if settings is None:
+        try:
+            settings_dict = self._calc.inp.settings.get_dict()
+            settings_dict = _uppercase_dict(settings.get_dict(),
+                                            dict_name='settings')
+        except AttributeError:
             settings_dict = {}
+
         initialise = settings_dict.pop('INITIALISE', None)
 
         # select the folder object
