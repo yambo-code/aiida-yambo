@@ -13,10 +13,6 @@ from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
 
-
-
-
-
  
 ParameterData = DataFactory('parameter')
     
@@ -25,7 +21,6 @@ parameters = ParameterData(dict={'ppa': True,
                                  'HF_and_locXC': True,
                                  'em1d': True,
                                  'Chimod':'hartree',
-                                 'BndsRnXp':[1,50],
                                  'EXXRLvcs': 10,
                                  'EXXRLvcs_units': 'Ry',
                                  'BndsRnXp': (1,50),
@@ -33,10 +28,10 @@ parameters = ParameterData(dict={'ppa': True,
                                  'NGsBlkXp_units': 'Ry',
                                  'GbndRnge': (1,50),
                                  'DysSolver': "n",
-                                 'QPkrange': [(1,1,4,4),(1,1,5,5),(2,2,4,4),(2,2,5,5)],
-                                 'X_all_q_CPU': "1 1 16 4",
+                                 'QPkrange': [(1,1,9,10)],
+                                 'X_all_q_CPU': "1 1 8 2",
                                  'X_all_q_ROLEs': "q k c v",
-                                 'SE_CPU': "1 4 16",
+                                 'SE_CPU': "1 2 8",
                                  'SE_ROLEs': "q qp b",
                                 })
 
@@ -45,11 +40,12 @@ inputs['parameters'] = parameters
 inputs['_options'] = {'max_wallclock_seconds':30*60, 
                       'resources':{
                                   "num_machines": 1,
-                                  "num_mpiprocs_per_machine":64,
+                                  "num_mpiprocs_per_machine":16,
                                   },
-                      'custom_scheduler_commands':u"#PBS -A Pra15_3963
-                                                    \nexport OMP_NUM_THREADS=64
-                                                    \nexport MKL_NUM_THREADS=64",
+                      #'custom_scheduler_commands':u"#SBATCH  --partition=debug",
+                      #'custom_scheduler_commands':u"#PBS -A Pra15_3963
+                      #                              \nexport OMP_NUM_THREADS=64
+                      #                              \nexport MKL_NUM_THREADS=64",
                       }
 
 if __name__ == "__main__":
@@ -63,7 +59,9 @@ if __name__ == "__main__":
     code = Code.get_from_string(args.codename)
     inputs['code'] = code
     inputs['parent_folder'] = load_node(args.parent).out.remote_folder
-    process = PwCalculation.process()
+    process = YamboCalculation.process()
     running = submit(process, **inputs)
     print "Created calculation; with pid={}".format(running.pid)
+
+
 
