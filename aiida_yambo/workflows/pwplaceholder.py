@@ -58,7 +58,7 @@ class PwRestartWf(WorkChain):
             while_(cls.pw_should_continue)(
                 cls.pw_continue,
             ),
-            cls.report
+            cls.report_wf
         )
         spec.dynamic_output()
 
@@ -109,7 +109,7 @@ class PwRestartWf(WorkChain):
         self.ctx.success = False
         self.ctx.scf_pk = None 
         self.ctx.nscf_pk = None
-        return ResultToContext(first_pk=Outputs(future)  )
+        return ResultToContext(first_calc=future  )
 
     def pw_should_continue(self):
         if len(self.ctx.pw_pks) ==0: # we never run a single calculation 
@@ -172,9 +172,9 @@ class PwRestartWf(WorkChain):
         future =  submit (PwProcess, **inputs)
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart += 1
-        return  ResultToContext(last_pk=Outputs(future))
+        return  ResultToContext(last_pk=future)
 
-    def report(self):
+    def report_wf(self):
         """
         Output final quantities
         return information that may be used to figure out

@@ -2,7 +2,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from from aiida_yambo.workflows.yamboconvergence  import  YamboConvergenceWorkflow
+from aiida_yambo.workflows.yamboconvergence  import  YamboConvergenceWorkflow
  
 try:
     from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
@@ -64,7 +64,7 @@ settings_p2y =   ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
                   'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':True})
 
 settings_yambo =  ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
-                  'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'] })
+                  'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':False })
 
 
 

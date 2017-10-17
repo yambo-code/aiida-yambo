@@ -27,6 +27,7 @@ from aiida_yambo.workflows.yamborestart  import YamboRestartWf
 from aiida_yambo.workflows.pwplaceholder  import PwRestartWf
 from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.workflows.pw.base  import PwBaseWorkChain
 
 #PwCalculation = CalculationFactory('quantumespresso.pw')
 #YamboCalculation = CalculationFactory('yambo.yambo')
@@ -69,7 +70,7 @@ class YamboWorkflow(WorkChain):
             while_(cls.can_continue)(
                 cls.perform_next,
             ),
-            cls.report
+            cls.report_wf
         )
         spec.dynamic_output()
 
@@ -87,11 +88,26 @@ class YamboWorkflow(WorkChain):
             if isinstance(parent_calc, YamboCalculation):
                 self.ctx.last_step_kind = 'yambo' 
                 self.ctx.yambo_res = DataFactory('parameter')(dict={"yambo_pk": parent_calc.pk } )
-            if isinstance(parent_calc, PwCalculation):
+            elif isinstance(parent_calc, PwCalculation):
                 self.ctx.last_step_kind = 'pw'
+                self.ctx.pw_wf_res = None  
+            else:
                 self.ctx.pw_wf_res = None  
         
     def can_continue(self):
+        if self.ctx.last_step_kind == 'yambo' and self.ctx.yambo_res: 
+            self.ctx.yambo_res = self.ctx.yambo_res.out.gw
+            self.ctx.yambo_pks.append(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]) 
+            self.ctx.yambo_pks.append(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]) 
+            if self.ctx.yambo_res.out.gw.get_dict()["success"] == True:
+                self.ctx.done = True
+
+        if self.ctx.last_step_kind == 'yambo_p2y' and self.ctx.yambo_res : 
+            self.ctx.yambo_pks.append(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]) 
+
+        if self.ctx.last_step_kind == 'pw' and self.ctx.pw_wf_res != None : 
+            self.ctx.pw_pks.append(self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"]) 
+
         if self.ctx.done == True:
             return False
         self.ctx.can_cont +=1
@@ -100,77 +116,71 @@ class YamboWorkflow(WorkChain):
         return True
  
     def perform_next(self):
-        print ("yambowf perform_next() ")
         if self.ctx.last_step_kind == 'yambo' or self.ctx.last_step_kind == 'yambo_p2y' :
             #print (" last step kind ",  self.ctx.last_step_kind, load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() )
-            if load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).get_state() == u'FINISHED':
+            if load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]).get_state() == u'FINISHED':
                 #print(" at qp")
                 if self.inputs.to_set_qpkrange  and 'QPkrange' not in self.inputs.parameters_yambo.get_dict().keys():
-                    self.inputs.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.get_dict()["nscf_pk"], self.inputs.parameters_yambo)
-                is_initialize = load_node(self.ctx.yambo_res.get_dict()["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
-                print(" yambowf perform_next() is_initialize: ", is_initialize)
+                    self.inputs.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"], self.inputs.parameters_yambo)
+                is_initialize = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
+                #print(" yambowf perform_next() is_initialize: ", is_initialize)
                 if is_initialize: # after init we run yambo 
-                    parentcalc = load_node(self.ctx.yambo_res.get_dict()["yambo_pk"])
+                    self.report ("yambowf: perform_next(): submitted YamboRestartWf subworkflow, in Initialize mode  ")
+                    parentcalc = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"])
                     parent_folder = parentcalc.out.remote_folder 
-                    p2y_result = run (YamboRestartWf,precode= self.inputs.codename_p2y.copy(), yambocode=self.inputs.codename_yambo.copy(),
+                    p2y_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y.copy(), yambocode=self.inputs.codename_yambo.copy(),
                          parameters = self.inputs.parameters_yambo.copy(), calculation_set= self.inputs.calculation_set_yambo.copy(),
                         parent_folder = parent_folder, settings = self.inputs.settings_yambo.copy() )
                     self.ctx.last_step_kind = 'yambo'
-                    self.ctx.yambo_res = p2y_result["gw"]
-                    self.ctx.yambo_pks.append(p2y_result["gw"].get_dict()["yambo_pk"]) 
-                    if p2y_result["gw"].get_dict()["success"] == True:
-                        self.ctx.done = True
-                    return  #ResultToContext( yambo_res= p2y_result["pw"])
+                    return  ResultToContext( yambo_res= p2y_result  )
                 else:  # Possibly a restart,  after some type of failure, why was is not handled by YamboRestartWf? 
-                    print ("yambowf perform_next()  possible lost codepath kind: ", self.ctx.last_step_kind  )
-                    pass 
+                    self.report("yambowf perform_next()  possible lost codepath kind: {} ".format(self.ctx.last_step_kind)  )
+                    pass
             if len(self.ctx.yambo_pks) > 0:
-                 #print("state ".format( load_node(self.ctx.yambo_pks[-1] ).get_state() ))
                  if load_node(self.ctx.yambo_pks[-1] ).get_state() == u'FAILED':  # Needs a resubmit depending on the error.
+                    self.report("yambowf perform_next() last calculation failed:  type: {} pk:  ".format(self.ctx.last_step_kind, self.ctx.yambo_pks[-1] ))
                     pass
 
         if  self.ctx.last_step_kind == 'pw' and  self.ctx.pw_wf_res :
-            if self.ctx.pw_wf_res.get_dict()['success'] == True:
-                print(" yambowf perform_next() aft p2y, ")
-                parentcalc = load_node(self.ctx.pw_wf_res.get_dict()["nscf_pk"])
+            if self.ctx.pw_wf_res.out.pw.get_dict()['success'] == True:
+                parentcalc = load_node(self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"])
                 parent_folder = parentcalc.out.remote_folder 
-                p2y_result = run (YamboRestartWf, precode= self.inputs.codename_p2y.copy(), yambocode=self.inputs.codename_yambo.copy(),
+                self.report(" yambowf perform_next() : PwRestartWf was successful, nscf pk={} running initialize next with: YamboRestartWf ".format(parentcalc.pk))
+                p2y_result = submit (YamboRestartWf, precode= self.inputs.codename_p2y.copy(), yambocode=self.inputs.codename_yambo.copy(),
                      parameters = self.inputs.parameters_p2y.copy() , calculation_set= self.inputs.calculation_set_p2y.copy(),
                     parent_folder = parent_folder, settings = self.inputs.settings_p2y.copy() )
                 self.ctx.last_step_kind = 'yambo_p2y'
-                self.ctx.yambo_res = p2y_result["gw"]
-                self.ctx.yambo_pks.append(p2y_result["gw"].get_dict()["yambo_pk"]) 
-                return  #ResultToContext( yambo_res= p2y_result )
-            if self.ctx.pw_wf_res.get_dict()['success'] == False:
+                return  ResultToContext( yambo_res= p2y_result )
+            if self.ctx.pw_wf_res.out.pw.get_dict()['success'] == False:
                 # PwRestartWf could not run 
+                self.report(" yambowf perform_next() : PwRestartWf subworkflow  NOT  successful")
                 return 
 
         if  self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res :# this is likely  the very begining, we can start with the scf/nscf here
             extra = {}
-            print(" yambowf perform_next() b4 PwRestart, ")
+            self.report(" yambowf perform_next(), will run PwRestartWf subworkflow next  ")
             if 'parameters_pw_nscf' in self.inputs.keys():
                 extra['parameters_nscf'] = self.inputs.parameters_pw_nscf.copy() 
             if 'parent_folder' in self.inputs.keys():
                 extra['parent_folder'] = self.inputs.parent_folder
-            pw_wf_result = run(PwRestartWf, codename = self.inputs.codename_pw.copy()  , pseudo_family = self.inputs.pseudo_family.copy(), 
+            pw_wf_result = submit(PwRestartWf, codename = self.inputs.codename_pw.copy()  , pseudo_family = self.inputs.pseudo_family.copy(), 
                     calculation_set = self.inputs.calculation_set_pw.copy(), settings=self.inputs.settings_pw.copy(), 
                     kpoints=self.inputs.kpoint_pw.copy(), gamma= self.inputs.gamma_pw.copy(),
                     structure = self.inputs.structure.copy() , parameters = self.inputs.parameters_pw.copy(), **extra)
-            self.ctx.pw_wf_res = pw_wf_result["pw"]
-            self.ctx.pw_pks.append(pw_wf_result["pw"].get_dict()["nscf_pk"]) 
+            self.ctx.pw_wf_res = pw_wf_result 
             self.ctx.last_step_kind = 'pw'                    
-            return  #ResultToContext( pw_wf_res = pw_wf_result  )
+            return  ResultToContext( pw_wf_res = pw_wf_result  )
 
 
 
 
-    def report(self):
+    def report_wf(self):
         """
         """
         print ("wf done")
         from aiida.orm import DataFactory
-        pw = self.ctx.pw_wf_res.get_dict()
-        gw = self.ctx.yambo_res.get_dict()
+        pw = self.ctx.pw_wf_res.out.get_dict()
+        gw = self.ctx.yambo_res.out.get_dict()
         gw.update(pw)
         print(gw, "gd")
         self.out("gw", DataFactory('parameter')(dict=gw ))
