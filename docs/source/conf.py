@@ -58,7 +58,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'yambo-aiida'
 copyright = u'2014-{}, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland. All rights reserved.'.format(time.localtime().tm_year)
-
+### TODO MODENA, 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
@@ -192,7 +192,7 @@ html_show_sourcelink = False
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
 # base URL from which the finished HTML is served.
-html_use_opensearch = 'http://yambo-aiida.readthedocs.io'
+html_use_opensearch = 'http://aiida-yambo.readthedocs.io'
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 #html_file_suffix = None
@@ -212,7 +212,7 @@ html_search_language = 'en'
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'yambo-aiida'
+htmlhelp_basename = 'aiida-yambo'
 
 # -- Options for LaTeX output ---------------------------------------------
 

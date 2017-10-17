@@ -3,27 +3,31 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-#######################################
+###########################################
 `AiiDA`_ plugins and workflows for `YAMBO`_
-#######################################
+###########################################
 
 .. figure:: images/AiiDA_transparent_logo.png
     :width: 250px
     :align: center
     :height: 100px
-.. figure:: images/qe_logo.jpg
+.. figure:: images/yambo-stripe.png
+    :width: 233px
+    :align: center
+    :height: 100px
+.. figure:: images/cropped-cropped-logo-MAX-orizz-300.png
     :width: 233px
     :align: center
     :height: 100px
 
 .. _AiiDA: http://www.aiida.net
-.. _YAMBOO: http://www.yambo-code.org/
+.. _YAMBO: http://www.yambo-code.org/
 
 
 Welcome to documentation of the AiiDA plugin and workflows for the YAMBO code!
 ==============================================================================
 
-The plugin is available at http://github.com/yambo-aiida/aiida_yambo/
+The plugin is available at http://github.com/yambo-code/yambo-aiida/
 
 If you use this plugin and/or AiiDA for your research, please cite the following work:
 
@@ -31,7 +35,7 @@ If you use this plugin and/or AiiDA for your research, please cite the following
   and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database
   for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
   http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
-
+.. to remove/update
 User's guide
 ++++++++++++
 
@@ -40,8 +44,8 @@ User's guide
 
    user_guide/index
 
-Modules provided with yambo-aiida (API reference)
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Modules provided with aiida-yambo (API reference)
++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. toctree::
    :maxdepth: 4
