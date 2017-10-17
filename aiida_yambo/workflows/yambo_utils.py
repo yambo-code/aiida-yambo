@@ -44,6 +44,7 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     if label:
         inputs._label = label 
     inputs.parent_folder = parent_folder
+    print (settings.get_dict() )
     inputs.settings =  settings 
     # Get defaults:
     edit_parameters = parameters.get_dict()
@@ -59,6 +60,9 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
         bndsrnxp = gbndrnge = nelec 
         ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.4)   # ev to ry then 1/4 
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
+        if 'FFTGvecs' not in edit_parameters.keys():
+             edit_parameters['FFTGvecs'] =  20
+             edit_parameters['FFTGvecs_units'] =  'Ry'
         if 'BndsRnXp' not in edit_parameters.keys():
              edit_parameters['BndsRnXp'] = (1.0,bndsrnxp*2)
         if 'GbndRnge' not in edit_parameters.keys():
@@ -196,6 +200,12 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             X_para[c_index] = c  
             X_para[v_index] = v
         X_string = " ".join([str(it) for it in X_para])
+        if X_string.strip() == '':
+            mpi_per = calculation_set['resources']['num_mpiprocs_per_machine'] 
+            num_mach = calculation_set['resources']['num_machines']
+            c = mpi_per if mpi_per > num_mach else num_mach
+            v = mpi_per if mpi_per < num_mach else num_mach
+            X_string = '1  1 {c} {v}'.format(c=c, v=v )
         calculation_set['resources']['num_machines'] = num_machines
         calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
         if c_index and v_index:
@@ -233,6 +243,13 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             SE_para[b_index] = b
         SE_string = " ".join([str(it) for it in SE_para])
         print("SE_string", SE_string, " : from:", SE_para )
+        if SE_string.strip() == '':
+            mpi_per = calculation_set['resources']['num_mpiprocs_per_machine']
+            num_mach = calculation_set['resources']['num_machines']
+            c = mpi_per if mpi_per > num_mach else num_mach
+            v = mpi_per if mpi_per < num_mach else num_mach
+            SE_string = '1   {v} {c}'.format(c=c, v=v )
+        
         calculation_set['resources']['num_machines'] = num_machines
         calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
         if qp_index and b_index: 
@@ -248,12 +265,13 @@ default_step_size = {
                'BndsRnXp': .2, 
                'GbndRnge': .2,
                'BSEBands': 2, # 
+               'FFTGvecs': .2,
                 }
 
 def update_parameter_field( field, starting_point, update_delta):
     if update_delta < 2:
        update_delta = 2 
-    if field in ['PPAPntXp','NGsBlkXp','BSENGBlk','BSENGexx']: # single numbers
+    if field in ['PPAPntXp','NGsBlkXp','BSENGBlk','BSENGexx','FFTGvecs']: # single numbers
         new_field_value =  starting_point  + update_delta 
         return new_field_value
     elif field == 'BndsRnXp':
@@ -270,9 +288,6 @@ def update_parameter_field( field, starting_point, update_delta):
         hi =  starting_point +   update_delta
         low  =  starting_point  -  update_delta
         return ( low, hi )
-    #elif field == 'QPkrange':
-    #    hi = starting_point[1] + update_delta
-    #    return [(starting_point[0], hi, starting_point[-2], starting_point[-1] )]
     else:
         raise WorkflowInputValidationError("convergences the field {} are not supported".format(field))
 
@@ -306,7 +321,11 @@ def set_default_qp_param(parameter=None):
     if 'X_all_q_CPU' not in  edit_param.keys():
         edit_param['X_all_q_CPU']= "1 1 16 8"
         edit_param['X_all_q_ROLEs'] ="q k c v"
+    if 'FFTGvecs' not in edit_param.keys():
+        edit_param['FFTGvecs'] =  20
+        edit_param['FFTGvecs_units'] =  'Ry'
     return ParameterData(dict=edit_param)
+
 
 
 def set_default_pw_param():

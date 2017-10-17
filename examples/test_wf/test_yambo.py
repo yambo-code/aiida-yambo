@@ -11,7 +11,7 @@ except ImportError:
     from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
     from aiida.workflows2.db_types import  SimpleData as BaseType
     from aiida.orm.data.simple import  SimpleData as SimpleData_
-    from aiida.workflows2.run import run
+    from aiida.workflows2.run import run , submit
 
 from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         structure = load_node(int(args.structure)) #1791 
     parentcalc = load_node(int(args.parent))
     parent_folder_ = parentcalc.out.remote_folder
-    p2y_result =run(YamboRestartWf, 
+    p2y_result =  submit (YamboRestartWf, 
                     precode= Str( args.precode), 
                     yambocode=Str(args.yambocode),
                     parameters = ParameterData(dict=yambo_parameters) , 

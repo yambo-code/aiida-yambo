@@ -12,7 +12,7 @@ from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.data.base import Float, Str, NumericType, BaseType, List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.work.run import run, submit, async
+from aiida.work.run import run, submit
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
 from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
@@ -95,10 +95,12 @@ class YamboConvergenceWorkflow(WorkChain):
 
         spec.outline(
           cls.start,
+          cls.iterate,
           while_(cls.is_not_converged)(
               cls.run_next_update,
+              cls.iterate,
               ),
-          cls.report
+          cls.report_wf
         )
         spec.dynamic_output()
 
@@ -177,29 +179,32 @@ class YamboConvergenceWorkflow(WorkChain):
                       if 'parameters' not in self.inputs.keys():
                           self.inputs.parameters = set_default_qp_param()
                       self.inputs.parameters = default_qpkrange(parent_calc.pk, self.inputs.parameters)
- 
-  
+        self.report('yamboconvergence.py:  init_parameters() complete. ' )
         self.ctx.distance_kpoints = 0.2
 
     def start(self):
         # for kpoints, we will need to have the scf step, and  use YamboWorkflow not YamboRestartWf
         # 
-        print("yamboconvergence.py:  start() ")
-        outs = self.iterate([0,1,2,3])
-        print ("outs", outs.keys() )
-        #return ToContext( **outs )
-        #return ToContext(r0=outs['r0'] , r1=outs['r1']  , r2=outs['r2'] , r3=outs['r3']  )
-        self.ctx.r0 = outs['r0'] ;self.ctx.r1 = outs['r1'] ; self.ctx.r2 = outs['r2'] ; self.ctx.r3 = outs['r3'] 
+        #self.iterate([0,1,2,3])
+        self.ctx.skip_prescf = False
+        self.ctx.very_firxt = True
 
     def run_next_update(self):
-        outs = self.iterate([1,2,3,4]) 
-        self.ctx.r0 = outs['r1'] ;self.ctx.r1 = outs['r2'] ; self.ctx.r2 = outs['r3'] ; self.ctx.r3 = outs['r4'] 
-        #return ToContext(r0=outs['r1'] , r1=outs['r2']  , r2=outs['r3'] , r3=outs['r4']  )
+        if self.ctx.skip_prescf: 
+            p2y_parent = load_node( self.ctx.missing_p2y_parent.out.gw.get_dict()["yambo_pk"])
+            self.ctx.p2y_parent_folder = p2y_parent.out.remote_folder
+            self.ctx.skip_prescf = False
+        #self.iterate([1,2,3,4])
 
-    def iterate(self, loop_items):
-        print("yamboconvergence.py :  iterate() ", loop_items )
+    def iterate(self):
+        loop_items = [1,2,3,4]
+        if self.ctx.very_firxt == True:
+            loop_items = [0,1,2,3]
+            self.ctx.very_firxt = False
+        self.report('yamboconvergence.py:  start() will run four calculations first ' )
         outs={}
         if 'kpoints' not in self.inputs.converge_parameters:
+            self.report("yamboconvergence.py: iterate() this is not a K-point convergence ")
             for num in loop_items: # includes 0 because of starting point
                 if loop_items[0] == 0:
                     self.init_parameters(num)
@@ -208,28 +213,29 @@ class YamboConvergenceWorkflow(WorkChain):
                 try: 
                     p2y_done = self.ctx.p2y_parent_folder 
                 except AttributeError:
-                    p2y_res =  async  (YamboRestartWf,
+                    self.report('yamboconvergence.py:  iterate(): no preceeding yambo parent, will run P2Y from NSCF parent first ' )
+                    p2y_res =  submit (YamboRestartWf,
                                 precode= self.inputs.precode.copy(),
                                 yambocode=self.inputs.yambocode.copy(),
                                 parameters = self.inputs.parameters_p2y.copy(),
                                 calculation_set= self.inputs.calculation_set_p2y.copy(),
-                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y.copy() ).result()
-                    p2y_parent = load_node(p2y_res["gw"].get_dict()["yambo_pk"])
-                    self.ctx.p2y_parent_folder = p2y_parent.out.remote_folder
-                future =  async  (YamboRestartWf,
+                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y.copy()) 
+                    self.ctx.skip_prescf = True
+                    return ToContext(missing_p2y_parent= p2y_res)
+                self.report('yamboconvergence.py:  iterate(): running from preceeding yambo/p2y calculation  ' )
+                future =  submit  (YamboRestartWf,
                             precode= self.inputs.precode.copy(),
                             yambocode=self.inputs.yambocode.copy(),
                             parameters = self.inputs.parameters.copy(),
                             calculation_set= self.inputs.calculation_set.copy(),
                             parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings.copy())
                 outs[ 'r'+str(num) ] =  future
-            for num in loop_items: # includes 0 because of starting point
-                print ("yamboconvergence.py: waiting  for result of YamboRestartWf ")
-                outs[ 'r'+str(num) ] = outs['r'+str(num)].result() 
+            self.report ("yamboconvergence.py: iterate():  waiting  for result of YamboRestartWf ")
+            return ToContext(**outs )
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
+            self.report("yamboconvergence.py: iterate():  K-point convergence ")
             for num in loop_items: # includes 0 because of starting point
-                print("loop ", num)
                 if loop_items[0] == 0:
                     self.init_parameters(num)
                 else:
@@ -243,7 +249,7 @@ class YamboConvergenceWorkflow(WorkChain):
                    extra['parent_folder'] = self.inputs.parent_scf_folder
                 if 'QPkrange' not in self.inputs.parameters.get_dict().keys():
                    extra['to_set_qpkrange'] = Bool(1)
-                future =  async (YamboWorkflow, codename_pw= self.inputs.pwcode.copy(), codename_p2y=self.inputs.precode.copy(),
+                future =  submit (YamboWorkflow, codename_pw= self.inputs.pwcode.copy(), codename_p2y=self.inputs.precode.copy(),
                    codename_yambo= self.inputs.yambocode.copy(), pseudo_family= self.inputs.pseudo.copy(),
                    calculation_set_pw= self.inputs.calculation_set_pw.copy(),
                    calculation_set_p2y = self.inputs.calculation_set_p2y.copy(),
@@ -255,36 +261,37 @@ class YamboConvergenceWorkflow(WorkChain):
                    **extra)
                 outs[ 'r'+str(num) ] = future
             for num in loop_items: # includes 0 because of starting point
-                print ("yamboconvergence.py: waiting  for result of YamboWorkflow ")
-                outs[ 'r'+str(num) ] = outs['r'+str(num)].result() 
+                self.report("yamboconvergence.py: waiting  for result of YamboWorkflow ")
+                outs[ 'r'+str(num) ] = outs['r'+str(num)]
              
         return outs 
 
     def interstep(self):
-        print("yamboconvergence.py: pass", self.ctx.r0)
+        self.report("yamboconvergence.py: interstep() ", self.ctx.r0)
         return
 
     def update_parameters(self, paging):
         params = self.inputs.parameters.get_dict()
         for idx in range(len(self.inputs.converge_parameters)):
-             starting_point = params [idx]
+             starting_point = self.inputs.starting_points[idx]
              field = self.inputs.converge_parameters[idx]
              update_delta = np.ceil( self.inputs.default_step_size.get_dict()[field]*paging*starting_point) 
              params[field] = update_parameter_field( field, params[field] ,  update_delta ) 
              self.ctx.conv_elem[field].append(params[field])
-        print("yamboconvergence.py update_parameters {}".format(self.ctx.conv_elem))
+        self.report("yamboconvergence.py update_parameters(): extended convergence points: {}".format(self.ctx.conv_elem))
         self.inputs.parameters = DataFactory('parameter')(dict= params)
 
 
     def is_not_converged(self):
+        if self.ctx.skip_prescf == True:
+            return True 
+
         try: # for yamborestart
-            print(self.ctx.r0 )
             r0_width = self.get_total_range(self.ctx.r0["gw"].get_dict()['yambo_pk'])
             r1_width = self.get_total_range(self.ctx.r1["gw"].get_dict()['yambo_pk'])
             r2_width = self.get_total_range(self.ctx.r2["gw"].get_dict()['yambo_pk'])
             r3_width = self.get_total_range(self.ctx.r3["gw"].get_dict()['yambo_pk'])
         except AttributeError: # for yamboworkflow
-            print(self.ctx.r0  )
             r0_width = self.get_total_range(self.ctx.r0["gw"].get_dict()['yambo_pk'])
             r1_width = self.get_total_range(self.ctx.r1["gw"].get_dict()['yambo_pk'])
             r2_width = self.get_total_range(self.ctx.r2["gw"].get_dict()['yambo_pk'])
@@ -293,14 +300,16 @@ class YamboConvergenceWorkflow(WorkChain):
         self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
         if 'scf_pk' in self.ctx.r3["gw"].get_dict() and 'parent_scf_folder' not in self.inputs.keys():
             self.inputs.parent_scf_folder =  load_node(self.ctx.r3["gw"].get_dict()['scf_pk']).out.remote_folder
-        print("yamboconvergence.py: is_not_converged() {}".format(self.ctx.en_diffs))
         if len(self.ctx.en_diffs) > 16: # no more than 16 calcs
+            self.report("yamboconvergence.py: aborting after 16 calculations with no convergence ")
             return False
         if len(self.ctx.en_diffs) > 4:
             converged_fit = self.fitting_deviation(0) # only need to check against one convergence parameter at a time. 
             if  converged_fit:
+                self.report("yamboconvergence.py: Convergence achieved. ")
                 return False
             else:
+                self.report("yamboconvergence.py: Convergence not yet achieved yet. ")
                 return True
         else:
             # check the the  differences are minimal, when on first 4 calculations
@@ -325,9 +334,8 @@ class YamboConvergenceWorkflow(WorkChain):
             fit_data = func(independent, a,b)      
             deviations = np.abs(dependent[:4] - fit_data[:4])  # deviation of last four from extrapolated values at those points
             converged_fit = np.allclose(deviations, np.linspace(0.01,0.01, 4), atol=self.inputs.threshold) # last four are within 0.01 of predicted value
-            print("yamboconvergence.py: fitting_deviation: converged_fit {}".format(converged_fit))
+            self.report("yamboconvergence.py: fitting_deviation: converged_fit {}".format(converged_fit))
             return converged_fit
-        print("yamboconvergence.py: fitting_deviation: False {}".format(False))
         return False
 
     def get_total_range(self,node_id):
@@ -335,7 +343,6 @@ class YamboConvergenceWorkflow(WorkChain):
         #         bands listed in the QPkrange, on the first kpoint selected,
         #         i.e. for 'QPkrange': [(1,16,30,31)] , will find width between 
         #         kpoint 1  band 30 and kpoint  1 band 31. 
-        print(node_id, " yamboconvergence.py :  node_id in get_total_range() ")
         calc = load_node(node_id)
         table=calc.out.array_qp.get_array('qp_table')
         try:
@@ -371,13 +378,13 @@ class YamboConvergenceWorkflow(WorkChain):
         e_m_eo = calc.out.array_qp.get_array('E_minus_Eo') 
         eo = calc.out.array_qp.get_array('Eo')
         corrected = eo+e_m_eo
-        print( arglb, arghb , " arglb, arghb")
         corrected_lb = corrected[arglb]
         corrected_hb = corrected[arghb]
-        print(corrected_hb,corrected_hb, corrected_hb- corrected_lb, " :corrected_hb,corrected_hb, corrected_hb- corrected_lb ")
+        self.report("yamboconvergence.py:get_total_range (): corrected gap(s)   at K-point {}, between bands {} and {}".format(
+                    corrected_hb- corrected_lb, lowest_k, lowest_b, highest_b ))
         return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
 
-    def report(self):
+    def report_wf(self):
         """
         Output final quantities
         """
