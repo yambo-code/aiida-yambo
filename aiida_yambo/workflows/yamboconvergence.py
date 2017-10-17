@@ -14,17 +14,18 @@ from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.work.run import run, submit, async
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
-from aiida.workflows.user.cnr_nano.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
+from aiida_yambo.calculations.gw  import YamboCalculation
+from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
                default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings
-from aiida.workflows.user.cnr_nano.yamborestart  import YamboRestartWf
-from aiida.workflows.user.cnr_nano.yambowf  import YamboWorkflow
+from aiida_yambo.workflows.yamborestart  import YamboRestartWf
+from aiida_yambo.workflows.yambowf  import YamboWorkflow
 from aiida.orm.data.remote import RemoteData
 from aiida_quantumespresso.calculations.pw import PwCalculation
 import numpy as np 
 from scipy.optimize import  curve_fit 
 
 #PwCalculation = CalculationFactory('quantumespresso.pw')
-YamboCalculation = CalculationFactory('yambo.yambo')
+#YamboCalculation = CalculationFactory('yambo.yambo')
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
@@ -265,8 +266,8 @@ class YamboConvergenceWorkflow(WorkChain):
 
     def update_parameters(self, paging):
         params = self.inputs.parameters.get_dict()
-        starting_point = params [idx]
         for idx in range(len(self.inputs.converge_parameters)):
+             starting_point = params [idx]
              field = self.inputs.converge_parameters[idx]
              update_delta = np.ceil( self.inputs.default_step_size.get_dict()[field]*paging*starting_point) 
              params[field] = update_parameter_field( field, params[field] ,  update_delta ) 

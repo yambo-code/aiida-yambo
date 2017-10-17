@@ -23,14 +23,15 @@ except ImportError:
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.workflows.user.cnr_nano.yambo_utils import generate_pw_input_params 
+from aiida_yambo.workflows.yambo_utils import generate_pw_input_params 
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_yambo.calculations.gw  import YamboCalculation
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
 #PwCalculation = CalculationFactory('quantumespresso.pw')
 PwProcess = PwCalculation.process()
-YamboCalculation = CalculationFactory('yambo.yambo')
+#YamboCalculation = CalculationFactory('yambo.yambo')
 
 class PwRestartWf(WorkChain):
     """

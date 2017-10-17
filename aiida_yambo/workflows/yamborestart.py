@@ -19,11 +19,12 @@ from aiida.work.run import run, submit
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
-from aiida.workflows.user.cnr_nano.yambo_utils import generate_yambo_input_params, reduce_parallelism 
+from aiida_yambo.calculations.gw  import YamboCalculation
+from aiida_yambo.workflows.yambo_utils import generate_yambo_input_params, reduce_parallelism 
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 #PwCalculation = CalculationFactory('quantumespresso.pw')
-YamboCalculation = CalculationFactory('yambo.yambo')
+#YamboCalculation = CalculationFactory('yambo.yambo')
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")

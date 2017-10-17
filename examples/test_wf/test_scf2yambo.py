@@ -2,7 +2,7 @@ from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
 
-from  from aiida_yambo.workflows.yambowf  import YamboWorkflow
+from aiida_yambo.workflows.yambowf  import YamboWorkflow
  
 try:
     from aiida.orm.data.base import Float, Str, NumericType, BaseType, Bool, List  
@@ -15,6 +15,26 @@ except ImportError:
 
 from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
+StructureData = DataFactory('structure')
+alat = 7.15110109 # angstrom
+a=1.002292408
+c=0.639106637657
+cell = [[a*alat, 0., 0.,],
+        [0., a*alat, 0.,],
+        [0., 0., c*alat,],
+       ]
+
+struc = StructureData(cell=cell)
+struc.append_atom(position=(0.000000000, 0.000000000, 0.000000000), symbols='Ti')
+struc.append_atom(position=(0.500000000, 0.500000000, 0.250000610), symbols='Ti')
+struc.append_atom(position=(0.500000000, 0.500000000, 0.500000000), symbols='Ti')
+struc.append_atom(position=(0.500000000, 0.000000000, 0.749999390), symbols='Ti')
+struc.append_atom(position=(0.000000000, 0.000000000, 0.206767566), symbols='O')
+struc.append_atom(position=(0.000000000, 0.500000000, 0.043233777), symbols='O')
+struc.append_atom(position=(0.000000000, 0.000000000, 0.793232434), symbols='O')
+struc.append_atom(position=(0.500000000, 0.000000000, 0.956766223), symbols='O')
+
+struc.store()
 
 pw_parameters =  {
           'CONTROL': {
@@ -27,7 +47,7 @@ pw_parameters =  {
               'verbosity' :'high',
               },
           'SYSTEM': {
-              'ecutwfc': 45.,
+              'ecutwfc': 35.,
               },
           'ELECTRONS': {
               'conv_thr': 1.e-8,
@@ -47,8 +67,8 @@ pw_nscf_parameters =  {
               'verbosity' :'high',
               },
           'SYSTEM': {
-              'ecutwfc': 45.,
-              'nbnd':400,
+              'ecutwfc': 35.,
+              'nbnd':40,
               'force_symmorphic': True,
               },
           'ELECTRONS': {
@@ -74,19 +94,19 @@ yambo_parameters = {'ppa': True,
                                  'SE_Threads':  32,
                                  'EXXRLvcs': 789569,
                                  'EXXRLvcs_units': 'RL',
-                                 'BndsRnXp': (1,60),
+                                 'BndsRnXp': (1,38),
                                  'NGsBlkXp': 3,
                                  'NGsBlkXp_units': 'Ry',
                                  'PPAPntXp': 2000000,
                                  'PPAPntXp_units': 'eV',
-                                 'GbndRnge': (1,60),
+                                 'GbndRnge': (1,38),
                                  'GDamping': 0.1,
                                  'GDamping_units': 'eV',
                                  'dScStep': 0.1,
                                  'dScStep_units': 'eV',
                                  'GTermKind': "none",
                                  'DysSolver': "n",
-                                 'QPkrange': [(1,16,30,31)],
+                                 'QPkrange': [(1,8,34,38)],
                                  }
 
 calculation_set_pw ={'resources':  {"num_machines": 4,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
@@ -97,7 +117,7 @@ calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine
                   'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200, 
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
                   'max_memory_kb': 1*86*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
@@ -138,13 +158,16 @@ if __name__ == "__main__":
                         help='The pw codename to use')
     parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
                         help='The pesudo  to use')
-    parser.add_argument('--structure', type=int, dest='structure', required=True,
+    parser.add_argument('--structure', type=int, dest='structure', required=False,
                         help='The structure  to use')
     parser.add_argument('--parent', type=int, dest='parent', required=False,
                         help='QE scf/nscf calculation ')
 
     args = parser.parse_args()
-    structure = load_node(int(args.structure)) #1791 
+    if not args.structure:
+        structure = struc
+    else:
+        structure = load_node(int(args.structure)) #1791 
     parent_calc = None
     if args.parent:
         parent_calc = load_node(int(args.parent)) #1791 
