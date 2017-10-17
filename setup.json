@@ -13,6 +13,13 @@
         "Topic :: Scientific/Engineering :: Physics"
     ],
     "version": "0.1a",
+    "extras_require": {
+         "docs": [
+            "Sphinx", 
+            "docutils", 
+            "sphinx_rtd_theme"
+          ]
+      }, 
     "install_requires": [
         "aiida-core>=0.9.1",
         "aiida-quantumespresso"
