@@ -190,12 +190,11 @@ class YamboParser(Parser):
             if  hasattr(result, 'game_over'):
                 if result.game_over == True:
                     successful = True 
-            if 'INITIALISE' in  self._calc.inp.settings.get_dict().keys():
-                if self._calc.inp.settings.get_dict()['INITIALISE'] == True:
-                    # we do not have game_over, but we do have P2Y completed. 
-                    if  hasattr(result, 'p2y_completed'):
-                        result.p2y_completed = True
-                        successful = True
+            if initialise:
+                # we do not have game_over, but we do have P2Y completed. 
+                if  hasattr(result, 'p2y_completed'):
+                    result.p2y_completed = True
+                    successful = True
                 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
@@ -230,8 +229,10 @@ class YamboParser(Parser):
                         new_nodes_list.append((self._alpha_array_linkname+'_', arr ))
 
             else: 
-                output_params['warnings'].extend('Parser output format is invalid')
-
+                if not initialise:
+                    output_params['warnings'].extend('Parser output format is invalid')
+                else:
+                    pass
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:# 
