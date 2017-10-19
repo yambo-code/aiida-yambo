@@ -16,7 +16,8 @@ from aiida.work.run import run, submit
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
 from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
-               default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings
+               default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange,\
+               p2y_default_settings, is_converged
 from aiida_yambo.workflows.yamborestart  import YamboRestartWf
 from aiida_yambo.workflows.yambowf  import YamboWorkflow
 from aiida.orm.data.remote import RemoteData
@@ -65,12 +66,15 @@ class YamboConvergenceWorkflow(WorkChain):
     @classmethod
     def define(cls, spec):
         """
-        as input we need
-         1. variable
-         2. threshold
-         3. starting points
-          converge_parameters = ['BndsRnXp','NGsBlkXp','GbndRnge']
-          starting_points = [10,10,10]
+        
+        convergence_parameters = {'variable_to_convergence':'bands' or 'W_cutoff' or 'kpoints' or 'FFT_cutoff',
+                                    'start_value': 10,
+                                    'step': 5,
+                                    'max_value':100,
+                                    'conv_tol': 0.1 (optional),
+                                    'conv_window': 3 (optional),
+                                    'loop_length': 4 (optional),
+                                    }
         """
         super(YamboConvergenceWorkflow, cls).define(spec)
         spec.input("precode", valid_type=BaseType)
@@ -86,12 +90,13 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
         spec.input("parameters_p2y", valid_type=ParameterData, required=False, default=set_default_qp_param()  )
-        spec.input("parameters", valid_type=ParameterData, required=False   )
-        spec.input("converge_parameters", valid_type=List)
-        spec.input("starting_points", valid_type=List,required=False,default=List() )
-        spec.input("default_step_size", valid_type=ParameterData,required=False,
-                           default=DataFactory('parameter')(dict=default_step_size))
-        spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
+        spec.input("parameters", valid_type=ParameterData, required=False)
+        #spec.input("converge_parameters", valid_type=List)
+        #spec.input("starting_points", valid_type=List,required=False,default=List() )
+        #spec.input("default_step_size", valid_type=ParameterData,required=False,
+        #                   default=DataFactory('parameter')(dict=default_step_size))
+        spec.input("convergence_parameters", valid_type=ParameterData, required=True)
+        #spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
 
         spec.outline(
           cls.start,
@@ -105,6 +110,8 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.dynamic_output()
 
     def init_parameters(self,paging):
+        
+        convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
         if 'calculation_set_pw' not in self.inputs.keys():
             self.inputs.calculation_set_pw = DataFactory('parameter')(dict=self.inputs.calculation_set.get_dict())
         if 'calculation_set_p2y' not in self.inputs.keys():
@@ -117,19 +124,14 @@ class YamboConvergenceWorkflow(WorkChain):
         params = {}
         if 'parameters' in self.inputs.keys():
             params = self.inputs.parameters.get_dict()
-        if 'kpoints' not in self.inputs.converge_parameters:
-            for idx in range(len(self.inputs.converge_parameters)):
-                 starting_point = self.inputs.starting_points[idx] 
-                 field =  self.inputs.converge_parameters[idx] # PPAPntXp,...
-                 update_delta = np.ceil(self.inputs.default_step_size.get_dict()[field]*paging* starting_point )
-                 params[ field ] = update_parameter_field( field, starting_point, update_delta)
-                 if field in self.ctx.conv_elem:
-                     self.ctx.conv_elem[field].append(params[field])
-                 else:
-                     entry = []
-                     entry.append(params[field])
-                     self.ctx.conv_elem[field] = entry
-        self.inputs.parameters = DataFactory('parameter')(dict= params)
+        if 'kpoints'!=self.ctx.variable_to_convergence:
+            for field in self.ctx.conv_elem.keys():
+                 starting_point = self.ctx.start_value +\
+                                  self.ctx.step * len(self.ctx.loop_length) * self.ctx.iteration  
+                 #update_delta = np.ceil(self.inputs.default_step_size.get_dict()[field]*paging* starting_point )
+                 params[ field ] = update_parameter_field( field, starting_point, self.ctx.step*paging)
+                 self.ctx.conv_elem[field].append(params[field])
+            self.inputs.parameters = DataFactory('parameter')(dict= params)
 
         if 'parent_scf_folder' in  self.inputs.keys(): 
             parent_calc = self.inputs.parent_scf_folder.get_inputs_dict()['remote_folder']
@@ -147,7 +149,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     if 'parameters' not in self.inputs.keys():
                         self.inputs.parameters = set_default_qp_param()
 
-            if 'kpoints' in self.inputs.converge_parameters:
+            if 'kpoints'==self.ctx.variable_to_convergence:
                 if 'settings_pw' not in self.inputs.keys():
                     self.inputs.settings_pw =  default_pw_settings() 
                 if 'parameters_pw' not in self.inputs.keys():
@@ -156,7 +158,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.inputs.parameters = set_default_qp_param()
                       
         else:
-            if 'kpoints' in self.inputs.converge_parameters:
+            if 'kpoints'==self.ctx.variable_to_convergence:
                 if 'settings_pw' not in self.inputs.keys():
                     self.inputs.settings_pw =  default_pw_settings() 
                 if 'parameters_pw' not in self.inputs.keys():
@@ -169,7 +171,8 @@ class YamboConvergenceWorkflow(WorkChain):
                 raise InputValidationError("Pseudo should be provided if parent PW calculation is not given when converging kpoints")
             if 'pwcode' not in self.inputs.keys():
                 raise InputValidationError("PW code  should be provided when converging kpoints")
-            if 'kpoints' not in self.inputs.converge_parameters and 'parent_nscf_folder' not in self.inputs.keys:
+            if 'kpoints'!=self.ctx.variable_to_convergence and\
+                                                   'parent_nscf_folder' not in self.inputs.keys:
                 raise InputValidationError("Parent nscf folder should be provided when not converging kpoints")
         if 'parent_nscf_folder' in  self.inputs.keys(): 
               parent_calc = self.inputs.parent_nscf_folder.get_inputs_dict()['remote_folder']
@@ -179,31 +182,76 @@ class YamboConvergenceWorkflow(WorkChain):
                       if 'parameters' not in self.inputs.keys():
                           self.inputs.parameters = set_default_qp_param()
                       self.inputs.parameters = default_qpkrange(parent_calc.pk, self.inputs.parameters)
-        self.report('yamboconvergence.py:  init_parameters() complete. ' )
-        self.ctx.distance_kpoints = 0.2
+        self.report('YamboConvergence:  init_parameters step completed.' )
+        ##self.ctx.distance_kpoints = 0.2  ### UPDATE
 
     def start(self):
         # for kpoints, we will need to have the scf step, and  use YamboWorkflow not YamboRestartWf
-        # 
-        #self.iterate([0,1,2,3])
+        #
+        self.ctx.max_iterations = 20 
+        self.ctx.iteration = 0
         self.ctx.skip_prescf = False
         self.ctx.very_firxt = True
+        convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
+        # Mandatory inputs
+        try:
+            self.ctx.variable_to_converge = convergence_parameters_dict['variable_to_converge']
+        except KeyError:
+            raise InputValidationError('variable_to_converge not defined in input!')
+        try:
+            self.ctx.start_value = convergence_parameters_dict['start_value']
+        except KeyError:
+            raise InputValidationError('start_value not defined in input!')  
+        try:
+            self.ctx.step = convergence_parameters_dict['step']
+        except KeyError:
+            raise InputValidationError('step not defined in input!')  
+        try:
+            self.ctx.max_value = convergence_parameters_dict['max_value']
+        except KeyError:            
+            raise InputValidationError('max_value not defined in input!') 
+        try:                        
+            self.ctx.conv_tol = convergence_parameters_dict['conv_tol']
+        except KeyError:
+            raise InputValidationError('conv_tol not defined in input!')  
+        # Optional inputs          
+        try:
+            self.ctx.conv_window = convergence_parameters_dict['conv_window']
+        except KeyError:
+            self.ctx.conv_window = 3
+        try:
+            self.ctx.loop_length = convergence_parameters_dict['loop_length']
+        except KeyError:
+            self.ctx.loop_length = 4
+        self.ctx.distance_kpoints = 0.2
+        if self.ctx.variable_to_converge=='bands':
+            self.ctx.conv_elem = {'BndsRnXp':[],'GbndRnge': []}
+        elif self.ctx.variable_to_converge=='W_cutoff':
+            self.ctx.conv_elem = {'NGsBlkXp':[]}
+        elif self.ctx.variable_to_converge=='FFT_cutoff':
+            self.ctx.conv_elem = {'FFTGvecs':[]}
+        elif self.ctx.variable_to_converge=='kpoints':
+            self.ctx.conv_elem = {'kpoints':[]}
+        else:
+            self.ctx.conv_elem = {self.ctx.variable_to_converge:[]}
+            self.report('WARNING: the variable to converge is {}, not recognized but I try anyway to converge it') 
+        self.report("Setup step completed.")
 
     def run_next_update(self):
         if self.ctx.skip_prescf: 
             p2y_parent = load_node( self.ctx.missing_p2y_parent.out.gw.get_dict()["yambo_pk"])
             self.ctx.p2y_parent_folder = p2y_parent.out.remote_folder
             self.ctx.skip_prescf = False
-        #self.iterate([1,2,3,4])
 
     def iterate(self):
-        loop_items = [1,2,3,4]
+        self.report("Convergence iteration {}".format(str(self.ctx.iteration)))
+        loop_items = range(1,self.ctx.loop_length+1)
         if self.ctx.very_firxt == True:
-            loop_items = [0,1,2,3]
+            loop_items = range(self.ctx.loop_length)
             self.ctx.very_firxt = False
         self.report('yamboconvergence.py:  start() will run four calculations first ' )
         outs={}
-        if 'kpoints' not in self.inputs.converge_parameters:
+        if 'kpoints'!=self.ctx.variable_to_converge:
             self.report("yamboconvergence.py: iterate() this is not a K-point convergence ")
             for num in loop_items: # includes 0 because of starting point
                 if loop_items[0] == 0:
@@ -231,6 +279,7 @@ class YamboConvergenceWorkflow(WorkChain):
                             parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings.copy())
                 outs[ 'r'+str(num) ] =  future
             self.report ("yamboconvergence.py: iterate():  waiting  for result of YamboRestartWf ")
+            self.ctx.iteration = self.ctx.iteration + 1
             return ToContext(**outs )
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
@@ -272,11 +321,13 @@ class YamboConvergenceWorkflow(WorkChain):
 
     def update_parameters(self, paging):
         params = self.inputs.parameters.get_dict()
-        for idx in range(len(self.inputs.converge_parameters)):
-             starting_point = self.inputs.starting_points[idx]
-             field = self.inputs.converge_parameters[idx]
-             update_delta = np.ceil( self.inputs.default_step_size.get_dict()[field]*paging*starting_point) 
-             params[field] = update_parameter_field( field, params[field] ,  update_delta ) 
+        for field in self.inputs.conv_elem.keys():
+             starting_point = self.ctx.start_value +\
+                              self.ctx.step * len(self.ctx.loop_length) * self.ctx.iteration
+             params[ field ] = update_parameter_field( field, starting_point, self.ctx.step*paging)
+             ##starting_point = self.inputs.starting_points[idx]
+             ##update_delta = np.ceil( self.inputs.default_step_size.get_dict()[field]*paging*starting_point) 
+             ##params[field] = update_parameter_field( field, params[field] ,  update_delta ) 
              self.ctx.conv_elem[field].append(params[field])
         self.report("yamboconvergence.py update_parameters(): extended convergence points: {}".format(self.ctx.conv_elem))
         self.inputs.parameters = DataFactory('parameter')(dict= params)
@@ -300,43 +351,47 @@ class YamboConvergenceWorkflow(WorkChain):
         self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
         if 'scf_pk' in self.ctx.r3["gw"].get_dict() and 'parent_scf_folder' not in self.inputs.keys():
             self.inputs.parent_scf_folder =  load_node(self.ctx.r3["gw"].get_dict()['scf_pk']).out.remote_folder
-        if len(self.ctx.en_diffs) > 16: # no more than 16 calcs
+        if len(self.ctx.en_diffs) > self.ctx.max_iterations: # no more than 16 calcs
             self.report("yamboconvergence.py: aborting after 16 calculations with no convergence ")
             return False
-        if len(self.ctx.en_diffs) > 4:
-            converged_fit = self.fitting_deviation(0) # only need to check against one convergence parameter at a time. 
-            if  converged_fit:
-                self.report("yamboconvergence.py: Convergence achieved. ")
-                return False
-            else:
-                self.report("yamboconvergence.py: Convergence not yet achieved yet. ")
-                return True
         else:
-            # check the the  differences are minimal, when on first 4 calculations
-            delta =  abs(r0_width-r1_width) + abs(r1_width-r2_width) + abs(r2_width-r3_width)
-            if delta < self.inputs.threshold:
+            field = self.ctx.conv_elem.keys()[0]
+            independent = np.array(self.ctx.conv_elem[field])
+            dependent = np.array(self.ctx.en_diffs)
+            values = dependent[-4:]
+            is_conv =  is_converged(values,conv_tol=self.ctx.conv_tol,conv_window=self.ctx.conv_window)
+            if is_conv:
+                converged_fit = self.analyse_fit(field)
+            #converged_fit = self.fitting_deviation(0) # only need to check against one convergence parameter at a tim 
+                if converged_fit:
+                   self.report("yamboconvergence.py: Fit convergence achieved. ")
+                else:
+                   self.report("yamboconvergence.py: Fit convergence not achieved.")
                 return False
-            else:
-                return True
         return True
 
-    def fitting_deviation(self,idx):
-        field = self.inputs.converge_parameters[idx]
+    def analyse_fit(self,field):
+        """
+        Docs
+
+        independent means the input values
+        dependent the quantity to converge (e.g. band gap)
+        """
         independent = np.array(self.ctx.conv_elem[field])
         dependent = np.array(self.ctx.en_diffs)
-        if len(independent)> 4:
-            def func(x,a,b):
-                y=1.0
-                y =y*(a/x+b)
-                return y
-            popt,pcov = curve_fit(func,independent[:-4],dependent[:-4])
-            a,b = popt
-            fit_data = func(independent, a,b)      
-            deviations = np.abs(dependent[:4] - fit_data[:4])  # deviation of last four from extrapolated values at those points
-            converged_fit = np.allclose(deviations, np.linspace(0.01,0.01, 4), atol=self.inputs.threshold) # last four are within 0.01 of predicted value
-            self.report("yamboconvergence.py: fitting_deviation: converged_fit {}".format(converged_fit))
-            return converged_fit
-        return False
+        
+        def func(x,a,b):
+            y = 1.0
+            y = y*(a/x+b)
+            return y
+        popt,pcov = curve_fit(func,independent[:-4],dependent[:-4])
+        a,b = popt
+        fit_data = func(independent, a,b)      
+        deviations = np.abs(dependent[:4] - fit_data[:4])  # deviation of last four from extrapolated values at those points
+        converged_fit = np.allclose(deviations, np.linspace(0.01,0.01, 4), atol=self.inputs.threshold) # last four are within 0.01 of predicted value
+        self.report("yamboconvergence.py: fitting_deviation: converged_fit {}".format(converged_fit))
+        return converged_fit
+ 
 
     def get_total_range(self,node_id):
         # CAVEAT: this does not calculate HOMO LUMO gap, but the width between two
