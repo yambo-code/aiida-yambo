@@ -47,6 +47,7 @@ class YamboRestartWf(WorkChain):
         spec.input("settings", valid_type=ParameterData)
         spec.input("parent_folder", valid_type=RemoteData)
         spec.input("parameters", valid_type=ParameterData)
+        spec.input("restart_options", valid_type=ParameterData, required=False)
         spec.outline(
             cls.yambobegin,
             while_(cls.yambo_should_restart)(
@@ -78,26 +79,39 @@ class YamboRestartWf(WorkChain):
             self.inputs.parent_folder, parameters, self.inputs.calculation_set.copy(), ParameterData(dict=new_settings) )
         YamboProcess = YamboCalculation.process()
         future =  submit(YamboProcess, **inputs)
-        #future_pk = future['remote_folder'].inp.remote_folder.pk 
         self.ctx.yambo_pks = []
         self.ctx.yambo_pks.append( future.pid )
-        self.ctx.restart = 0 
-        self.report("yamborestart: yambobegin(): submitted a calculation with pk: {} ".format(future.pid ))
+        self.ctx.restart = 0
+
+        try:
+            restart_options = self.inputs.restart_options
+            self.report('Restart options found in input.')
+            try:
+                max_restarts = restart_options.get_dict()['max_restarts']
+            except KeyError:
+                max_restarts = 5
+        except AttributeError:
+            restart_options = None
+            max_restarts = 5
+        self.ctx.max_restarts = max_restarts
+        self.report("Submitted a calculation with pk: {} ".format(future.pid ))
         return  ResultToContext(yambo= future)
 
     def yambo_should_restart(self):
+        """
         # should restart a calculation if it satisfies either
-        # 1. It hasnt been restarted  X times already.
+        # 1. It has not been restarted  X times already.
         # 2. It hasnt produced output.
         # 3. Submission failed.
         # 4. Failed: a) Memory problems
-        #            b) 
-        self.report("yamborestart: yambo_should_restart() ")
-        if self.ctx.restart >= 5:
-            self.report("yamborestart, yambo_should_restart():  workflow will not restart: maximum restarts reached: {}".format(5))
+        #            b)
+        """
+        self.report("Checking if yambo restart is needed")
+        if self.ctx.restart >= self.ctx.max_restarts:
+            self.report("I will not restart: maximum restarts reached: {}".format(self.ctx.max_restarts))
             return False
 
-        self.report("yamborestart: yambo_restart Max restarts not reached" ) 
+        self.report("I can restart (# {}), max restarts ({}) not reached yet".format(self.ctx.restart, self.ctx.max_restarts))
         calc = load_node(self.ctx.yambo_pks[-1])
         if self.ctx.last == 'INITIALISE':
             return True
@@ -105,7 +119,7 @@ class YamboRestartWf(WorkChain):
         if calc.get_state() == calc_states.SUBMISSIONFAILED:
                    #or calc.get_state() == calc_states.FAILED\
                    #or 'output_parameters' not in calc.get_outputs_dict():
-            self.report("workflow  will not resubmit calk pk: {}, submission failed: {}, check the log or you settings ".format(calc.pk ,calc.get_state() ))
+            self.report("I will not resubmit calc pk: {}, submission failed: {}, check the log or you settings ".format(calc.pk ,calc.get_state() ))
             return False
 
         max_input_seconds = self.inputs.calculation_set.get_dict()['max_wallclock_seconds']
@@ -121,7 +135,7 @@ class YamboRestartWf(WorkChain):
             calculation_set = self.inputs.calculation_set.get_dict() 
             calculation_set['max_wallclock_seconds'] = max_input_seconds
             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
-            self.report("yamborestart, yambo_should_restart(): Failed calculation, cause is likely queue time exhaustion, restarting with new max_input_seconds = {}".format(
+            self.report("Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}".format(
                         max_input_seconds ))
             return True
 
@@ -141,10 +155,10 @@ class YamboRestartWf(WorkChain):
                     params['SE_CPU'], calculation_set=  reduce_parallelism('SE_CPU', SE_ROLEs,  SE_CPU,  calculation_set )
                     self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set)
                     self.inputs.parameters = DataFactory('parameter')(dict=params)
-                    self.report("yamborestart: yambo_should_restart: Calculation {} failed from a parallelism problem: {}".format(calc.pk,output_p['errors']) )
-                    self.report("yamborestart: yambo_should_restart: old parallelism {}= {} , {} = {} ".format(
+                    self.report("Calculation {} failed from a parallelism problem: {}".format(calc.pk,output_p['errors']) )
+                    self.report("Old parallelism {}= {} , {} = {} ".format(
                                     X_all_q_ROLEs,X_all_q_CPU, SE_ROLEs, SE_CPU))
-                    self.report("yamborestart: yambo_should_restart: new parallelism {}={} , {} = {}".format(
+                    self.report("New parallelism {}={} , {} = {}".format(
                                     X_all_q_ROLEs, params['X_all_q_CPU'], SE_ROLEs,  params['SE_CPU'] ))
                     return True 
             if 'errors' in output_p.keys() and calc.get_state() == calc_states.FAILED:
@@ -166,10 +180,10 @@ class YamboRestartWf(WorkChain):
                             params['SE_CPU'], calculation_set=  reduce_parallelism('SE_CPU', SE_ROLEs,  SE_CPU,  calculation_set )
                             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set)
                             self.inputs.parameters = DataFactory('parameter')(dict=params)
-                            self.report("yamborestart: yambo_should_restart: calculation  {} failed likely from memory issues")
-                            self.report("yamborestart: yambo_should_restart: old parallelism {}= {} , {} = {} ".format(
+                            self.report("Calculation  {} failed likely from memory issues")
+                            self.report("Old parallelism {}= {} , {} = {} ".format(
                                                   X_all_q_ROLEs,X_all_q_CPU, SE_ROLEs, SE_CPU))
-                            self.report("yamborestart: yambo_should_restart: new parallelism {}={}, {} = {} ".format(
+                            self.report("New parallelism {}={}, {} = {} ".format(
                                                   X_all_q_ROLEs, params['X_all_q_CPU'], SE_ROLEs,  params['SE_CPU'] ))
                             return True 
                         else:
@@ -183,9 +197,12 @@ class YamboRestartWf(WorkChain):
         return False
 
     def yambo_restart(self):
-        # restart if neccessary
-        # get inputs from prior calculation ctx.yambo_pks
-        # should be able to handle submission failed, by possibly going to parent?
+        """
+        restart if necessary
+        get inputs from prior calculation ctx.yambo_pks
+        should be able to handle submission failed, by possibly going to parent?
+        """
+
         calc = load_node(self.ctx.yambo_pks[-1])
         if  calc.get_state() == calc_states.SUBMISSIONFAILED:
             calc = self.get_last_submitted(calc.pk)
