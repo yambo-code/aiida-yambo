@@ -103,11 +103,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
            raise InputValidationError("Either the structure or parent SCF calculation should be provided")
         
         self.init_parameters()
-        self.ctx.last_step = 'step_0_1'
-        self.ctx.step0_res = load_node(22963) 
-        self.ctx.first_run = False
-        self.ctx.scf_calc = self.ctx.step0_res.out.convergence.get_dict()["scf_pk"]
-        self.ctx.nscf_calc = self.ctx.step0_res.out.convergence.get_dict()["nscf_pk"]
+        #self.ctx.last_step = 'step_0_1'
+        #self.ctx.step0_res = load_node(22963) 
+        #self.ctx.first_run = False
+        #self.ctx.scf_calc = self.ctx.step0_res.out.convergence.get_dict()["scf_pk"]
+        #self.ctx.nscf_calc = self.ctx.step0_res.out.convergence.get_dict()["nscf_pk"]
   
     def run_next_update(self):
         # step 0 == kpoints
