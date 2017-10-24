@@ -411,3 +411,20 @@ def split_incom(num):
         return (2**(power*3/4), 2**(power*1/4))
     else:
         return (2**(power*2/3), 2**(power*1/3))
+
+def is_converged(values,conv_tol=1e-5,conv_window=3):
+    """Check convergence for a list of values
+    
+    If the change between successive iterations is less than conv_tol for conv_window iterations
+    the list is said to be converged.
+
+    :param values: list of values in input
+    :param conv_tol: convergence tolerance (optional, default = 1e-5)
+    :param conv_window: number of last iterations considered (optional, default = 3)
+    :rtype: Bool
+    """
+    delta_list = []
+    for i in range(1,len(values)):
+        delta_list.append(abs(values[i]-values[i-1]))
+    delta_list = delta_list[-conv_window:]
+    return any(x<conv_tol for x in delta_list) 
