@@ -1,0 +1,37 @@
+{
+    "name": "aiida-yambo",
+    "author": "Michael Atambo, Antimo Marrazzo, Prandini Gianluca",
+    "author_email": "m.atambo@nano.cnr.it",
+    "description": "YAMBO code Plugin for AiiDA",
+    "url": "https://bitbucket.org/prandini/yambo_input",
+    "license": "MIT",
+    "classifiers": [
+        "Programming Language :: Python",
+        "Environment :: Plugins",
+        "Framework :: AiiDa",
+        "Framework :: AiiDa",
+        "Topic :: Scientific/Engineering :: Physics"
+    ],
+    "version": "0.1a",
+    "extras_require": {
+         "docs": [
+            "Sphinx", 
+            "docutils", 
+            "sphinx_rtd_theme"
+          ]
+      }, 
+    "install_requires": [
+        "aiida-core>=0.9.1",
+        "aiida-quantumespresso"
+        ],
+    "keywords": "yambo aiida workflows",
+    "entry_points": {
+        "aiida.calculations": [
+            "yambo.yambo =  aiida_yambo.calculations.gw:YamboCalculation"
+        ],
+        "aiida.parsers": [
+            "yambo.yambo = aiida_yambo.parsers.parsers:YamboParser"
+        ],
+        "aiida.data":[]
+    }
+}
