@@ -15,7 +15,7 @@ from aiida.work.workchain import WorkChain, while_ , Outputs
 from aiida.work.workchain import ToContext as ResultToContext
 from aiida.work.run import legacy_workflow
 from aiida.work.run import run, submit
-
+from aiida.common.links import LinkType
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
@@ -52,6 +52,7 @@ class YamboRestartWf(WorkChain):
             cls.yambobegin,
             while_(cls.yambo_should_restart)(
                 cls.yambo_restart,
+                cls.interstep,
             ),
             cls.report_wf
         )
@@ -62,6 +63,9 @@ class YamboRestartWf(WorkChain):
         Run the  pw-> yambo conversion, init and yambo run
         #  precodename,yambocodename, parent_folder, parameters,  calculation_set=None, settings
         """
+        self.ctx.yambo_pks = []
+        self.ctx.yambo_nodes = []
+        self.ctx.restart = 0 
         # run YamboCalculation
         if not isinstance(self.inputs.parent_folder, RemoteData):
             raise InputValidationError("parent_calc_folder must be of"
@@ -69,20 +73,11 @@ class YamboRestartWf(WorkChain):
         self.ctx.last = ''
         parameters = self.inputs.parameters
         new_settings = self.inputs.settings.get_dict()
-        parent_calc = self.inputs.parent_folder.get_inputs_dict()['remote_folder']
+        parent_calc = self.inputs.parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
         yambo_parent = isinstance(parent_calc, YamboCalculation)
         if 'INITIALISE' not in new_settings.keys() and not yambo_parent:
             new_settings['INITIALISE'] = True
             self.ctx.last = 'INITIALISE'
-        inputs = generate_yambo_input_params(
-            self.inputs.precode.copy(),self.inputs.yambocode.copy(),
-            self.inputs.parent_folder, parameters, self.inputs.calculation_set.copy(), ParameterData(dict=new_settings) )
-        YamboProcess = YamboCalculation.process()
-        future =  submit(YamboProcess, **inputs)
-        self.ctx.yambo_pks = []
-        self.ctx.yambo_pks.append( future.pid )
-        self.ctx.restart = 0
-
         try:
             restart_options = self.inputs.restart_options
             self.report('Restart options found in input.')
@@ -94,8 +89,18 @@ class YamboRestartWf(WorkChain):
             restart_options = None
             max_restarts = 5
         self.ctx.max_restarts = max_restarts
+        inputs = generate_yambo_input_params(
+            self.inputs.precode.copy(),self.inputs.yambocode.copy(),
+            self.inputs.parent_folder, parameters, self.inputs.calculation_set.copy(), ParameterData(dict=new_settings) )
         self.report("Submitted a calculation with pk: {} ".format(future.pid ))
+        future = self.run_yambo(inputs)
         return  ResultToContext(yambo= future)
+
+    def interstep(self):
+        # convenience function that stores output of resolved future  before the next loop if any, 
+        # of no loop will run, it is still useful for the report_wf to find the resolved future's node
+        # in the context. 
+        self.yambo_nodes.append(self.ctx.yambo)
 
     def yambo_should_restart(self):
         """
@@ -104,7 +109,8 @@ class YamboRestartWf(WorkChain):
         # 2. It hasnt produced output.
         # 3. Submission failed.
         # 4. Failed: a) Memory problems
-        #            b)
+        #            b) Parallelism problems.
+        #            c) Some input inconsistency problems (too low bands)
         """
         self.report("Checking if yambo restart is needed")
         if self.ctx.restart >= self.ctx.max_restarts:
@@ -117,8 +123,6 @@ class YamboRestartWf(WorkChain):
             return True
 
         if calc.get_state() == calc_states.SUBMISSIONFAILED:
-                   #or calc.get_state() == calc_states.FAILED\
-                   #or 'output_parameters' not in calc.get_outputs_dict():
             self.report("I will not resubmit calc pk: {}, submission failed: {}, check the log or you settings ".format(calc.pk ,calc.get_state() ))
             return False
 
@@ -131,7 +135,7 @@ class YamboRestartWf(WorkChain):
             pass  # Likely no logs were produced 
  
         if calc.get_state() == calc_states.FAILED and (float(max_input_seconds)-float(last_time))/float(max_input_seconds)*100.0 < 1:   
-            max_input_seconds = int( max_input_seconds * 1.3)
+            max_input_seconds = int( max_input_seconds * 1.3) # 30% increase
             calculation_set = self.inputs.calculation_set.get_dict() 
             calculation_set['max_wallclock_seconds'] = max_input_seconds
             self.inputs.calculation_set = DataFactory('parameter')(dict=calculation_set) 
@@ -144,7 +148,7 @@ class YamboRestartWf(WorkChain):
             if 'output_parameters'  in  calc.get_outputs_dict(): # calc.get_outputs_dict()['output_parameters'].get_dict().keys() 
                 output_p = calc.get_outputs_dict()['output_parameters'].get_dict()
             if 'para_error' in output_p.keys(): 
-                if output_p['para_error'] == True:  # Change parallelism or add some
+                if output_p['para_error'] == True:  # Change parallelism or add missing parallelism inputs
                     params = self.inputs.parameters.get_dict() 
                     X_all_q_CPU = params.pop('X_all_q_CPU','')
                     X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','') 
@@ -161,6 +165,24 @@ class YamboRestartWf(WorkChain):
                     self.report("New parallelism {}={} , {} = {}".format(
                                     X_all_q_ROLEs, params['X_all_q_CPU'], SE_ROLEs,  params['SE_CPU'] ))
                     return True 
+            if 'unphysical_input' in output_p.keys():
+                if output_p['unphysical_input'] == True:
+                    # this handles this type of error: "[ERROR][NetCDF] NetCDF: NC_UNLIMITED in the wrong index"
+                    # we should reset the bands to a larger value, it may be too small. 
+                    # this is a probable cause, and it may not be the real problem, but often is the cause.
+                    self.report("the calculation failed due to a problematic input, defaulting to increasing bands")
+                    params = self.inputs.parameters.get_dict()
+                    bandX = params.pop('BndsRnXp', None)
+                    bandG = params.pop('GbndRnge', None)
+                    if bandX:
+                        bandX = ( bandX[0], bandX[0]*2) # 
+                        params['BndsRnXp'] = bandX
+                    if bandG:
+                        bandG = ( bandG[0], bandG[0]*2) # 
+                        params['GbndRnge'] = bandG
+                    self.inputs.parameters = DataFactory('parameter')(dict=params)
+                    return True 
+                   
             if 'errors' in output_p.keys() and calc.get_state() == calc_states.FAILED:
                 if len(calc.get_outputs_dict()['output_parameters'].get_dict()['errors']) < 1:
                     # No errors, We  check for memory issues, indirectly
@@ -214,27 +236,34 @@ class YamboRestartWf(WorkChain):
         parent_folder = calc.out.remote_folder
         new_settings = self.inputs.settings.get_dict()
 
-        parent_calc = parent_folder.get_inputs_dict()['remote_folder']
+        parent_calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
         yambo_parent = isinstance(parent_calc, YamboCalculation)
         p2y_restart =  calc.get_state() != calc_states.FINISHED and calc.inp.settings.get_dict().pop('INITIALISE',None)==True 
             
         if not yambo_parent or p2y_restart == True: 
             new_settings['INITIALISE'] =  True
             self.ctx.last = 'INITIALISE'
-            self.report("yamborestart: yambo_restart(): restarting from: {}, a P2Y calculation ".format(self.ctx.yambo_pks[-1]))
+            self.report(" restarting from: {}, a P2Y calculation ".format(self.ctx.yambo_pks[-1]))
         else:
             new_settings['INITIALISE'] =  False
             self.ctx.last = 'NOTINITIALISE'
-            self.report("yamborestart: yambo_restart(): restarting from: {},  a GW calculation ".format(self.ctx.yambo_pks[-1]))
+            self.report(" restarting from: {},  a GW calculation ".format(self.ctx.yambo_pks[-1]))
         inputs = generate_yambo_input_params(
              self.inputs.precode.copy(),self.inputs.yambocode.copy(),
              parent_folder, ParameterData(dict=parameters), self.inputs.calculation_set.copy(), ParameterData(dict=new_settings) )
-        YamboProcess = YamboCalculation.process()
-        future = submit (YamboProcess, **inputs)
+        future = self.run_yambo(inputs)
         self.ctx.yambo_pks.append(future.pid )
-        self.report("yamborestart: yambo_restart(): restarting from:{}  ".format(future.pid )) 
         self.ctx.restart += 1
+        self.report(" restarting from:{}  ".format(future.pid )) 
         return ResultToContext(yambo_restart= future)
+
+    def run_yambo(self,inputs):
+        YamboProcess = YamboCalculation.process()
+        future =  submit(YamboProcess, **inputs)
+        self.ctx.yambo_pks.append( future.pid )
+        self.report(" submitted a calculation with pk: {} ".format(future.pid ))
+        return future  # we can not  ReturnToContext since this fuction is not called from the outline 
+
 
     def get_last_submitted(self, pk):
         submited = False
@@ -256,7 +285,7 @@ class YamboRestartWf(WorkChain):
         """
         from aiida.orm import DataFactory
         success = load_node(self.ctx.yambo_pks[-1]).get_state()== 'FINISHED' 
-        self.out("gw", DataFactory('parameter')(dict={ "yambo_pk":   self.ctx.yambo_pks[-1], "success": success }))
+        self.out("gw", DataFactory('parameter')(dict={ "yambo_pk":   self.ctx.yambo_pks[-1], "yambo_node": load_node(self.ctx.yambo_pks[-1]) , "success": success }))
 
 if __name__ == "__main__":
     pass

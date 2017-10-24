@@ -12,6 +12,7 @@ from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
+from aiida.common.links import LinkType
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_yambo.calculations.gw  import YamboCalculation
 
@@ -44,12 +45,11 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     if label:
         inputs._label = label 
     inputs.parent_folder = parent_folder
-    print (settings.get_dict() )
     inputs.settings =  settings 
     # Get defaults:
     edit_parameters = parameters.get_dict()
     try:
-        calc = parent_folder.get_inputs_dict()['remote_folder'].inp.parent_calc_folder.get_inputs_dict()\
+        calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder'].inp.parent_calc_folder.get_inputs_dict()\
                ['remote_folder'].inp.parent_calc_folder.get_inputs_dict()['remote_folder']
     except AttributeError:
         calc = None
@@ -57,26 +57,36 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     if isinstance(calc,PwCalculation):
         is_pw = True
         nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
-        bndsrnxp = gbndrnge = nelec 
-        ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.4)   # ev to ry then 1/4 
+        nocc = None
+        if calc.out.output_parameters.get_dict()['lsda']== True or\
+           calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+           nocc = nelec/2 
+        else:
+           nocc = nelec
+        bndsrnxp = gbndrnge = nocc 
+        #ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
+        ngsblxpp =  1 
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
+        tot_mpi =  calculation_set['resources']['num_mpiprocs_per_machine'] * calculation_set['resources']['num_machines']
         if 'FFTGvecs' not in edit_parameters.keys():
              edit_parameters['FFTGvecs'] =  20
              edit_parameters['FFTGvecs_units'] =  'Ry'
         if 'BndsRnXp' not in edit_parameters.keys():
-             edit_parameters['BndsRnXp'] = (1.0,bndsrnxp*2)
+             edit_parameters['BndsRnXp'] = (bndsrnxp/2 ,bndsrnxp/2+1 )
         if 'GbndRnge' not in edit_parameters.keys():
-             edit_parameters['GbndRnge'] = (1.0, gbndrnge*2) 
+             edit_parameters['GbndRnge'] = (1.0, gbndrnge/2) 
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
-             edit_parameters['NGsBlkXp_units'] =  'eV'
+             edit_parameters['NGsBlkXp_units'] =  'Ry'
         if 'QPkrange' not in edit_parameters.keys():
-             edit_parameters['QPkrange'] = [(1,1,int(nelec/2), int(nelec/2)+1 )]
+             edit_parameters['QPkrange'] = [(1,1,int(nocc), int(occ)+1 )] # To revisit 
         if 'SE_CPU' not in  edit_parameters.keys():
-            edit_parameters['SE_CPU'] ="1 8 16" 
+            b, qp = split_incom(tot_mpi)
+            edit_parameters['SE_CPU'] ="1 {qp} {b}".format(qp=qp, b = b) 
             edit_parameters['SE_ROLEs']= "q qp b"
         if 'X_all_q_CPU' not in  edit_parameters.keys():
-            edit_parameters['X_all_q_CPU']= "1 1 16 8"
+            c, v = split_incom(tot_mpi)
+            edit_parameters['X_all_q_CPU']= "1 1 {c} {v}".format(c = c, v = v)
             edit_parameters['X_all_q_ROLEs'] ="q k c v"
     
     inputs.parameters = ParameterData(dict=edit_parameters) 
@@ -100,40 +110,50 @@ def get_pseudo(structure, pseudo_family):
 
 def generate_pw_input_params(structure, codename, pseudo_family,parameters, calculation_set, kpoints,gamma,settings,parent_folder):
     """
-    inputs_template: {'code': None, 'vdw_table': None, 'parameters': None, 
-                      '_options': DictSchemaInputs({'resources': DictSchemaInputs({})}), 
-                      'kpoints': None, 'settings': None, 'pseudo': None, 
-                      'parent_folder': None, 'structure': None}
+        future =  submit(PwBaseWorkChain, code = self.inputs.codename , structure=self.inputs.structure, , pseudo_family=self.inputs.pseudo_family, 
+                    parent_folder=parent_folder , kpoints=  , parameters= ,settings=,
+                         options= , clean_workdir= , max_iterations=  )
+        -spec.input('code', valid_type=Code)
+        -spec.input('structure', valid_type=StructureData)                    +  unchanged
+        -spec.input('pseudo_family', valid_type=Str, required=False)          +  unchanged
+        -spec.input('parent_folder', valid_type=RemoteData, required=False)   +  unchanged
+        -spec.input('kpoints', valid_type=KpointsData)                        ?  *********
+        -spec.input('parameters', valid_type=ParameterData)                   +  unchanged
+        -spec.input('settings', valid_type=ParameterData)                     +  unchanged, 
+        -spec.input('options', valid_type=ParameterData)                      ?  unchanged? calculation_set['resources']
+        -spec.input('clean_workdir', valid_type=Bool, default=Bool(False))    +  False
+        -spec.input('max_iterations', valid_type=Int, default=Int(5))         +  Default
     """
-    inputs = PwCalculation.process().get_inputs_template()
-    inputs.structure = structure
-    inputs.code = Code.get_from_string(codename.value)
+    #inputs = PwCalculation.process().get_inputs_template()
+    inputs = {}
+    inputs['structure'] = structure
+    inputs['code'] = Code.get_from_string(codename.value)
     calculation_set = calculation_set.get_dict() 
-    resource = calculation_set.pop('resources', {})
-    if resource:
-        inputs._options.resources =  resource
-    inputs._options.max_wallclock_seconds =  calculation_set.pop('max_wallclock_seconds', 86400) 
-    max_memory_kb = calculation_set.pop('max_memory_kb',None)
-    if max_memory_kb:
-        inputs._options.max_memory_kb = max_memory_kb
-    queue_name = calculation_set.pop('queue_name',None)
-    if queue_name:
-        inputs._options.queue_name = queue_name           
-    custom_scheduler_commands = calculation_set.pop('custom_scheduler_commands',None)
-    if custom_scheduler_commands:
-        inputs._options.custom_scheduler_commands = custom_scheduler_commands
-    environment_variables = calculation_set.pop("environment_variables",None)
-    if environment_variables:
-        inputs._options.environment_variables = environment_variables
-    label = calculation_set.pop('label',None)
-    if label :
-        inputs._label = label
+    #resource = calculation_set.pop('resources', {})
+    inputs['options'] = ParameterData(dict=calculation_set)
+    #if resource:
+    #inputs._options.max_wallclock_seconds =  calculation_set.pop('max_wallclock_seconds', 86400) 
+    #max_memory_kb = calculation_set.pop('max_memory_kb',None)
+    #if max_memory_kb:
+    #    inputs._options.max_memory_kb = max_memory_kb
+    #queue_name = calculation_set.pop('queue_name',None)
+    #if queue_name:
+    #    inputs._options.queue_name = queue_name           
+    #custom_scheduler_commands = calculation_set.pop('custom_scheduler_commands',None)
+    #if custom_scheduler_commands:
+    #    inputs._options.custom_scheduler_commands = custom_scheduler_commands
+    #environment_variables = calculation_set.pop("environment_variables",None)
+    #if environment_variables:
+    #    inputs._options.environment_variables = environment_variables
+    #label = calculation_set.pop('label',None)
+    #if label :
+    #    inputs._label = label
     if parent_folder:
-        inputs.parent_folder = parent_folder
-    inputs.kpoints=kpoints
-    inputs.parameters = parameters  
-    inputs.pseudo = get_pseudo(structure, str(pseudo_family))
-    inputs.settings  = settings
+        inputs['parent_folder'] = parent_folder
+    inputs['kpoints']=kpoints
+    inputs['parameters'] = parameters  
+    inputs['pseudo_family'] =  pseudo_family
+    inputs['settings']  = settings
     #if gamma:
     #    inputs.settings = ParameterData(dict={'gamma_only':True})
     return  inputs
@@ -242,7 +262,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             SE_para[qp_index] = qp  
             SE_para[b_index] = b
         SE_string = " ".join([str(it) for it in SE_para])
-        print("SE_string", SE_string, " : from:", SE_para )
         if SE_string.strip() == '':
             mpi_per = calculation_set['resources']['num_mpiprocs_per_machine']
             num_mach = calculation_set['resources']['num_machines']
@@ -262,8 +281,8 @@ default_step_size = {
                'NGsBlkXp': .1,   
                'BSENGBlk': .1,  
                'BSENGexx': .2,
-               'BndsRnXp': .2, 
-               'GbndRnge': .2,
+               'BndsRnXp': .1, 
+               'GbndRnge': .1,
                'BSEBands': 2, # 
                'FFTGvecs': .2,
                 }
@@ -275,12 +294,12 @@ def update_parameter_field( field, starting_point, update_delta):
         new_field_value =  starting_point  + update_delta 
         return new_field_value
     elif field == 'BndsRnXp':
-        new_field_value =  starting_point  + update_delta 
+        new_field_value =  int( starting_point  + update_delta )
         #new_field_value =  starting_point[-1]  + update_delta 
         #return (starting_point[0], new_field_value)
-        return (1, new_field_value)
+        return (starting_point  , new_field_value)
     elif field == 'GbndRnge':
-        new_field_value =  starting_point   + update_delta 
+        new_field_value =  int( starting_point   + update_delta )
         #new_field_value =  starting_point[-1]  + update_delta 
         #return (starting_point[0], new_field_value)
         return (1, new_field_value)
@@ -313,7 +332,7 @@ def set_default_qp_param(parameter=None):
     if 'LongDrXp' not in edit_param.keys():
         edit_param['LongDrXp'] = (1.000000,0.000000, 0.000000)
     if 'PPAPntXp' not in edit_param.keys():
-        edit_param['PPAPntXp'] =  10
+        edit_param['PPAPntXp'] =  4
         edit_param['PPAPntXp_units'] =  'eV'
     if 'SE_CPU' not in  edit_param.keys():
         edit_param['SE_CPU'] ="1 8 16" 
@@ -328,7 +347,7 @@ def set_default_qp_param(parameter=None):
 
 
 
-def set_default_pw_param():
+def set_default_pw_param(nscf=False):
     pw_parameters =  {
           'CONTROL': {
               'calculation': 'scf',
@@ -340,7 +359,7 @@ def set_default_pw_param():
               'verbosity' :'high',
               },
           'SYSTEM': {
-              'ecutwfc': 45.,
+              'ecutwfc': 25.,
               'occupations':'smearing',
               'degauss': 0.001,
               'starting_magnetization(1)' : 0.0,
@@ -352,6 +371,9 @@ def set_default_pw_param():
               'mixing_mode': 'plain',
               'mixing_beta' : 0.3,
               } }
+    if nscf:
+        pw_parameters['CONTROL']['calculation'] = 'nscf'
+        pw_parameters['SYSTEM']['force_symmorphic'] =  True 
     return ParameterData(dict=pw_parameters)
 
 def default_pw_settings():
@@ -375,6 +397,20 @@ def default_qpkrange(calc_pk, parameters):
        if 'QPkrange' not in edit_parameters.keys():
             edit_parameters['QPkrange'] = [(1,nkpts/2 , int(nelec*2) , int(nelec*2)+1 )]
     return ParameterData(dict=edit_parameters)
+
+def split_incom(num):
+    powers = []
+    i = 1
+    while i <= num:
+        if i & num:
+            powers.append(i)
+        i <<= 1
+    larges_p = powers[-1]
+    power = int(math.log(larges_p)/math.log(2))
+    if power%2 == 0:
+        return (2**(power*3/4), 2**(power*1/4))
+    else:
+        return (2**(power*2/3), 2**(power*1/3))
 
 def is_converged(values,conv_tol=1e-5,conv_window=3):
     """Check convergence for a list of values

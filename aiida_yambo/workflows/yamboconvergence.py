@@ -15,6 +15,7 @@ from aiida.orm.data.structure import StructureData
 from aiida.work.run import run, submit
 from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
 from aiida_yambo.calculations.gw  import YamboCalculation
+from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
                default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange,\
                p2y_default_settings, is_converged
@@ -22,6 +23,7 @@ from aiida_yambo.workflows.yamborestart  import YamboRestartWf
 from aiida_yambo.workflows.yambowf  import YamboWorkflow
 from aiida.orm.data.remote import RemoteData
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_yambo.calculations.gw  import YamboCalculation
 import numpy as np 
 from scipy.optimize import  curve_fit 
 
@@ -109,6 +111,15 @@ class YamboConvergenceWorkflow(WorkChain):
         )
         spec.dynamic_output()
 
+
+    def start(self):
+        # for kpoints, we will need to have the scf step, and  use YamboWorkflow not YamboRestartWf
+        # 
+        #self.iterate([0,1,2,3])
+        self.ctx.skip_prescf = False
+        self.ctx.very_first = True
+        self.ctx.iterate_count=1
+
     def init_parameters(self,paging):
         
         convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
@@ -134,19 +145,29 @@ class YamboConvergenceWorkflow(WorkChain):
             self.inputs.parameters = DataFactory('parameter')(dict= params)
 
         if 'parent_scf_folder' in  self.inputs.keys(): 
-            parent_calc = self.inputs.parent_scf_folder.get_inputs_dict()['remote_folder']
+            parent_calc = self.inputs.parent_scf_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
             if isinstance(parent_calc, PwCalculation):
-                if parent_calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf'\
-                       and parent_calc.get_state()== 'FINISHED': 
+                if parent_calc.get_state()== 'FINISHED': 
                     if 'settings_pw' not in self.inputs.keys():
                         self.inputs.settings_pw = parent_calc.inp.settings
-                    if 'parameters_pw' not in self.inputs.keys():
-                        self.inputs.parameters_pw = parent_calc.inp.parameters
                     if 'structure' not in self.inputs.keys():
                         self.inputs.structure = parent_calc.inp.structure
                     if 'pseudo' not in self.inputs.keys():
                         raise InputValidationError("Pseudo should be provided")
                     if 'parameters' not in self.inputs.keys():
+                        self.report("setting default parameters ")
+                        self.inputs.parameters = set_default_qp_param()
+                    if parent_calc.get_inputs_dict(link_type=LinkType.CREATE)['parameters'].get_dict()['CONTROL']['calculation'] == 'scf':
+                        if 'parameters_pw' not in self.inputs.keys():
+                            self.inputs.parameters_pw = parent_calc.inp.parameters
+                    else:
+                        if 'parameters_pw_nscf' not in self.inputs.keys():
+                            self.inputs.parameters_pw_nscf = parent_calc.inp.parameters
+
+            if isinstance(parent_calc, YamboCalculation):
+                if parent_calc.get_state()== 'FINISHED': 
+                    if 'parameters' not in self.inputs.keys():
+                        self.report("setting default parameters ")
                         self.inputs.parameters = set_default_qp_param()
 
             if 'kpoints'==self.ctx.variable_to_convergence:
@@ -154,15 +175,22 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.inputs.settings_pw =  default_pw_settings() 
                 if 'parameters_pw' not in self.inputs.keys():
                     self.inputs.parameters_pw = set_default_pw_param() 
+                if 'parameters_pw_nscf' not in self.inputs.keys():
+                    self.inputs.parameters_pw_nscf = set_default_pw_param(nscf=True) 
                 if 'parameters' not in self.inputs.keys():
                     self.inputs.parameters = set_default_qp_param()
                       
         else:
             if 'kpoints'==self.ctx.variable_to_convergence:
+            self.report(" initializing in a kpoints convergence calculation")
                 if 'settings_pw' not in self.inputs.keys():
                     self.inputs.settings_pw =  default_pw_settings() 
                 if 'parameters_pw' not in self.inputs.keys():
+                    self.report("  parameters_pw were not found setting them to default pw params")
                     self.inputs.parameters_pw = set_default_pw_param() 
+                if 'parameters_pw_nscf' not in self.inputs.keys():
+                    self.report("  parameters_pw_nscf were not found setting them to default pw params")
+                    self.inputs.parameters_pw_nscf = set_default_pw_param(nscf=True) 
                 if 'parameters' not in self.inputs.keys():
                     self.inputs.parameters = set_default_qp_param()
             if 'structure' not in self.inputs.keys() :
@@ -269,8 +297,10 @@ class YamboConvergenceWorkflow(WorkChain):
                                 calculation_set= self.inputs.calculation_set_p2y.copy(),
                                 parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y.copy()) 
                     self.ctx.skip_prescf = True
+                    self.ctx.iterate_count-=1  
+                    self.ctx.very_first = True
                     return ToContext(missing_p2y_parent= p2y_res)
-                self.report('yamboconvergence.py:  iterate(): running from preceeding yambo/p2y calculation  ' )
+                self.report(' running from preceeding yambo/p2y calculation  ' )
                 future =  submit  (YamboRestartWf,
                             precode= self.inputs.precode.copy(),
                             yambocode=self.inputs.yambocode.copy(),
@@ -283,13 +313,13 @@ class YamboConvergenceWorkflow(WorkChain):
             return ToContext(**outs )
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
-            self.report("yamboconvergence.py: iterate():  K-point convergence ")
+            self.report("  K-point convergence ")
             for num in loop_items: # includes 0 because of starting point
                 if loop_items[0] == 0:
                     self.init_parameters(num)
                 else:
                     self.update_parameters(num)
-                self.ctx.distance_kpoints = self.ctx.distance_kpoints*1.1
+                self.ctx.distance_kpoints = self.ctx.distance_kpoints*1.5
                 kpoints = KpointsData()
                 kpoints.set_cell_from_structure(self.inputs.structure.copy())
                 kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=False)
@@ -305,18 +335,18 @@ class YamboConvergenceWorkflow(WorkChain):
                    calculation_set_yambo = self.inputs.calculation_set.copy(),
                    settings_pw =self.inputs.settings_pw.copy(), settings_p2y = self.inputs.settings_p2y.copy(),
                    settings_yambo=self.inputs.settings.copy() , structure = self.inputs.structure.copy(),
-                   kpoint_pw = kpoints, parameters_pw= self.inputs.parameters_pw.copy(),
+                   kpoint_pw = kpoints, parameters_pw= self.inputs.parameters_pw.copy(), parameters_pw_nscf= self.inputs.parameters_pw_nscf.copy(),
                    parameters_p2y= self.inputs.parameters_p2y.copy(), parameters_yambo=  self.inputs.parameters.copy(),
                    **extra)
                 outs[ 'r'+str(num) ] = future
             for num in loop_items: # includes 0 because of starting point
-                self.report("yamboconvergence.py: waiting  for result of YamboWorkflow ")
-                outs[ 'r'+str(num) ] = outs['r'+str(num)]
-             
+                self.report(" waiting  for result of YamboWorkflow ")
+                #outs[ 'r'+str(num) ] = outs['r'+str(num)]
+            return ToContext(**outs )  
         return outs 
 
     def interstep(self):
-        self.report("yamboconvergence.py: interstep() ", self.ctx.r0)
+        self.report("interstep() ", self.ctx.r0)
         return
 
     def update_parameters(self, paging):
@@ -329,7 +359,7 @@ class YamboConvergenceWorkflow(WorkChain):
              ##update_delta = np.ceil( self.inputs.default_step_size.get_dict()[field]*paging*starting_point) 
              ##params[field] = update_parameter_field( field, params[field] ,  update_delta ) 
              self.ctx.conv_elem[field].append(params[field])
-        self.report("yamboconvergence.py update_parameters(): extended convergence points: {}".format(self.ctx.conv_elem))
+        self.report(" extended convergence points: {}".format(self.ctx.conv_elem))
         self.inputs.parameters = DataFactory('parameter')(dict= params)
 
 
@@ -338,15 +368,15 @@ class YamboConvergenceWorkflow(WorkChain):
             return True 
 
         try: # for yamborestart
-            r0_width = self.get_total_range(self.ctx.r0["gw"].get_dict()['yambo_pk'])
-            r1_width = self.get_total_range(self.ctx.r1["gw"].get_dict()['yambo_pk'])
-            r2_width = self.get_total_range(self.ctx.r2["gw"].get_dict()['yambo_pk'])
-            r3_width = self.get_total_range(self.ctx.r3["gw"].get_dict()['yambo_pk'])
+            r0_width = self.get_total_range(self.ctx.r0.out.gw.get_dict()['yambo_pk'])
+            r1_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
+            r2_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
+            r3_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
         except AttributeError: # for yamboworkflow
-            r0_width = self.get_total_range(self.ctx.r0["gw"].get_dict()['yambo_pk'])
-            r1_width = self.get_total_range(self.ctx.r1["gw"].get_dict()['yambo_pk'])
-            r2_width = self.get_total_range(self.ctx.r2["gw"].get_dict()['yambo_pk'])
-            r3_width = self.get_total_range(self.ctx.r3["gw"].get_dict()['yambo_pk'])
+            r0_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
+            r1_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
+            r2_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
+            r3_width = self.get_total_range(self.ctx.r4.out.gw.get_dict()['yambo_pk'])
 
         self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
         if 'scf_pk' in self.ctx.r3["gw"].get_dict() and 'parent_scf_folder' not in self.inputs.keys():
@@ -435,7 +465,7 @@ class YamboConvergenceWorkflow(WorkChain):
         corrected = eo+e_m_eo
         corrected_lb = corrected[arglb]
         corrected_hb = corrected[arghb]
-        self.report("yamboconvergence.py:get_total_range (): corrected gap(s)   at K-point {}, between bands {} and {}".format(
+        self.report(" corrected gap(s)   at K-point {}, between bands {} and {}".format(
                     corrected_hb- corrected_lb, lowest_k, lowest_b, highest_b ))
         return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
 
@@ -445,16 +475,22 @@ class YamboConvergenceWorkflow(WorkChain):
         """
         extra = {}
         nscf_pk = False
+        scf_pk = False
+        parameters = None
         from aiida.orm import DataFactory
-        if 'nscf_pk' in self.ctx.r3["gw"].get_dict():
-            nscf_pk = self.ctx.r3["gw"].get_dict()['nscf_pk'] 
+        if 'nscf_pk' in self.ctx.r1.out.gw.get_dict():
+            nscf_pk = self.ctx.r1.out.gw.get_dict()['nscf_pk'] 
+        if 'scf_pk' in self.ctx.r1.out.gw.get_dict():
+            scf_pk = self.ctx.r1.out.gw.get_dict()['scf_pk'] 
+        if 'yambo_pk' in self.ctx.r1.out.gw.get_dict():
+            parameters = load_node( self.ctx.r1.out.gw.get_dict()['yambo_pk']).inp.parameters.get_dict()
         self.out("convergence", DataFactory('parameter')(dict={
-            "parameters": self.inputs.parameters.get_dict(),
-            "yambo_pk": self.ctx.r3["gw"].get_dict()['yambo_pk'],
+            "parameters": parameters,
+            "yambo_pk": self.ctx.r1.out.gw.get_dict()['yambo_pk'],
             "convergence_space": self.ctx.conv_elem,
             "energy_widths":  self.ctx.en_diffs ,
             "nscf_pk":  nscf_pk, 
-            "scf_pk":  self.inputs.parent_scf_folder.get_inputs_dict()['remote_folder'].pk, 
+            "scf_pk":  scf_pk , 
             }))
 
 if __name__ == "__main__":

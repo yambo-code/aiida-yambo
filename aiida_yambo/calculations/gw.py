@@ -8,13 +8,14 @@ from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.common.datastructures import calc_states
 from aiida_quantumespresso.calculations import  get_input_data_text,_lowercase_dict,_uppercase_dict
-from aiida.common.exceptions import UniquenessError
+from aiida.common.exceptions import UniquenessError, InputValidationError
 from aiida.common.utils import classproperty
 from aiida.orm.data.parameter import ParameterData 
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.utils import DataFactory, CalculationFactory
 from aiida.orm.code import Code
 from aiida.common import aiidalogger
+from aiida.common.links import LinkType
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -166,7 +167,7 @@ class YamboCalculation(JobCalculation):
                                            "must be of type Code")
         
         
-        parent_calc = parent_calc_folder.get_inputs_dict()['remote_folder']
+        parent_calc = parent_calc_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
         yambo_parent = isinstance(parent_calc, YamboCalculation)
         
         # flags for yambo interfaces
@@ -328,10 +329,13 @@ class YamboCalculation(JobCalculation):
         # set copy of the parent calculation
         ############################################
         
-        parent_calcs = parent_calc_folder.get_inputs()
+        parent_calcs = parent_calc_folder.get_inputs(link_type=LinkType.CREATE)
+        print("parent_calcs {}  folder {}".format(parent_calcs, parent_calc_folder))
         if len(parent_calcs)>1:
             raise UniquenessError("More than one parent totalenergy calculation" 
-                                  "has been found")
+                                  "has been found for parent_calc_folder {}".format(parent_calc_folder))
+        if len(parent_calcs)==0:
+            raise InputValidationError("No parent calculation associated with parent_folder {}".format(parent_calc_folder))
         parent_calc = parent_calcs[0]
         
         if yambo_parent:
