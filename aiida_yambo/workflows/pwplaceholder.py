@@ -19,12 +19,13 @@ try:
     from aiida.work.run import run, submit
 except ImportError:
      pass
-
+from aiida.common.links import LinkType
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida_yambo.workflows.yambo_utils import generate_pw_input_params 
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_yambo.calculations.gw  import YamboCalculation
 
 ParameterData = DataFactory("parameter")
@@ -75,7 +76,7 @@ class PwRestartWf(WorkChain):
         if 'parent_folder' in self.inputs.keys():
             parameters = self.inputs.parameters.get_dict()
             parent_folder=self.inputs.parent_folder
-            calc = parent_folder.get_inputs_dict()['remote_folder']
+            calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state()== 'FINISHED':# next nscf 
                 if 'force_symmorphic' not in parameters['SYSTEM']:
                      parameters['SYSTEM']['force_symmorphic'] = True
@@ -86,73 +87,107 @@ class PwRestartWf(WorkChain):
                          parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*1.2) # 20% more
                 parameters['CONTROL']['calculation'] = 'nscf'
                 parameters = ParameterData(dict=parameters)
-                if  'parameters_nscf' in  self.inputs.keys() :
+                if  'parameters_nscf' in  self.inputs.keys():
                     parameters = self.inputs.parameters_nscf
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
-                self.ctx.scf_pk = calc.pk 
+                self.ctx.scf_pk = calc.pk
+                self.report(" submitted NSCF {} ".format(calc.pk)) 
 
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state() != 'FINISHED':#  starting from failed SCF
+                self.report("restarting failed   SCF  {} ".format(calc.pk))
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
                 
-            if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED':# next nscf
+            if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED':# 
+                self.report(" workflow completed nscf successfully, exiting")
                 self.ctx.nscf_pk = calc.pk # NSCF is done, we should exit  
         else:
+           self.report("Running from SCF")
            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
 
-        future = submit(PwProcess, **inputs)
+        future = submit( PwBaseWorkChain, **inputs)
         self.ctx.pw_pks = []
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart = 0 
         self.ctx.success = False
         self.ctx.scf_pk = None 
         self.ctx.nscf_pk = None
+        self.report("submitted subworkflow  {}".format(future.pid))
         return ResultToContext(first_calc=future  )
 
     def pw_should_continue(self):
+        """
+        """
         if len(self.ctx.pw_pks) ==0: # we never run a single calculation 
             return False 
 
         if self.ctx.success == True:
             return False
-        if self.ctx.restart > 5:
+        if self.ctx.restart > 4:
             return False
         if len (self.ctx.pw_pks) < 1: 
             return True 
-        calc = load_node(self.ctx.pw_pks[-1])
+        calc = None
+        if len(self.ctx.pw_pks) ==1:
+            calc = load_node(self.ctx.first_calc.out.CALL.pk)
+        else:
+            calc = load_node(self.ctx.last_calc.out.CALL.pk)
+        self.report("calc {} ".format(calc))
         if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state()== 'FINISHED':
-            self.ctx.scf_pk = self.ctx.pw_pks[-1] 
+            self.ctx.scf_pk = calc.pk 
+            self.report(" completed SCF successfully")
             return True 
         if calc.get_state() == calc_states.SUBMISSIONFAILED or calc.get_state() == calc_states.FAILED\
             or 'output_parameters' not in calc.get_outputs_dict()  and  self.ctx.restart < 4:
+            self.report(" calculation failed  {}, will try restarting".format(calc.pk))
             return True
         if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED':
-            self.ctx.nscf_pk = self.ctx.pw_pks[-1] 
+            self.ctx.nscf_pk =  calc.pk 
             self.ctx.success = True
+            self.report("completed NSCF successfully, exiting")
             return False 
         if calc.get_state() == calc_states.SUBMISSIONFAILED or calc.get_state() == calc_states.FAILED\
             or 'output_parameters' not in calc.get_outputs_dict()  and  self.ctx.restart >= 4:
             self.ctx.success = False
+            self.report("workflow failed to succesfully run any calcultions exiting")
             return False
+        self.report("worklfow exiting unsuccessfully ")
         return False
 
     def pw_continue(self):
         # restart if neccessary
-        calc = load_node(self.ctx.pw_pks[-1])
+        calc = None
+        if len(self.ctx.pw_pks) ==1:
+            calc = load_node(self.ctx.first_calc.out.CALL.pk)
+        else:
+            calc = load_node(self.ctx.last_calc.out.CALL.pk)
+        self.report(" continuing from calculation {}".format(calc.pk))
         parameters = calc.get_inputs_dict()['parameters'].get_dict()
         scf = ''
         parent_folder = None
         if parameters['CONTROL']['calculation'] == 'scf' and calc.get_state()== 'FINISHED':
             scf = 'nscf'
             parent_folder = calc.out.remote_folder
-            self.ctx.scf_pk = self.ctx.pw_pks[-1] 
-        if parameters['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED': 
-            self.ctx.nscf_pk = self.ctx.pw_pks[-1] 
+            self.ctx.scf_pk = calc.pk
+        elif parameters['CONTROL']['calculation'] == 'scf' and calc.get_state()!= 'FINISHED':
+            scf = 'scf'  # RESTART
+            parent_folder = calc.out.remote_folder
+            self.ctx.restart += 1 # so we do not end up in an infinite loop 
+        elif parameters['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED': 
+            self.ctx.nscf_pk = calc.pk
             self.ctx.success = True
             self.ctx.restart += 1 # so we do not end up in an infinite loop 
             return # we are finished, ideally we should not need to arrive here, this is also done at self.pw_should_continue
+        elif parameters['CONTROL']['calculation'] == 'nscf' and calc.get_state()!= 'FINISHED':
+            scf = 'nscf'  # RESTART
+            parent_folder = calc.out.remote_folder
+            self.ctx.restart += 1 # so we do not end up in an infinite loop 
+        else:
+            self.ctx.success = False
+            self.report("workflow in an inconsistent state.")
+            return 
  
         if scf == 'nscf':
             if 'force_symmorphic' not in parameters['SYSTEM']:
@@ -162,17 +197,21 @@ class PwRestartWf(WorkChain):
                      parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*2
                  except KeyError:
                      parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*1.2) # 20% more
-            
         parameters['CONTROL']['calculation'] = scf  
+        self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
         parameters = ParameterData(dict=parameters)  
         if 'parameters_nscf' in self.inputs.keys():
             parameters = self.inputs.parameters_nscf
         inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                       parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
-        future =  submit (PwProcess, **inputs)
+        #future =  submit (PwProcess, **inputs)
+        future =  submit (PwBaseWorkChain, **inputs)
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart += 1
-        return  ResultToContext(last_pk=future)
+        self.report("submitted subworkflow  {}".format(future.pid))
+        return  ResultToContext(last_calc=future)
+
+
 
     def report_wf(self):
         """
@@ -180,8 +219,17 @@ class PwRestartWf(WorkChain):
         return information that may be used to figure out
         the status of the calculation.
         """
+        self.report("reporting: scf {}  nscf {} success {}".format(self.ctx.scf_pk,self.ctx.nscf_pk,self.ctx.success))
         from aiida.orm import DataFactory
-        self.out("pw", DataFactory('parameter')(dict= {"scf_pk": self.ctx.scf_pk , "nscf_pk": self.ctx.nscf_pk, 'success': self.ctx.success }) ) 
+        res = {}
+        if self.ctx.scf_pk:
+            res['scf_pk'] = self.ctx.scf_pk
+            res['scf_node'] = load_node(self.ctx.scf_pk)
+        if self.ctx.nscf_pk:
+            res['nscf_pk'] = self.ctx.nscf_pk
+            res['nscf_node'] = load_node(self.ctx.nscf_pk)
+        res['success'] = self.ctx.success 
+        self.out("pw", DataFactory('parameter')(dict=res )) 
 
 if __name__ == "__main__":
     pass

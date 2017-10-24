@@ -56,6 +56,7 @@ class YamboFile():
         self.game_over = False  # check yambo run completed successfully
         self.p2y_complete = False  # check yambo initialization completed successfully
         self.para_error = False 
+        self.unphysical_input = False 
         if any(filename.startswith(prefix) for prefix in self._output_prefixes):
             #read lines from file
             f = open("%s/%s"%(folder,filename),'r')
@@ -304,13 +305,16 @@ class YamboFile():
         if len(self.memstats)>0:
             self.last_memory_time = [ get_seconds(memory.match(line).groups()[0]) for line in self.memstats][-1]
 
-        para_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
+        generic_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
         paralle = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[ERROR\](?=\s+)?Impossible(?=\s+)?(?=[a-zA-Z0-9\s.()\[\]]+)?')
+        unphysical = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[ERROR\](?=\s+)?\[NetCDF\]\s*NetCDF[:]\s*NC_UNLIMITED\s*in\s*the\s*wrong\s*index')
         self.errors.extend ([ line for line in self.lines if ( para_error.match(line) and paralle.match(line))  ])
         for line in self.lines:
-            if para_error.match(line):
+            if generic_error.match(line):
                 if paralle.match(line):
                     self.para_error = True
+                if unphysical.match(line):
+                    self.unphysical_input = True
 
     def parse_p2y_log(self):
         """ Get ERRORS and WARNINGS from p2y l_*  file, useful for debugging
