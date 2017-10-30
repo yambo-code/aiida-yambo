@@ -61,10 +61,6 @@ if __name__ == "__main__":
                         help='The pw codename to use')
     parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
                         help='The pseudo  to use')
-    parser.add_argument('--parent', type=int, dest='parent', required=True,
-                        help='The parent  to use')
-    parser.add_argument('--parent_nscf', type=int, dest='parent_nscf', required=True,
-                        help='The parent nscf  to use')
 
     args = parser.parse_args()
     structure =  struc
