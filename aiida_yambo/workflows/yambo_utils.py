@@ -1,6 +1,7 @@
 import sys
 import copy
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+import math 
 
 if not is_dbenv_loaded():
     load_dbenv()
@@ -16,8 +17,6 @@ from aiida.common.links import LinkType
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_yambo.calculations.gw  import YamboCalculation
 
-#PwCalculation = CalculationFactory('quantumespresso.pw')
-#YamboCalculation = CalculationFactory('yambo.yambo')
 ParameterData = DataFactory("parameter")
 
 def generate_yambo_input_params(precodename,yambocodename, parent_folder, parameters,  calculation_set, settings):
@@ -62,12 +61,14 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
            calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
            nocc = nelec/2 
         else:
-           nocc = nelec
+           nocc = nelec/2
         bndsrnxp = gbndrnge = nocc 
-        #ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
-        ngsblxpp =  1 
+        ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
+        #ngsblxpp =  2
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
-        tot_mpi =  calculation_set['resources']['num_mpiprocs_per_machine'] * calculation_set['resources']['num_machines']
+        if not resource:
+             resource = {"num_mpiprocs_per_machine": 8, "num_machines": 1} # safe trivial defaults
+        tot_mpi =  resource[u'num_mpiprocs_per_machine'] * resource[u'num_machines']
         if 'FFTGvecs' not in edit_parameters.keys():
              edit_parameters['FFTGvecs'] =  20
              edit_parameters['FFTGvecs_units'] =  'Ry'
@@ -79,7 +80,7 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
              edit_parameters['NGsBlkXp'] = ngsblxpp
              edit_parameters['NGsBlkXp_units'] =  'Ry'
         if 'QPkrange' not in edit_parameters.keys():
-             edit_parameters['QPkrange'] = [(1,1,int(nocc), int(occ)+1 )] # To revisit 
+             edit_parameters['QPkrange'] = [(1,1,int(nocc), int(nocc)+1 )] # To revisit 
         if 'SE_CPU' not in  edit_parameters.keys():
             b, qp = split_incom(tot_mpi)
             edit_parameters['SE_CPU'] ="1 {qp} {b}".format(qp=qp, b = b) 
@@ -110,65 +111,27 @@ def get_pseudo(structure, pseudo_family):
 
 def generate_pw_input_params(structure, codename, pseudo_family,parameters, calculation_set, kpoints,gamma,settings,parent_folder):
     """
-        future =  submit(PwBaseWorkChain, code = self.inputs.codename , structure=self.inputs.structure, , pseudo_family=self.inputs.pseudo_family, 
-                    parent_folder=parent_folder , kpoints=  , parameters= ,settings=,
-                         options= , clean_workdir= , max_iterations=  )
-        -spec.input('code', valid_type=Code)
-        -spec.input('structure', valid_type=StructureData)                    +  unchanged
-        -spec.input('pseudo_family', valid_type=Str, required=False)          +  unchanged
-        -spec.input('parent_folder', valid_type=RemoteData, required=False)   +  unchanged
-        -spec.input('kpoints', valid_type=KpointsData)                        ?  *********
-        -spec.input('parameters', valid_type=ParameterData)                   +  unchanged
-        -spec.input('settings', valid_type=ParameterData)                     +  unchanged, 
-        -spec.input('options', valid_type=ParameterData)                      ?  unchanged? calculation_set['resources']
-        -spec.input('clean_workdir', valid_type=Bool, default=Bool(False))    +  False
-        -spec.input('max_iterations', valid_type=Int, default=Int(5))         +  Default
     """
-    #inputs = PwCalculation.process().get_inputs_template()
     inputs = {}
     inputs['structure'] = structure
     inputs['code'] = Code.get_from_string(codename.value)
     calculation_set = calculation_set.get_dict() 
-    #resource = calculation_set.pop('resources', {})
     inputs['options'] = ParameterData(dict=calculation_set)
-    #if resource:
-    #inputs._options.max_wallclock_seconds =  calculation_set.pop('max_wallclock_seconds', 86400) 
-    #max_memory_kb = calculation_set.pop('max_memory_kb',None)
-    #if max_memory_kb:
-    #    inputs._options.max_memory_kb = max_memory_kb
-    #queue_name = calculation_set.pop('queue_name',None)
-    #if queue_name:
-    #    inputs._options.queue_name = queue_name           
-    #custom_scheduler_commands = calculation_set.pop('custom_scheduler_commands',None)
-    #if custom_scheduler_commands:
-    #    inputs._options.custom_scheduler_commands = custom_scheduler_commands
-    #environment_variables = calculation_set.pop("environment_variables",None)
-    #if environment_variables:
-    #    inputs._options.environment_variables = environment_variables
-    #label = calculation_set.pop('label',None)
-    #if label :
-    #    inputs._label = label
     if parent_folder:
         inputs['parent_folder'] = parent_folder
     inputs['kpoints']=kpoints
     inputs['parameters'] = parameters  
     inputs['pseudo_family'] =  pseudo_family
     inputs['settings']  = settings
-    #if gamma:
-    #    inputs.settings = ParameterData(dict={'gamma_only':True})
     return  inputs
 
 
 def reduce_parallelism(typ, roles,  values,calc_set):
     """
-                        X_all_q_CPU = params.pop('X_all_q_CPU','')
-                        X_all_q_ROLEs =  params.pop('X_all_q_ROLEs','')
-                        SE_CPU = params.pop('SE_CPU','')
-                        SE_ROLEs = params.pop('SE_ROLEs','')
-                        calculation_set_yambo ={'resources':  {"num_machines": 8,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200,
-                             'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
-                             '  environment_variables': {"OMP_NUM_THREADS": "2" }  
-                             }
+       calculation_set_yambo ={'resources':  {"num_machines": 8,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200,
+            'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+            '  environment_variables': {"OMP_NUM_THREADS": "2" }  
+            }
     """
     calculation_set = copy.deepcopy(calc_set)
     # the latter needs to be reduced, we can either increase the former or leave it untouched.
@@ -179,10 +142,12 @@ def reduce_parallelism(typ, roles,  values,calc_set):
     if 'environment_variables' in calculation_set.keys():
         omp_threads = calculation_set['environment_variables'].pop('OMP_NUM_THREADS',1)
     num_mpiprocs_per_machine=int(num_mpiprocs_per_machine/2)
-    omp_threads= int(omp_threads)*2 
+    omp_threads= int(omp_threads)*2
+    increased_mpi_task = False 
     if num_mpiprocs_per_machine < 1:
         num_mpiprocs_per_machine = 1 
         num_machines = num_machines * 2
+        increased_mpi_task = True 
     calculation_set['environment_variables']['OMP_NUM_THREADS'] = str(omp_threads)
     calculation_set['environment_variables']['NUM_CORES_PER_MPIPROC'] = str(omp_threads)
     if isinstance(values,list):
@@ -192,6 +157,7 @@ def reduce_parallelism(typ, roles,  values,calc_set):
     # adjust the X_all_q_CPU and SE_CPU
     mpi_task = num_mpiprocs_per_machine*num_machines 
     if typ == 'X_all_q_CPU':
+        print "this type"
         #X_all_q_CPU = "1 1 96 32"
         #X_all_q_ROLEs = "q k c v"
         X_para = [ int(it) for it in values.strip().split(' ') if it ]
@@ -208,14 +174,33 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             c_index = v_index = 0
             c = 1
             v = 1
-        if c_index and v_index:
-            pass
-        if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1:
-            v = v/2 
-        if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v == 1:
-            c = c/2 
-        if num_machines > calculation_set['resources']['num_machines']: 
-            c = c*2 
+        # we should keep c*v == mpi_task, with  c>v always
+        # if increased_mpi_task we try a simple assignment
+        # else, we factor again?  
+        c, v = split_incom(mpi_task*2)
+        if  False:
+            if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] :
+                print("num_mpiprocs_per_machine {} , calculation_set['resources']['num_mpiprocs_per_machine'] {}, v {}".format(
+                      num_mpiprocs_per_machine, calculation_set['resources']['num_mpiprocs_per_machine'] , v ))
+                print("num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v == 1")
+                c = c/2 
+            if num_machines > calculation_set['resources']['num_machines']:
+                print("num_machines {} , calculation_set['resources']['num_machines'] {},".format(
+                      num_machines, calculation_set['resources']['num_machines']  ))
+                print("num_machines > calculation_set['resources']['num_machines']")
+                c = c*2 
+        if False: 
+            if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1:
+                print("num_mpiprocs_per_machine {} , calculation_set['resources']['num_mpiprocs_per_machine'] {}, v {}".format(
+                      num_mpiprocs_per_machine, calculation_set['resources']['num_mpiprocs_per_machine'] , v ))
+                print("num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1")
+                v = v/2 
+            if num_machines > calculation_set['resources']['num_machines']:
+                print("num_machines {} , calculation_set['resources']['num_machines'] {},".format(
+                      num_machines, calculation_set['resources']['num_machines']  ))
+                print("num_machines > calculation_set['resources']['num_machines']")
+                c = c*2 
+
         if c_index and v_index:
             X_para[c_index] = c  
             X_para[v_index] = v
@@ -228,9 +213,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             X_string = '1  1 {c} {v}'.format(c=c, v=v )
         calculation_set['resources']['num_machines'] = num_machines
         calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
-        if c_index and v_index:
-            pass
-        print("X_all_q_CPU", X_string, " :from: ", X_para)
         return X_string , calculation_set
             
     if typ == 'SE_CPU':
@@ -250,8 +232,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
             qp_index = b_index = 0
             qp =1
             b  =1  
-        if qp_index and b_index: 
-            pass
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and qp >1:
              qp = qp/2 
         if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and qp == 1:
@@ -271,8 +251,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
         
         calculation_set['resources']['num_machines'] = num_machines
         calculation_set['resources']['num_mpiprocs_per_machine'] = num_mpiprocs_per_machine
-        if qp_index and b_index: 
-            pass
         return SE_string, calculation_set
    
 
@@ -288,20 +266,16 @@ default_step_size = {
                 }
 
 def update_parameter_field( field, starting_point, update_delta):
-    if update_delta < 2:
-       update_delta = 2 
+    # Bug 
     if field in ['PPAPntXp','NGsBlkXp','BSENGBlk','BSENGexx','FFTGvecs']: # single numbers
         new_field_value =  starting_point  + update_delta 
         return new_field_value
     elif field == 'BndsRnXp':
-        new_field_value =  int( starting_point  + update_delta )
-        #new_field_value =  starting_point[-1]  + update_delta 
-        #return (starting_point[0], new_field_value)
-        return (starting_point  , new_field_value)
+        new_hi_value =  int( starting_point  + update_delta )
+        new_low_value =  int( starting_point  - update_delta )
+        return (new_low_value , new_hi_value)
     elif field == 'GbndRnge':
         new_field_value =  int( starting_point   + update_delta )
-        #new_field_value =  starting_point[-1]  + update_delta 
-        #return (starting_point[0], new_field_value)
         return (1, new_field_value)
     elif field == 'BSEBands':  # Will be useful when we support BSE calculations
         hi =  starting_point +   update_delta
@@ -341,7 +315,7 @@ def set_default_qp_param(parameter=None):
         edit_param['X_all_q_CPU']= "1 1 16 8"
         edit_param['X_all_q_ROLEs'] ="q k c v"
     if 'FFTGvecs' not in edit_param.keys():
-        edit_param['FFTGvecs'] =  20
+        edit_param['FFTGvecs'] =  8
         edit_param['FFTGvecs_units'] =  'Ry'
     return ParameterData(dict=edit_param)
 
@@ -391,11 +365,17 @@ def default_qpkrange(calc_pk, parameters):
     calc = load_node(calc_pk)
     edit_parameters = parameters.get_dict()
     if isinstance(calc,PwCalculation):
-       is_pw = True
        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+       nocc = None
+       if calc.out.output_parameters.get_dict()['lsda']== True or\
+          calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+          nocc = nelec/2 
+       else:
+          nocc = nelec/2
+       is_pw = True
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():
-            edit_parameters['QPkrange'] = [(1,nkpts/2 , int(nelec*2) , int(nelec*2)+1 )]
+            edit_parameters['QPkrange'] = [(1,1 , int(nocc) , int(nocc)+1 )]
     return ParameterData(dict=edit_parameters)
 
 def split_incom(num):

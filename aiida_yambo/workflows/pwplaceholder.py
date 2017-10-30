@@ -208,7 +208,7 @@ class PwRestartWf(WorkChain):
         future =  submit (PwBaseWorkChain, **inputs)
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart += 1
-        self.report("submitted subworkflow  {}".format(future.pid))
+        self.report("submitted pw  subworkflow  {}".format(future.pid))
         return  ResultToContext(last_calc=future)
 
 
@@ -219,17 +219,18 @@ class PwRestartWf(WorkChain):
         return information that may be used to figure out
         the status of the calculation.
         """
-        self.report("reporting: scf {}  nscf {} success {}".format(self.ctx.scf_pk,self.ctx.nscf_pk,self.ctx.success))
+        self.report("Workflow Complete : scf {}  nscf {} success {}".format(self.ctx.scf_pk,self.ctx.nscf_pk,self.ctx.success))
         from aiida.orm import DataFactory
         res = {}
         if self.ctx.scf_pk:
             res['scf_pk'] = self.ctx.scf_pk
-            res['scf_node'] = load_node(self.ctx.scf_pk)
         if self.ctx.nscf_pk:
             res['nscf_pk'] = self.ctx.nscf_pk
-            res['nscf_node'] = load_node(self.ctx.nscf_pk)
         res['success'] = self.ctx.success 
         self.out("pw", DataFactory('parameter')(dict=res )) 
+        self.out("scf_remote_folder", load_node(self.ctx.scf_pk).out.remote_folder ) 
+        self.out("nscf_remote_folder",  load_node(self.ctx.nscf_pk).out.remote_folder ) 
+
 
 if __name__ == "__main__":
     pass
