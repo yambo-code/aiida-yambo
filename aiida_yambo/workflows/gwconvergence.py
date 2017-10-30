@@ -365,8 +365,6 @@ class YamboFullConvergenceWorkflow(WorkChain):
                         calculation_set_pw = self.inputs.calculation_set_pw,
                         pseudo = self.inputs.pseudo,
                         convergence_parameters = convergence_parameters, 
-                        #converge_parameters= converge_parameters,
-                        #threshold = Float(0.01), starting_points = starting_points,
                         **extra
                         )
         self.report("Submitted the K-point convergence step ")
