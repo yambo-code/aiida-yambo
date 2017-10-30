@@ -27,7 +27,7 @@ custom = """
 """
 
 
-calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds': 60*480,
+calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds': 2*60*60,
                   'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n"+custom  ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32,  }, 'max_wallclock_seconds': 60*45,
