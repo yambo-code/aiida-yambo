@@ -16,24 +16,18 @@ except ImportError:
 from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
-alat = 7.15110109 # angstrom
-a=1.002292408
-c=0.639106637657
-cell = [[a*alat, 0., 0.,],
-        [0., a*alat, 0.,],
-        [0., 0., c*alat,],
+
+cell = [[4.2262023163, 0.0000000000, 0.0000000000],
+        [0.0000000000, 4.2262023163, 0.0000000000],
+        [0.0000000000, 0.0000000000, 2.7009939524],
        ]
-
 struc = StructureData(cell=cell)
-struc.append_atom(position=(0.000000000, 0.000000000, 0.000000000), symbols='Ti')
-struc.append_atom(position=(0.500000000, 0.500000000, 0.250000610), symbols='Ti')
-struc.append_atom(position=(0.500000000, 0.500000000, 0.500000000), symbols='Ti')
-struc.append_atom(position=(0.500000000, 0.000000000, 0.749999390), symbols='Ti')
-struc.append_atom(position=(0.000000000, 0.000000000, 0.206767566), symbols='O')
-struc.append_atom(position=(0.000000000, 0.500000000, 0.043233777), symbols='O')
-struc.append_atom(position=(0.000000000, 0.000000000, 0.793232434), symbols='O')
-struc.append_atom(position=(0.500000000, 0.000000000, 0.956766223), symbols='O')
-
+struc.append_atom(position=(1.2610450495  ,1.2610450495  ,0.0000000000  ), symbols='O')
+struc.append_atom(position=(0.8520622471  ,3.3741400691  ,1.3504969762  ), symbols='O')
+struc.append_atom(position=(2.9651572668  ,2.9651572668  ,0.0000000000  ), symbols='O')
+struc.append_atom(position=(3.3741400691  ,0.8520622471  ,1.3504969762  ), symbols='O')
+struc.append_atom(position=( 0.0000000000 , 0.0000000000 , 0.0000000000 ), symbols='Ti')
+struc.append_atom(position=( 2.1131011581 , 2.1131011581 , 1.3504969762 ), symbols='Ti')
 struc.store()
 
 pw_parameters =  {
