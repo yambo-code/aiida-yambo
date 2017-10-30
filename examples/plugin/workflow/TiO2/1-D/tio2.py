@@ -70,7 +70,7 @@ if __name__ == "__main__":
                     yambocode=Str(args.yambocode),
                     calculation_set= ParameterData(dict=calculation_set_yambo),
                     calculation_set_pw= ParameterData(dict=calculation_set_pw),
-                    convergence_parameters=ParameterData(dict=convergence_parameters),
+                    convergence_parameters=convergence_parameters,
                     structure = structure , 
                     pseudo = Str(args.pseudo),
                     )
