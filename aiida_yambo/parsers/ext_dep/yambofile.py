@@ -222,8 +222,8 @@ class YamboFile():
         full_lines = ''.join(self.lines)
         qp_regx = re.compile('(^\s+?QP\s\[eV\]\s@\sK\s\[\d+\][a-z0-9E:()\s.-]+)(.*?)(?=^$)',re.M|re.DOTALL)
         kp_regex = re.compile('^\s+?QP\s\[eV\]\s@\sK\s\[(\d+)\][a-z0-9E:()\s.-]+$')
-        spliter = re.compile('^(B[=]\d+\sEo[=]\s+?[E0-9.-]+\sE[=]\s+?[E0-9.-]+\sE[-]Eo[=]\s+?[E0-9.-]+\sRe[(]Z[)][=]\s+?[E0-9.-]+\sIm[(]Z[)][=]\s?[E0-9.-]+\snlXC[=]\s+?[E0-9.-]+\slXC[=]\s+?[E0-9.-]+\sSo[=]\s+?[E0-9.-]+)')
-        extract = re.compile('B[=](\d+)\sEo[=](?:\s+)?([E0-9.-]+)\sE[=](?:\s+)?([E0-9.-]+)\sE[-]Eo[=](?:\s+)?([E0-9.-]+)\sRe[(]Z[)][=](?:\s+)?([E0-9.-]+)\sIm[(]Z[)][=](?:\s+)?[E0-9.-]+\snlXC[=](?:\s+)?([E0-9.-]+)\slXC[=](?:\s+)?([E0-9.-]+)\sSo[=](?:\s+)?([E0-9.-]+)')
+        spliter = re.compile('^(B[=]\d+\sEo[=]\s+?[E0-9.-]+\sE[=]\s+?[E0-9.-]+\sE[-]Eo[=]\s+?[E0-9.-]+\sRe[(]Z[)][=]\s+?[*E0-9.-]+\sIm[(]Z[)][=]\s?[*E0-9.-]+\snlXC[=]\s+?[E0-9.-]+\slXC[=]\s+?[E0-9.-]+\sSo[=]\s+?[E0-9.-]+)')
+        extract = re.compile('B[=](\d+)\sEo[=](?:\s+)?([E0-9.-]+)\sE[=](?:\s+)?([E0-9.-]+)\sE[-]Eo[=](?:\s+)?([E0-9.-]+)\sRe[(]Z[)][=](?:\s+)?([*E0-9.-]+)\sIm[(]Z[)][=](?:\s+)?[*E0-9.-]+\snlXC[=](?:\s+)?([E0-9.-]+)\slXC[=](?:\s+)?([E0-9.-]+)\sSo[=](?:\s+)?([E0-9.-]+)')
         qp_lines = qp_regx.findall(full_lines)
         qp_results ={}
         for each in qp_lines: # first group of qp data, shares k-point index
@@ -237,7 +237,15 @@ class YamboFile():
                     data_lines = [ i for i in spliter.split(line) if i.strip()]
                     for qp_data in data_lines:
                         bindex, dft_energy, qp_energy, qp_correction, z_factor, \
-                        non_local_xc, local_xc, selfenergy_c = [float (i) for i in extract.match(qp_data).groups()]
+                        non_local_xc, local_xc, selfenergy_c = [ i for i in extract.match(qp_data).groups() ]
+                        listed = [bindex, dft_energy, qp_energy, qp_correction, z_factor, non_local_xc, local_xc, selfenergy_c]
+                        for i in range(len(listed)):
+                            try:
+                                listed[i] = float(listed[i])
+                            except ValueError:
+                                listed[i] =  np.nan
+                        bindex, dft_energy, qp_energy, qp_correction, z_factor,\
+                        non_local_xc, local_xc, selfenergy_c = listed
                         kp_results['bindex'].append(bindex) 
                         kp_results['dft_energy'].append(dft_energy) 
                         kp_results['qp_energy'].append(qp_energy) 
@@ -308,7 +316,7 @@ class YamboFile():
         generic_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
         paralle = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[ERROR\](?=\s+)?Impossible(?=\s+)?(?=[a-zA-Z0-9\s.()\[\]]+)?')
         unphysical = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[ERROR\](?=\s+)?\[NetCDF\]\s*NetCDF[:]\s*NC_UNLIMITED\s*in\s*the\s*wrong\s*index')
-        self.errors.extend ([ line for line in self.lines if ( para_error.match(line) and paralle.match(line))  ])
+        self.errors.extend ([ line for line in self.lines if ( generic_error.match(line) and (paralle.match(line) or unphysical.match(line)) )  ])
         for line in self.lines:
             if generic_error.match(line):
                 if paralle.match(line):
