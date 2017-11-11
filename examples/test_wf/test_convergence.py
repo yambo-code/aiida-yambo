@@ -19,44 +19,30 @@ ParameterData = DataFactory("parameter")
 yambo_parameters = {'ppa': True,
                                  'gw0': True,
                                  'HF_and_locXC': True,
-                                 'NLogCPUs': 0,
                                  'em1d': True,
-                                 'X_all_q_CPU': "",
-                                 'X_all_q_ROLEs': "",
-                                 'X_all_q_nCPU_invert':0,
-                                 'X_Threads':  0 ,
                                  'DIP_Threads': 0 ,
-                                 'SE_CPU': "",
-                                 'SE_ROLEs': "",
-                                 'SE_Threads':  32,
-                                 #'EXXRLvcs': 789569,
-                                 'EXXRLvcs': 7895,
-                                 'EXXRLvcs_units': 'RL',
-                                 #'BndsRnXp': (1,60),
-                                 'BndsRnXp': (1,10),
-                                 'NGsBlkXp': 2,
-                                 'NGsBlkXp_units': 'Ry',
-                                 'PPAPntXp': 2000000,
+                                 'BndsRnXp': (1,16),
+                                 'NGsBlkXp': 1,
+                                 'NGsBlkXp_units': 'RL',
+                                 'PPAPntXp': 20,
                                  'PPAPntXp_units': 'eV',
-                                 #'GbndRnge': (1,60),
-                                 'GbndRnge': (1,10),
+                                 'GbndRnge': (1,16),
                                  'GDamping': 0.1,
                                  'GDamping_units': 'eV',
                                  'dScStep': 0.1,
                                  'dScStep_units': 'eV',
-                                 'GTermKind': "none",
                                  'DysSolver': "n",
-                                 'QPkrange': [(1,2,30,31)],
+                                 'QPkrange': [(1,1,16,18)],
                                  }
 
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*80*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*80*1000000 ,"queue_name":"s3par8cv3" ,'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  2*60*60, 
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
-                  'environment_variables': {"omp_num_threads": "16" }  }
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds':  6*60*60, 
+                  'max_memory_kb': 1*80*1000000 , "queue_name":"s3par8cv3" ,'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'environment_variables': {"omp_num_threads": "0" }  }
 
 settings_pw =  ParameterData(dict= {'cmdline':['-npool', '2' , '-ndiag', '8', '-ntg', '2' ]})
 
@@ -86,39 +72,33 @@ if __name__ == "__main__":
                         help='The pesudo  to use')
     parser.add_argument('--structure', type=int, dest='structure', required=True,
                         help='The structure  to use')
-    parser.add_argument('--parent', type=int, dest='parent', required=True,
+    parser.add_argument('--parent', type=int, dest='parent', required=False,
                         help='The parent  to use')
-    parser.add_argument('--parent_nscf', type=int, dest='parent_nscf', required=True,
+    parser.add_argument('--parent_nscf', type=int, dest='parent_nscf', required=False,
                         help='The parent nscf  to use')
 
-    converge_parameters = List()
-    #converge_parameters.extend(['PPAPntXp'])
-    converge_parameters.extend(['NGsBlkXp'])
-    starting_points = List()
-    starting_points.extend([4])
-    #default_step_size = List()
-    #default_step_size.extend([50000])
-    threshold = Float(0.1)
     args = parser.parse_args()
     structure = load_node(int(args.structure))
-    parentcalc = load_node(int(args.parent))
-    parent_folder_ = parentcalc.out.remote_folder
-    parentnscfcalc = load_node(int(args.parent_nscf))
-    parent_nscf_folder_ = parentnscfcalc.out.remote_folder
+    parentcalc = parent_folder_ = parentnscfcalc = parent_nscf_folder_ = False
+    if args.parent:
+        parentcalc = load_node(int(args.parent))
+        parent_folder_ = parentcalc.out.remote_folder
+        parentnscfcalc = load_node(int(args.parent_nscf))
+        parent_nscf_folder_ = parentnscfcalc.out.remote_folder
+    convergence_parameters = {'variable_to_converge': 'kpoints', 'conv_tol':0.1,
+                                   'start_value': .9  , 'step':.1 , 'max_value': 0.017 }
     p2y_result =run(YamboConvergenceWorkflow, 
+                    pwcode= Str( args.pwcode), 
                     precode= Str( args.precode), 
                     yambocode=Str(args.yambocode),
                     calculation_set= ParameterData(dict=calculation_set_yambo),
                     settings = settings_yambo,
-                    parent_scf_folder = parent_folder_, 
-                    parent_nscf_folder = parent_nscf_folder_, 
+                    convergence_parameters = ParameterData(dict=convergence_parameters),
+                    #parent_scf_folder = parent_folder_, 
+                    #parent_nscf_folder = parent_nscf_folder_, 
                     parameters = ParameterData(dict=yambo_parameters), 
-                    converge_parameters= converge_parameters,
-                    starting_points= starting_points,
                     structure = structure , 
                     pseudo = Str(args.pseudo),
-                    #default_step_size = default_step_size, 
-                    threshold= threshold,
                     )
 
-    print ("Resutls", p2y_result)
+    print ("Workflow launched: ", p2y_result)

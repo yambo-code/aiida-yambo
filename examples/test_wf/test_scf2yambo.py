@@ -79,29 +79,21 @@ yambo_parameters = {'ppa': True,
                                  'HF_and_locXC': True,
                                  'NLogCPUs': 0,
                                  'em1d': True,
-                                 #'X_all_q_CPU': "1 1 16 8",
-                                 #'X_all_q_ROLEs': "q k c v",
                                  'X_all_q_nCPU_invert':0,
                                  'X_Threads':  0 ,
                                  'DIP_Threads': 0 ,
-                                 #'SE_CPU': "1 8 16",
-                                 #'SE_ROLEs': "q qp b",
-                                 'SE_Threads':  32,
-                                 'EXXRLvcs': 789569,
-                                 'EXXRLvcs_units': 'RL',
-                                 'BndsRnXp': (1,38),
-                                 'NGsBlkXp': 3,
-                                 'NGsBlkXp_units': 'Ry',
-                                 'PPAPntXp': 2000000,
+                                 'SE_Threads':  2,
+                                 'NGsBlkXp': 1,
+                                 'NGsBlkXp_units': 'RL',
+                                 'PPAPntXp': 10, 
                                  'PPAPntXp_units': 'eV',
-                                 'GbndRnge': (1,38),
                                  'GDamping': 0.1,
                                  'GDamping_units': 'eV',
                                  'dScStep': 0.1,
                                  'dScStep_units': 'eV',
                                  'GTermKind': "none",
                                  'DysSolver': "n",
-                                 'QPkrange': [(1,8,34,38)],
+                                 'QPkrange': [(1,1,16,17)],
                                  }
 
 calculation_set_pw ={'resources':  {"num_machines": 4,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
@@ -116,20 +108,7 @@ calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machi
                   'max_memory_kb': 1*86*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
-#calculation_set_pw ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine":  16}, 'max_wallclock_seconds': 3*60*60, 
-#                  'max_memory_kb': 1*92*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n#PBS -q s3par8cv3" ,
-#                  'environment_variables': {"OMP_NUM_THREADS": "2" }  }
-
-#calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-#                  'max_memory_kb': 1*92*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n#PBS -q s3par8cv3" ,
-#                  'environment_variables': {"OMP_NUM_THREADS": "1" }  }
-
-#calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds': 200, 
-#                  'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n#PBS -q s3par8cv3" ,
-#                  'environment_variables': {"OMP_NUM_THREADS": "2" }  }
-
-
-settings_pw =  ParameterData(dict= {'cmdline':['-npool', '2' , '-ndiag', '8', '-ntg', '2' ]})
+settings_pw =  ParameterData(dict= {})
 
 settings_p2y =   ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
                   'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':True})
@@ -156,8 +135,10 @@ if __name__ == "__main__":
     parser.add_argument('--structure', type=int, dest='structure', required=False,
                         help='The structure  to use')
     parser.add_argument('--parent', type=int, dest='parent', required=False,
-                        help='QE scf/nscf calculation ')
+                        help='QE scf/nscf / yambo calculation ')
 
+    parser.add_argument('--parent-workchain', type=int, dest='parent_workchain', required=False,
+                        help=' Parent yambo workflow ')
     args = parser.parse_args()
     if not args.structure:
         structure = struc
@@ -187,5 +168,7 @@ if __name__ == "__main__":
           }
     if parent_calc:
           kwargs["parent_folder"] =  parent_calc.out.remote_folder
-    full_result = submit(YamboWorkflow, **kwargs )
-    print ("Resutls", full_result)
+    if args.parent_workchain:
+          kwargs["previous_yambo_workchain"] =  Str(args.parent_workchain)
+    full_result = run(YamboWorkflow, **kwargs )
+    print ("Workflow submited :", full_result)
