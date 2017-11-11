@@ -12,7 +12,7 @@
         "Framework :: AiiDa",
         "Topic :: Scientific/Engineering :: Physics"
     ],
-    "version": "0.1a",
+    "version": "0.2-beta",
     "extras_require": {
          "docs": [
             "Sphinx", 
