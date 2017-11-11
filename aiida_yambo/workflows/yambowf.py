@@ -89,7 +89,7 @@ class YamboWorkflow(WorkChain):
             parent_calc = self.inputs.parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
             if isinstance(parent_calc, YamboCalculation):
                 self.ctx.last_step_kind = 'yambo' 
-                self.ctx.yambo_res = DataFactory('parameter')(dict={"out":{"yambo_pk": parent_calc.pk }} )
+                self.ctx.yambo_res = DataFactory('parameter')(dict={"out":{"gw":{"yambo_pk": parent_calc.pk }}} )
                 self.report("Yambo calculation (pk {}) found in input, I will start from there.".format(parent_calc.pk ))
             elif isinstance(parent_calc, PwCalculation):
                 self.ctx.last_step_kind = 'pw'
