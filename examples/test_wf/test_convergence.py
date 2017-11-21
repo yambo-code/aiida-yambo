@@ -37,11 +37,11 @@ yambo_parameters = {'ppa': True,
 
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*80*1000000 ,"queue_name":"s3par8cv3" ,'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*80*1000000 ,"queue_name":"s3par8cv3" ,#'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "1" }  }
 
 calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds':  6*60*60, 
-                  'max_memory_kb': 1*80*1000000 , "queue_name":"s3par8cv3" ,'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*80*1000000 , "queue_name":"s3par8cv3" ,#'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 
 settings_pw =  ParameterData(dict= {'cmdline':['-npool', '2' , '-ndiag', '8', '-ntg', '2' ]})

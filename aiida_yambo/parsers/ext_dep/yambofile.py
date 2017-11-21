@@ -111,7 +111,10 @@ class YamboFile():
             tags = tags[2:].strip().split()
         table = np.genfromtxt(self.lines)
         _kdata ={}
-        k_index =[ str(int(i)) for i in table[:,0]] # first column  has kpoints
+        if table.ndim> 1:
+            k_index =[ str(int(i)) for i in table[:,0]] # first column  has kpoints
+        else:
+            k_index =[ str(int(table[0])) ] # first column  has kpoints
         for ind in range(len(k_index)):
             for itag in range(len(tags)):
                  if k_index[ind] not in _kdata.keys():
@@ -119,7 +122,10 @@ class YamboFile():
                  try:
                      _kdata[k_index[ind]][tags[itag]].append(table[ind,itag])
                  except KeyError:
-                     _kdata[k_index[ind]][tags[itag]]  = [ table[ind,itag] ]
+                    try:
+                         _kdata[k_index[ind]][tags[itag]]  = [ table[ind,itag] ]
+                    except IndexError:
+                         _kdata[k_index[ind]][tags[itag]]  = [ table[itag] ]
 
         self.data = _kdata 
         #self.data = dict(zip(tags,table.T))
