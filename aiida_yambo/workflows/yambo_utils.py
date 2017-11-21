@@ -56,12 +56,13 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     if isinstance(calc,PwCalculation):
         is_pw = True
         nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+        nbands = calc.out.output_parameters.get_dict()['number_of_bands']
         nocc = None
         if calc.out.output_parameters.get_dict()['lsda']== True or\
-           calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+           calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
            nocc = nelec/2 
         else:
-           nocc = nelec/2
+           nocc = nelec
         bndsrnxp = gbndrnge = nocc 
         ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
         #ngsblxpp =  2
@@ -260,7 +261,8 @@ def update_parameter_field( field, starting_point, update_delta):
     elif field == 'BndsRnXp':
         new_hi_value =  int( starting_point  + update_delta )
         new_low_value =  int( starting_point  - update_delta )
-        return (new_low_value , new_hi_value)
+        #return (new_low_value , new_hi_value)
+        return ( 1 , new_hi_value)
     elif field == 'GbndRnge':
         new_field_value =  int( starting_point   + update_delta )
         return (1, new_field_value)
@@ -357,12 +359,13 @@ def default_qpkrange(calc_pk, parameters):
     edit_parameters = parameters.get_dict()
     if isinstance(calc,PwCalculation):
        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+       nbands = calc.out.output_parameters.get_dict()['number_of_bands']
        nocc = None
        if calc.out.output_parameters.get_dict()['lsda']== True or\
-          calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+               calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
           nocc = nelec/2 
        else:
-          nocc = nelec/2
+          nocc = nelec
        is_pw = True
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():

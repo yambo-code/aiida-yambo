@@ -84,7 +84,7 @@ class PwRestartWf(WorkChain):
                      try:
                          parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*2
                      except KeyError:
-                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*1.2) # 20% more
+                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*2) # 20% more
                 parameters['CONTROL']['calculation'] = 'nscf'
                 parameters = ParameterData(dict=parameters)
                 if  'parameters_nscf' in  self.inputs.keys():
@@ -196,7 +196,7 @@ class PwRestartWf(WorkChain):
                  try:
                      parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*2
                  except KeyError:
-                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*1.2) # 20% more
+                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*2) # 20% more
         parameters['CONTROL']['calculation'] = scf  
         self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
         parameters = ParameterData(dict=parameters)  

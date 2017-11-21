@@ -97,15 +97,15 @@ yambo_parameters = {'ppa': True,
                                  }
 
 calculation_set_pw ={'resources':  {"num_machines": 4,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
-                  'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*86*1000000 , #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*86*1000000 ,# 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
 calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
-                  'max_memory_kb': 1*86*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*86*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
 settings_pw =  ParameterData(dict= {})
