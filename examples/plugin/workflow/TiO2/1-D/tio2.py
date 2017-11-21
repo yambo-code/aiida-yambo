@@ -33,15 +33,15 @@ struc.append_atom(position=( 2.1131011581 , 2.1131011581 , 1.3504969762 ), symbo
 struc.store()
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*80*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*80*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  2*60*60, 
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds':  2*60*60, 
                   'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "16" }  }
 
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  1*60*60, 
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds':  1*60*60, 
+                  'max_memory_kb': 1*80*1000000 ,  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "16" }  }
 
 

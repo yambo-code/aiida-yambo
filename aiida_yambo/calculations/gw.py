@@ -262,7 +262,6 @@ class YamboCalculation(JobCalculation):
                     units = this_dict['units']
                 
                     if isinstance(value,(tuple,list)):
-                        print("instance key: {}, val{}".format(key, value))        
                         # write the input flags for the Drude term and for the parallelization options of vers. 4 
                         # (it can be implemented in a better way)
                         if key.startswith('DrudeW'):
@@ -316,7 +315,6 @@ class YamboCalculation(JobCalculation):
                         the_string += "\n%"
                             
                     else:
-                        print("else key: {}, val{}".format(key, value))        
                         the_value = '"{}"'.format(value) if isinstance(value,basestring) else '{}'.format(value)
                         the_string = "{} = {}".format(key, the_value)
                         if units is not None:
@@ -330,7 +328,6 @@ class YamboCalculation(JobCalculation):
         ############################################
         
         parent_calcs = parent_calc_folder.get_inputs(link_type=LinkType.CREATE)
-        print("parent_calcs {}  folder {}".format(parent_calcs, parent_calc_folder))
         if len(parent_calcs)>1:
             raise UniquenessError("More than one parent totalenergy calculation" 
                                   "has been found for parent_calc_folder {}".format(parent_calc_folder))

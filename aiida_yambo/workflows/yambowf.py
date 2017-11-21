@@ -118,7 +118,6 @@ class YamboWorkflow(WorkChain):
                     del self.ctx['pw_wf_res']
             if 'yambo_remote_folder' in wf_outs.get_outputs_dict().keys():
                 parent_calc = wf_outs.out.yambo_remote_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
-                print(parent_calc.inp.settings.get_dict())
                 init_calc = parent_calc.inp.settings.get_dict().pop('INITIALISE', False) 
                 if init_calc and parent_calc.get_state() == u'FINISHED' : # Finished P2Y
                     self.ctx.last_step_kind = 'yambo_p2y'
