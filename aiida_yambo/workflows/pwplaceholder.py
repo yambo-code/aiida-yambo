@@ -47,9 +47,12 @@ class PwRestartWf(WorkChain):
         spec.input("codename", valid_type=BaseType)
         spec.input("pseudo_family", valid_type=Str)
         spec.input("calculation_set", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
+        spec.input("calculation_set_nscf", valid_type=ParameterData, required=False)
         spec.input("settings", valid_type=ParameterData)
+        spec.input("settings_nscf", valid_type=ParameterData, required=False)
         spec.input("structure", valid_type=StructureData)
         spec.input("kpoints", valid_type=KpointsData)
+        spec.input("kpoints_nscf", valid_type=KpointsData, required=False)
         spec.input("gamma", valid_type=Bool, default=Bool(0), required=False)
         spec.input("parameters", valid_type=ParameterData)
         spec.input("parameters_nscf", valid_type=ParameterData ,required=False)
@@ -72,6 +75,7 @@ class PwRestartWf(WorkChain):
                 raise InputValidationError("parent_calc_folder when defined must be of"
                                        " type RemoteData")
         parent_folder = None
+        skip_calc = False
         inputs={}
         if 'parent_folder' in self.inputs.keys():
             parameters = self.inputs.parameters.get_dict()
@@ -100,22 +104,27 @@ class PwRestartWf(WorkChain):
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
                 
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED':# 
-                self.report(" workflow completed nscf successfully, exiting")
-                self.ctx.nscf_pk = calc.pk # NSCF is done, we should exit  
+                self.report("workflow completed nscf successfully, exiting")
+                self.ctx.nscf_pk = calc.pk # NSCF is done, we should exit 
+                skip_calc = True 
+                return
         else:
            self.report("Running from SCF")
            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
-
-        future = submit( PwBaseWorkChain, **inputs)
-        self.ctx.pw_pks = []
-        self.ctx.pw_pks.append(future.pid)
-        self.ctx.restart = 0 
-        self.ctx.success = False
-        self.ctx.scf_pk = None 
-        self.ctx.nscf_pk = None
-        self.report("submitted subworkflow  {}".format(future.pid))
-        return ResultToContext(first_calc=future  )
+        if skip_calc:
+            self.report("All done, not submitting")
+            return
+        else:
+            future = submit( PwBaseWorkChain, **inputs)
+            self.ctx.pw_pks = []
+            self.ctx.pw_pks.append(future.pid)
+            self.ctx.restart = 0 
+            self.ctx.success = False
+            self.ctx.scf_pk = None 
+            self.ctx.nscf_pk = None
+            self.report("submitted subworkflow  {}".format(future.pid))
+            return ResultToContext(first_calc=future  )
 
     def pw_should_continue(self):
         """
@@ -202,8 +211,22 @@ class PwRestartWf(WorkChain):
         parameters = ParameterData(dict=parameters)  
         if 'parameters_nscf' in self.inputs.keys():
             parameters = self.inputs.parameters_nscf
+        else:
+            parameters = self.inputs.parameters
+        if 'kpoints_nscf' in self.inputs.keys():
+            kpoints = self.inputs.kpoints_nscf
+        else:
+            kpoints = self.inputs.kpoints
+        if 'settings_nscf' in self.inputs.keys():
+            settings = self.inputs.settings_nscf
+        else:
+            settings = self.inputs.settings
+        if 'calculation_set_nscf' in self.inputs.keys():
+            calc_set = self.inputs.calculation_set_nscf
+        else:
+            calc_set = self.inputs.calculation_set
         inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
-                      parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
+                      parameters, calc_set, kpoints,self.inputs.gamma, settings , parent_folder )
         #future =  submit (PwProcess, **inputs)
         future =  submit (PwBaseWorkChain, **inputs)
         self.ctx.pw_pks.append(future.pid)

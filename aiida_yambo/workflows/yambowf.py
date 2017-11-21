@@ -50,21 +50,24 @@ class YamboWorkflow(WorkChain):
         spec.input("codename_p2y", valid_type=Str)
         spec.input("codename_yambo", valid_type=Str)
         spec.input("pseudo_family", valid_type=Str)
-        spec.input("calculation_set_pw", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
+        spec.input("calculation_set_pw_scf", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
+        spec.input("calculation_set_pw_nscf", valid_type=ParameterData)
         spec.input("calculation_set_p2y", valid_type=ParameterData)
         spec.input("calculation_set_yambo", valid_type=ParameterData)
-        spec.input("settings_pw", valid_type=ParameterData)
+        spec.input("settings_pw_scf", valid_type=ParameterData)
+        spec.input("settings_pw_nscf", valid_type=ParameterData)
         spec.input("settings_p2y", valid_type=ParameterData)
         spec.input("settings_yambo", valid_type=ParameterData)
         spec.input("structure", valid_type=StructureData)
-        spec.input("kpoint_pw", valid_type=KpointsData)
+        spec.input("kpoints_scf", valid_type=KpointsData)
+        spec.input("kpoints_nscf", valid_type=KpointsData)
         spec.input("gamma_pw", valid_type=Bool, default=Bool(0), required=False )
-        spec.input("parameters_pw", valid_type=ParameterData)
+        spec.input("parameters_pw_scf", valid_type=ParameterData)
         spec.input("parameters_pw_nscf", valid_type=ParameterData,required=False)
         spec.input("parameters_p2y", valid_type=ParameterData)
         spec.input("parameters_yambo", valid_type=ParameterData)
         spec.input("parent_folder", valid_type=RemoteData,required=False)
-        spec.input("previous_yambo_workchain", valid_type=Str,required=False)
+        spec.input("previous_yambo_workchain", valid_type=WorkChain,required=False)
         spec.input("to_set_qpkrange", valid_type=Bool,required=False, default=Bool(0) )
         spec.input("bands_groupname", valid_type=Str, required=False)
         spec.outline(
@@ -100,7 +103,7 @@ class YamboWorkflow(WorkChain):
                 self.report("No PW or Yambo calculation found in input, I will start from scratch.")
         if 'previous_yambo_workchain' in self.inputs.keys():
             self.report('WARNING: previous_yambo_workchain option should be used in DEBUG mode only!')
-            wf_outs = load_node(int(str(self.inputs.previous_yambo_workchain)))
+            wf_outs = self.inputs.previous_yambo_workchain
             self.ctx.pw_wf_res = wf_outs  # has both gw and pw outputs in one
             self.ctx.yambo_res = wf_outs 
             if 'scf_remote_folder' in wf_outs.get_outputs_dict().keys():
@@ -135,7 +138,7 @@ class YamboWorkflow(WorkChain):
             self.ctx.bands_groupname = None
         self.ctx.parameters_yambo = self.inputs.parameters_yambo 
 
-        self.report(" workflow initilization step completed.")
+        self.report("Workchain initilization step completed.")
         
     def can_continue(self):
         if self.ctx.last_step_kind == 'yambo' and self.ctx.yambo_res:
@@ -189,11 +192,12 @@ class YamboWorkflow(WorkChain):
                 self.report("PwRestartWf subworkflow  NOT  successful")
                 return 
 
-        if  self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res :# this is likely  the very begining, we can start with the scf/nscf here
+        if  self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res :
+            # this is likely  the very begining, we can start with the scf/nscf here
             extra = {}
             self.report("Launching PwRestartWf ")
-            if 'parameters_pw_nscf' in self.inputs.keys():
-                extra['parameters_nscf'] = self.inputs.parameters_pw_nscf 
+            #if 'parameters_pw_nscf' in self.inputs.keys():
+            #    extra['parameters_nscf'] = self.inputs.parameters_pw_nscf
             if 'parent_folder' in self.inputs.keys():
                 extra['parent_folder'] = self.inputs.parent_folder
             pw_wf_result = self.run_pw(extra)
@@ -219,10 +223,19 @@ class YamboWorkflow(WorkChain):
         return p2y_result
 
     def run_pw(self, extra):
+
         pw_wf_result = submit(PwRestartWf, codename = self.inputs.codename_pw  , pseudo_family = self.inputs.pseudo_family, 
-                calculation_set = self.inputs.calculation_set_pw, settings=self.inputs.settings_pw, 
-                kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
-                structure = self.inputs.structure , parameters = self.inputs.parameters_pw, **extra)
+                calculation_set = self.inputs.calculation_set_pw_scf,
+                calculation_set_nscf = self.inputs.calculation_set_pw_nscf,
+                settings= self.inputs.settings_pw_scf,
+                settings_nscf= self.inputs.settings_pw_nscf,
+                kpoints=self.inputs.kpoints_scf,
+                kpoints_nscf=self.inputs.kpoints_nscf,
+                gamma= self.inputs.gamma_pw,
+                structure = self.inputs.structure ,
+                parameters = self.inputs.parameters_pw_scf,
+                parameters_nscf=self.inputs.parameters_pw_nscf,
+                              **extra)
         self.ctx.last_step_kind = 'pw'                   
         return pw_wf_result  
 
@@ -247,7 +260,6 @@ class YamboWorkflow(WorkChain):
         except Exception:
             pw = {}
         gw = self.ctx.yambo_res.out.gw.get_dict()
-        #gw.update(pw)
         self.out("yambo_remote_folder", self.ctx.yambo_res.out.yambo_remote_folder)
         self.out("scf_remote_folder", self.ctx.pw_wf_res.out.scf_remote_folder)
         self.out("nscf_remote_folder", self.ctx.pw_wf_res.out.nscf_remote_folder)
