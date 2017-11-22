@@ -292,8 +292,6 @@ class YamboConvergenceWorkflow(WorkChain):
         outs={}
         if 'kpoints'!=self.ctx.variable_to_converge:
             self.report("this is not a K-point convergence ")
-            self.report("loop items {}".format(loop_items))
-            self.report("self.ctx.conv_elem {}".format(self.ctx.conv_elem))
             for num in loop_items: # includes 0 because of starting point
                 # There is a bug here, for Bands we might end up 
                 # with a situation like BandsRnXP  %   12 | 12  % where both
@@ -333,7 +331,6 @@ class YamboConvergenceWorkflow(WorkChain):
                             parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings)
                 outs[ 'r'+str(num) ] =  future
             self.ctx.iteration = self.ctx.iteration + 1
-            self.report("XXself.ctx.conv_elem {}".format(self.ctx.conv_elem))
             return ToContext(**outs )
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
@@ -343,11 +340,10 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.init_parameters(num)
                 #else:
                 #    self.update_parameters(num)  # Not neccessary, kpoint variation is done at PBE level with the self.ctx.distance_kpoints
-
-                self.ctx.distance_kpoints = self.ctx.distance_kpoints* 0.80 # 15% change 
+                self.ctx.distance_kpoints = self.ctx.distance_kpoints* 0.75 # 30% change 
                 kpoints = KpointsData()
                 kpoints.set_cell_from_structure(self.inputs.structure)
-                kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=False)
+                kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=True)
                 extra = {}
                 if 'parent_scf_folder' in self.inputs.keys():
                    extra['parent_folder'] = self.inputs.parent_scf_folder
@@ -392,15 +388,15 @@ class YamboConvergenceWorkflow(WorkChain):
         if self.ctx.skip_prescf == True:
             return True 
         try: # for yamborestart
-            r0_width = self.get_total_range(self.ctx.r0.out.gw.get_dict()['yambo_pk'])
-            r1_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
-            r2_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
-            r3_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
-        except AttributeError: # for yamboworkflow
             r0_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
             r1_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
             r2_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
             r3_width = self.get_total_range(self.ctx.r4.out.gw.get_dict()['yambo_pk'])
+        except AttributeError: # for yamboworkflow
+            r0_width = self.get_total_range(self.ctx.r0.out.gw.get_dict()['yambo_pk'])
+            r1_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
+            r2_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
+            r3_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
 
         self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
         if 'scf_pk' in self.ctx.r1.out.gw.get_dict() and 'parent_scf_folder' not in self.inputs.keys():
@@ -497,8 +493,8 @@ class YamboConvergenceWorkflow(WorkChain):
         corrected = eo+e_m_eo
         corrected_lb = corrected[arglb]
         corrected_hb = corrected[arghb]
-        self.report(" corrected gap(s) {}  at K-point {}, between bands {} and {}".format(
-                    corrected_hb- corrected_lb, lowest_k, lowest_b, highest_b ))
+        self.report(" corrected gap(s) {}  at K-point {}, between bands {} and {} for calc {}".format(
+                    corrected_hb- corrected_lb, lowest_k, lowest_b, highest_b , node_id))
         return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
 
     def report_wf(self):

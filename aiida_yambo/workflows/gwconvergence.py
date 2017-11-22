@@ -62,7 +62,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         spec.input("pwcode", valid_type=BaseType)
         spec.input("yambocode", valid_type=BaseType)
         spec.input("pseudo", valid_type=BaseType)
-        spec.input("threshold", valid_type=Float, required=False)
+        spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("calculation_set", valid_type=ParameterData)
@@ -188,7 +188,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_0_1' and self.ctx.step_0_done== True:
              extra['parameters'] = ParameterData(dict=self.ctx.step0_res.out.convergence.get_dict()['parameters'] )
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'FFT_cutoff', 'conv_tol':0.1, 
+                                  'variable_to_converge': 'FFT_cutoff', 'conv_tol':float(self.inputs.threshold), 
                                    'start_value': 2 , 'step':2 , 'max_value': 60 })
         p2y_result = submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
@@ -261,7 +261,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              params['NGsBlkXp'] =  2   # 
              extra['parameters'] = ParameterData(dict=params)
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'bands', 'conv_tol':0.3 ,
+                                  'variable_to_converge': 'bands', 'conv_tol':float(self.inputs.threshold),
                                    'start_value': band_cutoff , 'step':1 , 'max_value': self.ctx.MAX_B_VAL  })
         self.report("converging  BndsRnXp, GbndRnge")
         p2y_result =submit (YamboConvergenceWorkflow,
@@ -316,7 +316,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.last_used_band = self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1]
         self.report("Bands in last  bands convergence:  {}".format(self.ctx.last_used_band))
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'W_cutoff', 'conv_tol':0.3, 
+                                  'variable_to_converge': 'W_cutoff', 'conv_tol':float(self.inputs.threshold), 
                                    'start_value': w_cutoff , 'step': 1 , 'max_value': self.ctx.MAX_B_VAL}) 
         self.report("converging 1-D  W-off")
         p2y_result = submit(YamboConvergenceWorkflow,
@@ -358,8 +358,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
         self.report("converging K-points ")
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'kpoints', 'conv_tol':0.1, 
-                                   'start_value': .9  , 'step':.1 , 'max_value': 0.017 })
+                                  'variable_to_converge': 'kpoints', 'conv_tol':float(self.inputs.threshold), 
+                                   'start_value': .6 , 'step':1 , 'max_value': 0.0450508117676 })
                                    
         p2y_result = submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
