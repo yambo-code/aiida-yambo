@@ -10,28 +10,21 @@ ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 
 
-cell = [[5.3976054000,    0.0000000000,    0.0000000000 ],
-        [0.0000000000,    5.3976054000,    0.0000000000 ],
-        [0.0000000000,    0.0000000000,    5.3976054000 ],
-       ]
-struc = StructureData(cell=cell)
-struc.append_atom(position=( 2.6988027000,     2.6988027000,     0.0000000000), symbols='Si')
-struc.append_atom(position=( 0.0000000000,     0.0000000000,     0.0000000000), symbols='Si')
-struc.append_atom(position=( 2.6988027000,     0.0000000000,     2.6988027000), symbols='Si')
-struc.append_atom(position=( 0.0000000000,     2.6988027000,     2.6988027000), symbols='Si')
-struc.append_atom(position=( 4.0482040500,     4.0482040500,     1.3494013500), symbols='Si')
-struc.append_atom(position=( 1.3494013500,     1.3494013500,     1.3494013500), symbols='Si')
-struc.append_atom(position=( 4.0482040500,     1.3494013500,     4.0482040500), symbols='Si')
-struc.append_atom(position=( 1.3494013500,     4.0482040500,     4.0482040500), symbols='Si')
+from ase.spacegroup import crystal
+a=5.388
+cell = crystal('Si', [(0,0,0)], spacegroup=227, cellpar=[a, a, a, 90, 90, 90],primitive_cell=True)
+struc = StructureData(ase=cell)
 
 struc.store()
 
 
-calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds': 2*60*60,
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 60*60/2 ,
                   'max_memory_kb': 1*80*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
+                 #"queue_name":"s3par8cv3" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32,  }, 'max_wallclock_seconds': 60*45,
+calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2 }, 'max_wallclock_seconds': 60*45,
                   'max_memory_kb': 1*80*1000000 ,  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
+                  #"queue_name":"s3par8cv3" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 
 
