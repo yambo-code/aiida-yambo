@@ -62,8 +62,7 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
            calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
            nocc = nelec/2 
         else:
-           nocc = nelec
-        bndsrnxp = gbndrnge = nocc 
+           nocc = nelec/2
         ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
         #ngsblxpp =  2
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
@@ -74,9 +73,9 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
              edit_parameters['FFTGvecs'] =  2
              edit_parameters['FFTGvecs_units'] =  'Ry'
         if 'BndsRnXp' not in edit_parameters.keys():
-             edit_parameters['BndsRnXp'] = (bndsrnxp/2 ,bndsrnxp/2+1 )
+             edit_parameters['BndsRnXp'] = ( 1.0 , nocc )
         if 'GbndRnge' not in edit_parameters.keys():
-             edit_parameters['GbndRnge'] = (1.0, gbndrnge/2) 
+             edit_parameters['GbndRnge'] = (1.0,  nocc ) 
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
              edit_parameters['NGsBlkXp_units'] =  'RL'
@@ -330,7 +329,6 @@ def set_default_pw_param(nscf=False):
               'degauss': 0.001,
               'starting_magnetization(1)' : 0.0,
               'smearing': 'fermi-dirac',
-              'force_symmorphic': True,
               },
           'ELECTRONS': {
               'conv_thr': 1.e-8,
@@ -365,7 +363,7 @@ def default_qpkrange(calc_pk, parameters):
                calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
           nocc = nelec/2 
        else:
-          nocc = nelec
+          nocc = nelec/2
        is_pw = True
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():
