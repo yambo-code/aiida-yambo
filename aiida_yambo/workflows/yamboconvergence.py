@@ -335,6 +335,7 @@ class YamboConvergenceWorkflow(WorkChain):
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
             self.report("  K-point convergence commencing")
+            mesh = False
             for num in loop_items: # includes 0 because of starting point
                 if loop_items[0] == 0:
                     self.init_parameters(num)
@@ -344,6 +345,9 @@ class YamboConvergenceWorkflow(WorkChain):
                 kpoints = KpointsData()
                 kpoints.set_cell_from_structure(self.inputs.structure)
                 kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=True)
+                if mesh == kpoints.get_kpoints_mesh(): # deduplicate
+                    continue
+                mesh = kpoints.get_kpoints_mesh()
                 extra = {}
                 if 'parent_scf_folder' in self.inputs.keys():
                    extra['parent_folder'] = self.inputs.parent_scf_folder

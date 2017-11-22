@@ -359,7 +359,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.report("converging K-points ")
         convergence_parameters = DataFactory('parameter')(dict= { 
                                   'variable_to_converge': 'kpoints', 'conv_tol':float(self.inputs.threshold), 
-                                   'start_value': .6 , 'step':1 , 'max_value': 0.0450508117676 })
+                                   'start_value': .8 , 'step':1 , 'max_value': 0.0450508117676 })
                                    
         p2y_result = submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
