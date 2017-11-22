@@ -56,13 +56,13 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     if isinstance(calc,PwCalculation):
         is_pw = True
         nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+        nbands = calc.out.output_parameters.get_dict()['number_of_bands']
         nocc = None
         if calc.out.output_parameters.get_dict()['lsda']== True or\
-           calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+           calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
            nocc = nelec/2 
         else:
            nocc = nelec/2
-        bndsrnxp = gbndrnge = nocc 
         ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
         #ngsblxpp =  2
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
@@ -70,15 +70,15 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
              resource = {"num_mpiprocs_per_machine": 8, "num_machines": 1} # safe trivial defaults
         tot_mpi =  resource[u'num_mpiprocs_per_machine'] * resource[u'num_machines']
         if 'FFTGvecs' not in edit_parameters.keys():
-             edit_parameters['FFTGvecs'] =  20
+             edit_parameters['FFTGvecs'] =  2
              edit_parameters['FFTGvecs_units'] =  'Ry'
         if 'BndsRnXp' not in edit_parameters.keys():
-             edit_parameters['BndsRnXp'] = (bndsrnxp/2 ,bndsrnxp/2+1 )
+             edit_parameters['BndsRnXp'] = ( 1.0 , nocc )
         if 'GbndRnge' not in edit_parameters.keys():
-             edit_parameters['GbndRnge'] = (1.0, gbndrnge/2) 
+             edit_parameters['GbndRnge'] = (1.0,  nocc ) 
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
-             edit_parameters['NGsBlkXp_units'] =  'Ry'
+             edit_parameters['NGsBlkXp_units'] =  'RL'
         if 'QPkrange' not in edit_parameters.keys():
              edit_parameters['QPkrange'] = [(1,1,int(nocc), int(nocc)+1 )] # To revisit 
         if 'SE_CPU' not in  edit_parameters.keys():
@@ -157,7 +157,6 @@ def reduce_parallelism(typ, roles,  values,calc_set):
     # adjust the X_all_q_CPU and SE_CPU
     mpi_task = num_mpiprocs_per_machine*num_machines 
     if typ == 'X_all_q_CPU':
-        print "this type"
         #X_all_q_CPU = "1 1 96 32"
         #X_all_q_ROLEs = "q k c v"
         X_para = [ int(it) for it in values.strip().split(' ') if it ]
@@ -180,25 +179,13 @@ def reduce_parallelism(typ, roles,  values,calc_set):
         c, v = split_incom(mpi_task*2)
         if  False:
             if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] :
-                print("num_mpiprocs_per_machine {} , calculation_set['resources']['num_mpiprocs_per_machine'] {}, v {}".format(
-                      num_mpiprocs_per_machine, calculation_set['resources']['num_mpiprocs_per_machine'] , v ))
-                print("num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v == 1")
                 c = c/2 
             if num_machines > calculation_set['resources']['num_machines']:
-                print("num_machines {} , calculation_set['resources']['num_machines'] {},".format(
-                      num_machines, calculation_set['resources']['num_machines']  ))
-                print("num_machines > calculation_set['resources']['num_machines']")
                 c = c*2 
         if False: 
             if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1:
-                print("num_mpiprocs_per_machine {} , calculation_set['resources']['num_mpiprocs_per_machine'] {}, v {}".format(
-                      num_mpiprocs_per_machine, calculation_set['resources']['num_mpiprocs_per_machine'] , v ))
-                print("num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] and v >1")
                 v = v/2 
             if num_machines > calculation_set['resources']['num_machines']:
-                print("num_machines {} , calculation_set['resources']['num_machines'] {},".format(
-                      num_machines, calculation_set['resources']['num_machines']  ))
-                print("num_machines > calculation_set['resources']['num_machines']")
                 c = c*2 
 
         if c_index and v_index:
@@ -273,7 +260,8 @@ def update_parameter_field( field, starting_point, update_delta):
     elif field == 'BndsRnXp':
         new_hi_value =  int( starting_point  + update_delta )
         new_low_value =  int( starting_point  - update_delta )
-        return (new_low_value , new_hi_value)
+        #return (new_low_value , new_hi_value)
+        return ( 1 , new_hi_value)
     elif field == 'GbndRnge':
         new_field_value =  int( starting_point   + update_delta )
         return (1, new_field_value)
@@ -315,8 +303,11 @@ def set_default_qp_param(parameter=None):
         edit_param['X_all_q_CPU']= "1 1 16 8"
         edit_param['X_all_q_ROLEs'] ="q k c v"
     if 'FFTGvecs' not in edit_param.keys():
-        edit_param['FFTGvecs'] =  8
+        edit_param['FFTGvecs'] =  2
         edit_param['FFTGvecs_units'] =  'Ry'
+    if 'NGsBlkXp' not in edit_param.keys():
+        edit_param['NGsBlkXp'] =  1
+        edit_param['NGsBlkXp_units'] =  'RL'
     return ParameterData(dict=edit_param)
 
 
@@ -366,9 +357,10 @@ def default_qpkrange(calc_pk, parameters):
     edit_parameters = parameters.get_dict()
     if isinstance(calc,PwCalculation):
        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+       nbands = calc.out.output_parameters.get_dict()['number_of_bands']
        nocc = None
        if calc.out.output_parameters.get_dict()['lsda']== True or\
-          calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+               calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
           nocc = nelec/2 
        else:
           nocc = nelec/2

@@ -50,7 +50,7 @@ yambo_parameters = {'ppa': True,
                                  'BndsRnXp': (1,36),
                                  'NGsBlkXp': 3,
                                  'NGsBlkXp_units': 'Ry',
-                                 'PPAPntXp': 2000000,
+                                 'PPAPntXp': 10,
                                  'PPAPntXp_units': 'eV',
                                  'GbndRnge': (1,36),
                                  'GDamping': 0.1,
@@ -63,15 +63,15 @@ yambo_parameters = {'ppa': True,
                                  }
 
 
-calculation_set_p2y ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*88*1000000 , 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds':  60*29, 
+                  'max_memory_kb': 1*88*1000000 ,"queue_name":"s3parvc3", #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds':  60*2, 
-                  'max_memory_kb': 1*10*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds':  60*2, 
+                  'max_memory_kb': 1*10*1000000 , "queue_name":"s3parvc3", # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
-settings_pw =  ParameterData(dict= {'cmdline':['-npool', '2' , '-ndiag', '8', '-ntg', '2' ]})
+settings_pw =  ParameterData(dict= {})
 
 settings_p2y =   ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
                   'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':True})
@@ -116,4 +116,4 @@ if __name__ == "__main__":
                     calculation_set= ParameterData(dict=calculation_set_yambo),
                     parent_folder = parent_folder_, settings = settings_yambo)
 
-    print ("Resutls", p2y_result)
+    print ("Workflow launched: ", p2y_result)

@@ -78,17 +78,23 @@ class PwRestartWf(WorkChain):
             parent_folder=self.inputs.parent_folder
             calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state()== 'FINISHED':# next nscf 
+                if  'parameters_nscf' in  self.inputs.keys():
+                    parameters = self.inputs.parameters_nscf.get_dict()
                 if 'force_symmorphic' not in parameters['SYSTEM']:
                      parameters['SYSTEM']['force_symmorphic'] = True
                 if 'nbnd' not in parameters['SYSTEM']:
                      try:
-                         parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*2
+                         parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*4
                      except KeyError:
-                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*1.2) # 20% more
+                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*4) # 
+                if 'ELECTRONS' not in parameters:
+                   parameters['ELECTRONS'] = {}
+                parameters['ELECTRONS']['diagonalization'] = 'cg'
+                parameters['ELECTRONS']['conv_thr'] = 0.000001
+                parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
                 parameters['CONTROL']['calculation'] = 'nscf'
+                self.report("NSCF PARAMS {}".format(parameters))
                 parameters = ParameterData(dict=parameters)
-                if  'parameters_nscf' in  self.inputs.keys():
-                    parameters = self.inputs.parameters_nscf
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
                 self.ctx.scf_pk = calc.pk
@@ -189,19 +195,24 @@ class PwRestartWf(WorkChain):
             self.report("workflow in an inconsistent state.")
             return 
  
+        if 'parameters_nscf' in self.inputs.keys():
+            parameters = self.inputs.parameters_nscf.get_dict() 
         if scf == 'nscf':
             if 'force_symmorphic' not in parameters['SYSTEM']:
                  parameters['SYSTEM']['force_symmorphic'] = True 
             if 'nbnd' not in parameters['SYSTEM']:
                  try:
-                     parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*2
+                     parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*4
                  except KeyError:
-                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*1.2) # 20% more
-        parameters['CONTROL']['calculation'] = scf  
+                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*4) # 
+            parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
+        parameters['CONTROL']['calculation'] = scf
+        if 'ELECTRONS' not in parameters:
+            parameters['ELECTRONS'] = {}
+        parameters['ELECTRONS']['diagonalization'] = 'cg'
+        parameters['ELECTRONS']['conv_thr'] = 0.000001
         self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
         parameters = ParameterData(dict=parameters)  
-        if 'parameters_nscf' in self.inputs.keys():
-            parameters = self.inputs.parameters_nscf
         inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                       parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
         #future =  submit (PwProcess, **inputs)

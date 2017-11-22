@@ -11,8 +11,8 @@ StructureData = DataFactory('structure')
 
 
 from ase.spacegroup import crystal
-a=5.388
-cell = crystal('Si', [(0,0,0)], spacegroup=227, cellpar=[a, a, a, 90, 90, 90],primitive_cell=True)
+a=3.567
+cell = crystal('C', [(0,0,0)], spacegroup=227, cellpar=[a, a, a, 90, 90, 90],primitive_cell=True)
 struc = StructureData(ase=cell)
 
 struc.store()
@@ -20,11 +20,9 @@ struc.store()
 
 calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 60*60/2 ,
                   'max_memory_kb': 1*80*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
-                 #"queue_name":"s3par8cv3" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2 }, 'max_wallclock_seconds': 60*45,
                   'max_memory_kb': 1*80*1000000 ,  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
-                  #"queue_name":"s3par8cv3" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 
 
@@ -44,7 +42,7 @@ if __name__ == "__main__":
     parser.add_argument('--parent', type=int, dest='parent', required=False,
                         help='The parent SCF   to use')
 
-    threshold = Float(0.01)
+    threshold = Float(0.05)
     args = parser.parse_args()
     structure =  struc
     extra={}

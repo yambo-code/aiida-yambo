@@ -9,34 +9,16 @@ from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
 
-#calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 8}, 'max_wallclock_seconds':  4*60*60, 
-##                  'custom_scheduler_commands': u"#PBS -q s3par8c" ,
-#                 'environment_variables': {"omp_num_threads": "2" }  }
-custom = """
-   module load env-knl
-   module load profile/global
-   module load intel/pe-xe-2017--binary
-   module load intelmpi/2017--binary
-   module load mkl/2017--binary
-
-   export I_MPI_HYDRA_PMI_CONNECT=alltoall
-   export KMP_AFFINITY=scatter
-   export I_MPI_EAGER_THRESHOLD=2097152
-   export I_MPI_INTRANODE_EAGER_THRESHOLD=2097152
-   export KMP_AFFINITY=scatter,granularity=fine,
-"""
-
-
-calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds': 2*60*60,
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n"+custom  ,
+calculation_set_yambo ={'resources':  {"num_machines":1 ,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 2*60*60,
+                  'max_memory_kb': 1*80*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n"  ,
                   'environment_variables': {"omp_num_threads": "0" }  }
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32,  }, 'max_wallclock_seconds': 60*45,
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n"+custom  ,
+calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2,  }, 'max_wallclock_seconds': 60*45,
+                  'max_memory_kb': 1*80*1000000  , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 
 
 if __name__ == "__main__":
-    # verdi run test_gwco.py --precode p2h@hyd   --yambocode yamb@hyd  --pwcode qe6.1@hyd --pseudo CHtest  --parent  637  --structure 7
+    # verdi run  file.py --precode p2h@hyd   --yambocode yamb@hyd  --pwcode qe6.1@hyd --pseudo CHtest  --parent  637  --structure 7
     import argparse
     parser = argparse.ArgumentParser(description='GW QP calculation.')
     parser.add_argument('--precode', type=str, dest='precode', required=True,
@@ -60,7 +42,7 @@ if __name__ == "__main__":
     if  args.parent:
         parent = load_node(args.parent)
         extra['parent_scf_folder'] = parent.out.remote_folder
-    p2y_result =run(YamboFullConvergenceWorkflow, 
+    p2y_result =submit(YamboFullConvergenceWorkflow, 
                     pwcode= Str( args.pwcode), 
                     precode= Str( args.precode), 
                     pseudo= Str( args.pseudo), 
@@ -71,4 +53,4 @@ if __name__ == "__main__":
                     threshold = threshold, 
                      **extra
                     )
-    print ("Resutls", p2y_result)
+    print ("workflow launched ", p2y_result)

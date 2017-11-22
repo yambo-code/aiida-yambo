@@ -62,6 +62,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         spec.input("pwcode", valid_type=BaseType)
         spec.input("yambocode", valid_type=BaseType)
         spec.input("pseudo", valid_type=BaseType)
+        spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("calculation_set", valid_type=ParameterData)
@@ -102,8 +103,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
         
         self.init_parameters()
         #self.ctx.last_step = 'step_1_1'
-        #self.ctx.step0_res = load_node(44846) 
-        #self.ctx.step1_res = load_node(45050)
+        #self.ctx.step0_res = load_node(9224) 
+        #self.ctx.step1_res = load_node(9617)
         #self.ctx.step2_res = load_node(45107)
         #self.ctx.first_run = False
         #self.ctx.scf_calc = self.ctx.step0_res.out.convergence.get_dict()["scf_pk"]
@@ -187,8 +188,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_0_1' and self.ctx.step_0_done== True:
              extra['parameters'] = ParameterData(dict=self.ctx.step0_res.out.convergence.get_dict()['parameters'] )
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'FFT_cutoff', 'conv_tol':0.1, 
-                                   'start_value': 4 , 'step':2 , 'max_value': 60 })
+                                  'variable_to_converge': 'FFT_cutoff', 'conv_tol':float(self.inputs.threshold), 
+                                   'start_value': 2 , 'step':2 , 'max_value': 60 })
         p2y_result = submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode ,
@@ -219,6 +220,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
     def step_2(self,recheck=False):
         self.report ("Working on Bands Convergence ")
         nelec =  load_node(self.ctx.nscf_calc).out.output_parameters.get_dict()['number_of_electrons']
+        nbands = load_node(self.ctx.nscf_calc).out.output_parameters.get_dict()['number_of_bands']
+        self.ctx.MAX_B_VAL = min(nelec,nbands)
         band_cutoff  = int(nelec/2)
         extra={}
         if self.inputs.parent_scf_folder:
@@ -232,9 +235,9 @@ class YamboFullConvergenceWorkflow(WorkChain):
                  self.ctx.bands_n_cutoff_consistent = True
                  return 
              #band_cutoff = self.ctx.last_used_band ## BUG?
-             band_cutoff = int(self.ctx.last_used_band *0.7)
+             #band_cutoff = int(self.ctx.last_used_band *0.7)
              extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
-             self.report("updated the bands convegence parameters with cut-off from cutoff convergence step")
+             self.report("updated the bands convergence parameters with cut-off from cutoff convergence step")
         if self.ctx.last_step == 'step_3_2':
              # CRUNCH TIME:  use  values from step3_2
              if self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp'] <=  self.ctx.last_used_cutoff : # 
@@ -245,7 +248,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                  return 
              self.report("passing parameters from  converged cut-off, this can be repeated untill the two parameters are consistent ")
              #band_cutoff = self.ctx.last_used_band  ## BUG?
-             band_cutoff = int( self.ctx.last_used_band*0.7) 
+             #band_cutoff = int( self.ctx.last_used_band*0.7) 
              extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
              self.report("updated the bands convegence parameters with cut-off from cutoff convergence")
         if self.ctx.last_step != 'step_1_1' and self.ctx.last_step != 'step_1_2': # last iteration was W_cutoff not FFT  
@@ -258,8 +261,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
              params['NGsBlkXp'] =  2   # 
              extra['parameters'] = ParameterData(dict=params)
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'bands', 'conv_tol':0.1 ,
-                                   'start_value': band_cutoff , 'step':1 , 'max_value': nelec -2  })
+                                  'variable_to_converge': 'bands', 'conv_tol':float(self.inputs.threshold),
+                                   'start_value': band_cutoff , 'step':1 , 'max_value': self.ctx.MAX_B_VAL  })
         self.report("converging  BndsRnXp, GbndRnge")
         p2y_result =submit (YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
@@ -287,6 +290,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.step2_res_ = p2y_result
 
     def step_3(self, recheck=False):
+        nbands = load_node(self.ctx.nscf_calc).out.output_parameters.get_dict()['number_of_bands']
         self.report ("Working on W-cutoff ")
         w_cutoff  = 1 
         extra={}
@@ -303,7 +307,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              self.report("passing parameters from  re-converged bands ")
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
              #w_cutoff =  self.ctx.last_used_cutoff  # start  from last used value. ## BUG?
-             w_cutoff =  int(self.ctx.last_used_cutoff*0.7)  
+             #w_cutoff =  int(self.ctx.last_used_cutoff*0.7)  
         if self.ctx.last_step == 'step_2_1':
              self.report("passing parameters from  converged bands ")
              # use cut-off from 2_1
@@ -312,8 +316,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.last_used_band = self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1]
         self.report("Bands in last  bands convergence:  {}".format(self.ctx.last_used_band))
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'W_cutoff', 'conv_tol':0.1, 
-                                   'start_value': w_cutoff , 'step': 1 , 'max_value':  20 }) 
+                                  'variable_to_converge': 'W_cutoff', 'conv_tol':float(self.inputs.threshold), 
+                                   'start_value': w_cutoff , 'step': 1 , 'max_value': self.ctx.MAX_B_VAL}) 
         self.report("converging 1-D  W-off")
         p2y_result = submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
@@ -354,8 +358,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
         self.report("converging K-points ")
         convergence_parameters = DataFactory('parameter')(dict= { 
-                                  'variable_to_converge': 'kpoints', 'conv_tol':0.1, 
-                                   'start_value': .9  , 'step':.1 , 'max_value': 0.017 })
+                                  'variable_to_converge': 'kpoints', 'conv_tol':float(self.inputs.threshold), 
+                                   'start_value': .8 , 'step':1 , 'max_value': 0.0450508117676 })
                                    
         p2y_result = submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
@@ -386,10 +390,10 @@ class YamboFullConvergenceWorkflow(WorkChain):
             self.report("convergence reached, workflow will stop")
             return False 
         else:
-            self.report("no  convergene achieved")
+            self.report("No full  convergence achieved yet")
             self.report("progress:  kpoints converged: {}  , fft converged: {}  , bands converged: {}  ,  cut-off converged:{}".format(
                         self.ctx.step_0_done, self.ctx.step_1_done, self.ctx.step_2_done, self.ctx.step_3_done ))
-            self.report("progress: consistency for interdepended bands and cut-off  {}".format(self.ctx.bands_n_cutoff_consistent))
+            self.report("consistency for interdepended bands and cut-off: {}".format(self.ctx.bands_n_cutoff_consistent))
             return True 
 
 
