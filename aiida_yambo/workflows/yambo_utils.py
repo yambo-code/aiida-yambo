@@ -20,6 +20,7 @@ from aiida_yambo.calculations.gw  import YamboCalculation
 ParameterData = DataFactory("parameter")
 
 def generate_yambo_input_params(precodename,yambocodename, parent_folder, parameters,  calculation_set, settings):
+    """Generate yambo plugin  inputs._*  from  given params"""
     inputs = YamboCalculation.process().get_inputs_template()
     inputs.preprocessing_code = Code.get_from_string(precodename.value)
     inputs.code = Code.get_from_string(yambocodename.value)
@@ -63,22 +64,22 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
            nocc = nelec/2 
         else:
            nocc = nelec/2
-        ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
-        #ngsblxpp =  2
+        #ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4 
+        ngsblxpp =  2
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
         if not resource:
              resource = {"num_mpiprocs_per_machine": 8, "num_machines": 1} # safe trivial defaults
         tot_mpi =  resource[u'num_mpiprocs_per_machine'] * resource[u'num_machines']
         if 'FFTGvecs' not in edit_parameters.keys():
-             edit_parameters['FFTGvecs'] =  2
+             edit_parameters['FFTGvecs'] =  50
              edit_parameters['FFTGvecs_units'] =  'Ry'
         if 'BndsRnXp' not in edit_parameters.keys():
-             edit_parameters['BndsRnXp'] = ( 1.0 , nocc )
+             edit_parameters['BndsRnXp'] = ( 1.0 , nocc *12 )
         if 'GbndRnge' not in edit_parameters.keys():
-             edit_parameters['GbndRnge'] = (1.0,  nocc ) 
+             edit_parameters['GbndRnge'] = (1.0,  nocc  *12 ) 
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
-             edit_parameters['NGsBlkXp_units'] =  'RL'
+             edit_parameters['NGsBlkXp_units'] =  'Ry'
         if 'QPkrange' not in edit_parameters.keys():
              edit_parameters['QPkrange'] = [(1,1,int(nocc), int(nocc)+1 )] # To revisit 
         if 'SE_CPU' not in  edit_parameters.keys():
@@ -94,6 +95,7 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
     return  inputs
 
 def get_pseudo(structure, pseudo_family):
+    """Get pseudopotential by family for atoms ina  structure """
     kind_pseudo_dict = get_pseudos_from_structure(structure, pseudo_family)
     pseudo_dict = {}
     pseudo_species = defaultdict(list)
@@ -110,8 +112,7 @@ def get_pseudo(structure, pseudo_family):
 
 
 def generate_pw_input_params(structure, codename, pseudo_family,parameters, calculation_set, kpoints,gamma,settings,parent_folder):
-    """
-    """
+    """Generate PW input._*  from given params """
     inputs = {}
     inputs['structure'] = structure
     inputs['code'] = Code.get_from_string(codename.value)
@@ -253,7 +254,7 @@ default_step_size = {
                 }
 
 def update_parameter_field( field, starting_point, update_delta):
-    # Bug 
+    """Update a parameter in the parameter dictionary given the starting point and the update to apply"""
     if field in ['PPAPntXp','NGsBlkXp','BSENGBlk','BSENGexx','FFTGvecs']: # single numbers
         new_field_value =  starting_point  + update_delta 
         return new_field_value
@@ -274,8 +275,7 @@ def update_parameter_field( field, starting_point, update_delta):
 
 
 def set_default_qp_param(parameter=None):
-    """
-    """
+    """Create a default QP parameter object"""
     if not parameter:
        parameter = ParameterData(dict={})
     edit_param = parameter.get_dict()
@@ -303,38 +303,34 @@ def set_default_qp_param(parameter=None):
         edit_param['X_all_q_CPU']= "1 1 16 8"
         edit_param['X_all_q_ROLEs'] ="q k c v"
     if 'FFTGvecs' not in edit_param.keys():
-        edit_param['FFTGvecs'] =  2
+        edit_param['FFTGvecs'] =  50
         edit_param['FFTGvecs_units'] =  'Ry'
     if 'NGsBlkXp' not in edit_param.keys():
-        edit_param['NGsBlkXp'] =  1
-        edit_param['NGsBlkXp_units'] =  'RL'
+        edit_param['NGsBlkXp'] =  2
+        edit_param['NGsBlkXp_units'] =  'Ry'
     return ParameterData(dict=edit_param)
 
 
 
 def set_default_pw_param(nscf=False):
+    """Create a default PW  parameter object"""
     pw_parameters =  {
           'CONTROL': {
               'calculation': 'scf',
               'restart_mode': 'from_scratch',
               'wf_collect': True,
-              'tprnfor': True,
-              'etot_conv_thr': 0.00001,
-              'forc_conv_thr': 0.0001,
               'verbosity' :'high',
               },
           'SYSTEM': {
-              'ecutwfc': 25.,
+              'ecutwfc': 70.,
               'occupations':'smearing',
-              'degauss': 0.001,
-              'starting_magnetization(1)' : 0.0,
+              'degauss': 0.0001,
+              'starting_magnetization(1)' : 0.1,
               'smearing': 'fermi-dirac',
               },
           'ELECTRONS': {
-              'conv_thr': 1.e-8,
+              'conv_thr': 1.e-6,
               'electron_maxstep ': 100,
-              'mixing_mode': 'plain',
-              'mixing_beta' : 0.3,
               } }
     if nscf:
         pw_parameters['CONTROL']['calculation'] = 'nscf'
@@ -353,6 +349,7 @@ def p2y_default_settings():
 
 
 def default_qpkrange(calc_pk, parameters):
+    """ Create a default QPkrange when one is not provided"""
     calc = load_node(calc_pk)
     edit_parameters = parameters.get_dict()
     if isinstance(calc,PwCalculation):
@@ -370,7 +367,26 @@ def default_qpkrange(calc_pk, parameters):
             edit_parameters['QPkrange'] = [(1,1 , int(nocc) , int(nocc)+1 )]
     return ParameterData(dict=edit_parameters)
 
+
+def default_bands(calc_pk, parameters):
+    """Set default range for the chi bands and G  bands"""
+    calc = load_node(calc_pk)
+    edit_parameters = parameters.get_dict()
+    if isinstance(calc,PwCalculation):
+       nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
+       nbands = calc.out.output_parameters.get_dict()['number_of_bands']
+       nocc = None
+       if calc.out.output_parameters.get_dict()['lsda']== True or\
+               calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
+          nocc = nelec/2 
+       else:
+          nocc = nelec/2
+       edit_parameters['BndsRnXp'] = ( 1.0 , nocc *12)
+       edit_parameters['GbndRnge'] = (1.0,  nocc  *12)
+    return ParameterData(dict=edit_parameters)
+
 def split_incom(num):
+    """Does not work yet, needs some bugfix """
     powers = []
     i = 1
     while i <= num:
@@ -399,4 +415,4 @@ def is_converged(values,conv_tol=1e-5,conv_window=3):
     for i in range(1,len(values)):
         delta_list.append(abs(values[i]-values[i-1]))
     delta_list = delta_list[-conv_window:]
-    return any(x<conv_tol for x in delta_list) 
+    return all(x<conv_tol for x in delta_list) 
