@@ -19,4 +19,4 @@ Installation
 .. toctree::
    :maxdepth: 4
 
-   yambo
+   start
