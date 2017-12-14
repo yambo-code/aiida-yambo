@@ -1,7 +1,7 @@
-.. _my-ref-to-yambo-tutorial:
+.. _tut-ref-to-yambo-tutorial:
 
 Yambo Workflows Tutorial
-=======================
+========================
 
 .. toctree::
    :maxdepth: 2
@@ -62,7 +62,7 @@ convergence between the bands and W-cutoff.
                                                                                                                                                                                  
 Example usage: 
 
-.. include:: ../../../../examples/test_wf/gwconvergence.py
+.. include:: ../../../../examples/plugin/workflow/TiO2/Full/tio2_wf_full_example.py
    :literal:
 
 The complete workflow will return the  results of the convergence iterations, as well as a final converged set of parameters.

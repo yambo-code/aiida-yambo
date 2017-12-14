@@ -1,4 +1,4 @@
-.. _my-ref-to-yambo-tutorial:
+.. _2-ref-to-yambo-tutorial:
 
 Yambo G0W0 Tutorial
 ====================

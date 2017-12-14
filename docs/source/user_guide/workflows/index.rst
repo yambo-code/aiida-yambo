@@ -1,4 +1,4 @@
-.. _sec.yambo:
+.. _sec.yambo_plugin:
 
 Avaliable calculation plugin
 -----------------------------
