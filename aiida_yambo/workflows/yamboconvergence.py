@@ -27,48 +27,23 @@ from aiida_yambo.calculations.gw  import YamboCalculation
 import numpy as np 
 from scipy.optimize import  curve_fit 
 
-#PwCalculation = CalculationFactory('quantumespresso.pw')
-#YamboCalculation = CalculationFactory('yambo.yambo')
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
 PwProcess = PwCalculation.process()
 YamboProcess = YamboCalculation.process()
 
-"""
-GW (Bands)
-===========
-First target parameters for convergences.
-  - BndsRnXp   nbndX 
-  - GbndRnge   nbndG
-  - PPAPntXp [OK]
-  - NGsBlkXp [OK] ecutX
-  - FFTGvecs 
-  - kpoints
-
-Target quantities for convergence:
-  - GW band width along a single kpoint, between two band indexes
-
-Test for convergence:
-  - Change between runs smaller than threshold
-
-possible techniques
-  1. Coordinate descent
-  2. k
-
-#BSE (Optics)   *** THIS WILL WAIT FOR ITS OWN WORKFLOW******
-#First target parameters for convergences.
-#BSEBands
-"""
 
 class YamboConvergenceWorkflow(WorkChain):
-    """
+    """This class supports 1-D convergence of FFT, kpoints, Bands or W_cutoff, only one must be selected.
+
+    This class computed the quasiparticle direct gap at Gamma, and updates the convergence paramteter
+    until the change in at least three sequential calculations is within a set threshold.
     """
 
     @classmethod
     def define(cls, spec):
         """
-        
         convergence_parameters = {'variable_to_converge':'bands' or 'W_cutoff' or 'kpoints' or 'FFT_cutoff',
                                     'start_value': 10,
                                     'step': 5,
@@ -93,12 +68,9 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
         spec.input("parameters_p2y", valid_type=ParameterData, required=False, default=set_default_qp_param()  )
         spec.input("parameters", valid_type=ParameterData, required=False  )
-        #spec.input("converge_parameters", valid_type=List)
-        #spec.input("starting_points", valid_type=List,required=False,default=List() )
-        #spec.input("default_step_size", valid_type=ParameterData,required=False,
-        #                   default=DataFactory('parameter')(dict=default_step_size))
+        spec.input("parameters_pw", valid_type=ParameterData, required=False  )
+        spec.input("parameters_pw_nscf", valid_type=ParameterData, required=False  )
         spec.input("convergence_parameters", valid_type=ParameterData, required=True)
-        #spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
 
         spec.outline(
           cls.start,
@@ -114,6 +86,13 @@ class YamboConvergenceWorkflow(WorkChain):
 
 
     def init_parameters(self,paging):
+        """This function initializes the  settings and parameters needed for  a convergence calculations.
+
+        This function will store all needed parameters each in a self.ctx variable, and generate from
+        defaults optional parameters that are not provieded. It uses functions from `yambo_utils` to 
+        generates the defaults. This function is only called once,  after which the only update parameter
+        is called.
+        """
         convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
         if 'calculation_set_pw' not in self.inputs.keys():
             self.inputs.calculation_set_pw = DataFactory('parameter')(dict=self.inputs.calculation_set.get_dict())
@@ -147,7 +126,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     else:
                         if 'parameters_pw_nscf' not in self.inputs.keys():
                             self.ctx.parameters_pw_nscf = parent_calc.inp.parameters
-                    self.report("parent_scf_folder defined params {}".format(self.ctx.parameters.get_dict() ))
+                    self.report("parent_scf_folder defined params {}".format(self.ctx.parameters_pw.get_dict() ))
 
             if isinstance(parent_calc, YamboCalculation):
                 if parent_calc.get_state()== 'FINISHED': 
@@ -224,8 +203,7 @@ class YamboConvergenceWorkflow(WorkChain):
         self.report('Initialization step completed.' )
 
     def start(self):
-        # for kpoints, we will need to have the scf step, and  use YamboWorkflow not YamboRestartWf
-        #
+        """This function performs some neccessary checks to ensure all neccessary information is provided, and stores  the provided parameters in  self.ctx variables."""
         self.ctx.max_iterations = 20 
         self.ctx.iteration = 0
         self.ctx.skip_prescf = False
@@ -277,12 +255,17 @@ class YamboConvergenceWorkflow(WorkChain):
         self.report("Setup step completed.")
 
     def run_next_update(self):
+        """This function only stores a completed P2Y, to continued from an NSCF calculation where P2Y was not run, 
+        
+        This stores a complete P2Y in the ctx to continue from a provided NSCF calculation. 
+        """
         if self.ctx.skip_prescf: 
             p2y_parent = load_node( self.ctx.missing_p2y_parent.out.gw.get_dict()["yambo_pk"])
             self.ctx.p2y_parent_folder = p2y_parent.out.remote_folder
             self.ctx.skip_prescf = False
 
     def iterate(self):
+        """This function  creates (and on subsequent iteration updates) the parameters and submits subworkflows  for each parameter step"""
         self.report("Convergence iteration {}".format(str(self.ctx.iteration)))
         loop_items = range(1,self.ctx.loop_length+1)
         if self.ctx.very_first == True:
@@ -335,20 +318,32 @@ class YamboConvergenceWorkflow(WorkChain):
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
             self.report("  K-point convergence commencing")
+            mesh = False
             for num in loop_items: # includes 0 because of starting point
                 if loop_items[0] == 0:
                     self.init_parameters(num)
                 #else:
                 #    self.update_parameters(num)  # Not neccessary, kpoint variation is done at PBE level with the self.ctx.distance_kpoints
-                self.ctx.distance_kpoints = self.ctx.distance_kpoints* 0.75 # 30% change 
-                kpoints = KpointsData()
-                kpoints.set_cell_from_structure(self.inputs.structure)
-                kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=True)
+                def get_kpoints():
+                    self.ctx.distance_kpoints = self.ctx.distance_kpoints* 0.9 # 10% change 
+                    kpoints = KpointsData()
+                    kpoints.set_cell_from_structure(self.inputs.structure)
+                    kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=True)
+                    return kpoints
+                while True:
+                    kpoints = get_kpoints()
+                    if mesh == kpoints.get_kpoints_mesh(): # deduplicate
+                        continue
+                    else:
+                        break
+                mesh =  kpoints.get_kpoints_mesh() 
                 extra = {}
                 if 'parent_scf_folder' in self.inputs.keys():
                    extra['parent_folder'] = self.inputs.parent_scf_folder
                 if 'QPkrange' not in self.ctx.parameters.get_dict().keys():
                    extra['to_set_qpkrange'] = Bool(1)
+                if 'BndsRnXp' not in self.ctx.parameters.get_dict().keys() or 'GbndRnge' not in self.ctx.parameters.get_dict().keys() :
+                   extra['to_set_bands'] = Bool(1)
                 extra['calculation_set_p2y'] = self.ctx.calculation_set_p2y
                 extra['calculation_set_pw'] = self.inputs.calculation_set_pw
                 extra['settings_p2y'] = self.inputs.settings_p2y
@@ -385,6 +380,7 @@ class YamboConvergenceWorkflow(WorkChain):
 
 
     def is_not_converged(self):
+        """This function check is there has been convergence reached or not."""
         if self.ctx.skip_prescf == True:
             return True 
         try: # for yamborestart
@@ -426,11 +422,18 @@ class YamboConvergenceWorkflow(WorkChain):
         return True
 
     def analyse_fit(self,field):
-        """
-        Docs
+        """This function implements the logic to decide if any >3 calculations have converged.
 
-        independent means the input values
-        dependent the quantity to converge (e.g. band gap)
+        arguments:
+        field -- The quantity being conveged (kpoint, FFT...)
+        independent means the input values.
+        dependent the quantity to converge (e.g. band gap).
+        This function ensures the energy differences between any four successful calculation to
+        be below the threshold, i.e.:
+        d1 = C1 - C2
+        d2 = C2 - C3
+        d3 = C3 - C4
+        therefore  d1 and d2 and d3   must be ALL less than the convergence threshold.
         """
         independent = np.array(self.ctx.conv_elem[field])
         if self.ctx.variable_to_converge== 'bands':
@@ -452,10 +455,14 @@ class YamboConvergenceWorkflow(WorkChain):
  
 
     def get_total_range(self,node_id):
-        # CAVEAT: this does not calculate HOMO LUMO gap, but the width between two
-        #         bands listed in the QPkrange, on the first kpoint selected,
-        #         i.e. for 'QPkrange': [(1,16,30,31)] , will find width between 
-        #         kpoint 1  band 30 and kpoint  1 band 31. 
+        """
+        compute the gap in energy between two bands along the kpoints listed in QPkrange
+
+        CAVEAT: this does not neccessarily calculate HOMO LUMO gap, but the width between two
+                 bands listed in the QPkrange, on the first kpoint selected,
+                 i.e. for 'QPkrange': [(1,16,30,31)] , will find width between 
+                 kpoint 1  band 30 and kpoint  1 band 31. 
+        """
         calc = load_node(node_id)
         table=calc.out.array_qp.get_array('qp_table')
         try:
@@ -498,8 +505,11 @@ class YamboConvergenceWorkflow(WorkChain):
         return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
 
     def report_wf(self):
-        """
-        Output final quantities
+        """Output final quantities
+
+        this reports the parameters used in the converged calculation, the pk of that calculation,
+        a listing of the space sampled for convergence and the  gaps computed  at those points 
+        in the convergence space.
         """
         extra = {}
         nscf_pk = False
