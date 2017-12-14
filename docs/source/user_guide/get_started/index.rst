@@ -1,4 +1,4 @@
-.. _sec.yambo:
+.. _sec.yambo_start:
 
 Getting Started with Aiida-Yambo
 ---------------------------------

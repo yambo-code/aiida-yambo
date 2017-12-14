@@ -1,4 +1,6 @@
-.. _sec.yambo:
+:orphan: 
+
+.. _sec.yambo: 
 
 Avaliable calculation plugin
 -----------------------------
