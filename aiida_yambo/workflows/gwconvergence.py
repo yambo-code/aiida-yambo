@@ -62,6 +62,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("calculation_set", valid_type=ParameterData)
         spec.input("calculation_set_pw", valid_type=ParameterData,required=False)
+        spec.input("parameters", valid_type=ParameterData,required=False)
         spec.input("parameters_pw", valid_type=ParameterData,required=False)
         spec.input("parameters_pw_nscf", valid_type=ParameterData,required=False)
         spec.input("convergence_settings", valid_type=ParameterData,required=False)
@@ -394,6 +395,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_1_1':
              extra['parameters'] = self.ctx.step1_res.out.convergence.get_dict()['parameters'] 
+        if 'parameters' in self.inputs.keys():
+             extra['parameters'] = self.inputs.parameters
         if 'parameters_pw' in self.inputs.keys():
              extra['parameters_pw'] = self.inputs.parameters_pw
         if 'parameters_pw_nscf' in  self.inputs.keys():
