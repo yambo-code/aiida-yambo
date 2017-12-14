@@ -23,22 +23,36 @@ from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import generate_yambo_input_params, reduce_parallelism 
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
-#PwCalculation = CalculationFactory('quantumespresso.pw')
-#YamboCalculation = CalculationFactory('yambo.yambo')
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
 
-"""
-"""
 class YamboRestartWf(WorkChain):
-    """
+    """This module interacts directly with the yambo plugin to submit calculations
+
+    This module submits calculations using the yambo plugin, and manages them, including
+    restarting the calculation in case of:
+    1. Memory problems ( will reduce MPI parallelism before resubmitting)
+    2. Queue time exhaustions (will increase time by a fraction before resubmitting)
+    3. Parallelism errors (will reduce the MPI the parallelism before resbmitting)
+    4. Errors originating from a few select unphysical input parameters like too low bands.
     """
 
     @classmethod
     def define(cls, spec):
-        """
-        Workfunction definition
+        """Workflow input parameters and the spec definition
+
+        This function has a list of inputs that this workflow accepts, as well as the
+        high level workflow iteration logic
+        
+        Keyword arguments:
+        precode -- the P2Y code  (required) 
+        yambocode -- the yambp code  (required) 
+        calculation_set -- scheduler settings  (required) 
+        settings -- code settings  (required) 
+        parent_folder -- parent NSCF/P2Y/YAMBO calculation  (required) 
+        parameters -- yambo parameter  (required)  
+        restart_options -- the P2Y code  (optional) 
         """
         super(YamboRestartWf, cls).define(spec)
         spec.input("precode", valid_type=Str)
@@ -59,9 +73,10 @@ class YamboRestartWf(WorkChain):
         spec.dynamic_output()
 
     def yambobegin(self):
-        """
-        Run the  pw-> yambo conversion, init and yambo run
-        #  precodename,yambocodename, parent_folder, parameters,  calculation_set=None, settings
+        """Submits a calculation  using the  yambo plugin.
+
+        This function takes inputs provided and using the YamboCalculation class
+        submits a calculation.
         """
         self.ctx.yambo_pks = []
         self.ctx.yambo_nodes = []
@@ -103,14 +118,15 @@ class YamboRestartWf(WorkChain):
         self.ctx.yambo_nodes.append(self.ctx.yambo)
 
     def yambo_should_restart(self):
-        """
-        # should restart a calculation if it satisfies either
-        # 1. It has not been restarted  X times already.
-        # 2. It hasnt produced output.
-        # 3. Submission failed.
-        # 4. Failed: a) Memory problems
-        #            b) Parallelism problems.
-        #            c) Some input inconsistency problems (too low bands)
+        """This function encodes the logic to restart calculations from failures
+
+        This function supports detecting failed/incomplete yambo runs, taking corrective
+        action and resubmitting automatically. These classes of errors are taken care of:
+        1. Memory probelems
+        2. Parallelism problems
+        3. Some input inconsistency problems (too low bands)
+        4. Queue time exhaustion.
+        The calculation is restarted upto a maximum number of 4 retries
         """
         self.report("Checking if yambo restart is needed")
         if self.ctx.restart >= self.ctx.max_restarts:
@@ -224,10 +240,10 @@ class YamboRestartWf(WorkChain):
         return False
 
     def yambo_restart(self):
-        """
-        restart if necessary
-        get inputs from prior calculation ctx.yambo_pks
-        should be able to handle submission failed, by possibly going to parent?
+        """Submits a yambo calculation using the yambo plugin
+
+        This function submits a calculation, usually this represents a 
+        resubmission of a failed calculation, or a continuation from P2Y.
         """
 
         calc = load_node(self.ctx.yambo_pks[-1])
@@ -264,6 +280,7 @@ class YamboRestartWf(WorkChain):
         return ResultToContext(yambo_restart= future)
 
     def run_yambo(self,inputs):
+        """Call submit with the inputs  """
         YamboProcess = YamboCalculation.process()
         future =  submit(YamboProcess, **inputs)
         self.ctx.yambo_pks.append( future.pid )

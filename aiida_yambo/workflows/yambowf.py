@@ -18,7 +18,8 @@ from aiida.work.run import legacy_workflow
 from aiida.work.run import run, submit
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
-               default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings
+               default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings,\
+               default_bands
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.code import Code
@@ -29,8 +30,6 @@ from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.workflows.pw.base  import PwBaseWorkChain
 
-#PwCalculation = CalculationFactory('quantumespresso.pw')
-#YamboCalculation = CalculationFactory('yambo.yambo')
 ParameterData = DataFactory("parameter")
 
 class YamboWorkflow(WorkChain):
@@ -39,11 +38,31 @@ class YamboWorkflow(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        """
-        Workfunction definition
-        Necessary information:  codename_pw , pseudo_family, calculation_set_pw , calculation_set_p2y,
-                                 calculation_set_yambo, structure, kpoints, parameters_pw, parameters_gw, settings_pw,
-                                 codename_p2y, codename_yambo ,  input_pw
+        """Workfunction definition
+
+        Keyword arguments:
+        codename_pw -- PW code name (required)
+        codename_p2y -- P2Y code name (required)
+        codename_yambo -- Yambo code name (required)
+        pseudo_family -- pseudo name (required)
+        calculation_set_pw -- scheduler settings {'resources':{...}}  for PW calculation (required)
+        calculation_set_p2y -- scheduler settings {'resources':{...}} for P2Y conversion (required)
+        calculation_set_yambo -- scheduler settings {'resources':{...}} for Yambo calculation (required)
+        settings_pw -- plugin settings for PW  (required)
+        settings_p2y -- settings for P2Y { "ADDITIONAL_RETRIEVE_LIST":[], 'INITIALISE':True}  (optional)
+        settings_yambo -- settings for yambo { "ADDITIONAL_RETRIEVE_LIST":[] } (optional)
+        structure -- Structure (required)
+        kpoint_pw -- kpoints  (option)
+        gamma_pw -- Whether its a gammap point calculation(optional)
+        parameters_pw -- PW SCF parameters (required)
+        parameters_pw_nscf -- PW NSCF parameters (optional)
+        parameters_p2y --  (required)
+        parameters_yambo -- Parameters for Yambo (required)
+        parent_folder -- Parent calculation (optional)
+        previous_yambo_workchain -- Parent workchain (Yambo) (optional)
+        to_set_qpkrange --  whether to set the QPkrange, override with defaults  (optional)
+        to_set_bands -- Whether to set the bands, overide with default (optional)
+        bands_groupname --  (optional)
         """
         super(YamboWorkflow, cls).define(spec)
         spec.input("codename_pw", valid_type=Str)
@@ -66,6 +85,7 @@ class YamboWorkflow(WorkChain):
         spec.input("parent_folder", valid_type=RemoteData,required=False)
         spec.input("previous_yambo_workchain", valid_type=Str,required=False)
         spec.input("to_set_qpkrange", valid_type=Bool,required=False, default=Bool(0) )
+        spec.input("to_set_bands", valid_type=Bool,required=False, default=Bool(0) )
         spec.input("bands_groupname", valid_type=Str, required=False)
         spec.outline(
             cls.start_workflow,
@@ -77,6 +97,9 @@ class YamboWorkflow(WorkChain):
         spec.dynamic_output()
 
     def start_workflow(self):
+        """Initialize the workflow, set the parent calculation
+        
+        This function sets the parent, and its type, including support for starting from a workchain"""
         self.ctx.pw_wf_res = DataFactory('parameter')(dict={})
         self.ctx.yambo_res = DataFactory('parameter')(dict={})
         self.ctx.last_step_pw_wf = None
@@ -137,6 +160,8 @@ class YamboWorkflow(WorkChain):
         self.report(" workflow initilization step completed.")
         
     def can_continue(self):
+        """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
+
         if self.ctx.last_step_kind == 'yambo' and self.ctx.yambo_res:
             try:
                 self.ctx.yambo_pks.append(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"])
@@ -161,13 +186,17 @@ class YamboWorkflow(WorkChain):
         return True
  
     def perform_next(self):
+        """This function  will run the next step, depending on the information provided in the context"""
         if self.ctx.last_step_kind == 'yambo' or self.ctx.last_step_kind == 'yambo_p2y' :
             if load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]).get_state() == u'FINISHED':
                 if self.inputs.to_set_qpkrange   and 'QPkrange' not in self.ctx.parameters_yambo.get_dict().keys():
                     self.ctx.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"], self.ctx.parameters_yambo)
+                if self.inputs.to_set_bands   and ('BndsRnXp' not in self.ctx.parameters_yambo.get_dict().keys()\
+                        or 'GbndRnge' not in self.ctx.parameters_yambo.get_dict().keys()):
+                    self.ctx.parameters_yambo = default_bands( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"], self.ctx.parameters_yambo)
                 start_from_initialize = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
 
-                if start_from_initialize: # YamboRestartWf will initialize before starting QP calc  for us, 
+                if start_from_initialize: # YamboRestartWf will initialize before starting QP calc  for us,  INIT != P2Y 
                     self.report ("YamboRestartWf will start from initialise mode (yambo init) ")
                     yambo_result =  self.run_yambo()
                     return  ResultToContext( yambo_res= yambo_result  )
@@ -182,7 +211,7 @@ class YamboWorkflow(WorkChain):
         if  self.ctx.last_step_kind == 'pw' and  self.ctx.pw_wf_res :
             if self.ctx.pw_wf_res.out.pw.get_dict()['success'] == True:
                 self.report("PwRestartWf was successful,  running initialize next with: YamboRestartWf ")
-                p2y_result = self.run_initialize()
+                p2y_result = self.run_p2y()
                 return  ResultToContext( yambo_res= p2y_result )
             if self.ctx.pw_wf_res.out.pw.get_dict()['success'] == False:
                 self.report("PwRestartWf subworkflow  NOT  successful")
@@ -199,6 +228,7 @@ class YamboWorkflow(WorkChain):
             return  ResultToContext( pw_wf_res = pw_wf_result  )
 
     def run_yambo(self):
+        """ submit a yambo calculation """    
         parentcalc = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"])
         parent_folder = parentcalc.out.remote_folder 
         yambo_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
@@ -208,7 +238,8 @@ class YamboWorkflow(WorkChain):
         self.report ("submitted YamboRestartWf subworkflow, in Initialize mode  ")
         return yambo_result
 
-    def run_initialize(self):
+    def run_p2y(self):
+        """ submit a  P2Y  calculation """    
         parentcalc = load_node(self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"])
         parent_folder = parentcalc.out.remote_folder 
         p2y_result = submit (YamboRestartWf, precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
@@ -218,6 +249,7 @@ class YamboWorkflow(WorkChain):
         return p2y_result
 
     def run_pw(self, extra):
+        """ submit a  PW   calculation """    
         pw_wf_result = submit(PwRestartWf, codename = self.inputs.codename_pw  , pseudo_family = self.inputs.pseudo_family, 
                 calculation_set = self.inputs.calculation_set_pw, settings=self.inputs.settings_pw, 
                 kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
@@ -226,6 +258,7 @@ class YamboWorkflow(WorkChain):
         return pw_wf_result  
 
     def run_restart(self):
+        """ submit a followup yambo calculation """    
         parent_folder = self.ctx.yambo_res.out.yambo_remote_folder 
         yambo_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.ctx.parameters_yambo, calculation_set= self.inputs.calculation_set_yambo,
