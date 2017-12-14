@@ -1,12 +1,11 @@
-:orphan: 
-
-.. _sec.yambo: 
+.. _sec.yambo_calc_plugin: 
 
 Avaliable calculation plugin
 -----------------------------
 
 Description
 ^^^^^^^^^^^
+
 `Yambo`_  is a  code for Many-Body calculations in solid state and molecular physics  `available online`_.
 Documentation of the code and its internal details can also be found in the `Yambo Documentation`_.
 
@@ -25,4 +24,4 @@ Plugin
 .. toctree::
    :maxdepth: 4
 
-   yambo
+   plugin

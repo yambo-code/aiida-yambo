@@ -1,4 +1,4 @@
-.. _sec.yambo_plugin:
+.. _sec.yambo_workflows:
 
 Avaliable calculation plugin
 -----------------------------
@@ -23,4 +23,4 @@ Plugin
 .. toctree::
    :maxdepth: 4
 
-   yambo
+   workflows

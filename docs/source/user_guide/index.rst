@@ -3,3 +3,4 @@
 
    ./get_started/index
    ./workflows/index
+   ./calculation_plugin/index
