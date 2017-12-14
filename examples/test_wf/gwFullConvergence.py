@@ -9,11 +9,11 @@ from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
 
-calculation_set_yambo ={'resources':  {"num_machines":1 ,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 2*60*60,
-                  'max_memory_kb': 1*80*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n"  ,
+calculation_set_yambo ={'resources':  {"num_machines":1 ,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 2*60*60,
+                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n"  ,
                   'environment_variables': {"omp_num_threads": "0" }  }
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2,  }, 'max_wallclock_seconds': 60*45,
-                  'max_memory_kb': 1*80*1000000  , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n" ,
+calculation_set_pw ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 32 }, 'max_wallclock_seconds': 60*45*3,
+                  'max_memory_kb': 1*80*1000000  ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n" ,
                   'environment_variables': {"omp_num_threads": "0" }  }
 
 
@@ -35,14 +35,14 @@ if __name__ == "__main__":
     parser.add_argument('--parent', type=int, dest='parent', required=False,
                         help='The parent SCF   to use')
 
-    threshold = Float(0.01)
+    threshold = Float(0.1)
     args = parser.parse_args()
     structure = load_node(int(args.structure))
     extra={}
     if  args.parent:
         parent = load_node(args.parent)
         extra['parent_scf_folder'] = parent.out.remote_folder
-    p2y_result =submit(YamboFullConvergenceWorkflow, 
+    p2y_result =run(YamboFullConvergenceWorkflow, 
                     pwcode= Str( args.pwcode), 
                     precode= Str( args.precode), 
                     pseudo= Str( args.pseudo), 

@@ -80,17 +80,37 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
              edit_parameters['NGsBlkXp_units'] =  'Ry'
+        if 'QpntsRXp' not in edit_parameters.keys():
+             edit_parameters['QpntsRXp'] = (1, 301 ) 
+        if 'rim_cut' not in edit_parameters.keys():
+             edit_parameters['rim_cut'] = True
+        if 'GTermEn' not in edit_parameters.keys():
+             edit_parameters['GTermEn'] = 40.81708
+             edit_parameters['GTermEn_units'] = 'eV'
+             edit_parameters['GTermKind'] = 'BG'
+        if 'BoseTemp' not in edit_parameters.keys():
+             edit_parameters['BoseTemp'] = 0.000
+             edit_parameters['BoseTemp_units'] = 'eV'
+        if 'ElecTemp' not in edit_parameters.keys():
+             edit_parameters['ElecTemp'] = 0.000
+             edit_parameters['ElecTemp_units'] = 'eV'
+        if 'RandQpts' not in edit_parameters.keys():
+             edit_parameters['RandQpts'] = 1000000
+        if 'RandGvec' not in edit_parameters.keys():
+             edit_parameters['RandGvec'] = 1
+             edit_parameters['RandGvec_units'] = 'RL'
+        if 'CUTGeo' not in edit_parameters.keys():
+             edit_parameters['CUTGeo'] = 'none'
         if 'QPkrange' not in edit_parameters.keys():
-             edit_parameters['QPkrange'] = [(1,1,int(nocc), int(nocc)+1 )] # To revisit 
+             edit_parameters['QPkrange'] = [(1,1,int(nocc)-1, int(nocc)+1 ), (7,7,int(nocc)-1, int(nocc)+1 )] # To revisit 
         if 'SE_CPU' not in  edit_parameters.keys():
-            b, qp = split_incom(tot_mpi)
+            qp, b = split_incom(tot_mpi)
             edit_parameters['SE_CPU'] ="1 {qp} {b}".format(qp=qp, b = b) 
             edit_parameters['SE_ROLEs']= "q qp b"
         if 'X_all_q_CPU' not in  edit_parameters.keys():
-            c, v = split_incom(tot_mpi)
+            v, c = split_incom(tot_mpi)
             edit_parameters['X_all_q_CPU']= "1 1 {c} {v}".format(c = c, v = v)
             edit_parameters['X_all_q_ROLEs'] ="q k c v"
-    
     inputs.parameters = ParameterData(dict=edit_parameters) 
     return  inputs
 
@@ -177,7 +197,7 @@ def reduce_parallelism(typ, roles,  values,calc_set):
         # we should keep c*v == mpi_task, with  c>v always
         # if increased_mpi_task we try a simple assignment
         # else, we factor again?  
-        c, v = split_incom(mpi_task*2)
+        v, c = split_incom(mpi_task*2)
         if  False:
             if num_mpiprocs_per_machine < calculation_set['resources']['num_mpiprocs_per_machine'] :
                 c = c/2 
@@ -294,8 +314,29 @@ def set_default_qp_param(parameter=None):
     if 'LongDrXp' not in edit_param.keys():
         edit_param['LongDrXp'] = (1.000000,0.000000, 0.000000)
     if 'PPAPntXp' not in edit_param.keys():
-        edit_param['PPAPntXp'] =  4
+        edit_param['PPAPntXp'] =  20
         edit_param['PPAPntXp_units'] =  'eV'
+    if 'QpntsRXp' not in edit_param.keys():
+         edit_param['QpntsRXp'] = (1, 301 ) 
+    if 'rim_cut' not in edit_param.keys():
+         edit_param['rim_cut'] = True
+    if 'GTermEn' not in edit_param.keys():
+         edit_param['GTermEn'] = 40.81708
+         edit_param['GTermEn_units'] = 'eV'
+         edit_param['GTermKind'] = 'BG'
+    if 'BoseTemp' not in edit_param.keys():
+         edit_param['BoseTemp'] = 0.000
+         edit_param['BoseTemp_units'] = 'eV'
+    if 'ElecTemp' not in edit_param.keys():
+         edit_param['ElecTemp'] = 0.000
+         edit_param['ElecTemp_units'] = 'eV'
+    if 'RandQpts' not in edit_param.keys():
+         edit_param['RandQpts'] = 1000000
+    if 'RandGvec' not in edit_param.keys():
+         edit_param['RandGvec'] = 1
+         edit_param['RandGvec_units'] = 'RL'
+    if 'CUTGeo' not in edit_param.keys():
+         edit_param['CUTGeo'] = 'none'
     if 'SE_CPU' not in  edit_param.keys():
         edit_param['SE_CPU'] ="1 8 16" 
         edit_param['SE_ROLEs']= "q qp b"
@@ -364,7 +405,7 @@ def default_qpkrange(calc_pk, parameters):
        is_pw = True
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():
-            edit_parameters['QPkrange'] = [(1,1 , int(nocc) , int(nocc)+1 )]
+            edit_parameters['QPkrange'] = [(1, 1, int(nocc) , int(nocc)+1 ), (7,7,int(nocc)-1, int(nocc)+1 )]
     return ParameterData(dict=edit_parameters)
 
 
@@ -386,7 +427,14 @@ def default_bands(calc_pk, parameters):
     return ParameterData(dict=edit_parameters)
 
 def split_incom(num):
-    """Does not work yet, needs some bugfix """
+    """Does not work yet, needs some bugfix. 
+
+    so when the power p is odd, take (p-1)/2 and (p-1)/2+1
+    when the power p is even, take (p/2)+1 and (p/2)-1
+    let's do an example, random number 563. largest power of 2 still less than is 9
+    so we use the formula for odd p and take (p-1)/2 and (p-1)/2+1 which 4 and 5
+    so 16 and 32
+    """
     powers = []
     i = 1
     while i <= num:
@@ -396,9 +444,9 @@ def split_incom(num):
     larges_p = powers[-1]
     power = int(math.log(larges_p)/math.log(2))
     if power%2 == 0:
-        return (2**(power*3/4), 2**(power*1/4))
+        return (2**(power/2+1), 2**(power/2-1))
     else:
-        return (2**(power*2/3), 2**(power*1/3))
+        return (2**((power-1)/2+1), 2**((power-1)/2))
 
 def is_converged(values,conv_tol=1e-5,conv_window=3):
     """Check convergence for a list of values
@@ -416,3 +464,15 @@ def is_converged(values,conv_tol=1e-5,conv_window=3):
         delta_list.append(abs(values[i]-values[i-1]))
     delta_list = delta_list[-conv_window:]
     return all(x<conv_tol for x in delta_list) 
+
+
+def default_convergence_settings():
+    return ParameterData(dict={
+          'start_fft' :20 , 
+          'max_fft': 400 , 
+          'start_bands' : 10 ,
+          'max_bands': 4000, 
+          'start_w_cutoff': 1 ,
+          'max_w_cutoff': 40 ,
+          'kpoint_starting_distance': 1.,
+          'kpoint_min_distance': 0.025}) 

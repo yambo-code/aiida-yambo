@@ -35,14 +35,17 @@ PwProcess = PwCalculation.process()
 #YamboCalculation = CalculationFactory('yambo.yambo')
 
 class PwRestartWf(WorkChain):
-    """
+    """This class is a wrapper for the workflows provided by the aiida-quantumespresso plugin
+
+    This class calls the aiida-quantumespresso PW workflow as a subworkflow with the correct
+    parameters, and encodes the logic neccessary to decide whether to do an SCF or an NSCF.
+    The subworkflow is assumed to include support for restarting failures from recoverable 
+    errors such as queue time exhaustion and other similar errors. 
     """
 
     @classmethod
     def define(cls, spec):
-        """
-        Workfunction definition
-        """
+        """Workfunction definition"""
         super(PwRestartWf, cls).define(spec)
         spec.input("codename", valid_type=BaseType)
         spec.input("pseudo_family", valid_type=Str)
@@ -64,8 +67,10 @@ class PwRestartWf(WorkChain):
         spec.dynamic_output()
 
     def pwbegin(self):
-        """
-        start SCF/NSCF 
+        """This function constructs the correct parameters to be passed to the subworkflow, and will also determine the type (SCF vs NSCF)
+
+        This function evaluates the inputs to  the workflow, and if there is a parent calculation passed, check its  type if SCF, then performs
+        and NSCF.  If there is no parent calculation, will default to running an SCF calculation, all done through subworkflows from aiida-quantumespresso
         """
         if 'parent_folder' in  self.inputs.keys() :
             if not isinstance(self.inputs.parent_folder, RemoteData):
@@ -84,12 +89,12 @@ class PwRestartWf(WorkChain):
                      parameters['SYSTEM']['force_symmorphic'] = True
                 if 'nbnd' not in parameters['SYSTEM']:
                      try:
-                         parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*4
+                         parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*20
                      except KeyError:
-                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*4) # 
+                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*20) # 
                 if 'ELECTRONS' not in parameters:
                    parameters['ELECTRONS'] = {}
-                parameters['ELECTRONS']['diagonalization'] = 'cg'
+                parameters['ELECTRONS']['diagonalization'] = 'davidson'
                 parameters['ELECTRONS']['conv_thr'] = 0.000001
                 parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
                 parameters['CONTROL']['calculation'] = 'nscf'
@@ -124,7 +129,10 @@ class PwRestartWf(WorkChain):
         return ResultToContext(first_calc=future  )
 
     def pw_should_continue(self):
-        """
+        """This function runs after each calculation is finished, and decides whether the calcuations performed was successfull and which one to do next or restart.
+
+        This function encodes the logic for restarting failed  calculations, including deciding if the calculation has failed enough times to warrant exiting the
+        workflow. It also decides if the last calculations were successful what calculation to do next, or quit successfully returning computed SCF+NSCF subworkflows.
         """
         if len(self.ctx.pw_pks) ==0: # we never run a single calculation 
             return False 
@@ -163,6 +171,11 @@ class PwRestartWf(WorkChain):
         return False
 
     def pw_continue(self):
+        """This function does the actual submissions after the decision has been made whether to continue or not, and will (re)start and SCF (NSCF)
+
+        This function does the actual submission after the first submission done in `self.pwbegin` are complete, and will either restart a failed
+        SCF subworkflow or start an NSCF subworkflow from SCF inputs,  or restart a failed NSCF subworkflow
+        """
         # restart if neccessary
         calc = None
         if len(self.ctx.pw_pks) ==1:
@@ -202,20 +215,19 @@ class PwRestartWf(WorkChain):
                  parameters['SYSTEM']['force_symmorphic'] = True 
             if 'nbnd' not in parameters['SYSTEM']:
                  try:
-                     parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*4
+                     parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*20
                  except KeyError:
-                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*4) # 
+                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*20) # 
             parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
         parameters['CONTROL']['calculation'] = scf
         if 'ELECTRONS' not in parameters:
             parameters['ELECTRONS'] = {}
-        parameters['ELECTRONS']['diagonalization'] = 'cg'
+        parameters['ELECTRONS']['diagonalization'] = 'davidson'
         parameters['ELECTRONS']['conv_thr'] = 0.000001
         self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
         parameters = ParameterData(dict=parameters)  
         inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                       parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
-        #future =  submit (PwProcess, **inputs)
         future =  submit (PwBaseWorkChain, **inputs)
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart += 1
@@ -225,8 +237,8 @@ class PwRestartWf(WorkChain):
 
 
     def report_wf(self):
-        """
-        Output final quantities
+        """Output final quantities
+
         return information that may be used to figure out
         the status of the calculation.
         """
