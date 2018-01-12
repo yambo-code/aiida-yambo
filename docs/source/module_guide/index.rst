@@ -6,3 +6,4 @@ aiida_yambo module documentation
 
     calculations
     parsers
+    workflows
