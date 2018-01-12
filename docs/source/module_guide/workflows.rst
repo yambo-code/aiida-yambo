@@ -9,5 +9,17 @@ This section describes the different workflows classes for automated calculation
 YAMBO Workflows
 ++++++++++++++++
 
-.. automodule:: aiida_yambo.workflows
+.. automodule:: aiida_yambo.workflows.gwconvergence
+   :members:
+
+.. automodule:: aiida_yambo.workflows.yamboconvergence
+   :members:
+
+.. automodule:: aiida_yambo.workflows.yamborestart
+   :members:
+
+.. automodule:: aiida_yambo.workflows.yambowf
+   :members:
+
+.. automodule:: aiida_yambo.workflows.pwplaceholder
    :members:
