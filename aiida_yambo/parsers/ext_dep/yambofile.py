@@ -355,6 +355,8 @@ class YamboFile():
                 self.lines = fl.readlines()
         p2y_complete = re.compile('^(\s+)?[-<>\d\w]+\s+?P\d+[:]\s+?==\s+?P2Y\s+?\w+\s+?==(\s+)?') # P2Y Complete
         p2y_complete_v2 = re.compile('(\s+)?[-<>\w\d]+(\s+)?==(\s+)?P2Y(\s+)?\w+(\s+)?==') # P2Y Complete
+        error = re.compile('\[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.\(\)\[\]\-]*)')
+        generic_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
         yambo_wrote = re.compile('(?:\s+)?(?:[<>\w\d]+)(:?\s+)?(?:P\d+[:])(?:\s+)?(?:[[]\w+[]])?(?:\s+)?Writing(?:\s+)?\w+(?:\s+)?')
         for line in self.lines:
             if p2y_complete.match(line) or p2y_complete_v2.match(line):
@@ -362,6 +364,7 @@ class YamboFile():
                 self.game_over = True 
             if yambo_wrote.match(line):
                 self.yambo_wrote = True 
+        self.errors.extend ([ line for line in self.lines if ( generic_error.match(line) or error.match(line) )  ])
 
     def __bool__(self):
         if self.type == 'unknown':
