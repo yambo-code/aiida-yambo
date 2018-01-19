@@ -209,7 +209,7 @@ class YamboFile():
         p2y_complete = re.compile('^(\s+)?[-<>\d\w]+\s+?P\d+[:]\s+?==\s+?P2Y\s+?\w+\s+?==(\s+)?') # P2Y Complete
         p2y_complete_v2 = re.compile('(\s+)?[-<>\w\d]+(\s+)?==(\s+)?P2Y(\s+)?\w+(\s+)?==') # P2Y Complete
         yambo_wrote =  re.compile('(?:\s+)?[[]WR[./\w]+[]](?:[-])+')
-        timing_overview = re.compile('\s+?([a-zA-Z_()0-9]+)\s+?:\s+?([0-9a-z.]+)\s*?CPU\s*?([(]?\s*?(\d+)?\s*?[a-z]+[,]\s*?([\d.]+\s+?s)\s+?avg[)])?$')
+        timing_overview = re.compile('\s+?([a-zA-Z_()0-9\s]+)\s+?:\s+?([0-9a-z.]+)\s*?CPU\s*?([(]?\s*?(\d+)?\s*?[a-z]+[,]\s*?([\d.]+\s+?s)\s+?avg[)])?$')
         current_timing_section= None
         for line in self.lines:
             if err.match(line):
@@ -234,10 +234,10 @@ class YamboFile():
                 self.yambo_wrote = True                                                    
             if timing_overview.match(line):
                 name, total, _ , calls, avg = timing_overview.match(line).groups()
-                self.timing_overview[name] =  self.get_seconds( total) 
-                self.timing_overview[name+'_calls'] = calls
+                self.timing_overview[name.replace(' ','')] =  self.get_seconds( total) 
+                self.timing_overview[name.replace(' ','')+'_calls'] = int(calls) if calls else calls
                 if avg:
-                    self.timing_overview[name+'_avg'] = self.get_seconds(avg.replace(' ',''))
+                    self.timing_overview[name.replace(' ','')+'_avg'] = self.get_seconds(avg.replace(' ',''))
     
         full_lines = ''.join(self.lines)
         qp_regx = re.compile('(^\s+?QP\s\[eV\]\s@\sK\s\[\d+\][a-z0-9E:()\s.-]+)(.*?)(?=^$)',re.M|re.DOTALL)
@@ -299,7 +299,16 @@ class YamboFile():
         pass
 
     def get_seconds( self, time_string):
-        time = time_string.split('-')
+        time = []
+        if '-' in time_string:
+            time = time_string.split('-')
+        else:
+            r = re.compile('([\d.]+h)?\s*([\d.]+m)?\s*([\d.]+s)?')
+            hr, mn, sc = r.match(time_string).groups()
+            time.append(hr if hr else '0h') 
+            time.append(mn if mn else '0m') 
+            time.append(sc if sc else '0s') 
+          
         if time[0]=='' and time[1]=='' and time[2]=='':
             time= ['0h','0m','0s']
         if time[0].endswith('h'):
