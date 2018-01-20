@@ -405,7 +405,7 @@ def default_qpkrange(calc_pk, parameters):
        is_pw = True
        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
        if 'QPkrange' not in edit_parameters.keys():
-            edit_parameters['QPkrange'] = [(1, 1, int(nocc) , int(nocc)+1 ), (7,7,int(nocc)-1, int(nocc)+1 )]
+            edit_parameters['QPkrange'] = [(1, 1, int(nocc) , int(nocc)+1 ), (nkpts,nkpts, int(nocc)-1, int(nocc)+1 )]
     return ParameterData(dict=edit_parameters)
 
 
