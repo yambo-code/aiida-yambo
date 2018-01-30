@@ -52,8 +52,6 @@ class YamboFile():
         self.data     = {} #dictionary containing all the important data from the file
         self.kpoints = {}
         self.timing = []
-        self.timing_section = []
-        self.timing_overview = {} 
         self.wall_time = None
         self.game_over = False  # check yambo run completed successfully
         self.p2y_complete = False  # check yambo initialization completed successfully
@@ -204,40 +202,28 @@ class YamboFile():
         err = re.compile('^\s+?\[ERROR\]\s+?(.*)$')
         kpoints = re.compile('^  [A-X*]+\sK\s\[([0-9]+)\]\s[:](?:\s+)?([0-9.E-]+\s+[0-9.E-]+\s+[0-9.E-]+)\s[A-Za-z()\s*.]+[0-9]+[A-Za-z()\s*.]+([0-9.]+)')
         timing = re.compile('\s+?[A-Za-z]+iming\s+?[A-Za-z/\[\]]+[:]\s+?([a-z0-9-]+)[/]([a-z0-9-]+)[/]([a-z0-9-]+)')
-        timing_section = re.compile('^\s+?\[\d+[.]?\d+?\]\s+?(.*)$')
         game_over = re.compile('^\s+?\[\d+\]\s+?G\w+\s+?O\w+\s+?\&\s+?G\w+\s+?\w+') # Game over & Game summary
         p2y_complete = re.compile('^(\s+)?[-<>\d\w]+\s+?P\d+[:]\s+?==\s+?P2Y\s+?\w+\s+?==(\s+)?') # P2Y Complete
         p2y_complete_v2 = re.compile('(\s+)?[-<>\w\d]+(\s+)?==(\s+)?P2Y(\s+)?\w+(\s+)?==') # P2Y Complete
         yambo_wrote =  re.compile('(?:\s+)?[[]WR[./\w]+[]](?:[-])+')
-        timing_overview = re.compile('\s+?([a-zA-Z_()0-9\s]+)\s+?:\s+?([0-9a-z.]+)\s*?CPU\s*?([(]?\s*?(\d+)?\s*?[a-z]+[,]\s*?([\d.]+\s+?s)\s+?avg[)])?$')
-        current_timing_section= None
         for line in self.lines:
             if err.match(line):
                 if 'STOP' in err.match(line).groups()[0]:
                     # stop parsing, this is a failed calc.
                     self.errors.append(err.match(line).groups()[0])
                     return 
-            if timing_section.match(line):
-                current_timing_section = timing_section.match(line).groups()[0]
             if timing.match(line):
-                self.timing.append( self.get_seconds( timing.match(line).groups()[0]) )    
-                self.timing_section.append(current_timing_section)                         
-            if kpoints.match(line):                                                        
-                kindx, kpt, wgt = kpoints.match(line).groups()                             
-                self.kpoints[str(int(kindx))] =  [ float(i.strip()) for i in kpt.split(    )]
-            if game_over.match(line):                                                      
-                self.game_over = True                                                      
-            if p2y_complete.match(line) or p2y_complete_v2.match(line):                    
-                self.p2y_complete = True                                                   
-                self.game_over = True                                                      
-            if yambo_wrote.match(line):                                                    
-                self.yambo_wrote = True                                                    
-            if timing_overview.match(line):
-                name, total, _ , calls, avg = timing_overview.match(line).groups()
-                self.timing_overview[name.replace(' ','')] =  self.get_seconds( total) 
-                self.timing_overview[name.replace(' ','')+'_calls'] = int(calls) if calls else calls
-                if avg:
-                    self.timing_overview[name.replace(' ','')+'_avg'] = self.get_seconds(avg.replace(' ',''))
+                self.timing.append(timing.match(line).groups()[0] )
+            if kpoints.match(line):
+                kindx, kpt, wgt = kpoints.match(line).groups()
+                self.kpoints[str(int(kindx))] =  [ float(i.strip()) for i in kpt.split()]
+            if game_over.match(line):
+                self.game_over = True
+            if p2y_complete.match(line) or p2y_complete_v2.match(line):
+                self.p2y_complete = True
+                self.game_over = True
+            if yambo_wrote.match(line):
+                self.yambo_wrote = True
     
         full_lines = ''.join(self.lines)
         qp_regx = re.compile('(^\s+?QP\s\[eV\]\s@\sK\s\[\d+\][a-z0-9E:()\s.-]+)(.*?)(?=^$)',re.M|re.DOTALL)
@@ -298,29 +284,6 @@ class YamboFile():
         """
         pass
 
-    def get_seconds( self, time_string):
-        time = []
-        if '-' in time_string:
-            time = time_string.split('-')
-        else:
-            r = re.compile('([\d.]+h)?\s*([\d.]+m)?\s*([\d.]+s)?')
-            hr, mn, sc = r.match(time_string).groups()
-            time.append(hr if hr else '0h') 
-            time.append(mn if mn else '0m') 
-            time.append(sc if sc else '0s') 
-          
-        if time[0]=='' and time[1]=='' and time[2]=='':
-            time= ['0h','0m','0s']
-        if time[0].endswith('h'):
-            return int(float(time[0].replace("h",""))) * 3600 + int(float(time[1].replace("m",""))) * 60 + int(float(time[2].replace("s","")))
-        elif time[0].endswith('m'):
-            return int(float(time[0].replace("m",""))) * 60 + int(float(time[1].replace("s","")))
-        elif time[0].endswith('s'):
-            return int(float(time[0].replace("s","")))
-        else:
-            raise Exception
-
-
     def parse_log(self):
         """ Get ERRORS and WARNINGS from  l-*  file, useful for debugging
         """
@@ -337,12 +300,24 @@ class YamboFile():
             self.max_memory = max([float(memory.match(line).groups()[2]) for line in self.memstats])
             self.last_memory = [float(memory.match(line).groups()[2]) for line in self.memstats][-1]
         # Function to convert time in seconds
+        def get_seconds(time_string):
+            time = time_string.split('-')
+            if time[0]=='' and time[1]=='' and time[2]=='':
+                time= ['0h','0m','0s']
+            if time[0].endswith('h'):
+                return int(time[0].replace("h","")) * 3600 + int(time[1].replace("m","")) * 60 + int(time[2].replace("s",""))
+            elif time[0].endswith('m'):
+                return int(time[0].replace("m","")) * 60 + int(time[1].replace("s",""))
+            elif time[0].endswith('s'):
+                return int(time[0].replace("s",""))
+            else:
+                raise Exception
 
         times = re.compile('^\s+?<([0-9a-z-]+)>')   
-        self.timestats.extend([ self.get_seconds(times.match(line).groups()[0]) for line in self.lines if times.match(line)]) 
+        self.timestats.extend([ get_seconds(times.match(line).groups()[0]) for line in self.lines if times.match(line)]) 
         self.last_time = self.timestats[-1]
         if len(self.memstats)>0:
-            self.last_memory_time = [ self.get_seconds(memory.match(line).groups()[0]) for line in self.memstats][-1]
+            self.last_memory_time = [ get_seconds(memory.match(line).groups()[0]) for line in self.memstats][-1]
 
         generic_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
         paralle = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[ERROR\](?=\s+)?Impossible(?=\s+)?(?=[a-zA-Z0-9\s.()\[\]]+)?')
@@ -364,8 +339,6 @@ class YamboFile():
                 self.lines = fl.readlines()
         p2y_complete = re.compile('^(\s+)?[-<>\d\w]+\s+?P\d+[:]\s+?==\s+?P2Y\s+?\w+\s+?==(\s+)?') # P2Y Complete
         p2y_complete_v2 = re.compile('(\s+)?[-<>\w\d]+(\s+)?==(\s+)?P2Y(\s+)?\w+(\s+)?==') # P2Y Complete
-        error = re.compile('\[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.\(\)\[\]\-]*)')
-        generic_error = re.compile('^(?=\s+)?([A-Z0-9]+)[:] \[(ERROR)\](?=\s+)?([a-zA-Z0-9\s.()\[\]]+)?')
         yambo_wrote = re.compile('(?:\s+)?(?:[<>\w\d]+)(:?\s+)?(?:P\d+[:])(?:\s+)?(?:[[]\w+[]])?(?:\s+)?Writing(?:\s+)?\w+(?:\s+)?')
         for line in self.lines:
             if p2y_complete.match(line) or p2y_complete_v2.match(line):
@@ -373,7 +346,6 @@ class YamboFile():
                 self.game_over = True 
             if yambo_wrote.match(line):
                 self.yambo_wrote = True 
-        self.errors.extend ([ line for line in self.lines if ( generic_error.match(line) or error.match(line) )  ])
 
     def __bool__(self):
         if self.type == 'unknown':

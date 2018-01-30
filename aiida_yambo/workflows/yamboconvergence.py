@@ -383,18 +383,16 @@ class YamboConvergenceWorkflow(WorkChain):
         """This function check is there has been convergence reached or not."""
         if self.ctx.skip_prescf == True:
             return True 
-        try:
+        try: # for yamborestart
             r0_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
             r1_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
             r2_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
             r3_width = self.get_total_range(self.ctx.r4.out.gw.get_dict()['yambo_pk'])
-            self.ctx.zero_calc = self.ctx.r1 
         except AttributeError: # for yamboworkflow
             r0_width = self.get_total_range(self.ctx.r0.out.gw.get_dict()['yambo_pk'])
             r1_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
             r2_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
             r3_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
-            self.ctx.zero_calc = self.ctx.r0 
 
         self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
         if 'scf_pk' in self.ctx.r1.out.gw.get_dict() and 'parent_scf_folder' not in self.inputs.keys():
@@ -518,19 +516,19 @@ class YamboConvergenceWorkflow(WorkChain):
         scf_pk = False
         parameters = None
         from aiida.orm import DataFactory
-        if 'pw' in self.ctx.zero_calc.out: 
-          if 'nscf_pk' in self.ctx.zero_calc.out.pw.get_dict():
-              nscf_pk = self.ctx.zero_calc.out.pw.get_dict()['nscf_pk'] 
-              self.out("nscf_remote_folder", self.ctx.zero_calc.out.nscf_remote_folder)
-          if 'scf_pk' in self.ctx.zero_calc.out.pw.get_dict():
-              scf_pk = self.ctx.zero_calc.out.pw.get_dict()['scf_pk'] 
-              self.out("scf_remote_folder", self.ctx.zero_calc.out.scf_remote_folder)
-        if 'yambo_pk' in self.ctx.zero_calc.out.gw.get_dict():
-            parameters = load_node( self.ctx.zero_calc.out.gw.get_dict()['yambo_pk']).inp.parameters.get_dict()
-            self.out("yambo_remote_folder", self.ctx.zero_calc.out.yambo_remote_folder)
+        if 'pw' in self.ctx.r1.out: 
+          if 'nscf_pk' in self.ctx.r1.out.pw.get_dict():
+              nscf_pk = self.ctx.r1.out.pw.get_dict()['nscf_pk'] 
+              self.out("nscf_remote_folder", self.ctx.r1.out.nscf_remote_folder)
+          if 'scf_pk' in self.ctx.r1.out.pw.get_dict():
+              scf_pk = self.ctx.r1.out.pw.get_dict()['scf_pk'] 
+              self.out("scf_remote_folder", self.ctx.r1.out.scf_remote_folder)
+        if 'yambo_pk' in self.ctx.r1.out.gw.get_dict():
+            parameters = load_node( self.ctx.r1.out.gw.get_dict()['yambo_pk']).inp.parameters.get_dict()
+            self.out("yambo_remote_folder", self.ctx.r1.out.yambo_remote_folder)
         self.out("convergence", DataFactory('parameter')(dict={
             "parameters": parameters,
-            "yambo_pk": self.ctx.zero_calc.out.gw.get_dict()['yambo_pk'],
+            "yambo_pk": self.ctx.r1.out.gw.get_dict()['yambo_pk'],
             "convergence_space": self.ctx.conv_elem,
             "energy_widths":  self.ctx.en_diffs ,
             "nscf_pk":  nscf_pk, 

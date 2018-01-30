@@ -87,13 +87,12 @@ class YamboParser(Parser):
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
         super(YamboParser, self).__init__(calculation)
-      
-    def parse_with_retrieved(self, retreived):
+        
+    def parse_from_calc(self):
         """Parses the datafolder, stores results.
 
         This parser for this code ...
         """
-        print ("reached here ")
         from aiida.common.exceptions import InvalidOperation
         from aiida.common import aiidalogger
         from  aiida.utils.logger import get_dblogger_extra
@@ -173,10 +172,6 @@ class YamboParser(Parser):
                 output_params['yambo_wrote'] = True # boolean
             if result.timing:
                 output_params['timing'] = result.timing
-            if result.timing_section:
-                output_params['timing_section'] = result.timing_section
-            if result.timing_overview:
-                output_params ['timing_overview']  = result.timing_overview
             if result.warnings:
                 output_params['warnings'].extend(result.warnings)
             if result.errors:
