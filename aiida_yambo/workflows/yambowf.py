@@ -17,8 +17,9 @@ from aiida.work.workchain import ToContext as ResultToContext
 from aiida.work.run import legacy_workflow
 from aiida.work.run import run, submit
 from aiida.common.links import LinkType
-from aiida_yambo.workflows.yambo_utils import default_step_size, default_pw_settings, set_default_pw_param,\
-               default_qpkrange, default_bands
+from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
+               default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange, p2y_default_settings,\
+               default_bands
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.code import Code
