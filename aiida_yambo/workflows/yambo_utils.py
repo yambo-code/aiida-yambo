@@ -150,7 +150,7 @@ def generate_pw_input_params(structure, codename, pseudo_family,parameters, calc
 def reduce_parallelism(typ, roles,  values,calc_set):
     """
        calculation_set_yambo ={'resources':  {"num_machines": 8,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200,
-            'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+            'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  XXXX" ,
             '  environment_variables': {"OMP_NUM_THREADS": "2" }  
             }
     """
