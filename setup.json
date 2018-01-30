@@ -8,11 +8,9 @@
     "classifiers": [
         "Programming Language :: Python",
         "Environment :: Plugins",
-        "Framework :: AiiDa",
-        "Framework :: AiiDa",
         "Topic :: Scientific/Engineering :: Physics"
     ],
-    "version": "0.2-beta",
+    "version": "0.2.0",
     "extras_require": {
          "docs": [
             "Sphinx", 

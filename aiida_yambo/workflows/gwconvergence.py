@@ -181,12 +181,16 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
         We store the scf and nscf calcs after kpoint convergence, as well as the convergence data after each convergence step in an ordere array to keep
         track of how the workflow evolves to convergence.
+        We have to be carefull not to double add the bands/W_cutoff at the end, which ever is the last
         """
         self.report(" persisting outputs to context ")
         if self.ctx.last_step == 'step_0_1' or self.ctx.last_step == 'step_0_2':
             self.ctx.scf_calc = self.ctx.step0_res.out.convergence.get_dict()["scf_pk"]
             self.ctx.nscf_calc = self.ctx.step0_res.out.convergence.get_dict()["nscf_pk"]
             self.report("persisted nscf calc to be used as parent.")
+
+        if self.ctx.bands_n_cutoff_consistent:
+            return # dont double append thins once the full convergence is done 
 
         if self.ctx.last_step == 'step_0_1' or self.ctx.last_step == 'step_0_2':
            self.ctx.ordered_outputs.append( self.ctx.step0_res.out.convergence.get_dict() )
@@ -345,6 +349,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
              #w_cutoff =  self.ctx.last_used_cutoff  # start  from last used value. ## BUG?
              #w_cutoff =  int(self.ctx.last_used_cutoff*0.7)  
+             w_cutoff= int(self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp'])
         if self.ctx.last_step == 'step_2_1':
              self.report("passing parameters from  converged bands ")
              # use cut-off from 2_1
@@ -431,7 +436,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
         
 
     def is_not_converged(self):
-        """This function checks if all the individual convergence steps have  been marked as complete, and decides whether the workflow should keep interating with the next step or end calculations when convergence has been achieved."""
+        """This function checks if all the individual convergence steps have  been marked as complete, 
+           and decides whether the workflow should keep iterating with the next step or end calculations when convergence has been achieved."""
 
         # check we are not complete. 
         if self.ctx.step_0_done and self.ctx.step_1_done and self.ctx.step_2_done and self.ctx.step_3_done and self.ctx.bands_n_cutoff_consistent :
