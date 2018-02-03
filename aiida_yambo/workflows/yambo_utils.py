@@ -366,7 +366,7 @@ def set_default_pw_param(nscf=False):
               'ecutwfc': 70.,
               'occupations':'smearing',
               'degauss': 0.0001,
-              'starting_magnetization(1)' : 0.1,
+              'starting_magnetization(2)' : 0.1,
               'smearing': 'fermi-dirac',
               },
           'ELECTRONS': {
