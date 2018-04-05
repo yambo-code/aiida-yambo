@@ -257,4 +257,3 @@ class PwRestartWf(WorkChain):
 
 if __name__ == "__main__":
     pass
-
