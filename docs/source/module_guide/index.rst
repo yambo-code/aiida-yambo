@@ -1,4 +1,4 @@
-aiida_yambo module documentation
+Modules provided with aiida-quantumespresso (API reference)
 ================================
 
 .. toctree::
