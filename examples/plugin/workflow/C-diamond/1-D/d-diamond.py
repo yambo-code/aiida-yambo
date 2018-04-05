@@ -18,36 +18,29 @@ ParameterData = DataFactory("parameter")
 
 StructureData = DataFactory('structure')
 
-cell = [[4.2262023163, 0.0000000000, 0.0000000000],
-        [0.0000000000, 4.2262023163, 0.0000000000],
-        [0.0000000000, 0.0000000000, 2.7009939524],
-       ]
-struc = StructureData(cell=cell)
-struc.append_atom(position=(1.2610450495  ,1.2610450495  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(0.8520622471  ,3.3741400691  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=(2.9651572668  ,2.9651572668  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(3.3741400691  ,0.8520622471  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=( 0.0000000000 , 0.0000000000 , 0.0000000000 ), symbols='Ti')
-struc.append_atom(position=( 2.1131011581 , 2.1131011581 , 1.3504969762 ), symbols='Ti')
+from ase.spacegroup import crystal
+a=5.388
+cell = crystal('C', [(0,0,0)], spacegroup=227, cellpar=[a, a, a, 90, 90, 90],primitive_cell=True)
+struc = StructureData(ase=cell)
 
 struc.store()
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+                  'max_memory_kb': 1*80*1000000 , #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds':  2*60*60, 
-                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  2*60*60, 
+                  'max_memory_kb': 1*80*1000000 ,  #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "16" }  }
 
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 64}, 'max_wallclock_seconds':  1*60*60, 
-                  'max_memory_kb': 1*80*1000000 ,   'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds':  1*60*60, 
+                  'max_memory_kb': 1*80*1000000 ,  #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"omp_num_threads": "16" }  }
 
 
 
 convergence_parameters = DataFactory('parameter')(dict= { 
-                           'variable_to_converge': 'kpoints', 'conv_tol':0.4, 
+                           'variable_to_converge': 'kpoints', 'conv_tol':0.1, 
                             'start_value': .9  , 'step':.1 , 'max_value': 0.017 })
 
 if __name__ == "__main__":
@@ -64,7 +57,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     structure =  struc
-    p2y_result = run(YamboConvergenceWorkflow, 
+    p2y_result =submit(YamboConvergenceWorkflow, 
                     pwcode= Str(args.pwcode),
                     precode= Str( args.precode), 
                     yambocode=Str(args.yambocode),

@@ -28,15 +28,15 @@ __version__ = "0.4.1"
 __authors__ = "Michael Atambo, Antimo Marrazzo, Gianluca Prandini and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
 class YamboParser(Parser):
-    """
-    This class is a wrapper class for the Parser class for Yambo calculators
-    from yambopy.
-    *IMPORTANT: This plugin can parse netcdf files produced by yambo if the 
-     python netcdf libraries are installed, otherwise they are ignored.
+    """This class is a wrapper class for the Parser class for Yambo calculators from yambopy.
+
+    *IMPORTANT:* This plugin can parse netcdf files produced by yambo if the 
+    python netcdf libraries are installed, otherwise they are ignored.
     Accepts data from yambopy's YamboFolder  as a list of YamboFile instances. 
     The instances of YamboFile have the following attributes:
-      .data: A Dict, with k-points as keys and  in each futher a dict with obeservalbe:value pairs ie.
-            { '1' : {'Eo': 5, 'B':1,..}, '15':{'Eo':5.55,'B': 30}... }
+   
+    ::
+      .data: A Dict, with k-points as keys and  in each futher a dict with obeservalbe:value pairs ie. { '1' : {'Eo': 5, 'B':1,..}, '15':{'Eo':5.55,'B': 30}... }
       .warnings:     list of strings, one warning  per string.
       .errors:       list of errors, one error per string.
       .memory        list of string, info on memory allocated and freed
@@ -46,29 +46,28 @@ class YamboParser(Parser):
       .*_units       units (e.g. Gb or seconds)
       .wall_time     duration of the run (as parsed from the log file)
       .last_time     last time reported (as parsed from the log file)
-      .kpoints: When non empty is a Dict of kpoint_index: kpoint_triplet values i.e.
-                { '1':[0,0,0], '5':[0.5,0.0,5] .. }
+      .kpoints: When non empty is a Dict of kpoint_index: kpoint_triplet values i.e.                  { '1':[0,0,0], '5':[0.5,0.0,5] .. }
       .type:   type of file according to YamboFile types include: 
-               1. 'report'    : 'r-*' report files
-               2. 'output_gw'  : 'o-*.qp': quasiparticle output file
-                ...           .. etc
-               N. 'unknown' : when YamboFile was unable to deduce what type of file
-      .timing: list of timing info.
+      1. 'report'    : 'r-..' report files
+      2. 'output_gw'  : 'o-...qp': quasiparticle output file   ...           .. etc
+      N. 'unknown' : when YamboFile was unable to deduce what type of file
+      .timing: list of timing info.  
 
     Saved data:
-    o-*.qp : ArrayData is stored in a format similar to the internal yambo db format (two arrays):
+
+    o-..qp : ArrayData is stored in a format similar to the internal yambo db format (two arrays):
              [[E_o,E-E_o,S_c],[...]]  and
              [[ik,ib,isp],...]
              First is the observables, and the second array contains the kpoint index, band index
              and spin index if spin polarized else 0. BandsData can not be used as the k-point triplets
-             are not available in the o-*.qp file.
-    r-*    : BandsData is stored with the proper list of K-points, bands_labels. 
+             are not available in the o-.qp file.
+
+    r-..    : BandsData is stored with the proper list of K-points, bands_labels. 
+
     """
     
     def __init__(self,calculation):
-        """
-        Initialize the instance of YamboParser
-        """
+        """Initialize the instance of YamboParser"""
         from aiida.common import aiidalogger
         self._logger = aiidalogger.getChild('parser').getChild(
             self.__class__.__name__)
@@ -88,18 +87,16 @@ class YamboParser(Parser):
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
         super(YamboParser, self).__init__(calculation)
-        
-    def parse_from_calc(self):
-        """
-        Parses the datafolder, stores results.
+      
+    def parse_with_retrieved(self, retreived):
+        """Parses the datafolder, stores results.
+
         This parser for this code ...
         """
+        print ("reached here ")
         from aiida.common.exceptions import InvalidOperation
         from aiida.common import aiidalogger
-        from  aiida.utils.logger import get_dblogger_extra
         
-        parserlogger = aiidalogger.getChild('yamboparser')
-        logger_extra = get_dblogger_extra(self._calc)
         
         # suppose at the start that the job is unsuccessful, unless proven otherwise
         successful = False  
@@ -173,6 +170,10 @@ class YamboParser(Parser):
                 output_params['yambo_wrote'] = True # boolean
             if result.timing:
                 output_params['timing'] = result.timing
+            if result.timing_section:
+                output_params['timing_section'] = result.timing_section
+            if result.timing_overview:
+                output_params ['timing_overview']  = result.timing_overview
             if result.warnings:
                 output_params['warnings'].extend(result.warnings)
             if result.errors:
@@ -334,8 +335,8 @@ class YamboParser(Parser):
         return pdata
 
     def _aiida_ndb_hf(self, data ):
-        """
-        Save the data from ndb.HF_and_locXC  
+        """Save the data from ndb.HF_and_locXC  
+
         """
         pdata  = ArrayData()
         pdata.set_array('Sx', numpy.array(data['Sx']))
@@ -343,8 +344,8 @@ class YamboParser(Parser):
         return pdata
 
     def _sigma_c(self, ndbqp, ndbhf):
-        """
-        Calculate S_c if missing from  information parsed from the  ndb.*
+        """Calculate S_c if missing from  information parsed from the  ndb.*
+
          Sc = 1/Z[ E-Eo] -S_x + Vxc
         """
         Eo = numpy.array(ndbqp['E-Eo'])

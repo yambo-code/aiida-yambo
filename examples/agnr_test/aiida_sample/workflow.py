@@ -1,7 +1,8 @@
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
-
+import json
+import os, sys
 from aiida_yambo.workflows.yambowf  import YamboWorkflow
  
 try:
@@ -16,97 +17,52 @@ except ImportError:
 from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
+KpointsData = DataFactory('array.kpoints')
 
-cell = [[4.2262023163, 0.0000000000, 0.0000000000],
-        [0.0000000000, 4.2262023163, 0.0000000000],
-        [0.0000000000, 0.0000000000, 2.7009939524],
-       ]
-struc = StructureData(cell=cell)
-struc.append_atom(position=(1.2610450495  ,1.2610450495  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(0.8520622471  ,3.3741400691  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=(2.9651572668  ,2.9651572668  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(3.3741400691  ,0.8520622471  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=( 0.0000000000 , 0.0000000000 , 0.0000000000 ), symbols='Ti')
-struc.append_atom(position=( 2.1131011581 , 2.1131011581 , 1.3504969762 ), symbols='Ti')
+def read_from_pw_inp(filename="../GS/nscf.in"):
+    from aiida_quantumespresso.tools import pwinputparser
+    pwinputfile = pwinputparser.PwInputFile(os.path.abspath(filename))
+    struc =  pwinputfile.get_structuredata()
+    pw_params = pwinputfile.namelists  # CONTROL, SYSTEM, ELECTRONS,...
+    control = pw_params['CONTROL']
+    system = pw_params['SYSTEM']
+    del control['pseudo_dir']
+    del control['outdir']
+    del control['prefix']
+    pw_params['CONTROL'] = control
+    del system['ibrav']
+    del system['celldm(1)']
+    del system['celldm(2)']
+    del system['celldm(3)']
+    del system['nat']
+    del system['ntyp']
+    pw_params['SYSTEM'] = system
+    k_points = pwinputfile.k_points
+    return (pw_params, struc, k_points)
 
-struc.store()
-
-pw_parameters =  {
-          'CONTROL': {
-              'calculation': 'scf',
-              'restart_mode': 'from_scratch',
-              'wf_collect': True,
-              'tprnfor': True,
-              'etot_conv_thr': 0.00001,
-              'forc_conv_thr': 0.0001,
-              'verbosity' :'high',
-              },
-          'SYSTEM': {
-              'ecutwfc': 35.,
-              },
-          'ELECTRONS': {
-              'conv_thr': 1.e-8,
-              'electron_maxstep ': 100,
-              'mixing_mode': 'plain',
-              'mixing_beta' : 0.3,
-              } } 
-
-pw_nscf_parameters =  {
-          'CONTROL': {
-              'calculation': 'nscf',
-              'restart_mode': 'from_scratch',
-              'wf_collect': True,
-              'tprnfor': True,
-              'etot_conv_thr': 0.00001,
-              'forc_conv_thr': 0.0001,
-              'verbosity' :'high',
-              },
-          'SYSTEM': {
-              'ecutwfc': 20.,
-              'nbnd':40,
-              'force_symmorphic': True,
-              },
-          'ELECTRONS': {
-              'conv_thr': 1.e-8,
-              'electron_maxstep ': 100,
-              'mixing_mode': 'plain',
-              'mixing_beta' : 0.3,
-              } } 
+def read_yambo_json(filename="../INPUTS/init_01.json"):
+    with open(filename, 'r') as content:
+        y_config = json.loads(content.read())
+    return y_config
+##TODO struc
+##TODO pw_params
+pw_parameters = ParameterData(dict={})
+pw_nscf_parameters =ParameterData(dict={})
+##TODO yambo params
+yambo_parameters = ParameterData(dict={})
 
 
-yambo_parameters = {'ppa': True,
-                                 'gw0': True,
-                                 'HF_and_locXC': True,
-                                 'NLogCPUs': 0,
-                                 'em1d': True,
-                                 'X_all_q_nCPU_invert':0,
-                                 'X_Threads':  0 ,
-                                 'DIP_Threads': 0 ,
-                                 'SE_Threads':  2,
-                                 'NGsBlkXp': 1,
-                                 'NGsBlkXp_units': 'RL',
-                                 'PPAPntXp': 10, 
-                                 'PPAPntXp_units': 'eV',
-                                 'GDamping': 0.1,
-                                 'GDamping_units': 'eV',
-                                 'dScStep': 0.1,
-                                 'dScStep_units': 'eV',
-                                 'GTermKind': "none",
-                                 'DysSolver': "n",
-                                 'QPkrange': [(1,1,16,17)],
-                                 }
-
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 3*60*60, 
-                  'max_memory_kb': 1*86*1000000 , #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+calculation_set_pw ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds': 3*60*60, 
+        'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#SBATCH --account=Pra14_3622\n#SBATCH --partition=knl_usr_prod",
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
 calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 1}, 'max_wallclock_seconds':  60*29, 
-                  'max_memory_kb': 1*86*1000000 ,# 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+        'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#SBATCH --account=Pra14_3622\n#SBATCH --partition=knl_usr_prod",
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 12}, 'max_wallclock_seconds': 3*60*60, 
-                  'max_memory_kb': 1*86*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
-                  'environment_variables': {"OMP_NUM_THREADS": "1" }  }
+calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 3*60*60, 
+        'max_memory_kb': 1*86*1000000 , 'custom_scheduler_commands': u"#SBATCH --account=Pra14_3622\n#SBATCH --partition=knl_usr_prod",
+                  'environment_variables': {"OMP_NUM_THREADS": "2" }  }
 
 settings_pw =  ParameterData(dict= {})
 
@@ -116,9 +72,6 @@ settings_p2y =   ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
 settings_yambo =  ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
                   'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':False })
 
-KpointsData = DataFactory('array.kpoints')
-kpoints = KpointsData()
-kpoints.set_kpoints_mesh([2,2,2])
 
 if __name__ == "__main__":
     import argparse
@@ -127,7 +80,6 @@ if __name__ == "__main__":
                         help='The p2y codename to use')
     parser.add_argument('--yambocode', type=str, dest='yambocode', required=True,
                         help='The yambo codename to use')
-
     parser.add_argument('--pwcode', type=str, dest='pwcode', required=True,
                         help='The pw codename to use')
     parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
@@ -136,17 +88,36 @@ if __name__ == "__main__":
                         help='The structure  to use')
     parser.add_argument('--parent', type=int, dest='parent', required=False,
                         help='QE scf/nscf / yambo calculation ')
-
     parser.add_argument('--parent-workchain', type=int, dest='parent_workchain', required=False,
                         help=' Parent yambo workflow ')
+    parser.add_argument('--scfinput', type=str, dest='scfinput', required=False,
+                        help=' prexisitng inputfile to parse for parameters, structure and kpoints ')
+    parser.add_argument('--nscfinput', type=str, dest='nscfinput', required=False,
+                        help=' prexisitng inputfile to parse for parameters, structure and kpoints ')
+    parser.add_argument('--yamboconfig', type=str, dest='yamboconfig', required=False,
+                        help=' prexisitng inputfile to parse for parameters, structure and kpoints ')
     args = parser.parse_args()
+    structure = None
+    kpoints = None
     if not args.structure:
-        structure = struc
+        if args.scfinput:
+            pw_parameters , structure, kpoints =  read_from_pw_inp(filename=args.scfinput)
+        if args.nscfinput:
+            pw_nscf_parameters, structure, kpoints =  read_from_pw_inp(filename=args.scfinput)
     else:
         structure = load_node(int(args.structure)) #1791 
+    if structure is None and not args.parent:
+        print("provide a structure if not starting from p2y/yambo")
+        sys.exit(1)
+    if kpoints: # assuming kpoints == automatic 
+        kpt = KpointsData()
+        kpt.set_kpoints_mesh( kpoints['points'], offset=kpoints['offset'])
+        kpoints= kpt
     parent_calc = None
     if args.parent:
         parent_calc = load_node(int(args.parent)) #1791 
+    if args.yamboconfig:
+        yambo_parameters = read_yambo_json(filename=args.yamboconfig)    
     kwargs = {     "codename_pw": Str(args.pwcode),
                    "codename_p2y":Str( args.precode),
                    "codename_yambo": Str(args.yambocode),

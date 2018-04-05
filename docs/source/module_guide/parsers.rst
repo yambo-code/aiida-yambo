@@ -13,13 +13,13 @@ YAMBO parsers
    :members:
 
 yambo parser
----------
+------------
 
 .. automodule:: aiida_yambo.parsers.parsers
    :members:
 
 yambopy parser (external dependency) 
----------
+-------------------------------------
 
 .. automodule:: aiida_yambo.parsers.ext_dep
    :members:

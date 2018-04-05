@@ -17,17 +17,10 @@ from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 
-cell = [[4.2262023163, 0.0000000000, 0.0000000000],
-        [0.0000000000, 4.2262023163, 0.0000000000],
-        [0.0000000000, 0.0000000000, 2.7009939524],
-       ]
-struc = StructureData(cell=cell)
-struc.append_atom(position=(1.2610450495  ,1.2610450495  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(0.8520622471  ,3.3741400691  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=(2.9651572668  ,2.9651572668  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(3.3741400691  ,0.8520622471  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=( 0.0000000000 , 0.0000000000 , 0.0000000000 ), symbols='Ti')
-struc.append_atom(position=( 2.1131011581 , 2.1131011581 , 1.3504969762 ), symbols='Ti')
+from ase.spacegroup import crystal
+a=5.388
+cell = crystal('Si', [(0,0,0)], spacegroup=227, cellpar=[a, a, a, 90, 90, 90],primitive_cell=True)
+struc = StructureData(ase=cell)
 
 struc.store()
 
@@ -42,10 +35,10 @@ pw_parameters =  {
               'verbosity' :'high',
               },
           'SYSTEM': {
-              'ecutwfc': 35.,
+              'ecutwfc': 20.,
               },
           'ELECTRONS': {
-              'conv_thr': 1.e-8,
+              'conv_thr': 1.e-6,
               'electron_maxstep ': 100,
               'mixing_mode': 'plain',
               'mixing_beta' : 0.3,
@@ -54,7 +47,7 @@ pw_parameters =  {
 pw_nscf_parameters =  {
           'CONTROL': {
               'calculation': 'nscf',
-              'restart_mode': 'from_scratch',
+              'restart_mode': 'restart',
               'wf_collect': True,
               'tprnfor': True,
               'etot_conv_thr': 0.00001,
@@ -63,11 +56,11 @@ pw_nscf_parameters =  {
               },
           'SYSTEM': {
               'ecutwfc': 20.,
-              'nbnd':40,
+              'nbnd':80,
               'force_symmorphic': True,
               },
           'ELECTRONS': {
-              'conv_thr': 1.e-8,
+              'conv_thr': 1.e-6,
               'electron_maxstep ': 100,
               'mixing_mode': 'plain',
               'mixing_beta' : 0.3,
@@ -93,7 +86,7 @@ yambo_parameters = {'ppa': True,
                                  'dScStep_units': 'eV',
                                  'GTermKind': "none",
                                  'DysSolver': "n",
-                                 'QPkrange': [(1,1,16,17)],
+                                 'QPkrange': [(1,4,2,6)],
                                  }
 
 calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 3*60*60, 
@@ -104,7 +97,7 @@ calculation_set_p2y ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine
                   'max_memory_kb': 1*86*1000000 ,# 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 12}, 'max_wallclock_seconds': 3*60*60, 
+calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 3*60*60, 
                   'max_memory_kb': 1*86*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
                   'environment_variables': {"OMP_NUM_THREADS": "1" }  }
 
@@ -116,9 +109,13 @@ settings_p2y =   ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
 settings_yambo =  ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
                   'r-*','o-*','l-*','l_*','LOG/l-*_CPU_1','aiida/ndb.QP','aiida/ndb.HF_and_locXC'], 'INITIALISE':False })
 
-KpointsData = DataFactory('array.kpoints')
+KpointsData = DataFactory("array.kpoints")
+
+#distance_kpoints = 0.34816 # 25% change 
+distance_kpoints = 0.2109375  # 25% change 
 kpoints = KpointsData()
-kpoints.set_kpoints_mesh([2,2,2])
+kpoints.set_cell_from_structure(struc)
+kpoints.set_kpoints_mesh_from_density(distance= distance_kpoints,force_parity=False)
 
 if __name__ == "__main__":
     import argparse

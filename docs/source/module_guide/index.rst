@@ -1,5 +1,5 @@
-aiida_quantumespresso module documentation
-==========================================
+aiida_yambo module documentation
+================================
 
 .. toctree::
     :maxdepth: 3

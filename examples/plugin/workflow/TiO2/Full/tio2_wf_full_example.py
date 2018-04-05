@@ -9,28 +9,36 @@ from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 
-cell = [[4.2262023163, 0.0000000000, 0.0000000000],
-        [0.0000000000, 4.2262023163, 0.0000000000],
-        [0.0000000000, 0.0000000000, 2.7009939524],
+cell = [[4.6313377290,    0.0000000000,    0.0000000000],
+        [0.0000000000,    4.6313377290,    0.0000000000],
+        [0.0000000000,    0.0000000000,    2.9599186840],
        ]
 struc = StructureData(cell=cell)
-struc.append_atom(position=(1.2610450495  ,1.2610450495  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(0.8520622471  ,3.3741400691  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=(2.9651572668  ,2.9651572668  ,0.0000000000  ), symbols='O')
-struc.append_atom(position=(3.3741400691  ,0.8520622471  ,1.3504969762  ), symbols='O')
-struc.append_atom(position=( 0.0000000000 , 0.0000000000 , 0.0000000000 ), symbols='Ti')
-struc.append_atom(position=( 2.1131011581 , 2.1131011581 , 1.3504969762 ), symbols='Ti')
-
+struc.append_atom(position=(1.4128030100 ,   1.4128030100 ,   0.0000000000 ), symbols='O')
+struc.append_atom(position=(0.9028658550 ,   3.7284718740 ,   1.4799593420 ), symbols='O')
+struc.append_atom(position=(3.2185347190 ,   3.2185347190 ,   0.0000000000 ), symbols='O')
+struc.append_atom(position=(3.7284718740 ,   0.9028658550 ,   1.4799593420 ), symbols='O')
+struc.append_atom(position=(0.0000000000 ,   0.0000000000 ,   0.0000000000 ), symbols='Ti')
+struc.append_atom(position=(2.3156688650 ,   2.3156688650 ,   1.4799593420 ), symbols='Ti')
 struc.store()
 
-
-calculation_set_yambo ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2}, 'max_wallclock_seconds': 2*60*60,
-                  'max_memory_kb': 1*80*1000000 , # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
+calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine": 16}, 'max_wallclock_seconds': 59*60*20,
+                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
+                   "queue_name":"s3par8c",
                   'environment_variables': {"omp_num_threads": "0" }  }
-calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine": 2,  }, 'max_wallclock_seconds': 60*45,
-                  'max_memory_kb': 1*80*1000000 ,  #'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
+calculation_set_pw ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine":  16}, 'max_wallclock_seconds': 30*60*18,
+                  'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
+                   "queue_name":"s3par8c",
                   'environment_variables': {"omp_num_threads": "0" }  }
-
+convergence_settings = ParameterData(dict={
+          'start_fft' : 48, 
+          'max_fft':  200, 
+          'start_bands': 288,
+          'max_bands':4000, 
+          'start_w_cutoff': 2,
+          'max_w_cutoff': 40,
+          'kpoint_starting_distance': .35,
+          'kpoint_min_distance': 0.025})
 
 if __name__ == "__main__":
     # verdi run test_gwco.py --precode p2h@hyd   --yambocode yamb@hyd  --pwcode qe6.1@hyd --pseudo CHtest  --parent  637
@@ -48,7 +56,7 @@ if __name__ == "__main__":
     parser.add_argument('--parent', type=int, dest='parent', required=False,
                         help='The parent SCF   to use')
 
-    threshold = Float(0.01)
+    threshold = Float(0.1)
     args = parser.parse_args()
     structure =  struc
     extra={}
@@ -63,6 +71,7 @@ if __name__ == "__main__":
                     structure=structure,
                     calculation_set= ParameterData(dict=calculation_set_yambo),
                     calculation_set_pw= ParameterData(dict=calculation_set_pw),
+                    convergence_settings = convergence_settings,
                     threshold = threshold, 
                      **extra
                     )

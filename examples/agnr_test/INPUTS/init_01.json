@@ -1,0 +1,15 @@
+{
+        "setup": true ,          
+        "StdoHash":  40,         
+        "Nelectro": 60.00000,    
+        "ElecTemp": 0.000000,  
+        "ElecTemp_units":"eV",   
+        "BoseTemp":-1.00000,  
+        "BoseTemp_units": "eV",   
+        "OccTresh": 0.1000E-4 ,   
+        "NLogCPUs": 0 ,           
+        "DBsIOoff": "none",       
+        "DBsFRAGpm":"none",       
+        "MEM_tresh": 10000 ,      
+        "MEM_tresh_units": "Kb"   
+}

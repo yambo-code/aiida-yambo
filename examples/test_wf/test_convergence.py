@@ -54,10 +54,6 @@ settings_yambo =  ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":[
 
 
 
-KpointsData = DataFactory('array.kpoints')
-kpoints = KpointsData()
-kpoints.set_kpoints_mesh([2,2,2])
-
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='GW QP calculation.')
