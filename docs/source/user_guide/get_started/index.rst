@@ -22,4 +22,13 @@ Installation
 .. toctree::
    :maxdepth: 4
 
+   installation
+
+Plugin tutorial
+^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 4
+
    start
+
+
