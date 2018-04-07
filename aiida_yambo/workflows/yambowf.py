@@ -27,7 +27,6 @@ from aiida_yambo.workflows.yamborestart  import YamboRestartWf
 from aiida_yambo.workflows.pwplaceholder  import PwRestartWf
 from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida_quantumespresso.workflows.pw.base  import PwBaseWorkChain
 
 ParameterData = DataFactory("parameter")
 
@@ -64,18 +63,23 @@ class YamboWorkflow(WorkChain):
         bands_groupname --  (optional)
         """
         super(YamboWorkflow, cls).define(spec)
+        spec.input("restart_options_pw", valid_type=ParameterData, required=False)
+        spec.input("restart_options_gw", valid_type=ParameterData, required=False)
         spec.input("codename_pw", valid_type=Str)
         spec.input("codename_p2y", valid_type=Str)
         spec.input("codename_yambo", valid_type=Str)
         spec.input("pseudo_family", valid_type=Str)
         spec.input("calculation_set_pw", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
+        spec.input("calculation_set_pw_nscf", valid_type=ParameterData,required=False) # custom_scheduler_commands,  resources,...
         spec.input("calculation_set_p2y", valid_type=ParameterData)
         spec.input("calculation_set_yambo", valid_type=ParameterData)
         spec.input("settings_pw", valid_type=ParameterData)
+        spec.input("settings_pw_nscf", valid_type=ParameterData,required=False)
         spec.input("settings_p2y", valid_type=ParameterData)
         spec.input("settings_yambo", valid_type=ParameterData)
         spec.input("structure", valid_type=StructureData)
         spec.input("kpoint_pw", valid_type=KpointsData)
+        spec.input("kpoint_pw_nscf", valid_type=KpointsData,required=False)
         spec.input("gamma_pw", valid_type=Bool, default=Bool(0), required=False )
         spec.input("parameters_pw", valid_type=ParameterData)
         spec.input("parameters_pw_nscf", valid_type=ParameterData,required=False)
@@ -216,11 +220,20 @@ class YamboWorkflow(WorkChain):
                 self.report("PwRestartWf subworkflow  NOT  successful")
                 return 
 
-        if  self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res :# this is likely  the very begining, we can start with the scf/nscf here
+        if  self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res:
+            # this is likely  the very begining, we can start with the scf/nscf here
             extra = {}
             self.report("Launching PwRestartWf ")
             if 'parameters_pw_nscf' in self.inputs.keys():
                 extra['parameters_nscf'] = self.inputs.parameters_pw_nscf 
+            if 'calculation_set_pw_nscf' in self.inputs.keys():
+                extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
+            if 'settings_pw_nscf' in self.inputs.keys():
+                extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+            if 'kpoint_pw_nscf' in self.inputs.keys():
+                extra['kpoint_pw_nscf'] = self.inputs.kpoint_pw_nscf
+            if 'restart_options_pw' in self.inputs.keys():
+                extra['restart_options'] = self.inputs.restart_options_pw
             if 'parent_folder' in self.inputs.keys():
                 extra['parent_folder'] = self.inputs.parent_folder
             pw_wf_result = self.run_pw(extra)
@@ -228,22 +241,28 @@ class YamboWorkflow(WorkChain):
 
     def run_yambo(self):
         """ submit a yambo calculation """    
+        extra = {}
+        if 'restart_options_pw' in self.inputs.keys():
+            extra['restart_options'] = self.inputs.restart_options_pw
         parentcalc = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"])
         parent_folder = parentcalc.out.remote_folder 
         yambo_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.ctx.parameters_yambo, calculation_set= self.inputs.calculation_set_yambo,
-            parent_folder = parent_folder, settings = self.inputs.settings_yambo )
+            parent_folder = parent_folder, settings = self.inputs.settings_yambo, **extra )
         self.ctx.last_step_kind = 'yambo'
         self.report ("submitted YamboRestartWf subworkflow, in Initialize mode  ")
         return yambo_result
 
     def run_p2y(self):
         """ submit a  P2Y  calculation """    
+        extra = {}
+        if 'restart_options_gw' in self.inputs.keys():
+            extra['restart_options'] = self.inputs.restart_options_pw
         parentcalc = load_node(self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"])
         parent_folder = parentcalc.out.remote_folder 
         p2y_result = submit (YamboRestartWf, precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.inputs.parameters_p2y , calculation_set= self.inputs.calculation_set_p2y,
-            parent_folder = parent_folder, settings = self.inputs.settings_p2y )
+            parent_folder = parent_folder, settings = self.inputs.settings_p2y, **extra )
         self.ctx.last_step_kind = 'yambo_p2y'
         return p2y_result
 
@@ -258,10 +277,13 @@ class YamboWorkflow(WorkChain):
 
     def run_restart(self):
         """ submit a followup yambo calculation """    
+        extra = {}
+        if 'restart_options_gw' in self.inputs.keys():
+            extra['restart_options'] = self.inputs.restart_options_pw
         parent_folder = self.ctx.yambo_res.out.yambo_remote_folder 
         yambo_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.ctx.parameters_yambo, calculation_set= self.inputs.calculation_set_yambo,
-            parent_folder = parent_folder, settings = self.inputs.settings_yambo )
+            parent_folder = parent_folder, settings = self.inputs.settings_yambo , **extra)
         self.ctx.last_step_kind = 'yambo'
         self.report ("submitted YamboRestartWf subworkflow, in Initialize mode  ")
         return yambo_result

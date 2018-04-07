@@ -62,10 +62,17 @@ class YamboFullConvergenceWorkflow(WorkChain):
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("calculation_set", valid_type=ParameterData)
         spec.input("calculation_set_pw", valid_type=ParameterData,required=False)
+        spec.input("calculation_set_pw_nscf", valid_type=ParameterData,required=False)
         spec.input("parameters", valid_type=ParameterData,required=False)
         spec.input("parameters_pw", valid_type=ParameterData,required=False)
         spec.input("parameters_pw_nscf", valid_type=ParameterData,required=False)
         spec.input("convergence_settings", valid_type=ParameterData,required=False)
+        spec.input("restart_options_pw", valid_type=ParameterData, required=False)
+        spec.input("restart_options_gw", valid_type=ParameterData, required=False)
+        spec.input("settings", valid_type=ParameterData, required=False)
+        spec.input("settings_p2y", valid_type=ParameterData, required=False)
+        spec.input("settings_pw", valid_type=ParameterData, required=False )
+        spec.input("settings_pw_nscf", valid_type=ParameterData, required=False )
         spec.outline(
           cls.start,
           while_(cls.is_not_converged)(
@@ -211,6 +218,18 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
         self.report("converging  FFTGvecs")
         extra={}
+        if self.inputs.restart_options_pw:
+             extra['restart_options_pw'] = self.inputs.restart_options_pw
+        if self.inputs.restart_options_gw:
+             extra['restart_options_gw'] = self.inputs.restart_options_gw
+        if self.inputs.settings_pw_nscf:
+             extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+        if self.inputs.settings_pw:
+             extra['settings_pw'] = self.inputs.settings_pw
+        if self.inputs.settings_p2y:
+             extra['settings_pw_p2y'] = self.inputs.settings_p2y
+        if self.inputs.calculation_set_pw_nscf:
+             extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
         if self.inputs.structure:
@@ -260,6 +279,18 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.MAX_B_VAL = self.ctx.convergence_settings.dict.max_bands #   int(nelec*8) 
         band_cutoff  = self.ctx.convergence_settings.dict.start_bands #  min(nelec,nbands)
         extra={}
+        if self.inputs.restart_options_pw:
+             extra['restart_options_pw'] = self.inputs.restart_options_pw
+        if self.inputs.restart_options_gw:
+             extra['restart_options_gw'] = self.inputs.restart_options_gw
+        if self.inputs.settings_pw_nscf:
+             extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+        if self.inputs.settings_pw:
+             extra['settings_pw'] = self.inputs.settings_pw
+        if self.inputs.settings_p2y:
+             extra['settings_pw_p2y'] = self.inputs.settings_p2y
+        if self.inputs.calculation_set_pw_nscf:
+             extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
         if self.inputs.structure:
@@ -335,6 +366,18 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.report ("Working on W-cutoff ")
         w_cutoff = self.ctx.convergence_settings.dict.start_w_cutoff #2 
         extra={}
+        if self.inputs.restart_options_pw:
+             extra['restart_options_pw'] = self.inputs.restart_options_pw
+        if self.inputs.restart_options_gw:
+             extra['restart_options_gw'] = self.inputs.restart_options_gw
+        if self.inputs.settings_pw_nscf:
+             extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+        if self.inputs.settings_pw:
+             extra['settings_pw'] = self.inputs.settings_pw
+        if self.inputs.settings_p2y:
+             extra['settings_pw_p2y'] = self.inputs.settings_p2y
+        if self.inputs.calculation_set_pw_nscf:
+             extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
         if self.inputs.structure:
@@ -394,6 +437,18 @@ class YamboFullConvergenceWorkflow(WorkChain):
         """
         self.report("Working on K-point convergence ")
         extra={}
+        if self.inputs.restart_options_pw:
+             extra['restart_options_pw'] = self.inputs.restart_options_pw
+        if self.inputs.restart_options_gw:
+             extra['restart_options_gw'] = self.inputs.restart_options_gw
+        if self.inputs.settings_pw_nscf:
+             extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+        if self.inputs.settings_pw:
+             extra['settings_pw'] = self.inputs.settings_pw
+        if self.inputs.settings_p2y:
+             extra['settings_pw_p2y'] = self.inputs.settings_p2y
+        if self.inputs.calculation_set_pw_nscf:
+             extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
         if self.inputs.structure:

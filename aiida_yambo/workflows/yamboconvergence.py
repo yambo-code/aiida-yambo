@@ -59,11 +59,14 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("yambocode", valid_type=BaseType)
         spec.input("pseudo", valid_type=BaseType,required=True)
         spec.input("calculation_set_pw", valid_type=ParameterData, required=False)
+        spec.input("calculation_set_pw_nscf", valid_type=ParameterData, required=False)
         spec.input("calculation_set_p2y", valid_type=ParameterData,required=False)
         spec.input("calculation_set", valid_type=ParameterData )
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("settings_p2y", valid_type=ParameterData, required=False, default = p2y_default_settings())
         spec.input("settings", valid_type=ParameterData, required=False, default = yambo_default_settings())
+        spec.input("settings_pw", valid_type=ParameterData, required=False )
+        spec.input("settings_pw_nscf", valid_type=ParameterData, required=False )
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
         spec.input("parameters_p2y", valid_type=ParameterData, required=False, default=set_default_qp_param()  )
@@ -71,6 +74,8 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("parameters_pw", valid_type=ParameterData, required=False  )
         spec.input("parameters_pw_nscf", valid_type=ParameterData, required=False  )
         spec.input("convergence_parameters", valid_type=ParameterData, required=True)
+        spec.input("restart_options_pw", valid_type=ParameterData, required=False)
+        spec.input("restart_options_gw", valid_type=ParameterData, required=False)
 
         spec.outline(
           cls.start,
@@ -273,6 +278,19 @@ class YamboConvergenceWorkflow(WorkChain):
             self.ctx.very_first = False
         self.report('will run four calculations in parallel' )
         outs={}
+        # Extras: restart_options_pw, restart_options_gw, calculation_set_pw_nscf, settings_pw_nscf, kpoint_pw_nscf, kpoint_pw, 
+        extra_rs={}
+        extra_wf={}
+        if 'calculation_set_pw_nscf' in self.inputs.keys():
+            extra_wf['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
+        if 'settings_pw_nscf' in self.inputs.keys():
+            extra_wf['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+        if 'restart_options_pw' in self.inputs.keys():
+            extra_wf['restart_options_pw'] = self.inputs.restart_options_pw
+        if 'restart_options_gw' in self.inputs.keys():
+            extra_wf['restart_options_gw'] = self.inputs.restart_options_gw
+            extra_rs['restart_options'] = self.inputs.restart_options_gw
+
         if 'kpoints'!=self.ctx.variable_to_converge:
             self.report("this is not a K-point convergence ")
             for num in loop_items: # includes 0 because of starting point
@@ -300,7 +318,7 @@ class YamboConvergenceWorkflow(WorkChain):
                                 yambocode=self.inputs.yambocode,
                                 parameters = self.inputs.parameters_p2y,
                                 calculation_set= self.ctx.calculation_set_p2y,
-                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y) 
+                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y, **extra_rs) 
                     self.ctx.skip_prescf = True
                     #self.ctx.iteration-=1  
                     self.ctx.very_first = True  #  There was a bug  because of this.
@@ -311,7 +329,7 @@ class YamboConvergenceWorkflow(WorkChain):
                             yambocode=self.inputs.yambocode,
                             parameters = self.ctx.parameters,
                             calculation_set= self.inputs.calculation_set,
-                            parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings)
+                            parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings,**extra_rs)
                 outs[ 'r'+str(num) ] =  future
             self.ctx.iteration = self.ctx.iteration + 1
             return ToContext(**outs )
@@ -337,24 +355,23 @@ class YamboConvergenceWorkflow(WorkChain):
                     else:
                         break
                 mesh =  kpoints.get_kpoints_mesh() 
-                extra = {}
                 if 'parent_scf_folder' in self.inputs.keys():
-                   extra['parent_folder'] = self.inputs.parent_scf_folder
+                   extra_wf['parent_folder'] = self.inputs.parent_scf_folder
                 if 'QPkrange' not in self.ctx.parameters.get_dict().keys():
-                   extra['to_set_qpkrange'] = Bool(1)
+                   extra_wf['to_set_qpkrange'] = Bool(1)
                 if 'BndsRnXp' not in self.ctx.parameters.get_dict().keys() or 'GbndRnge' not in self.ctx.parameters.get_dict().keys() :
-                   extra['to_set_bands'] = Bool(1)
-                extra['calculation_set_p2y'] = self.ctx.calculation_set_p2y
-                extra['calculation_set_pw'] = self.inputs.calculation_set_pw
-                extra['settings_p2y'] = self.inputs.settings_p2y
-                extra['settings_pw'] = self.ctx.settings_pw
+                   extra_wf['to_set_bands'] = Bool(1)
+                extra_wf['calculation_set_p2y'] = self.ctx.calculation_set_p2y
+                extra_wf['calculation_set_pw'] = self.inputs.calculation_set_pw
+                extra_wf['settings_p2y'] = self.inputs.settings_p2y
+                extra_wf['settings_pw'] = self.ctx.settings_pw
                 future =  submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
                    codename_yambo= self.inputs.yambocode, pseudo_family= self.inputs.pseudo,
                    calculation_set_yambo = self.inputs.calculation_set,
                    settings_yambo=self.inputs.settings , structure = self.inputs.structure,
                    kpoint_pw = kpoints, parameters_pw= self.ctx.parameters_pw, parameters_pw_nscf= self.ctx.parameters_pw_nscf,
                    parameters_p2y= self.inputs.parameters_p2y, parameters_yambo=  self.ctx.parameters,
-                   **extra)
+                   **extra_wf)
                 outs[ 'r'+str(num) ] = future
                 self.ctx.conv_elem['kpoints'].append(self.ctx.distance_kpoints)
             self.ctx.iteration = self.ctx.iteration + 1
