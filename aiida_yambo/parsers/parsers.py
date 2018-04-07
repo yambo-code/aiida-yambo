@@ -93,13 +93,9 @@ class YamboParser(Parser):
 
         This parser for this code ...
         """
-        print ("reached here ")
         from aiida.common.exceptions import InvalidOperation
         from aiida.common import aiidalogger
-        from  aiida.utils.logger import get_dblogger_extra
         
-        parserlogger = aiidalogger.getChild('yamboparser')
-        logger_extra = get_dblogger_extra(self._calc)
         
         # suppose at the start that the job is unsuccessful, unless proven otherwise
         successful = False  
