@@ -218,17 +218,17 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
         self.report("converging  FFTGvecs")
         extra={}
-        if self.inputs.restart_options_pw:
+        if 'restart_options_pw' in  self.inputs.keys():
              extra['restart_options_pw'] = self.inputs.restart_options_pw
-        if self.inputs.restart_options_gw:
+        if 'restart_options_gw' in self.inputs.keys():
              extra['restart_options_gw'] = self.inputs.restart_options_gw
-        if self.inputs.settings_pw_nscf:
+        if 'settings_pw_nscf' in self.inputs.keys():
              extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
-        if self.inputs.settings_pw:
+        if 'settings_pw' in self.inputs.keys():
              extra['settings_pw'] = self.inputs.settings_pw
-        if self.inputs.settings_p2y:
+        if 'settings_p2y' in self.inputs.keys():
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
-        if self.inputs.calculation_set_pw_nscf:
+        if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
@@ -279,17 +279,17 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.MAX_B_VAL = self.ctx.convergence_settings.dict.max_bands #   int(nelec*8) 
         band_cutoff  = self.ctx.convergence_settings.dict.start_bands #  min(nelec,nbands)
         extra={}
-        if self.inputs.restart_options_pw:
+        if 'restart_options_pw' in  self.inputs.keys():
              extra['restart_options_pw'] = self.inputs.restart_options_pw
-        if self.inputs.restart_options_gw:
+        if 'restart_options_gw' in self.inputs.keys():
              extra['restart_options_gw'] = self.inputs.restart_options_gw
-        if self.inputs.settings_pw_nscf:
+        if 'settings_pw_nscf' in self.inputs.keys():
              extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
-        if self.inputs.settings_pw:
+        if 'settings_pw' in self.inputs.keys():
              extra['settings_pw'] = self.inputs.settings_pw
-        if self.inputs.settings_p2y:
+        if 'settings_p2y' in self.inputs.keys():
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
-        if self.inputs.calculation_set_pw_nscf:
+        if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
@@ -366,17 +366,17 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.report ("Working on W-cutoff ")
         w_cutoff = self.ctx.convergence_settings.dict.start_w_cutoff #2 
         extra={}
-        if self.inputs.restart_options_pw:
+        if 'restart_options_pw' in  self.inputs.keys():
              extra['restart_options_pw'] = self.inputs.restart_options_pw
-        if self.inputs.restart_options_gw:
+        if 'restart_options_gw' in self.inputs.keys():
              extra['restart_options_gw'] = self.inputs.restart_options_gw
-        if self.inputs.settings_pw_nscf:
+        if 'settings_pw_nscf' in self.inputs.keys():
              extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
-        if self.inputs.settings_pw:
+        if 'settings_pw' in self.inputs.keys():
              extra['settings_pw'] = self.inputs.settings_pw
-        if self.inputs.settings_p2y:
+        if 'settings_p2y' in self.inputs.keys():
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
-        if self.inputs.calculation_set_pw_nscf:
+        if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
@@ -437,17 +437,17 @@ class YamboFullConvergenceWorkflow(WorkChain):
         """
         self.report("Working on K-point convergence ")
         extra={}
-        if self.inputs.restart_options_pw:
+        if 'restart_options_pw' in  self.inputs.keys():
              extra['restart_options_pw'] = self.inputs.restart_options_pw
-        if self.inputs.restart_options_gw:
+        if 'restart_options_gw' in self.inputs.keys():
              extra['restart_options_gw'] = self.inputs.restart_options_gw
-        if self.inputs.settings_pw_nscf:
+        if 'settings_pw_nscf' in self.inputs.keys():
              extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
-        if self.inputs.settings_pw:
+        if 'settings_pw' in self.inputs.keys():
              extra['settings_pw'] = self.inputs.settings_pw
-        if self.inputs.settings_p2y:
+        if 'settings_p2y' in self.inputs.keys():
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
-        if self.inputs.calculation_set_pw_nscf:
+        if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
