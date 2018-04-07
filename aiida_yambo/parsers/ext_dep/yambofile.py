@@ -175,15 +175,22 @@ class YamboFile():
         if _has_netcdf:
             data = {}
             f = Dataset('%s/%s'%(self.folder,self.filename))
-            hf =  f.variables['Sx_Vxc'][:]
-            if hf.shape[0]%8 ==0 :
-                qp =  hf.reshape(-1,8)
-                ib, ibp, ik, isp, rsx, isx, revx, imvx = qp.T
-            else:
-                qp =  hf.reshape(-1,7)
-                ib, ibp, ik, rsx, isx, revx, imvx = qp.T
-            data['Sx'] = rsx + isx*1j 
-            data['Vxc'] = revx + imvx*1j
+            try:
+                hf =  f.variables['Sx_Vxc'][:]
+                if hf.shape[0]%8 ==0 :
+                    qp =  hf.reshape(-1,8)
+                    ib, ibp, ik, isp, rsx, isx, revx, imvx = qp.T
+                else:
+                    qp =  hf.reshape(-1,7)
+                    ib, ibp, ik, rsx, isx, revx, imvx = qp.T
+                data['Sx'] = rsx + isx*1j 
+                data['Vxc'] = revx + imvx*1j
+            except KeyError: # Missing Sx_Vcx  in new NETCDF format, 
+                # We need to adapt to the new format that has more information.
+                Sx =  f.variables['Sx'][:] # IN Hartree
+                Vxc =  f.variables['Vxc'][:] # IN Hartree
+                data['Sx'] =  Sx
+                data['Vxc'] = Vxc
 
             self.data=data
             f.close()
