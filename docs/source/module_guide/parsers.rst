@@ -4,7 +4,7 @@ Calculation parsers
 .. toctree::
    :maxdepth: 2
 
-This section describes the different parsers classes for calculations.
+This section describes the different parsers classes.
 
 YAMBO parsers
 ++++++++++++++++++++++++

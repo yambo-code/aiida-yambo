@@ -1,9 +1,13 @@
-# yambo-aiida  
-AiiDA plugin and workchains for the YAMBO code
+# AiiDA Yambo  
+This is the official Yambo plugin for AiiDA. It is now maintained for AiiDA >= v0.9.0, the new plugin system will ensure that the entry points are automatically registered upon installation.
+
+## Documentation
+
+The documentation for this package can be found on Read the Docs at https://aiida-yambo.readthedocs.io/en/latest
 
 ## Installation instructions:
 
-Requirements AiiDA (version >= 0.9.0).
+Requirements: AiiDA (version >= 0.9.0), netCDF4
 
 Installation via pip
 
@@ -12,14 +16,5 @@ pip install -e yambo-aiida
 reentry scan
 ```
 
-For workflows:  
-
-    `Place the folder `wf` in   aiida/workflows/user/cnr_nano`
-
-
-Examples:  
-    *Plugin Examples are located in:  
-     -examples/test_plugin
- 
-Documentation is available at: https://aiida-yambo.readthedocs.io/en/latest
-   
+# License  
+The terms of the yambo-aiida license can be found in the LICENSE.txt file.

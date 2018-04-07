@@ -1,0 +1,23 @@
+{
+        "em1d": true,                                
+        "ppa":true,                                  
+        "rim_cut":true,                              
+        "FFTGvecs":  59267,                          
+        "FFTGvecs_units": "RL" ,                     
+        "RandQpts": 1000000,                         
+        "RandGvec": 1,                               
+        "RandGvec": "RL",                            
+        "CUTGeo": "box xy",                          
+        "CUTBox":[ ( 58.00000 , 20.00000 ,  0.00000 )],
+        "CUTRadius": 0.000000,                       
+        "CUTCylLen": 0.000000,                       
+        "Chimod": "hartree",                         
+        "BndsRnXp":[(1 , 256 ) ] ,                   
+        "NGsBlkXp": 3,                               
+        "NGsBlkXp": "Ry",                            
+        "LongDrXp": [( 0.000000 ,0.000000 , 1.000000 )] , 
+        "PPAPntXp": 20.00000,                       
+        "PPAPntXp": "eV",                           
+        "MEM_tresh":10000 ,                         
+        "MEM_tresh":"Kb"                            
+}
