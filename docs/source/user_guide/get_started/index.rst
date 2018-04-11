@@ -29,6 +29,6 @@ Plugin tutorial
 .. toctree::
    :maxdepth: 4
 
-   start
+   tutorial
 
 
