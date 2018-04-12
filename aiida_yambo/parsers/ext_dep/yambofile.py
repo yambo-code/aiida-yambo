@@ -73,6 +73,10 @@ class YamboFile():
                 return
             if 'GW' in title:
                  self.type = 'output_gw'
+            if 'Absorption' in title:
+                 self.type = 'output_absorption'
+            if 'EELS' in title:
+                 self.type = 'output_eels'
 
         elif any(filename.startswith(prefix) for prefix in self._report_prefixes):
             self.type = 'report'
@@ -101,36 +105,48 @@ class YamboFile():
         elif self.type == 'log': self.parse_log()
         elif self.type == 'p2y_log': self.parse_p2y_log()
         elif self.type == 'report'  : self.parse_report()
+        elif self.type == 'output_absorption': self.parse_output()
+        elif self.type == 'output_eels': self.parse_output()
 
     def parse_output(self):
         """ Parse an output file from yambo,
         """
         #get the tags of the columns
-        if self.type == "output_absorption":
-            tags = [tag.strip() for tag in re.findall('([ `0-9a-zA-Z\-\/]+)\[[0-9]\]',''.join(self.lines))]
         if self.type == "output_gw":
             tags = [line.replace('(meV)','').replace('Sc(Eo)','Sc|Eo') for line in self.lines if all(tag in line for tag in ['K-point','Band','Eo'])][0]
             tags = tags[2:].strip().split()
-        table = np.genfromtxt(self.lines)
-        _kdata ={}
-        if table.ndim> 1:
-            k_index =[ str(int(i)) for i in table[:,0]] # first column  has kpoints
-        else:
-            k_index =[ str(int(table[0])) ] # first column  has kpoints
-        for ind in range(len(k_index)):
-            for itag in range(len(tags)):
-                 if k_index[ind] not in _kdata.keys():
-                     _kdata[k_index[ind]] = {}
-                 try:
-                     _kdata[k_index[ind]][tags[itag]].append(table[ind,itag])
-                 except KeyError:
-                    try:
-                         _kdata[k_index[ind]][tags[itag]]  = [ table[ind,itag] ]
-                    except IndexError:
-                         _kdata[k_index[ind]][tags[itag]]  = [ table[itag] ]
 
-        self.data = _kdata 
-        #self.data = dict(zip(tags,table.T))
+            table = np.genfromtxt(self.lines)
+            _kdata ={}
+            if table.ndim> 1:
+                k_index =[ str(int(i)) for i in table[:,0]] # first column  has kpoints
+            else:
+                k_index =[ str(int(table[0])) ] # first column  has kpoints
+            for ind in range(len(k_index)):
+                for itag in range(len(tags)):
+                     if k_index[ind] not in _kdata.keys():
+                         _kdata[k_index[ind]] = {}
+                     try:
+                         _kdata[k_index[ind]][tags[itag]].append(table[ind,itag])
+                     except KeyError:
+                        try:
+                             _kdata[k_index[ind]][tags[itag]]  = [ table[ind,itag] ]
+                        except IndexError:
+                             _kdata[k_index[ind]][tags[itag]]  = [ table[itag] ]
+
+            self.data = _kdata 
+            #self.data = dict(zip(tags,table.T))
+
+        if self.type in ["output_absorption","output_eels"]:
+            string = ''.join(self.lines)
+            tags = [tag.strip() for tag in re.findall('#\n#\s+((?:(?:[`0-9a-zA-Z\-\/\|\\(\)\_[\]]+)\s+)+)#\n\s', string)[0].split()]
+            tags = [ tag.replace('-','_').replace('/','_').split('[')[0]  for tag in tags]
+
+            table = np.genfromtxt(self.lines)
+            data ={}
+            for itag in range(len(tags)):
+                data[tags[itag]] = table[:,itag]
+            self.data = data
 
     def parse_netcdf_gw(self):
         """ Parse the netcdf gw file

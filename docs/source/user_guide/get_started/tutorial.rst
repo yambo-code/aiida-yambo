@@ -1,6 +1,8 @@
+.. _sec.yambo_calc_plugin: 
+
 .. _my-ref-to-yambo-tutorial:
 
-Yambo G0W0 Tutorial
+Yambo-AiiDA  Tutorial
 ====================
 
 .. toctree::
@@ -11,7 +13,7 @@ already setup,  ``pw.x`` and ``yambo`` codes configured.
 There will be three separate jobs submited as AiiDA calculations, one for the PWscf  `scf`, one for the corresponding `nscf`,
 and finally the actual `yambo` calculation. 
 
-PWscf `scf` step
+SCF step (Quantum ESPRESSO)
 -----------------
 
 Using the AiiDA PWscf plugin submit the following calculation and note its `pk` which will be required for subsequent steps.
@@ -77,7 +79,7 @@ and Pseudo family with one configured in your AiiDA installation.
     print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
     calc.submit()
 
-PWscf `nscf` step
+NSCF step (Quantum ESPRESSO)
 -----------------
 Using the ``pk`` of the preceeding ``scf`` calculation, run a ``nscf`` with PWscf, refer to the
 PWscf plugin for more information. Replace the ``pk`` in this example with the ``pk`` from your 
@@ -136,6 +138,30 @@ PWscf plugin for more information. Replace the ``pk`` in this example with the `
     calc.store_all()
     print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
     calc.submit()
+
+
+
+
+G0W0 (Yambo)
+------------
+
+
+Absorption spectrum IP-RPA (Yambo)
+----------------------------------
+
+
+
+
+
+
+
+*********
+---------
+
+
+
+
+
 
 
 Yambo Run
@@ -326,4 +352,3 @@ Here is the complete script for the ``yambo``  calculation described above:
     calc.store_all()
     print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
     calc.submit()
-
