@@ -44,13 +44,10 @@ class PwRestartWf(WorkChain):
     @classmethod
     def define(cls, spec):
         """Workfunction definition
- 
-        We need in increase the generality of the inputs provided to cater for more sophisticated use, 
-        Missing options:
-        kpoints speficic to SCF and NSCF (2 options)
-        calculation_set specific to SCF and NSCF (2 options)
-        settings  specifig to SCF and NSCF (2 options
-        )"""
+
+        Provides a thin wrapper around the aiida_quantumespresso PwBaseWorkChain, so yambo workflows
+        can be ignorant about the details of running a PW calculation.
+        """
         super(PwRestartWf, cls).define(spec)
         spec.input("codename", valid_type=BaseType)
         spec.input("restart_options", valid_type=ParameterData, required=False)
@@ -173,7 +170,7 @@ class PwRestartWf(WorkChain):
 
         if self.ctx.success == True:
             return False
-        if self.ctx.restart > int(self.inputs.max_restarts):
+        if self.ctx.restart > int(self.ctx.max_restarts):
             return False
         if len (self.ctx.pw_pks) < 1: 
             return True 

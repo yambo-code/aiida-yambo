@@ -484,44 +484,59 @@ class YamboConvergenceWorkflow(WorkChain):
         """
         calc = load_node(node_id)
         table=calc.out.array_qp.get_array('qp_table')
-        try:
-            qprange = calc.inp.parameters.get_dict()['QPkrange']
-        except KeyError: 
-            parent_calc =  calc.inp.parent_calc_folder.inp.remote_folder
-            if isinstance(parent_calc, YamboCalculation):
-                has_found_nelec = False
-                while (not has_found_nelec):
-                    try:
-                        nelec = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
-                        has_found_nelec = True
-                    except AttributeError:
-                        parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
-                    except KeyError:
-                        parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
-            elif isinstance(parent_calc, PwCalculation):
-                nelec  = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
-            qprange =  [ ( 1, 1 , int(nelec/2) , int(nelec/2)+1 ) ]
-        lowest_k = qprange[0][0] # first kpoint listed, 
-        lowest_b = qprange[0][-2] # first band on first kpoint listed,
-        highest_b= qprange[0][-1]  # last band on first kpoint listed,
-        argwlk = np.argwhere(table[:,0]==float(lowest_k))  # indexes for lowest kpoint
-        argwlb = np.argwhere(table[:,1]==float(lowest_b))  # indexes for lowest band
-        argwhb = np.argwhere(table[:,1]==float(highest_b)) # indexes for highest band
-        if len(argwlk)< 1:
-            argwlk = np.array([0])
-        if len(argwhb) < 1:
-            argwhb = np.argwhere(table[:,1]== table[:,1][np.argmax(table[:,1])])
-            argwlb = np.argwhere(table[:,1]== table[:,1][np.argmax(table[:,1])]-1 )
-        arglb = np.intersect1d(argwlk,argwlb)              # index for lowest kpoints' lowest band
-        arghb = np.intersect1d(argwlk,argwhb)              # index for lowest kpoint's highest band
-        e_m_eo = calc.out.array_qp.get_array('E_minus_Eo') 
+        parent_calc =  calc.inp.parent_calc_folder.inp.remote_folder
+        e_m_eo = calc.out.array_qp.get_array('E_minus_Eo')
         eo = calc.out.array_qp.get_array('Eo')
         corrected = eo+e_m_eo
-        corrected_lb = corrected[arglb]
-        corrected_hb = corrected[arghb]
-        self.report(" corrected gap(s) {}  at K-point {}, between bands {} and {} for calc {}".format(
-                    corrected_hb- corrected_lb, lowest_k, lowest_b, highest_b , node_id))
-        return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
+        spinp=False
+        nelec=None
+        if isinstance(parent_calc, YamboCalculation):
+            has_found_nelec = False
+            while (not has_found_nelec):
+                try:
+                    nelec = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
+                    nbands = parent_calc.out.output_parameters.get_dict()['number_of_bands']
+                    has_found_nelec = True
+                    if parent_calc.out.output_parameters.get_dict()['lsda']== True or\
+                        parent_calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True :
+                        spinp = True
+                    else:
+                        spinp = False
+                except AttributeError:
+                    parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+                except KeyError:
+                    parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+        elif isinstance(parent_calc, PwCalculation):
+            nelec  = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
+            nbands  = parent_calc.out.output_parameters.get_dict()['number_of_bands']
+            if parent_calc.out.output_parameters.get_dict()['lsda']== True or\
+                    parent_calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+                spinp = True
+            else:
+                spinp =  False
+        # Filter rows with bands  nocc and nocc+1 
+        vbm=int(nelec/2)
+        cbm = vbm+1
+        table = np.append(table, corrected[:,None], axis=1)
+        if spinp:
+            table = table[ table[:,-1]==1.000]   # we look at the majority spin only
+        vbm_cbm = table[ ( table[:,1]>=vbm ) & ( table[:,1] <=cbm) ]
+        # find the max vbm from all vbm rows,  same for cbm, subtract, and get their associated kpt, band info
+        vbm_only = vbm_cbm[vbm_cbm[:,1]==vbm]
+        cbm_only = vbm_cbm[vbm_cbm[:,1]==cbm]
+        vbm_arg_max = np.argmax(vbm_only[:,-1])
+        cbm_arg_max = np.argmin(cbm_only[:,-1])
+        vbm_arg= np.argwhere(table[:,-1] == vbm_only[:,-1][vbm_arg_max])[0][0]
+        cbm_arg= np.argwhere(table[:,-1] == cbm_only[:,-1][cbm_arg_max])[0][0]
+        kpt_vbm = table[:,0][vbm_arg]
+        band_vbm= table[:,1][vbm_arg]
+        kpt_cbm = table[:,0][cbm_arg]
+        band_cbm = table[:,1][cbm_arg]
+        gap = table[:, -1][cbm_arg] - table[:, -1][vbm_arg]
+
+        self.report(" corrected gap(s) {}  at K-points {}, {}, between bands {} and {} for calc {}".format(
+                    gap, kpt_vbm ,kpt_cbm,  band_vbm, band_cbm , node_id))
+        return  gap  # for spin polarized there will be two almost equivalent, else just one value.
 
     def report_wf(self):
         """Output final quantities

@@ -102,7 +102,9 @@ class YamboWorkflow(WorkChain):
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
         
-        This function sets the parent, and its type, including support for starting from a workchain"""
+        This function sets the parent, and its type, including support for starting from a previos workchain,
+        there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
+        steps to decide what are the subsequent steps"""
         self.ctx.pw_wf_res = DataFactory('parameter')(dict={})
         self.ctx.yambo_res = DataFactory('parameter')(dict={})
         self.ctx.last_step_pw_wf = None
@@ -117,31 +119,41 @@ class YamboWorkflow(WorkChain):
                 self.ctx.last_step_kind = 'yambo' 
                 self.ctx.yambo_res = DataFactory('parameter')(dict={"out": { "gw": {"yambo_pk": parent_calc.pk, "success": True }}} )
                 self.report("Yambo calculation (pk {}) found in input, I will start from there.".format(parent_calc.pk ))
+
             elif isinstance(parent_calc, PwCalculation):
+
                 self.ctx.last_step_kind = 'pw'
                 self.ctx.pw_wf_res = None
                 self.report("PW calculation (pk {}) found in input, I will start from there.".format(parent_calc.pk ))
             else:
+
                 self.ctx.pw_wf_res = None
                 self.report("No PW or Yambo calculation found in input, I will start from scratch.")
+
         if 'previous_yambo_workchain' in self.inputs.keys():
+
             self.report('WARNING: previous_yambo_workchain option should be used in DEBUG mode only!')
             wf_outs = load_node(int(str(self.inputs.previous_yambo_workchain)))
             self.ctx.pw_wf_res = wf_outs  # has both gw and pw outputs in one
             self.ctx.yambo_res = wf_outs 
+
             if 'scf_remote_folder' in wf_outs.get_outputs_dict().keys():
                 scf_calc  = wf_outs.out.scf_remote_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
                 if scf_calc.get_state() != u'FINISHED':
                     self.ctx.last_step_kind = 'pw'
                     del self.ctx['pw_wf_res']
+
             if 'nscf_remote_folder' in wf_outs.get_outputs_dict().keys():
                 nscf_calc = wf_outs.out.scf_remote_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
                 if nscf_calc.get_state() != u'FINISHED':
                     self.ctx.last_step_kind = 'pw'
                     del self.ctx['pw_wf_res']
+
             if 'yambo_remote_folder' in wf_outs.get_outputs_dict().keys():
+
                 parent_calc = wf_outs.out.yambo_remote_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
                 init_calc = parent_calc.inp.settings.get_dict().pop('INITIALISE', False) 
+
                 if init_calc and parent_calc.get_state() == u'FINISHED' : # Finished P2Y
                     self.ctx.last_step_kind = 'yambo_p2y'
                 elif init_calc == False and  parent_calc.get_state() != u'FINISHED':  #  Unfinished QP 
@@ -166,6 +178,7 @@ class YamboWorkflow(WorkChain):
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
 
         if self.ctx.last_step_kind == 'yambo' and self.ctx.yambo_res:
+
             try:
                 self.ctx.yambo_pks.append(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"])
             except AttributeError:
@@ -189,31 +202,46 @@ class YamboWorkflow(WorkChain):
         return True
  
     def perform_next(self):
-        """This function  will run the next step, depending on the information provided in the context"""
+        """This function  will submit the next step, depending on the information provided in the context
+        
+        The next step will be a yambo calculation if the provided inputs are a previous yambo/p2y run
+        Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
+
         if self.ctx.last_step_kind == 'yambo' or self.ctx.last_step_kind == 'yambo_p2y' :
             if load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]).get_state() == u'FINISHED':
-                if self.inputs.to_set_qpkrange   and 'QPkrange' not in self.ctx.parameters_yambo.get_dict().keys():
-                    self.ctx.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"], self.ctx.parameters_yambo)
+
+                if self.inputs.to_set_qpkrange   and 'QPkrange'\
+                        not in self.ctx.parameters_yambo.get_dict().keys():
+                    self.ctx.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"],\
+                             self.ctx.parameters_yambo)
+
                 if self.inputs.to_set_bands   and ('BndsRnXp' not in self.ctx.parameters_yambo.get_dict().keys()\
                         or 'GbndRnge' not in self.ctx.parameters_yambo.get_dict().keys()):
-                    self.ctx.parameters_yambo = default_bands( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"], self.ctx.parameters_yambo)
-                start_from_initialize = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
+                    self.ctx.parameters_yambo = default_bands( self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"],\
+                            self.ctx.parameters_yambo)
+
+                start_from_initialize = load_node(self.ctx.yambo_res.out.gw.get_dict()\
+                        ["yambo_pk"]).inp.settings.get_dict().pop('INITIALISE', None)
 
                 if start_from_initialize: # YamboRestartWf will initialize before starting QP calc  for us,  INIT != P2Y 
                     self.report ("YamboRestartWf will start from initialise mode (yambo init) ")
                     yambo_result =  self.run_yambo()
                     return  ResultToContext( yambo_res= yambo_result  )
+
                 else:  # Possibly a restart,  after some type of failure, why was is not handled by YamboRestartWf? maybe restarting whole workchain
-                    self.report(" Restarting {}, this is some form of restart for the workchain".format(self.ctx.last_step_kind)  )
+                    self.report(" Restarting {}, this is some form of restart for the workchain".format(\
+                            self.ctx.last_step_kind)  )
                     yambo_result =  self.run_yambo()
                     return  ResultToContext( yambo_res= yambo_result  )
+
             if len(self.ctx.yambo_pks) > 0:
                  if load_node(self.ctx.yambo_pks[-1] ).get_state() == u'FAILED':  # Needs a resubmit depending on the error.
-                    self.report("Last {} calculation (pk: {}) failed, will attempt a restart".format(self.ctx.last_step_kind, self.ctx.yambo_pks[-1] ))
+                    self.report("Last {} calculation (pk: {}) failed, will attempt a restart".format(\
+                            self.ctx.last_step_kind, self.ctx.yambo_pks[-1] ))
 
         if  self.ctx.last_step_kind == 'pw' and  self.ctx.pw_wf_res :
             if self.ctx.pw_wf_res.out.pw.get_dict()['success'] == True:
-                self.report("PwRestartWf was successful,  running initialize next with: YamboRestartWf ")
+                self.report("PwRestartWf was successful,  running P2Y next with: YamboRestartWf ")
                 p2y_result = self.run_p2y()
                 return  ResultToContext( yambo_res= p2y_result )
             if self.ctx.pw_wf_res.out.pw.get_dict()['success'] == False:

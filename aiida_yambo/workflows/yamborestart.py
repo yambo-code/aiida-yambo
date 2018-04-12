@@ -77,6 +77,10 @@ class YamboRestartWf(WorkChain):
 
         This function takes inputs provided and using the YamboCalculation class
         submits a calculation.
+        This will run only *ONE* calculation at a time,  it may be a p2y conversion or a yambo init or  a yambo calculation run, 
+        P2Y conversion will be done by providing a parent calculation of type PW,
+        Initialize (yambo init) calculation can be done independently by having the INITIALISE key in the settings dict.
+        Yambo Calc will be done when the parent calculation is P2Y/other yambo calculation, and INITIALISE is not provided.
         """
         self.ctx.yambo_pks = []
         self.ctx.yambo_nodes = []
@@ -122,9 +126,9 @@ class YamboRestartWf(WorkChain):
 
         This function supports detecting failed/incomplete yambo runs, taking corrective
         action and resubmitting automatically. These classes of errors are taken care of:
-        1. Memory probelems
+        1. Memory probelms
         2. Parallelism problems
-        3. Some input inconsistency problems (too low bands)
+        3. Some input inconsistency problems (too low number of bands)
         4. Queue time exhaustion.
         The calculation is restarted upto a maximum number of 4 retries
         """
@@ -243,7 +247,7 @@ class YamboRestartWf(WorkChain):
         """Submits a yambo calculation using the yambo plugin
 
         This function submits a calculation, usually this represents a 
-        resubmission of a failed calculation, or a continuation from P2Y.
+        resubmission of a failed calculation, or a continuation from P2Y/Init run.
         """
 
         calc = load_node(self.ctx.yambo_pks[-1])
@@ -280,7 +284,9 @@ class YamboRestartWf(WorkChain):
         return ResultToContext(yambo_restart= future)
 
     def run_yambo(self,inputs):
-        """Call submit with the inputs  """
+        """Call submit with the inputs  
+        
+        Takes some inputs and does a submit."""
         YamboProcess = YamboCalculation.process()
         future =  submit(YamboProcess, **inputs)
         self.ctx.yambo_pks.append( future.pid )
@@ -301,7 +307,8 @@ class YamboRestartWf(WorkChain):
         return  submited
 
     def report_wf(self):
-        """
+        """Report the outputs fof the workchain 
+
         Output final quantities
         return information that may be used to figure out
         the status of the calculation.
