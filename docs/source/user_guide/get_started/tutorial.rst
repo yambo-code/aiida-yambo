@@ -8,231 +8,483 @@ Yambo-AiiDA  Tutorial
 .. toctree::
    :maxdepth: 2
    
-The following shows how to run a single G0W0 calculation with ``yambo``, using an installation of AiiDA with a computer
-already setup,  ``pw.x`` and ``yambo`` codes configured.
-There will be three separate jobs submited as AiiDA calculations, one for the PWscf  `scf`, one for the corresponding `nscf`,
-and finally the actual `yambo` calculation. 
+The following tutorial shows how to run a G0W0 calculation and how to compute an IP-RPA spectrum with Yambo for bulk GaAs. In order to keep the tutorial light in terms of computational resources and time of execution, calculations are not fully converged with respect to parameters such as k-points, empty bands or G-vectors.
 
 SCF step (Quantum ESPRESSO)
 ----------------------------
 
-Using the AiiDA PWscf plugin submit the following calculation and note its `pk` which will be required for subsequent steps.
-For details on how to use the PWscf plugin, please refer to the plugins documentation page. Remember to replace the codename
-and Pseudo family with one configured in your AiiDA installation.
+Using the AiiDA quantumespresso.pw plugin, we begin with submitting an SCF calculation. We are going to use the ``pk`` of the SCF calculation in the next steps.
+
+For details on how to use the quantumespresso.pw plugin, please refer to the plugins documentation page. Remember to replace the codename
+and pseudo-family with those configured in your AiiDA installation. NB: Yambo can be used only with norm-conserving pseudopotentials!
 
 ::
     
-    from aiida import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
-    
-    codename = 'codename@machine'
-    from aiida.orm import Code
-    code = Code.get_from_string(codename)
-    from aiida.orm import DataFactory
-    StructureData = DataFactory('structure')
-    cell=[[   15.8753100000,    0.0000000000,    0.0000000000],
-        [0.0000000000 , 15.8753100000 , 0.0000000000],
-        [0.0000000000  , 0.0000000000  , 2.4696584760]]
-    
-    s = StructureData(cell=cell)
-    s.append_atom(position=(0.0000000000, 0.0000000000, -0.5857830640), symbols='C')
-    s.append_atom(position=(0.6483409550, 0.0000000000, 0.5857863990), symbols='C')
-    s.append_atom(position=(-1.0769905460, 0.0000000000, -0.5902956470), symbols='H')
-    s.append_atom(position=(1.7253315010, 0.0000000000, 0.5902989820), symbols='H')
-    
-    s.store()
-    
-    ParameterData = DataFactory('parameter')
-    
-    parameters = ParameterData(dict={
-              'CONTROL': {
-                  'calculation': 'scf',
-                  'restart_mode': 'from_scratch',
-                  'wf_collect': True,
-                  'verbosity' :'high',
-                  },
-              'SYSTEM': {
-                  'ecutwfc': 45.,
-                  },
-              'ELECTRONS': {
-                  'conv_thr': 1.e-8,
-                  'electron_maxstep ': 50,
-                  'mixing_mode': 'plain',
-                  'mixing_beta' : 0.4
-                  }})
-    KpointsData = DataFactory('array.kpoints')
-    kpoints = KpointsData() 
-    kpoints.set_kpoints_mesh([1,1,30])
-    calc = code.new_calc()
-    calc.set_max_wallclock_seconds(120*60) # 120 min
-    calc.set_resources({"num_machines": 4,"num_mpiprocs_per_machine":16,"num_cores_per_machine":32 })
-    
-    calc.use_structure(s)
-    calc.use_code(code)
-    calc.use_parameters(parameters)
-    calc.use_kpoints(kpoints)
-    
-    calc.use_pseudos_from_family('YourPseudoFamily')
-    calc.label = "Scf test for CH"
-    calc.store_all()
-    print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
-    calc.submit()
+	#!/usr/bin/env runaiida
+	# -*- coding: utf-8 -*-
+	import sys
+	import os
+	from aiida.orm import DataFactory, CalculationFactory
+	from aiida.common.example_helpers import test_and_get_code
+	from aiida.orm.data.base import List
+	from aiida.orm import Code
+	from aiida.orm import DataFactory
+	import pymatgen
+	from aiida.work.run import submit
+	from aiida_yambo.calculations.gw import YamboCalculation
+	from aiida_quantumespresso.calculations.pw import PwCalculation
+	from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
 
-NSCF step (Quantum ESPRESSO)
-----------------------------
-Using the ``pk`` of the preceeding ``scf`` calculation, run a ``nscf`` with PWscf, refer to the
-PWscf plugin for more information. Replace the ``pk`` in this example with the ``pk`` from your 
-``scf`` calculation.
+
+	StructureData = DataFactory('structure')
+
+	a = 5.367 * pymatgen.core.units.bohr_to_ang
+	structure_pmg = pymatgen.Structure(
+		    lattice=[[-a, 0, a], [0, a, a], [-a, a, 0]],
+		    species=['Ga', 'As'],
+		    coords=[[0] * 3, [0.25] * 3]
+		)
+	structure = StructureData()
+	structure.set_pymatgen_structure(structure_pmg)
+
+	 
+	ParameterData = DataFactory('parameter')
+	    
+	parameters = ParameterData(dict={
+		      'CONTROL': {
+		          'calculation': 'scf',
+		          'restart_mode': 'from_scratch',
+		          'wf_collect': True,
+		          'verbosity' :'high',
+		          },
+		      'SYSTEM': {
+		          'ecutwfc': 80.,
+		          },
+		      'ELECTRONS': {
+		          'conv_thr': 1.e-10,
+		          }})
+
+	KpointsData = DataFactory('array.kpoints')
+	kpoints = KpointsData() 
+	kpoints.set_kpoints_mesh([8,8,8])
+	    
+	inputs = {}
+	inputs['structure'] = structure
+	inputs['kpoints'] = kpoints
+	inputs['parameters'] = parameters
+	inputs['_options'] = {'max_wallclock_seconds':30*60, 
+		              'resources':{
+		                          "num_machines": 1,
+		                          #"num_mpiprocs_per_machine":1
+		                           },
+		               #'custom_scheduler_commands':u"your scheduler commands",
+		                          }
+
+	if __name__ == "__main__":
+	    import argparse
+	    parser = argparse.ArgumentParser(description='SCF calculation.')
+	    parser.add_argument('--code', type=str, dest='codename', required=True,
+		                help='The pw codename to use')
+	   
+	    parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
+		                help='The pseudo family to use') 
+	    args = parser.parse_args()
+	    code = Code.get_from_string(args.codename)
+	    inputs['code'] = code
+	    inputs['pseudo'] = get_pseudos_from_structure(structure, args.pseudo )
+	    process = PwCalculation.process()
+	    running = submit(process, **inputs)
+	    print "Created calculation; with pid={}".format(running.pid)
+
+
+NSCF step (Quantum ESPRESSO) for G0W0
+-------------------------------------
+Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation. GW calculations often require several empty states and few k-points (at least in 3D), so we are going to use a different NSCF to compute the IP-RPA spectrum for whic more k-points and less empty bands are needed.
+
 
 ::
-    
-    from aiida import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
-    
-    codename = 'codename@machine'
-    from aiida.orm import Code
-    code = Code.get_from_string(codename)
-    from aiida.orm import DataFactory
-    ParameterData = DataFactory('parameter')
-    parameters = ParameterData(dict={
-              'CONTROL': {
-                  'calculation': 'nscf',
-                  'restart_mode': 'from_scratch',
-                  'wf_collect': True,
-                  'verbosity' :'high',
-                  },
-              'SYSTEM': {
-                  'ecutwfc': 45,
-                  'force_symmorphic': True,
-                  'nbnd':  50
-                  },
-              'ELECTRONS': {
-                  'conv_thr': 1.e-8,
-                  'electron_maxstep ': 50,
-                  'mixing_mode': 'plain',
-                  'mixing_beta' : 0.4
-                  }})
-    
-    KpointsData = DataFactory('array.kpoints')
-    kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([1,1,30])
-    
-    parentcalc = load_node(219) # replace 219 with your scf pk
-    s = parentcalc.inp.structure
-    parent_folder = parentcalc.out.remote_folder
-    
-    calc = code.new_calc()
-    calc.use_parent_folder(parent_folder)
-    calc.set_max_wallclock_seconds(80*60) # 80 min
-    calc.set_resources({"num_machines": 4,"num_mpiprocs_per_machine":16,"num_cores_per_machine":32 })
-    
-    calc.use_structure(s)
-    calc.use_code(code)
-    calc.use_parameters(parameters)
-    calc.use_kpoints(kpoints)
-    
-    calc.use_pseudos_from_family('YourPseudoFamily')
-    calc.label = "nScf  for  rutile tio2"
-    calc.store_all()
-    print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
-    calc.submit()
 
+	#!/usr/bin/env runaiida
+	# -*- coding: utf-8 -*-
+	import sys
+	import os
+	from aiida.orm import DataFactory, CalculationFactory
+	from aiida.common.example_helpers import test_and_get_code
+	from aiida.orm.data.base import List
+	from aiida.orm import Code
+	from aiida.orm import DataFactory
+	import pymatgen
+	from aiida.work.run import submit
+	from aiida_yambo.calculations.gw import YamboCalculation
+	from aiida_quantumespresso.calculations.pw import PwCalculation
+	from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
+
+	 
+	ParameterData = DataFactory('parameter')
+	    
+	parameters = ParameterData(dict={
+		      'CONTROL': {
+		          'calculation': 'nscf',
+		          'restart_mode': 'from_scratch',
+		          'wf_collect': True,
+		          'verbosity' :'high',
+		          },
+		      'SYSTEM': {
+		          'ecutwfc': 80.,
+		          'nbnd':50,
+		          'force_symmorphic':True,
+		          },
+		      'ELECTRONS': {
+		          'conv_thr': 1.e-10,
+		          'diago_full_acc': True,
+		          'diagonalization':'cg',
+		          }})
+
+	KpointsData = DataFactory('array.kpoints')
+	kpoints = KpointsData() 
+	kpoints.set_kpoints_mesh([6,6,6])
+	    
+	inputs = {}
+	inputs['kpoints'] = kpoints
+	inputs['parameters'] = parameters
+	inputs['_options'] = {'max_wallclock_seconds':30*60, 
+		              'resources':{
+		                          "num_machines": 1,
+		                          "num_mpiprocs_per_machine":1,
+		                          },
+		                       'custom_scheduler_commands': u"#SBATCH --account=Pra15_3963 \n" + 
+		                       "#SBATCH --partition=knl_usr_dbg \n" +
+		                       "#SBATCH --mem=86000 \n" +         "\n"+"\nexport OMP_NUM_THREADS=1\nexport MKL_NUM_THREADS=1"}
+		                          
+	if __name__ == "__main__":
+	    import argparse
+	    parser = argparse.ArgumentParser(description='NSCF calculation.')
+	    parser.add_argument('--code', type=str, dest='codename', required=True,
+		                help='The pw codename to use')
+	    parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
+		                help='The pseudo family to use')
+	    parser.add_argument('--parent', type=int, dest='parent', required=True,
+		                help='The parent  to use')
+	    args = parser.parse_args()
+	    code = Code.get_from_string(args.codename)
+	    structure = load_node(args.parent).inp.structure
+	    inputs['structure'] = structure
+	    inputs['pseudo'] = get_pseudos_from_structure(structure, args.pseudo )
+	    inputs['code'] = code
+	    inputs['parent_folder'] = load_node(args.parent).out.remote_folder
+	    process = PwCalculation.process()
+	    running = submit(process, **inputs)
+	    print "Created calculation; with pid={}".format(running.pid)
+
+P2Y step (Yambo)
+-------------------------------------
+Now we use the Yambo plugin to run the p2y code, converting the Quantum ESPRESSO files into a NetCDF Yambo database.
+
+::
+
+	#!/usr/bin/env runaiida
+	# -*- coding: utf-8 -*-
+	import sys
+	import os
+	from aiida.orm import DataFactory, CalculationFactory
+	from aiida.common.example_helpers import test_and_get_code
+	from aiida.orm.data.base import List
+	from aiida.orm import Code
+	from aiida.orm import DataFactory
+	import pymatgen
+	from aiida.work.run import submit
+	from aiida_yambo.calculations.gw import YamboCalculation
+	from aiida_quantumespresso.calculations.pw import PwCalculation
+	from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
+
+
+	ParameterData = DataFactory('parameter')
+	    
+	inputs = {}
+	inputs['settings'] = ParameterData(dict={'initialise': True})
+	inputs['_options'] = {
+		              'max_wallclock_seconds':30*60, 
+		              'resources':{
+		                          "num_machines": 1,
+		                          "num_mpiprocs_per_machine":1,
+		                          },
+		               'custom_scheduler_commands':u"***",
+		               }
+
+	if __name__ == "__main__":
+	    import argparse
+	    parser = argparse.ArgumentParser(description='p2y calculation.')
+	    parser.add_argument('--code', type=str, dest='codename', required=True,
+		                help='The yambo code to use')
+	    parser.add_argument('--precode', type=str, dest='precodename', required=True,
+		                help='The yambo precodename to use')
+	    parser.add_argument('--parent', type=int, dest='parent', required=True,
+		                help='The parent to use')
+	    args = parser.parse_args()
+	    precode = Code.get_from_string(args.precodename)
+	    code = Code.get_from_string(args.codename)
+	    inputs['preprocessing_code'] = precode
+	    inputs['code'] = code
+	    inputs['parent_folder'] = load_node(args.parent).out.remote_folder
+	    process = YamboCalculation.process()
+	    running = submit(process, **inputs)
+	    print "Created calculation; with pid={}".format(running.pid)
 
 
 
 G0W0 (Yambo)
 ------------
+Now we are ready to run the a G0W0 calculations in the plasmon-pole approximation (PPA), in particular we compute the direct band gap at Gamma of GaAs.
 
+::
+
+	#!/usr/bin/env runaiida
+	# -*- coding: utf-8 -*-
+	import sys
+	import os
+	from aiida.orm import DataFactory, CalculationFactory
+	from aiida.common.example_helpers import test_and_get_code
+	from aiida.orm.data.base import List
+	from aiida.orm import Code
+	from aiida.orm import DataFactory
+	import pymatgen
+	from aiida.work.run import submit
+	from aiida_yambo.calculations.gw import YamboCalculation
+	from aiida_quantumespresso.calculations.pw import PwCalculation
+	from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
+
+	 
+	ParameterData = DataFactory('parameter')
+	    
+	parameters = ParameterData(dict={'ppa': True,
+		                         'gw0': True,
+		                         'HF_and_locXC': True,
+		                         'em1d': True,
+		                         'Chimod':'hartree',
+		                         'FFTGvecs': 50,
+		                         'FFTGvecs_units': 'Ry',
+		                         'BndsRnXp': (1,50),
+		                         'NGsBlkXp': 2,
+		                         'NGsBlkXp_units': 'Ry',
+		                         'GbndRnge': (1,50),
+		                         'DysSolver': "n",
+		                         'QPkrange': [(1,1,9,10)],
+		                         'X_all_q_CPU': "1 1 1 1",
+		                         'X_all_q_ROLEs': "q k c v",
+		                         'SE_CPU': "1 1 1",
+		                         'SE_ROLEs': "q qp b",
+		                        })
+
+	inputs = {}
+	inputs['parameters'] = parameters
+	inputs['_options'] = {'max_wallclock_seconds':30*60, 
+		              'resources':{
+		                          "num_machines": 1,
+		                          "num_mpiprocs_per_machine":1,
+		                          },
+		                       'custom_scheduler_commands': u"***"}
+		                          
+		                          
+
+	if __name__ == "__main__":
+	    import argparse
+	    parser = argparse.ArgumentParser(description='YAMBO calculation.')
+	    parser.add_argument('--code', type=str, dest='codename', required=True,
+		                help='The pw codename to use')
+	    parser.add_argument('--parent', type=int, dest='parent', required=True,
+		                help='The parent  to use')
+	    args = parser.parse_args()
+	    code = Code.get_from_string(args.codename)
+	    inputs['code'] = code
+	    inputs['parent_folder'] = load_node(args.parent).out.remote_folder
+	    process = YamboCalculation.process()
+	    running = submit(process, **inputs)
+	    print "Created calculation; with pid={}".format(running.pid)
+
+The quasiparticle corrections and the renormalization factors can be accessed from the Yambo calculation (yambo_calc) using the output bands and array data:
+
+::
+        yambo_calc = load_node(pk)
+	energies_DFT = yambo_calc.out.array_qp.get_array('E_0')
+	QP_corrections =  yambo_calc.out.array_qp.get_array('E_minus_Eo')
+	Z_factors =  yambo_calc.out.array_qp.get_array('Z')
+        kpoint_band_array = yambo_calc.out.array_qp.get_array('qp_table')
+        kpoints = y.out.bands_quasiparticle.get_kpoints()
+
+
+
+
+
+NSCF step (Quantum ESPRESSO) for IP-RPA spectrum
+------------------------------------------------
+Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the IP-RPA calculation. 
+
+::
+
+	#!/usr/bin/env runaiida
+	# -*- coding: utf-8 -*-
+	import sys
+	import os
+	from aiida.orm import DataFactory, CalculationFactory
+	from aiida.common.example_helpers import test_and_get_code
+	from aiida.orm.data.base import List
+	from aiida.orm import Code
+	from aiida.orm import DataFactory
+	import pymatgen
+	from aiida.work.run import submit
+	from aiida_yambo.calculations.gw import YamboCalculation
+	from aiida_quantumespresso.calculations.pw import PwCalculation
+	from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
+
+	 
+	ParameterData = DataFactory('parameter')
+	    
+	parameters = ParameterData(dict={
+		      'CONTROL': {
+		          'calculation': 'nscf',
+		          'restart_mode': 'from_scratch',
+		          'wf_collect': True,
+		          'verbosity' :'high',
+		          },
+		      'SYSTEM': {
+		          'ecutwfc': 80.,
+		          'nbnd':20,
+		          'force_symmorphic':True,
+		          },
+		      'ELECTRONS': {
+		          'conv_thr': 1.e-10,
+		          'diago_full_acc': True,
+		          'diagonalization':'cg',
+		          }})
+
+	KpointsData = DataFactory('array.kpoints')
+	kpoints = KpointsData() 
+	kpoints.set_kpoints_mesh([16,16,16])
+	    
+	inputs = {}
+	inputs['kpoints'] = kpoints
+	inputs['parameters'] = parameters
+	inputs['_options'] = {'max_wallclock_seconds':30*60, 
+		              'resources':{
+		                          "num_machines": 1,
+		                          "num_mpiprocs_per_machine":64,
+		                           },
+		                       'custom_scheduler_commands': u"#SBATCH --account=Pra15_3963 \n" + 
+		                       "#SBATCH --partition=knl_usr_dbg \n" +
+		                       "#SBATCH --mem=86000 \n" +         "\n"+"\nexport OMP_NUM_THREADS=1\nexport MKL_NUM_THREADS=1"}
+		                          
+	num_pools = 8
+	inputs['settings'] = ParameterData(dict={'cmdline':['-nk',str(num_pools)]})
+
+	if __name__ == "__main__":
+	    import argparse
+	    parser = argparse.ArgumentParser(description='NSCF calculation.')
+	    parser.add_argument('--code', type=str, dest='codename', required=True,
+		                help='The pw codename to use')
+	    parser.add_argument('--pseudo', type=str, dest='pseudo', required=True,
+		                help='The pseudo family to use')
+	    parser.add_argument('--parent', type=int, dest='parent', required=True,
+		                help='The parent  to use')
+	    args = parser.parse_args()
+	    code = Code.get_from_string(args.codename)
+	    structure = load_node(args.parent).inp.structure
+	    inputs['structure'] = structure
+	    inputs['pseudo'] = get_pseudos_from_structure(structure, args.pseudo )
+	    inputs['code'] = code
+	    inputs['parent_folder'] = load_node(args.parent).out.remote_folder
+	    process = PwCalculation.process()
+	    running = submit(process, **inputs)
+	    print "Created calculation; with pid={}".format(running.pid)
 
 Absorption spectrum IP-RPA (Yambo)
 ----------------------------------
 
+We compute the IP-RPA spectrum using Yambo. In order to include local fields effect you can replace 'Chimod': "IP" with 'Chimod': "Hartree" and add a value for 'NGsBlkXd'. 
 
-
-
-
-
-
-
-
-
-
-
-
-Yambo Run
----------
-Yambo requires preprocessing PWscf output before it can be run, and this is done using the
-``p2y`` executable. This will be done normally before ``yambo setup`` and the ``yambo`` 
-calculation. To configure AiiDA to do these steps, use the Yambo plugin as follows:
 
 ::
 
-    codename = 'yambo_codename@machine'
-    precodename = 'p2y_codename@machine'
-    code = Code.get_from_string(codename)
-    pre_code = Code.get_from_string(precodename)
-    calc = code.new_calc()
-    calc.use_preprocessing_code(pre_code)
+	#!/usr/bin/env runaiida
+	# -*- coding: utf-8 -*-
+	import sys
+	import os
+	from aiida.orm import DataFactory, CalculationFactory
+	from aiida.common.example_helpers import test_and_get_code
+	from aiida.orm.data.base import List
+	from aiida.orm import Code
+	from aiida.orm import DataFactory
+	import pymatgen
+	from aiida.work.run import submit
+	from aiida_yambo.calculations.gw import YamboCalculation
+	from aiida_quantumespresso.calculations.pw import PwCalculation
+	from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
 
-This configures AiiDA to run the  ``p2y`` binary first, as well as the initialization step of yambo.
+	 
+	ParameterData = DataFactory('parameter')
+	    
+	parameters = ParameterData(dict={
+		             'optics': True,
+		             'chi': True,
+		             'Chimod': "IP",
+		             'QpntsRXd': (1.,1.),
+		             'BndsrnXd': (1.,20.),
+                             'FFTGvecs': 50,
+                             'FFTGvecs_units': 'Ry',
+		            # 'NGsBlkXd': 1,              #For Hartree
+		            # 'NGsBlkXd_units': 'RL',      
+		             'EnRngeXd': (0.00,10.),
+		             'EnRngeXd_units': 'eV',
+		             'DmRngeXd': (0.15,0.3),
+		             'DmRngeXd_units': 'eV',
+		             'ETStpsXd': 1000,
+		             'LongDrXd': (1.,0.0,0.0),
+		             'X_all_q_CPU': "1 1 1 1",
+		             'X_all_q_ROLEs': "q k c v",
+		            })
 
-After AiiDA has performed the required precursor steps, we need to run ``yambo`` with the correct
-parameters to perform  a G0W0  calculation 
+	inputs = {}
+	inputs['parameters'] = parameters
+	inputs['_options'] = {'max_wallclock_seconds':30*60,
+		              'resources':{
+		                          "num_machines": 1,
+		                          "num_mpiprocs_per_machine":1,
+		                          },
+		                     'custom_scheduler_commands': u"***" }   
+	if __name__ == "__main__":
+	    import argparse
+	    parser = argparse.ArgumentParser(description='YAMBO calculation.')
+	    parser.add_argument('--code', type=str, dest='codename', required=True,
+		                help='The pw codename to use')
+	    parser.add_argument('--parent', type=int, dest='parent', required=True,
+		                help='The parent  to use')
+	    args = parser.parse_args()
+	    code = Code.get_from_string(args.codename)
+	    inputs['code'] = code
+	    inputs['parent_folder'] = load_node(args.parent).out.remote_folder
+	    process = YamboCalculation.process()
+	    running = submit(process, **inputs)
+	    print "Created calculation; with pid={}".format(running.pid)
 
-Parameters
-----------
-The parameters passed to ``yambo`` are provided as a  python dictionary, wrapped by the AiiDA 
-ParameterData data structure. Yambo input options that can accept multi-line parameters use 
-a list of python tuples, those that take integers and strings are setup as python strings and
-integers: 
+
+The real and imaginary part of the dielectric function can be accessed from the Yambo calculation (yambo_calc) using the output array:
 
 ::
+        yambo_calc = load_node(pk)
+	energies = yambo_calc.out.array_eps.get_array('E_ev')
+	eps_re =  yambo_calc.out.array_eps.get_array('EPS_Re')
+	eps_im =  yambo_calc.out.array_eps.get_array('EPS_Im')
 
-    parameters = ParameterData(dict={'ppa': True,
-                                 'gw0': True,
-                                 'rim_cut': True,
-                                 'HF_and_locXC': True,
-                                 'em1d': True,
-                                 'X_all_q_CPU': "1 2 8 2",
-                                 'X_all_q_ROLEs': "q k c v",
-                                 'X_all_q_nCPU_invert':0,
-                                 'X_Threads':  1 ,
-                                 'DIP_Threads': 1 ,
-                                 'SE_CPU': "1 4 8",
-                                 'SE_ROLEs': "q qp b",
-                                 'SE_Threads':  1,
-                                 'RandQpts': 0,
-                                 'RandGvec': 1,
-                                 'RandGvec_units': 'RL',
-                                 'CUTGeo': "none",
-                                 'CUTBox': (0.0,0.0,0.0),
-                                 'CUTRadius': 0.0,
-                                 'CUTCylLen': 0.0,
-                                 'EXXRLvcs': 170943,
-                                 'EXXRLvcs_units': 'RL',
-                                 'BndsRnXp': (1,50),
-                                 'NGsBlkXp': 3,
-                                 'NGsBlkXp_units': 'Ry',
-                                 'LongDrXp': (1,0,0),
-                                 'PPAPntXp': 20,
-                                 'PPAPntXp_units': 'eV',
-                                 'GbndRnge': (1,50),
-                                 'GDamping': 0.1,
-                                 'GDamping_units': 'eV',
-                                 'dScStep': 0.1,
-                                 'dScStep_units': 'eV',
-                                 'GTermKind': "none",
-                                 'DysSolver': "n",
-                                  "Chimod": "",
-                                 'QPkrange': [(1,1,5,6),(16,16,5,6)],
-                                 }
-                           )
-    calc.use_parameters(parameters)
+the spectrum can be directly be plotted with matplotlib:
 
-For the results to be retrieved and parsed, this plugin accepts a list of
-files to retreive in a settings dictionary:
+:: 
+
+	import matplotlib.pyplot as plt
+        plt.plot(energies,eps_im)
+        plt.show()
+
+
+
+To retrieve additional files:
 
 ::
 
@@ -240,112 +492,10 @@ files to retreive in a settings dictionary:
                         'aiida/ndb.QP','aiida/ndb.HF_and_locXC']})
     calc.use_settings(settings)
 
-This selects the files that will  be retreived and parsed after a calculation. Supported
+This selects theadditional files that will  be retreived and parsed after a calculation. Supported
 files include the report files ``r-*``, text outputs ``o-*``, logs, the quasiparticle 
 database for GW calculations ``aiida/ndb.QP``, and the Hartree Fock and local exchange
 db ``aiida/ndb.HF_and_locXC``. 
 
-To ensure that the ``yambo`` calculation is run in the output folder from the preceeding
-PWscf ``nscf`` calculation, we need to provide it to the Yambo plugin as follows:
-
-::
-
-    parentcalc = QepwCalc.get_subclass_from_pk(225) #  == nscf calc
-    calc.use_parent_calculation(parentcalc)
-    calc.use_preprocessing_code(pre_code)
-
-Replacing the ``pk`` with that of your ``nscf`` calculation. With this done, we can store the
-calculation and run it.
-
-::
-
-    calc.store_all()
-    print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
-    calc.submit()
 
 
-
-Complete Yambo input example:
-------------------------------
-Here is the complete script for the ``yambo``  calculation described above:
-
-::
-
-    from aiida import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
-    
-    UpfData = DataFactory('upf')
-    ParameterData = DataFactory('parameter')
-    StructureData = DataFactory('structure')
-    RemoteData = DataFactory('remote')
-    KpointsData = DataFactory('array.kpoints')
-    QepwCalc = CalculationFactory('quantumespresso.pw')
-    YamboCalc = CalculationFactory('yambo.yambo')
-    
-    codename = 'yambo_marconi@marconi'
-    precodename = 'p2y_marconi@marconi'
-    code = Code.get_from_string(codename)
-    pre_code = Code.get_from_string(precodename)
-    
-    ######
-    parameters = ParameterData(dict={'ppa': True,
-                                     'gw0': True,
-                                     'rim_cut': True,
-                                     'HF_and_locXC': True,
-                                     'em1d': True,
-                                     'X_all_q_CPU': "1 2 8 2",
-                                     'X_all_q_ROLEs': "q k c v",
-                                     'X_all_q_nCPU_invert':0,
-                                     'X_Threads':  1 ,
-                                     'DIP_Threads': 1 ,
-                                     'SE_CPU': "1 4 8",
-                                     'SE_ROLEs': "q qp b",
-                                     'SE_Threads':  1,
-                                     'RandQpts': 0,
-                                     'RandGvec': 1,
-                                     'RandGvec_units': 'RL',
-                                     'CUTGeo': "none",
-                                     'CUTBox': (0.0,0.0,0.0),
-                                     'CUTRadius': 0.0,
-                                     'CUTCylLen': 0.0,
-                                     'EXXRLvcs': 170943,
-                                     'EXXRLvcs_units': 'RL',
-                                     'BndsRnXp': (1,50),
-                                     'NGsBlkXp': 3,
-                                     'NGsBlkXp_units': 'Ry',
-                                     'LongDrXp': (1,0,0),
-                                     'PPAPntXp': 20,
-                                     'PPAPntXp_units': 'eV',
-                                     'GbndRnge': (1,50),
-                                     'GDamping': 0.1,
-                                     'GDamping_units': 'eV',
-                                     'dScStep': 0.1,
-                                     'dScStep_units': 'eV',
-                                     'GTermKind': "none",
-                                     'DysSolver': "n",
-                                      "Chimod": "",
-                                     'QPkrange': [(1,1,5,6),(16,16,5,6)],
-                                     }
-                               )
-    precode_parameters = ParameterData(dict={})
-    settings = ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":['r-*','o-*','LOG/l-*01']})
-    calc = code.new_calc()
-    calc.set_max_wallclock_seconds(240*60) # 4 hr
-    calc.set_max_memory_kb(1*128*1000000) # 128 GB 
-    calc.set_resources({"num_machines": 8,"num_mpiprocs_per_machine":16,"num_cores_per_machine":32 })
-    calc.set_custom_scheduler_commands("#PBS -A  Pra12_3100_0")
-    
-    parentcalc = QepwCalc.get_subclass_from_pk(225) # 23 == nscf calc
-
-    calc.use_parent_calculation(parentcalc)
-    calc.use_preprocessing_code(pre_code)
-    calc.use_precode_parameters(precode_parameters)
-    calc.use_parameters(parameters)
-    calc.use_settings(settings)
-    
-    calc.label = "Yambo GW test"
-    calc.description = "Yambo first testrun calculation "
-    calc.store_all()
-    print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
-    calc.submit()

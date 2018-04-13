@@ -31,4 +31,11 @@ Plugin tutorial
 
    tutorial
 
+Plugin features
+^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 4
+
+   features
+
 
