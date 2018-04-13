@@ -43,15 +43,38 @@ class YamboConvergenceWorkflow(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        """
-        convergence_parameters = {'variable_to_converge':'bands' or 'W_cutoff' or 'kpoints' or 'FFT_cutoff',
-                                    'start_value': 10,
-                                    'step': 5,
-                                    'max_value':100,
-                                    'conv_tol': 0.1,
-                                    'conv_window': 3 (optional),
-                                    'loop_length': 4 (optional),
-                                    }
+        """Yambo 1-D convergence workflow, accepts the following parameters
+
+        precode -- the yambo  P2Y converter, 
+        pwcode --  the PW code
+        yambocode -- Yambo code
+        pseudo --  pseudopotential family name
+        calculation_set_pw -- the scheduler settings {'resources':{...}} for the PW SCF step
+        calculation_set_pw_nscf -- the scheduler settings {'resources':{...}}  for the PW NSCF step
+        calculation_set_p2y -- the scheduler settings {'resources':{...}} for the P2Y conversion step
+        calculation_set -- the scheduler settings {'resources':{...}}  for the Yambo calculation
+        parent_scf_folder -- Parent SCF calculation, (Optional)
+        settings_p2y --  plugin settings for P2Y code
+        settings   -- plugin settings for Yambo code i.e. `{ "ADDITIONAL_RETRIEVE_LIST":[], 'INITIALISE':True}`
+        settings_pw --  plugin settings for PW SCF step
+        settings_pw_nscf --  plugin settings for PW NSCF step
+        structure -- The Structure data
+        parent_nscf_folder -- Parent NSCF calculation (Optional), 
+        parameters_p2y -- input parameters for P2Y,
+        parameters -- input parameters for Yambo
+        parameters_pw -- input parameters for  PW SCF
+        parameters_pw_nscf -- input parameters for PW NSCF 
+        convergence_parameters -- the parameter to converge using 1-D line search, i.e
+        {'variable_to_converge':'bands' or 'W_cutoff' or 'kpoints' or 'FFT_cutoff',
+        'start_value': 10,
+        'step': 5,
+        'max_value':100,
+        'conv_tol': 0.1,
+        'conv_window': 3 (optional),
+        'loop_length': 4 (optional),
+        }
+        restart_options_pw --  PW specific restart options i.e. `{"max_restarts":4}`
+        restart_options_gw --  GW specific restart options i.e. `{"max_restarts":4}`
         """
         super(YamboConvergenceWorkflow, cls).define(spec)
         spec.input("precode", valid_type=BaseType)
@@ -517,9 +540,9 @@ class YamboConvergenceWorkflow(WorkChain):
         # Filter rows with bands  nocc and nocc+1 
         vbm=int(nelec/2)
         cbm = vbm+1
-        table = np.append(table, corrected[:,None], axis=1)
+        table = np.append(table, corrected[:,None], axis=1) # appending the correction to the table as the last column
         if spinp:
-            table = table[ table[:,-1]==1.000]   # we look at the majority spin only
+            table = table[ table[:,-2]==1.000]   # we look at the majority spin only, spin is at -2 since we appended the corrected column
         vbm_cbm = table[ ( table[:,1]>=vbm ) & ( table[:,1] <=cbm) ]
         # find the max vbm from all vbm rows,  same for cbm, subtract, and get their associated kpt, band info
         vbm_only = vbm_cbm[vbm_cbm[:,1]==vbm]

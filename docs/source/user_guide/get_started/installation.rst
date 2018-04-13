@@ -20,7 +20,7 @@ or downloaded from github
 
 
 Setup Yambo on AiiDA
-----------------
+---------------------
 
 In order to set up a Yambo executable as an AiiDA code, use the name ``yambo.yambo`` as the plugin name
 

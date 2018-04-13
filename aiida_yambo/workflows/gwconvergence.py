@@ -49,7 +49,29 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        """
+        """Input definitions
+
+        precode -- The P2Y converted code, 
+        pwcode -- the PW code
+        yambocode -- the Yambo code
+        pseudo -- the pseudopotential family
+        threshold -- convergence threshold criteria, default is 0.1 (Gaps converged to 0.1 eV)
+        parent_scf_folder -- PW SCF remote data
+        parent_nscf_folder -- PW SCF remote data
+        structure --  Structure data.
+        calculation_set -- the scheduler settings for Yambo.
+        calculation_set_pw" -- the scheduler settings for PW.
+        calculation_set_pw_nscf -- the scheduler settings NSCF.
+        parameters -- input parameters for Yambo.
+        parameters_pw -- input parameters for PW SCF.
+        parameters_pw_nscf -- input parameters for PW NSCF.
+        convergence_settings -- the start and end values for the variables to converge such as start and max FFT value, Bands, or kpoints.
+        restart_options_pw -- Settings controlling the restart behaviour of the PW subworkflows.
+        restart_options_gw -- Settings controlling the restart behaviour of GW subworkflows
+        settings --   plugin settings for Yambo code
+        settings_p2y --  plugin settings for P2Y code
+        settings_pw --  plugin settings for PW code
+        settings_pw_nscf --  plugin settings for PW code
         """
         super(YamboFullConvergenceWorkflow, cls).define(spec)
 
@@ -59,6 +81,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         spec.input("pseudo", valid_type=BaseType)
         spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
+        spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("calculation_set", valid_type=ParameterData)
         spec.input("calculation_set_pw", valid_type=ParameterData,required=False)

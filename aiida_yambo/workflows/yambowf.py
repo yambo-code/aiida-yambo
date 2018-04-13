@@ -39,14 +39,18 @@ class YamboWorkflow(WorkChain):
         """Workfunction definition
 
         Keyword arguments:
+        restart_options_pw -- PW specific restart options (required)
+        restart_options_gw -- GW spefific restart options (required)
         codename_pw -- PW code name (required)
         codename_p2y -- P2Y code name (required)
         codename_yambo -- Yambo code name (required)
         pseudo_family -- pseudo name (required)
         calculation_set_pw -- scheduler settings {'resources':{...}}  for PW calculation (required)
+        calculation_set_pw_nscf -- PW NSCF specific scheduler settings {'resources':{...}}  for PW calculation (required)
         calculation_set_p2y -- scheduler settings {'resources':{...}} for P2Y conversion (required)
         calculation_set_yambo -- scheduler settings {'resources':{...}} for Yambo calculation (required)
         settings_pw -- plugin settings for PW  (required)
+        settings_pw_nscf -- PW NSCF specific  plugin settings  (required)
         settings_p2y -- settings for P2Y { "ADDITIONAL_RETRIEVE_LIST":[], 'INITIALISE':True}  (optional)
         settings_yambo -- settings for yambo { "ADDITIONAL_RETRIEVE_LIST":[] } (optional)
         structure -- Structure (required)
