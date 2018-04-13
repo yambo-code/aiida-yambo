@@ -43,15 +43,38 @@ class YamboConvergenceWorkflow(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        """
-        convergence_parameters = {'variable_to_converge':'bands' or 'W_cutoff' or 'kpoints' or 'FFT_cutoff',
-                                    'start_value': 10,
-                                    'step': 5,
-                                    'max_value':100,
-                                    'conv_tol': 0.1,
-                                    'conv_window': 3 (optional),
-                                    'loop_length': 4 (optional),
-                                    }
+        """Yambo 1-D convergence workflow, accepts the following parameters
+
+        precode -- the yambo  P2Y converter, 
+        pwcode --  the PW code
+        yambocode -- Yambo code
+        pseudo --  pseudopotential family name
+        calculation_set_pw -- the scheduler settings {'resources':{...}} for the PW SCF step
+        calculation_set_pw_nscf -- the scheduler settings {'resources':{...}}  for the PW NSCF step
+        calculation_set_p2y -- the scheduler settings {'resources':{...}} for the P2Y conversion step
+        calculation_set -- the scheduler settings {'resources':{...}}  for the Yambo calculation
+        parent_scf_folder -- Parent SCF calculation, (Optional)
+        settings_p2y --  plugin settings for P2Y code
+        settings   -- plugin settings for Yambo code i.e. `{ "ADDITIONAL_RETRIEVE_LIST":[], 'INITIALISE':True}`
+        settings_pw --  plugin settings for PW SCF step
+        settings_pw_nscf --  plugin settings for PW NSCF step
+        structure -- The Structure data
+        parent_nscf_folder -- Parent NSCF calculation (Optional), 
+        parameters_p2y -- input parameters for P2Y,
+        parameters -- input parameters for Yambo
+        parameters_pw -- input parameters for  PW SCF
+        parameters_pw_nscf -- input parameters for PW NSCF 
+        convergence_parameters -- the parameter to converge using 1-D line search, i.e
+        {'variable_to_converge':'bands' or 'W_cutoff' or 'kpoints' or 'FFT_cutoff',
+        'start_value': 10,
+        'step': 5,
+        'max_value':100,
+        'conv_tol': 0.1,
+        'conv_window': 3 (optional),
+        'loop_length': 4 (optional),
+        }
+        restart_options_pw --  PW specific restart options i.e. `{"max_restarts":4}`
+        restart_options_gw --  GW specific restart options i.e. `{"max_restarts":4}`
         """
         super(YamboConvergenceWorkflow, cls).define(spec)
         spec.input("precode", valid_type=BaseType)
@@ -59,11 +82,14 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("yambocode", valid_type=BaseType)
         spec.input("pseudo", valid_type=BaseType,required=True)
         spec.input("calculation_set_pw", valid_type=ParameterData, required=False)
+        spec.input("calculation_set_pw_nscf", valid_type=ParameterData, required=False)
         spec.input("calculation_set_p2y", valid_type=ParameterData,required=False)
         spec.input("calculation_set", valid_type=ParameterData )
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("settings_p2y", valid_type=ParameterData, required=False, default = p2y_default_settings())
         spec.input("settings", valid_type=ParameterData, required=False, default = yambo_default_settings())
+        spec.input("settings_pw", valid_type=ParameterData, required=False )
+        spec.input("settings_pw_nscf", valid_type=ParameterData, required=False )
         spec.input("structure", valid_type=StructureData,required=False)
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
         spec.input("parameters_p2y", valid_type=ParameterData, required=False, default=set_default_qp_param()  )
@@ -71,6 +97,8 @@ class YamboConvergenceWorkflow(WorkChain):
         spec.input("parameters_pw", valid_type=ParameterData, required=False  )
         spec.input("parameters_pw_nscf", valid_type=ParameterData, required=False  )
         spec.input("convergence_parameters", valid_type=ParameterData, required=True)
+        spec.input("restart_options_pw", valid_type=ParameterData, required=False)
+        spec.input("restart_options_gw", valid_type=ParameterData, required=False)
 
         spec.outline(
           cls.start,
@@ -273,6 +301,19 @@ class YamboConvergenceWorkflow(WorkChain):
             self.ctx.very_first = False
         self.report('will run four calculations in parallel' )
         outs={}
+        # Extras: restart_options_pw, restart_options_gw, calculation_set_pw_nscf, settings_pw_nscf, kpoint_pw_nscf, kpoint_pw, 
+        extra_rs={}
+        extra_wf={}
+        if 'calculation_set_pw_nscf' in self.inputs.keys():
+            extra_wf['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
+        if 'settings_pw_nscf' in self.inputs.keys():
+            extra_wf['settings_pw_nscf'] = self.inputs.settings_pw_nscf
+        if 'restart_options_pw' in self.inputs.keys():
+            extra_wf['restart_options_pw'] = self.inputs.restart_options_pw
+        if 'restart_options_gw' in self.inputs.keys():
+            extra_wf['restart_options_gw'] = self.inputs.restart_options_gw
+            extra_rs['restart_options'] = self.inputs.restart_options_gw
+
         if 'kpoints'!=self.ctx.variable_to_converge:
             self.report("this is not a K-point convergence ")
             for num in loop_items: # includes 0 because of starting point
@@ -300,7 +341,7 @@ class YamboConvergenceWorkflow(WorkChain):
                                 yambocode=self.inputs.yambocode,
                                 parameters = self.inputs.parameters_p2y,
                                 calculation_set= self.ctx.calculation_set_p2y,
-                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y) 
+                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y, **extra_rs) 
                     self.ctx.skip_prescf = True
                     #self.ctx.iteration-=1  
                     self.ctx.very_first = True  #  There was a bug  because of this.
@@ -311,7 +352,7 @@ class YamboConvergenceWorkflow(WorkChain):
                             yambocode=self.inputs.yambocode,
                             parameters = self.ctx.parameters,
                             calculation_set= self.inputs.calculation_set,
-                            parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings)
+                            parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings,**extra_rs)
                 outs[ 'r'+str(num) ] =  future
             self.ctx.iteration = self.ctx.iteration + 1
             return ToContext(**outs )
@@ -337,24 +378,23 @@ class YamboConvergenceWorkflow(WorkChain):
                     else:
                         break
                 mesh =  kpoints.get_kpoints_mesh() 
-                extra = {}
                 if 'parent_scf_folder' in self.inputs.keys():
-                   extra['parent_folder'] = self.inputs.parent_scf_folder
+                   extra_wf['parent_folder'] = self.inputs.parent_scf_folder
                 if 'QPkrange' not in self.ctx.parameters.get_dict().keys():
-                   extra['to_set_qpkrange'] = Bool(1)
+                   extra_wf['to_set_qpkrange'] = Bool(1)
                 if 'BndsRnXp' not in self.ctx.parameters.get_dict().keys() or 'GbndRnge' not in self.ctx.parameters.get_dict().keys() :
-                   extra['to_set_bands'] = Bool(1)
-                extra['calculation_set_p2y'] = self.ctx.calculation_set_p2y
-                extra['calculation_set_pw'] = self.inputs.calculation_set_pw
-                extra['settings_p2y'] = self.inputs.settings_p2y
-                extra['settings_pw'] = self.ctx.settings_pw
+                   extra_wf['to_set_bands'] = Bool(1)
+                extra_wf['calculation_set_p2y'] = self.ctx.calculation_set_p2y
+                extra_wf['calculation_set_pw'] = self.inputs.calculation_set_pw
+                extra_wf['settings_p2y'] = self.inputs.settings_p2y
+                extra_wf['settings_pw'] = self.ctx.settings_pw
                 future =  submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
                    codename_yambo= self.inputs.yambocode, pseudo_family= self.inputs.pseudo,
                    calculation_set_yambo = self.inputs.calculation_set,
                    settings_yambo=self.inputs.settings , structure = self.inputs.structure,
                    kpoint_pw = kpoints, parameters_pw= self.ctx.parameters_pw, parameters_pw_nscf= self.ctx.parameters_pw_nscf,
                    parameters_p2y= self.inputs.parameters_p2y, parameters_yambo=  self.ctx.parameters,
-                   **extra)
+                   **extra_wf)
                 outs[ 'r'+str(num) ] = future
                 self.ctx.conv_elem['kpoints'].append(self.ctx.distance_kpoints)
             self.ctx.iteration = self.ctx.iteration + 1
@@ -467,44 +507,59 @@ class YamboConvergenceWorkflow(WorkChain):
         """
         calc = load_node(node_id)
         table=calc.out.array_qp.get_array('qp_table')
-        try:
-            qprange = calc.inp.parameters.get_dict()['QPkrange']
-        except KeyError: 
-            parent_calc =  calc.inp.parent_calc_folder.inp.remote_folder
-            if isinstance(parent_calc, YamboCalculation):
-                has_found_nelec = False
-                while (not has_found_nelec):
-                    try:
-                        nelec = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
-                        has_found_nelec = True
-                    except AttributeError:
-                        parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
-                    except KeyError:
-                        parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
-            elif isinstance(parent_calc, PwCalculation):
-                nelec  = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
-            qprange =  [ ( 1, 1 , int(nelec/2) , int(nelec/2)+1 ) ]
-        lowest_k = qprange[0][0] # first kpoint listed, 
-        lowest_b = qprange[0][-2] # first band on first kpoint listed,
-        highest_b= qprange[0][-1]  # last band on first kpoint listed,
-        argwlk = np.argwhere(table[:,0]==float(lowest_k))  # indexes for lowest kpoint
-        argwlb = np.argwhere(table[:,1]==float(lowest_b))  # indexes for lowest band
-        argwhb = np.argwhere(table[:,1]==float(highest_b)) # indexes for highest band
-        if len(argwlk)< 1:
-            argwlk = np.array([0])
-        if len(argwhb) < 1:
-            argwhb = np.argwhere(table[:,1]== table[:,1][np.argmax(table[:,1])])
-            argwlb = np.argwhere(table[:,1]== table[:,1][np.argmax(table[:,1])]-1 )
-        arglb = np.intersect1d(argwlk,argwlb)              # index for lowest kpoints' lowest band
-        arghb = np.intersect1d(argwlk,argwhb)              # index for lowest kpoint's highest band
-        e_m_eo = calc.out.array_qp.get_array('E_minus_Eo') 
+        parent_calc =  calc.inp.parent_calc_folder.inp.remote_folder
+        e_m_eo = calc.out.array_qp.get_array('E_minus_Eo')
         eo = calc.out.array_qp.get_array('Eo')
         corrected = eo+e_m_eo
-        corrected_lb = corrected[arglb]
-        corrected_hb = corrected[arghb]
-        self.report(" corrected gap(s) {}  at K-point {}, between bands {} and {} for calc {}".format(
-                    corrected_hb- corrected_lb, lowest_k, lowest_b, highest_b , node_id))
-        return (corrected_hb- corrected_lb)[0]  # for spin polarized there will be two almost equivalent, else just one value.
+        spinp=False
+        nelec=None
+        if isinstance(parent_calc, YamboCalculation):
+            has_found_nelec = False
+            while (not has_found_nelec):
+                try:
+                    nelec = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
+                    nbands = parent_calc.out.output_parameters.get_dict()['number_of_bands']
+                    has_found_nelec = True
+                    if parent_calc.out.output_parameters.get_dict()['lsda']== True or\
+                        parent_calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True :
+                        spinp = True
+                    else:
+                        spinp = False
+                except AttributeError:
+                    parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+                except KeyError:
+                    parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+        elif isinstance(parent_calc, PwCalculation):
+            nelec  = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
+            nbands  = parent_calc.out.output_parameters.get_dict()['number_of_bands']
+            if parent_calc.out.output_parameters.get_dict()['lsda']== True or\
+                    parent_calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
+                spinp = True
+            else:
+                spinp =  False
+        # Filter rows with bands  nocc and nocc+1 
+        vbm=int(nelec/2)
+        cbm = vbm+1
+        table = np.append(table, corrected[:,None], axis=1) # appending the correction to the table as the last column
+        if spinp:
+            table = table[ table[:,-2]==1.000]   # we look at the majority spin only, spin is at -2 since we appended the corrected column
+        vbm_cbm = table[ ( table[:,1]>=vbm ) & ( table[:,1] <=cbm) ]
+        # find the max vbm from all vbm rows,  same for cbm, subtract, and get their associated kpt, band info
+        vbm_only = vbm_cbm[vbm_cbm[:,1]==vbm]
+        cbm_only = vbm_cbm[vbm_cbm[:,1]==cbm]
+        vbm_arg_max = np.argmax(vbm_only[:,-1])
+        cbm_arg_max = np.argmin(cbm_only[:,-1])
+        vbm_arg= np.argwhere(table[:,-1] == vbm_only[:,-1][vbm_arg_max])[0][0]
+        cbm_arg= np.argwhere(table[:,-1] == cbm_only[:,-1][cbm_arg_max])[0][0]
+        kpt_vbm = table[:,0][vbm_arg]
+        band_vbm= table[:,1][vbm_arg]
+        kpt_cbm = table[:,0][cbm_arg]
+        band_cbm = table[:,1][cbm_arg]
+        gap = table[:, -1][cbm_arg] - table[:, -1][vbm_arg]
+
+        self.report(" corrected gap(s) {}  at K-points {}, {}, between bands {} and {} for calc {}".format(
+                    gap, kpt_vbm ,kpt_cbm,  band_vbm, band_cbm , node_id))
+        return  gap  # for spin polarized there will be two almost equivalent, else just one value.
 
     def report_wf(self):
         """Output final quantities

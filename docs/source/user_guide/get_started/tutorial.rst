@@ -3,7 +3,7 @@
 .. _my-ref-to-yambo-tutorial:
 
 Yambo-AiiDA  Tutorial
-====================
+=====================
 
 .. toctree::
    :maxdepth: 2
@@ -14,7 +14,7 @@ There will be three separate jobs submited as AiiDA calculations, one for the PW
 and finally the actual `yambo` calculation. 
 
 SCF step (Quantum ESPRESSO)
------------------
+----------------------------
 
 Using the AiiDA PWscf plugin submit the following calculation and note its `pk` which will be required for subsequent steps.
 For details on how to use the PWscf plugin, please refer to the plugins documentation page. Remember to replace the codename
@@ -80,7 +80,7 @@ and Pseudo family with one configured in your AiiDA installation.
     calc.submit()
 
 NSCF step (Quantum ESPRESSO)
------------------
+----------------------------
 Using the ``pk`` of the preceeding ``scf`` calculation, run a ``nscf`` with PWscf, refer to the
 PWscf plugin for more information. Replace the ``pk`` in this example with the ``pk`` from your 
 ``scf`` calculation.
@@ -154,9 +154,6 @@ Absorption spectrum IP-RPA (Yambo)
 
 
 
-
-*********
----------
 
 
 
