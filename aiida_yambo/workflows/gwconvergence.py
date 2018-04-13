@@ -119,6 +119,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
         self.ctx.bands_n_cutoff_consistent = False
         if 'parent_scf_folder' not in  self.inputs.keys(): 
             self.inputs.parent_scf_folder = False
+        if 'parent_nscf_folder' not in  self.inputs.keys(): 
+            self.inputs.parent_nscf_folder = False
         if 'structure' not in self.inputs.keys():
             self.inputs.structure = False
         if 'calculation_set_pw' not in self.inputs.keys():
@@ -255,6 +257,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
+        if self.inputs.parent_nscf_folder:
+             extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
         if self.inputs.structure:
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_1':
@@ -316,6 +320,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
+        if self.inputs.parent_nscf_folder:
+             extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
         if self.inputs.structure:
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_3_1':
@@ -403,6 +409,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
+        if self.inputs.parent_nscf_folder:
+             extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
         if self.inputs.structure:
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_2':
@@ -474,6 +482,8 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
         if self.inputs.parent_scf_folder:
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
+        if self.inputs.parent_nscf_folder:
+             extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
         if self.inputs.structure:
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_1_1':
