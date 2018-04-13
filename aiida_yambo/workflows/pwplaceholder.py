@@ -12,7 +12,7 @@ from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType ,Bool
+    from aiida.orm.data.base import Float, Str, NumericType, BaseType ,Bool, Int
     from aiida.work.workchain import WorkChain, while_, Outputs
     from aiida.work.workchain import ToContext as ResultToContext
     from aiida.work.run import legacy_workflow
@@ -30,9 +30,7 @@ from aiida_yambo.calculations.gw  import YamboCalculation
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
-#PwCalculation = CalculationFactory('quantumespresso.pw')
 PwProcess = PwCalculation.process()
-#YamboCalculation = CalculationFactory('yambo.yambo')
 
 class PwRestartWf(WorkChain):
     """This class is a wrapper for the workflows provided by the aiida-quantumespresso plugin
@@ -45,14 +43,22 @@ class PwRestartWf(WorkChain):
 
     @classmethod
     def define(cls, spec):
-        """Workfunction definition"""
+        """Workfunction definition
+
+        Provides a thin wrapper around the aiida_quantumespresso PwBaseWorkChain, so yambo workflows
+        can be ignorant about the details of running a PW calculation.
+        """
         super(PwRestartWf, cls).define(spec)
         spec.input("codename", valid_type=BaseType)
+        spec.input("restart_options", valid_type=ParameterData, required=False)
         spec.input("pseudo_family", valid_type=Str)
         spec.input("calculation_set", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
+        spec.input("calculation_set_nscf", valid_type=ParameterData,required=False) # custom_scheduler_commands,  resources,...
         spec.input("settings", valid_type=ParameterData)
+        spec.input("settings_nscf", valid_type=ParameterData, required=False)
         spec.input("structure", valid_type=StructureData)
         spec.input("kpoints", valid_type=KpointsData)
+        spec.input("kpoints_nscf", valid_type=KpointsData,required=False)
         spec.input("gamma", valid_type=Bool, default=Bool(0), required=False)
         spec.input("parameters", valid_type=ParameterData)
         spec.input("parameters_nscf", valid_type=ParameterData ,required=False)
@@ -76,32 +82,50 @@ class PwRestartWf(WorkChain):
             if not isinstance(self.inputs.parent_folder, RemoteData):
                 raise InputValidationError("parent_calc_folder when defined must be of"
                                        " type RemoteData")
+        try:
+            restart_options = self.inputs.restart_options
+            try:
+                max_restarts = restart_options.get_dict()['max_restarts']
+            except KeyError:
+                max_restarts = 4
+        except AttributeError:
+            restart_options = None
+            max_restarts = 4
+        self.ctx.max_restarts = max_restarts
+
         parent_folder = None
         inputs={}
         if 'parent_folder' in self.inputs.keys():
-            parameters = self.inputs.parameters.get_dict()
+            parameters = self.inputs.parameters.get_dict() # Will be replaced by parameters_nscf if present and NSCF calc follows.
             parent_folder=self.inputs.parent_folder
             calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'scf' and  calc.get_state()== 'FINISHED':# next nscf 
+                if  'calculation_set_nscf' not in  self.inputs.keys():
+                     self.inputs.calculation_set_nscf = self.inputs.calculation_set
+                if  'settings_nscf' not in  self.inputs.keys():
+                     self.inputs.settings_nscf = self.inputs.settings
+                if  'kpoints_nscf' not in  self.inputs.keys():
+                     self.inputs.kpoints_nscf = self.inputs.kpoints
                 if  'parameters_nscf' in  self.inputs.keys():
-                    parameters = self.inputs.parameters_nscf.get_dict()
+                     parameters = self.inputs.parameters_nscf.get_dict()
                 if 'force_symmorphic' not in parameters['SYSTEM']:
                      parameters['SYSTEM']['force_symmorphic'] = True
                 if 'nbnd' not in parameters['SYSTEM']:
                      try:
-                         parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*20
+                         parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*10
                      except KeyError:
-                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*20) # 
+                         parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*10) # 
                 if 'ELECTRONS' not in parameters:
                    parameters['ELECTRONS'] = {}
-                parameters['ELECTRONS']['diagonalization'] = 'davidson'
-                parameters['ELECTRONS']['conv_thr'] = 0.000001
-                parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
+                   parameters['ELECTRONS']['diagonalization'] = 'davidson'
+                   parameters['ELECTRONS']['conv_thr'] = 0.000001
+                   parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
                 parameters['CONTROL']['calculation'] = 'nscf'
                 self.report("NSCF PARAMS {}".format(parameters))
-                parameters = ParameterData(dict=parameters)
+                self.inputs.parameters_nscf = ParameterData(dict=parameters)# Added to inputs to allow for RESTART from failed NSCF
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
-                        parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
+                           self.inputs.parameters_nscf, self.inputs.calculation_set_nscf, self.inputs.kpoints_nscf,
+                           self.inputs.gamma,self.inputs.settings_nscf, parent_folder)
                 self.ctx.scf_pk = calc.pk
                 self.report(" submitted NSCF {} ".format(calc.pk)) 
 
@@ -109,10 +133,17 @@ class PwRestartWf(WorkChain):
                 self.report("restarting failed   SCF  {} ".format(calc.pk))
                 inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
-                
+               
+            if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state() != 'FINISHED':#  starting from failed NSCF
+                self.report("restarting failed   NSCF  {} ".format(calc.pk))
+                inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
+                          self.inputs.parameters_nscf, self.inputs.calculation_set_nscf, self.inputs.kpoints_nscf,
+                          self.inputs.gamma,self.inputs.settings_nscf, parent_folder)
+ 
             if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf' and  calc.get_state()== 'FINISHED':# 
                 self.report(" workflow completed nscf successfully, exiting")
-                self.ctx.nscf_pk = calc.pk # NSCF is done, we should exit  
+                self.ctx.nscf_pk = calc.pk # NSCF is done, we should exit 
+                return 
         else:
            self.report("Running from SCF")
            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
@@ -139,7 +170,7 @@ class PwRestartWf(WorkChain):
 
         if self.ctx.success == True:
             return False
-        if self.ctx.restart > 4:
+        if self.ctx.restart > int(self.ctx.max_restarts):
             return False
         if len (self.ctx.pw_pks) < 1: 
             return True 
@@ -211,13 +242,19 @@ class PwRestartWf(WorkChain):
         if 'parameters_nscf' in self.inputs.keys():
             parameters = self.inputs.parameters_nscf.get_dict() 
         if scf == 'nscf':
+            if  'calculation_set_nscf' not in  self.inputs.keys():
+                 self.inputs.calculation_set_nscf = self.inputs.calculation_set
+            if  'settings_nscf' not in  self.inputs.keys():
+                 self.inputs.settings_nscf = self.inputs.settings
+            if  'kpoints_nscf' not in  self.inputs.keys():
+                 self.inputs.kpoints_nscf = self.inputs.kpoints
             if 'force_symmorphic' not in parameters['SYSTEM']:
                  parameters['SYSTEM']['force_symmorphic'] = True 
             if 'nbnd' not in parameters['SYSTEM']:
                  try:
-                     parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*20
+                     parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_electrons']*10
                  except KeyError:
-                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*20) # 
+                     parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*10) # 
             parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
         parameters['CONTROL']['calculation'] = scf
         if 'ELECTRONS' not in parameters:
@@ -225,16 +262,18 @@ class PwRestartWf(WorkChain):
         parameters['ELECTRONS']['diagonalization'] = 'davidson'
         parameters['ELECTRONS']['conv_thr'] = 0.000001
         self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
-        parameters = ParameterData(dict=parameters)  
-        inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
-                      parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
+        parameters = ParameterData(dict=parameters)
+        if scf == 'nscf':
+            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
+                          parameters, self.inputs.calculation_set_nscf, self.inputs.kpoints_nscf,self.inputs.gamma, self.inputs.settings_nscf, parent_folder )
+        else:
+            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
+                          parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
         future =  submit (PwBaseWorkChain, **inputs)
         self.ctx.pw_pks.append(future.pid)
         self.ctx.restart += 1
         self.report("submitted pw  subworkflow  {}".format(future.pid))
         return  ResultToContext(last_calc=future)
-
-
 
     def report_wf(self):
         """Output final quantities

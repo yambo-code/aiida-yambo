@@ -18,15 +18,15 @@ from aiida.common import aiidalogger
 from aiida.common.links import LinkType
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
-__copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.4.1"
-__authors__ = "Gianluca Prandini, Antimo Marrazzo, Michael Atambo and the AiiDA team."
+__authors__ = " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
+              " Antimo Marrazzo (antimo.marrazzo@epfl.ch)," \
+              " Michael Atambo (michaelontita.atambo@unimore.it)."
     
 class YamboCalculation(JobCalculation):
     """
-    Yambo code.
+    AiiDA plugin for the Yambo code.
     For more information, refer to http://www.yambo-code.org/
+    https://github.com/yambo-code/yambo-aiida and http://aiida-yambo.readthedocs.io/en/latest/
     """
 
     def _init_internal_params(self):
@@ -112,7 +112,6 @@ class YamboCalculation(JobCalculation):
         :param inputdict: a dictionary with the input nodes, as they would
                 be returned by get_inputdata_dict (with the Code(s)!)
         """
-#        from aiida.common.utils import get_unique_filename, get_suggestion
 
         local_copy_list = []
         remote_copy_list = []
@@ -154,18 +153,15 @@ class YamboCalculation(JobCalculation):
             raise InputValidationError("parent_calc_folder must be of"
                                        " type RemoteData")
         
-        ### !!!!!! ###
         main_code = inputdict.pop(self.get_linkname('code'),None)
         if main_code is None:
             raise InputValidationError("No input code found!")
-        
-        
+
         preproc_code =  inputdict.pop(self.get_linkname('preprocessing_code'),None)
         if preproc_code is not None:
             if not isinstance(preproc_code, Code):
                 raise InputValidationError("preprocessing_code, if specified,"
                                            "must be of type Code")
-        
         
         parent_calc = parent_calc_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
         yambo_parent = isinstance(parent_calc, YamboCalculation)
@@ -204,7 +200,7 @@ class YamboCalculation(JobCalculation):
         if input_cmdline is not None: 
             precode_params_list = precode_params_list + input_cmdline
         
-        # TODO: remotedata must be on the same computer 
+        # TODO: check that remote data must be on the same computer
 
         ##############################
         # END OF INITIAL INPUT CHECK #
@@ -244,18 +240,14 @@ class YamboCalculation(JobCalculation):
             
             input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
             
-            ## create an empty folder for the Yambo scratch
-            #tempfolder.get_subfolder(self._SCRATCH_FOLDER, create=True)
-            
+
             with open(input_filename,'w') as infile:
                 infile.write( self._LOGOSTRING)
                 
                 for k,v in boolean_dict.iteritems():
                     if v:
                         infile.write( "{}\n".format(k) )
-                
-    #         .format(key.lower(), value_string)   
-                
+
                 for this_dict in parameters_list:
                     key = this_dict['key']
                     value = this_dict['value']
@@ -388,12 +380,10 @@ class YamboCalculation(JobCalculation):
         
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.remote_symlink_list = []# remote_symlink_list
-        #calcinfo.stdout_name = None # self._OUTPUT_FILE_NAME
-        
+        calcinfo.remote_symlink_list = []  # remote_symlink_list
+
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []
-        #calcinfo.retrieve_list.append(self._OUTPUT_FILE_NAME)
         calcinfo.retrieve_list.append('r*')
         calcinfo.retrieve_list.append('l*')
         calcinfo.retrieve_list.append('o*')        
@@ -402,11 +392,7 @@ class YamboCalculation(JobCalculation):
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append( extra )
         
-#        # Empty command line by default
-#        cmdline_params = settings_dict.pop('CMDLINE', [])
-#        calcinfo.cmdline_params = (list(cmdline_params)
-#                                   + ["-F", self._INPUT_FILE_NAME, '-J', self._OUTPUT_FILE_NAME])
-        
+
         from aiida.common.datastructures import code_run_modes, CodeInfo
         
         # c1 = interface dft codes and yambo (ex. p2y or a2y)

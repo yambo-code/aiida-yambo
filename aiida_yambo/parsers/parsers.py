@@ -93,7 +93,6 @@ class YamboParser(Parser):
 
         This parser for this code ...
         """
-        print ("reached here ")
         from aiida.common.exceptions import InvalidOperation
         from aiida.common import aiidalogger
         

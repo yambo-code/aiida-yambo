@@ -57,8 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'yambo-aiida'
-copyright = u'2014-{}, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland. All rights reserved.'.format(time.localtime().tm_year)
-### TODO MODENA, 
+copyright = u'2015-{}, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and CNR NANO Modena, Italy. All rights reserved.'.format(time.localtime().tm_year)
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
