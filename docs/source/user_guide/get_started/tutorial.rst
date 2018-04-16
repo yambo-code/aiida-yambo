@@ -99,7 +99,7 @@ and pseudo-family with those configured in your AiiDA installation. NB: Yambo ca
 
 NSCF step (Quantum ESPRESSO) for G0W0
 -------------------------------------
-Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation. GW calculations often require several empty states and few k-points (at least in 3D), so we are going to use a different NSCF to compute the IP-RPA spectrum for whic more k-points and less empty bands are needed.
+Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation. GW calculations often require several empty states and few k-points (at least in 3D), so we are going to use a different NSCF to compute the IP-RPA spectrum for which more k-points and less empty bands are needed.
 
 
 ::
@@ -234,7 +234,7 @@ Now we use the Yambo plugin to run the p2y code, converting the Quantum ESPRESSO
 
 G0W0 (Yambo)
 ------------
-Now we are ready to run the a G0W0 calculations in the plasmon-pole approximation (PPA), in particular we compute the direct band gap at Gamma of GaAs.
+Now we are ready to run a G0W0 calculation in the plasmon-pole approximation (PPA), in particular we compute the direct band gap at Gamma of GaAs.
 
 ::
 
@@ -304,14 +304,13 @@ Now we are ready to run the a G0W0 calculations in the plasmon-pole approximatio
 The quasiparticle corrections and the renormalization factors can be accessed from the Yambo calculation (yambo_calc) using the output bands and array data:
 
 ::
-        yambo_calc = load_node(pk)
+
+	yambo_calc = load_node(pk)
 	energies_DFT = yambo_calc.out.array_qp.get_array('E_0')
 	QP_corrections =  yambo_calc.out.array_qp.get_array('E_minus_Eo')
 	Z_factors =  yambo_calc.out.array_qp.get_array('Z')
-        kpoint_band_array = yambo_calc.out.array_qp.get_array('qp_table')
-        kpoints = y.out.bands_quasiparticle.get_kpoints()
-
-
+	kpoint_band_array = yambo_calc.out.array_qp.get_array('qp_table')
+	kpoints = y.out.bands_quasiparticle.get_kpoints()
 
 
 
@@ -469,7 +468,8 @@ We compute the IP-RPA spectrum using Yambo. In order to include local fields eff
 The real and imaginary part of the dielectric function can be accessed from the Yambo calculation (yambo_calc) using the output array:
 
 ::
-        yambo_calc = load_node(pk)
+
+	yambo_calc = load_node(pk)
 	energies = yambo_calc.out.array_eps.get_array('E_ev')
 	eps_re =  yambo_calc.out.array_eps.get_array('EPS_Re')
 	eps_im =  yambo_calc.out.array_eps.get_array('EPS_Im')
@@ -479,9 +479,8 @@ the spectrum can be directly be plotted with matplotlib:
 :: 
 
 	import matplotlib.pyplot as plt
-        plt.plot(energies,eps_im)
-        plt.show()
-
+	plt.plot(energies,eps_im)
+	plt.show()
 
 
 To retrieve additional files:
