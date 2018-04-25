@@ -26,7 +26,7 @@ calculation_set_yambo ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machi
                   'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
                    "queue_name":"s3par8c",
                   'environment_variables': {"omp_num_threads": "0" }  }
-calculation_set_pw ={'resources':  {"num_machines": 2,"num_mpiprocs_per_machine":  16}, 'max_wallclock_seconds': 30*60*18,
+calculation_set_pw ={'resources':  {"num_machines": 1,"num_mpiprocs_per_machine":  16}, 'max_wallclock_seconds': 60*60*12,
                   'max_memory_kb': 1*80*1000000 ,  'custom_scheduler_commands': u"#PBS -A  Pra14_3622\n",
                    "queue_name":"s3par8c",
                   'environment_variables': {"omp_num_threads": "0" }  }
@@ -41,7 +41,6 @@ convergence_settings = ParameterData(dict={
           'kpoint_min_distance': 0.025})
 
 if __name__ == "__main__":
-    # verdi run test_gwco.py --precode p2h@hyd   --yambocode yamb@hyd  --pwcode qe6.1@hyd --pseudo CHtest  --parent  637
     import argparse
     parser = argparse.ArgumentParser(description='GW QP calculation.')
     parser.add_argument('--precode', type=str, dest='precode', required=True,
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     if  args.parent:
         parent = load_node(args.parent)
         extra['parent_scf_folder'] = parent.out.remote_folder
-    p2y_result =submit(YamboFullConvergenceWorkflow, 
+    p2y_result = submit(YamboFullConvergenceWorkflow, 
                     pwcode= Str( args.pwcode), 
                     precode= Str( args.precode), 
                     pseudo= Str( args.pseudo), 
