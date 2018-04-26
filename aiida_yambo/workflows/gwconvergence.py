@@ -199,13 +199,13 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
         """
         if self.ctx.last_step == 'step_0_1' or self.ctx.last_step == 'step_0_2':
-            return ToContext( step0_res =  self.step0_res_  ) 
+            return ToContext( step0_res =  self.ctx.step0_res_  ) 
         elif self.ctx.last_step == 'step_1_1' or self.ctx.last_step == 'step_1_2':
-            return ToContext( step1_res =  self.step1_res_  ) 
+            return ToContext( step1_res =  self.ctx.step1_res_  ) 
         elif self.ctx.last_step == 'step_2_1' or self.ctx.last_step == 'step_2_2':
-            return ToContext( step2_res =  self.step2_res_  ) 
+            return ToContext( step2_res =  self.ctx.step2_res_  ) 
         elif self.ctx.last_step == 'step_3_1' or self.ctx.last_step == 'step_3_2':
-            return ToContext( step3_res =  self.step3_res_  ) 
+            return ToContext( step3_res =  self.ctx.step3_res_  ) 
         return 
 
     def keep_step_data(self):
@@ -291,7 +291,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
             reslt['step1_2_res'] = p2y_result 
             self.ctx.last_step = 'step_1_2'
          
-        self.step1_res_  = p2y_result
+        self.ctx.step1_res_  = p2y_result
 
     def step_2(self,recheck=False):
         """This calls the YamboConvergenceWorkflow as a subworkflow, converging the  Bands.
@@ -382,7 +382,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
             self.step2_2_res = p2y_result 
             self.ctx.last_step = 'step_2_2'
             self.ctx.step_2_done = True
-        self.step2_res_ = p2y_result
+        self.ctx.step2_res_ = p2y_result
 
     def step_3(self, recheck=False):
         """This calls the YamboConvergenceWorkflow as a subworkflow, converging the  G-cutoff.
@@ -458,7 +458,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
             self.ctx.last_step = 'step_3_2'
             self.ctx.step_3_done = True
             # if this  differs from that of step3_1_res 
-        self.step3_res_ = p2y_result
+        self.ctx.step3_res_ = p2y_result
 
     def step_0(self,recheck=False):
         """This calls the YamboConvergenceWorkflow as a subworkflow, converging the K-points.
@@ -480,11 +480,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
         if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
-        if self.inputs.parent_scf_folder:
+        if 'parent_scf_folder' in self.inputs.keys():
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
-        if self.inputs.parent_nscf_folder:
+        if 'parent_nscf_folder' in self.inputs.keys():
              extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
-        if self.inputs.structure:
+        if 'structure' in self.inputs.keys():
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_1_1':
              extra['parameters'] = self.ctx.step1_res.out.convergence.get_dict()['parameters'] 
@@ -519,7 +519,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         else:
             reslt ['step0_2_res'] = p2y_result 
             self.ctx.last_step = 'step_0_2'
-        self.step0_res_ = p2y_result 
+        self.ctx.step0_res_ = p2y_result 
         self.ctx.first_run = False
         
 
