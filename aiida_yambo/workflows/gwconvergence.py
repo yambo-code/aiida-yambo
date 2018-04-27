@@ -255,11 +255,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
         if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
-        if self.inputs.parent_scf_folder:
+        if 'parent_scf_folder' in  self.inputs.keys():
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
-        if self.inputs.parent_nscf_folder:
+        if 'parent_nscf_folder' in  self.inputs.keys():
              extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
-        if self.inputs.structure:
+        if 'structure' in self.inputs.keys():
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_1':
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
@@ -318,11 +318,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
         if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
-        if self.inputs.parent_scf_folder:
+        if 'parent_scf_folder' in  self.inputs.keys():
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
-        if self.inputs.parent_nscf_folder:
+        if 'parent_nscf_folder' in  self.inputs.keys():
              extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
-        if self.inputs.structure:
+        if 'structure' in self.inputs.keys():
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_3_1':
              if self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp'] == self.ctx.convergence_settings.dict.start_w_cutoff  : # 1 == default
@@ -407,11 +407,11 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['settings_pw_p2y'] = self.inputs.settings_p2y
         if 'calculation_set_pw_nscf' in self.inputs.keys():
              extra['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
-        if self.inputs.parent_scf_folder:
+        if 'parent_scf_folder' in  self.inputs.keys():
              extra['parent_scf_folder'] = self.inputs.parent_scf_folder
-        if self.inputs.parent_nscf_folder:
+        if 'parent_nscf_folder' in  self.inputs.keys():
              extra['parent_nscf_folder'] = self.inputs.parent_nscf_folder
-        if self.inputs.structure:
+        if 'structure' in self.inputs.keys():
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_2':
              if self.ctx.last_used_band <= self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1] :
