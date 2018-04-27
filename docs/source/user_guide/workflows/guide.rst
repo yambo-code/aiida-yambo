@@ -194,5 +194,5 @@ The output consists of a `ParameterData` consisting of the following keys
 - **kpoints** :  The converged K-point density.
 - **fft** :  The converged FFT grid size.
 - **bands**:  The converged  bands value
-- **cutoff**:  The converged G-cutoff.
+- **cutoff**:  The converged :math:`\chi`-cutoff.
 - **ordered_step_output**: Convergence history, with the behaviour of the various 1-D convergence steps.

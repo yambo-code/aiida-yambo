@@ -80,27 +80,19 @@ def generate_yambo_input_params(precodename,yambocodename, parent_folder, parame
         if 'NGsBlkXp' not in edit_parameters.keys():
              edit_parameters['NGsBlkXp'] = ngsblxpp
              edit_parameters['NGsBlkXp_units'] =  'Ry'
-        if 'QpntsRXp' not in edit_parameters.keys():
-             edit_parameters['QpntsRXp'] = (1, 301 ) 
         if 'rim_cut' not in edit_parameters.keys():
              edit_parameters['rim_cut'] = True
-        if 'GTermEn' not in edit_parameters.keys():
-             edit_parameters['GTermEn'] = 40.81708
-             edit_parameters['GTermEn_units'] = 'eV'
-             edit_parameters['GTermKind'] = 'BG'
-        if 'BoseTemp' not in edit_parameters.keys():
-             edit_parameters['BoseTemp'] = 0.000
-             edit_parameters['BoseTemp_units'] = 'eV'
-        if 'ElecTemp' not in edit_parameters.keys():
-             edit_parameters['ElecTemp'] = 0.000
-             edit_parameters['ElecTemp_units'] = 'eV'
-        if 'RandQpts' not in edit_parameters.keys():
-             edit_parameters['RandQpts'] = 1000000
-        if 'RandGvec' not in edit_parameters.keys():
-             edit_parameters['RandGvec'] = 1
-             edit_parameters['RandGvec_units'] = 'RL'
-        if 'CUTGeo' not in edit_parameters.keys():
-             edit_parameters['CUTGeo'] = 'none'
+        #if 'GTermEn' not in edit_parameters.keys():
+        #     edit_parameters['GTermEn'] = 40.81708
+        #     edit_parameters['GTermEn_units'] = 'eV'
+        #     edit_parameters['GTermKind'] = 'BG'
+        #if 'RandQpts' not in edit_parameters.keys():
+        #     edit_parameters['RandQpts'] = 1000000
+        #if 'RandGvec' not in edit_parameters.keys():
+        #     edit_parameters['RandGvec'] = 1
+        #     edit_parameters['RandGvec_units'] = 'RL'
+        #if 'CUTGeo' not in edit_parameters.keys():
+        #     edit_parameters['CUTGeo'] = 'none'
         if 'QPkrange' not in edit_parameters.keys():
              edit_parameters['QPkrange'] = [(1, nkpts,int(nocc)-1, int(nocc)+1 )] # To revisit 
         if 'SE_CPU' not in  edit_parameters.keys():
@@ -313,30 +305,17 @@ def set_default_qp_param(parameter=None):
         edit_param['Chimod'] = "Hartree"
     if 'LongDrXp' not in edit_param.keys():
         edit_param['LongDrXp'] = (1.000000,0.000000, 0.000000)
-    if 'PPAPntXp' not in edit_param.keys():
-        edit_param['PPAPntXp'] =  20
-        edit_param['PPAPntXp_units'] =  'eV'
-    if 'QpntsRXp' not in edit_param.keys():
-         edit_param['QpntsRXp'] = (1, 301 ) 
+    #if 'PPAPntXp' not in edit_param.keys():
+    #    edit_param['PPAPntXp'] =  20
+    #    edit_param['PPAPntXp_units'] =  'eV'
+    #if 'QpntsRXp' not in edit_param.keys():
+    #     edit_param['QpntsRXp'] = (1, 301 ) 
     if 'rim_cut' not in edit_param.keys():
          edit_param['rim_cut'] = True
-    if 'GTermEn' not in edit_param.keys():
-         edit_param['GTermEn'] = 40.81708
-         edit_param['GTermEn_units'] = 'eV'
-         edit_param['GTermKind'] = 'BG'
-    if 'BoseTemp' not in edit_param.keys():
-         edit_param['BoseTemp'] = 0.000
-         edit_param['BoseTemp_units'] = 'eV'
-    if 'ElecTemp' not in edit_param.keys():
-         edit_param['ElecTemp'] = 0.000
-         edit_param['ElecTemp_units'] = 'eV'
-    if 'RandQpts' not in edit_param.keys():
-         edit_param['RandQpts'] = 1000000
-    if 'RandGvec' not in edit_param.keys():
-         edit_param['RandGvec'] = 1
-         edit_param['RandGvec_units'] = 'RL'
-    if 'CUTGeo' not in edit_param.keys():
-         edit_param['CUTGeo'] = 'none'
+    #if 'GTermEn' not in edit_param.keys():
+    #     edit_param['GTermEn'] = 40.81708
+    #     edit_param['GTermEn_units'] = 'eV'
+    #     edit_param['GTermKind'] = 'BG'
     if 'SE_CPU' not in  edit_param.keys():
         edit_param['SE_CPU'] ="1 8 16" 
         edit_param['SE_ROLEs']= "q qp b"
@@ -363,7 +342,7 @@ def set_default_pw_param(nscf=False):
               'verbosity' :'high',
               },
           'SYSTEM': {
-              'ecutwfc': 70.,
+              'ecutwfc': 60.,
               'occupations':'smearing',
               'degauss': 0.0001,
               'starting_magnetization(2)' : 0.1,
