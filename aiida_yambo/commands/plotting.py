@@ -23,11 +23,6 @@ def get_extremes(mn, mx, mn_state, mx_state):
     return mx_state, mn_state
 
 def plotter(fig, gs , ax1,  ind, dep , var ):
-    fig.suptitle(r'Direct Gap at $\Gamma$', size=14)
-    ax1.set_xlim(0,8)
-    ax1.set_ylim(0,8)
-    ax1.set_ylabel("Energy (eV)")
-    ax1.set_xlabel('Convergence space ')
     ax1.plot( ind , dep  , label= var, marker='+'  ) 
 
 def read_intp_out(jsondata, legendpos, label, output="fullconv"):
@@ -76,19 +71,23 @@ def read_intp_out(jsondata, legendpos, label, output="fullconv"):
             mn,mx= indep_G[0], indep_G[-1]
             dep_G = np.array(data['energy_widths'] )
             independent_ax = np.arange( independent_ax[-1], independent_ax[-1] +  indep_G.size )
-            plotter(fig,gs, ax1, independent_ax, dep_G,  "G {}-{} RL".format(mn,mx))
+            plotter(fig,gs, ax1, independent_ax, dep_G,  "W {}-{} RL".format(mn,mx))
             mx = np.amax(dep_G)
             mn = np.amin(dep_G)
             min_dependent, max_dependent = get_extremes(mn, mx,min_dependent ,max_dependent )
 
     h,l=ax1.get_legend_handles_labels()
     ax1.legend(h,l, loc=legendpos,  ncol=1, prop={'size': 12} )
+    ax1.set_ylabel("Energy (eV)")
+    ax1.set_xlabel('Convergence space')
+    #fig.suptitle(r'Direct Gap at $\Gamma$', size=14)
+    fig.suptitle(r'{}'.format(label), size=14)
     
     plt.xticks([], [])
-    plt.ylim(min_dependent-0.5, max_dependent+0.5)
+    plt.ylim(min_dependent*0.7, max_dependent*1.3)
     plt.xlim(0, independent_ax[-1] )
-    plt.show()
     plt.savefig(output)
+    plt.show()
     plt.close()
     mpl.rcParams.update(mpl.rcParamsDefault)
 
