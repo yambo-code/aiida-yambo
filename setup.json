@@ -32,6 +32,9 @@
         "aiida.parsers": [
             "yambo.yambo = aiida_yambo.parsers.parsers:YamboParser"
         ],
-        "aiida.data":[]
+        "aiida.data":[],
+        "console_scripts": [
+            "plotyamboconv = aiida_yambo.commands.plotting:plotconv"
+        ]
     }
 }
