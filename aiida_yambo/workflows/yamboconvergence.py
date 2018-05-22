@@ -245,8 +245,6 @@ class YamboConvergenceWorkflow(WorkChain):
 
         if 'settings_pw' in self.inputs.keys():
             self.ctx.settings_pw =  self.inputs.settings_pw 
-        else:
-            self.ctx.settings_pw = self.inputs.settings_pw
 
         params = self.ctx.parameters.get_dict() 
         if 'kpoints'!= self.ctx.variable_to_converge:
