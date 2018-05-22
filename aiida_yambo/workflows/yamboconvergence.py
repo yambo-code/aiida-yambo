@@ -220,10 +220,16 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.ctx.parameters = self.inputs.parameters
             if 'structure' not in self.inputs.keys() :
                 raise InputValidationError("Structure should be provided if parent PW SCF folder is not given when converging kpoints")
+            else:
+                self.ctx.structure = self.inputs.structure
             if 'pseudo' not in self.inputs.keys():
                 raise InputValidationError("Pseudo should be provided if parent PW calculation is not given when converging kpoints")
+            else:
+                self.ctx.pseudo = self.inputs.pseudo
             if 'pwcode' not in self.inputs.keys():
                 raise InputValidationError("PW code  should be provided when converging kpoints")
+            else: 
+                self.ctx.pwcode = self.inputs.pwcode
             if 'kpoints'!=self.ctx.variable_to_converge and\
                                                    'parent_nscf_folder' not in self.inputs.keys():
                 raise InputValidationError("Parent nscf folder should be provided when not converging kpoints")
