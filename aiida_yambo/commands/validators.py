@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import click
+import os
 
 def validate_node(callback_kwargs, ctx, param, value):
     """
@@ -47,5 +48,5 @@ def validate_output(callback_kwargs, ctx, param, value):
     """
     """
     from aiida.common.exceptions import NotExistent, LoadingPluginFailed, MissingPluginError
-
+    value = os.path.splitext(value)[0] + '.svg'
     return value

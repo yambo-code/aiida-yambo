@@ -9,7 +9,7 @@ import json
 import sys
 from aiida_yambo.commands.utils import command
 from aiida_yambo.commands import options
-
+import os 
 
 def get_extremes(mn, mx, mn_state, mx_state):
     if mx_state == None:
@@ -86,7 +86,7 @@ def read_intp_out(jsondata, legendpos, label, output="fullconv"):
     plt.xticks([], [])
     plt.ylim(min_dependent*0.7, max_dependent*1.3)
     plt.xlim(0, independent_ax[-1] )
-    plt.savefig(output)
+    plt.savefig(output,  format='eps', dpi=1200)
     plt.show()
     plt.close()
     mpl.rcParams.update(mpl.rcParamsDefault)

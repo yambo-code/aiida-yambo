@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 from aiida.common.exceptions import InputValidationError,ValidationError, WorkflowInputValidationError
 from aiida.orm import load_node
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
+from aiida.orm.data.base import Float, Str, NumericType, BaseType, List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.remote import RemoteData
@@ -263,8 +263,10 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_1':
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
         if self.ctx.last_step == 'step_0_1' and self.ctx.step_0_done== True:
              extra['parameters'] = ParameterData(dict=self.ctx.step0_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
         convergence_parameters = DataFactory('parameter')(dict= { 
                                   'variable_to_converge': 'FFT_cutoff', 'conv_tol':float(self.inputs.threshold), 
                                   'start_value': self.ctx.convergence_settings.dict.start_fft , 'step':20 , # 50
@@ -332,6 +334,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                  return 
              #band_cutoff = int(self.ctx.last_used_band *0.7)
              extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              self.report("updated the bands convergence parameters with cut-off from cutoff convergence step")
         if self.ctx.last_step == 'step_3_2':
              # CRUNCH TIME:  use  values from step3_2
@@ -345,6 +348,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              #band_cutoff = self.ctx.last_used_band  ## BUG?
              #band_cutoff = int( self.ctx.last_used_band*0.7) 
              extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              self.report("updated the bands convegence parameters with cut-off from cutoff convergence")
         if self.ctx.last_step != 'step_1_1' and self.ctx.last_step != 'step_1_2': # last iteration was W_cutoff not FFT  
              self.ctx.last_used_cutoff = self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp']
@@ -353,6 +357,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_1_1':
              params = self.ctx.step1_res.out.convergence.get_dict()['parameters'] 
              extra['parameters'] = ParameterData(dict=params)
+             extra['merge_override'] =Bool(1)
         convergence_parameters = DataFactory('parameter')(dict= { 
                                  'variable_to_converge': 'bands', 'conv_tol':float(self.inputs.threshold),
                                  'start_value': band_cutoff , 'step':10 , #band_cutoff
@@ -421,6 +426,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                  return 
              self.report("passing parameters from  re-converged bands ")
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              #w_cutoff =  self.ctx.last_used_cutoff  # start  from last used value. ## BUG?
              #w_cutoff =  int(self.ctx.last_used_cutoff*0.7)  
              w_cutoff= int(self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp'])
@@ -428,6 +434,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              self.report("passing parameters from  converged bands ")
              # use cut-off from 2_1
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              #self.ctx.last_used_band = self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1] 
         self.ctx.last_used_band = self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1]
         self.report("Bands in last  bands convergence:  {}".format(self.ctx.last_used_band))
@@ -490,6 +497,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['parameters'] = self.ctx.step1_res.out.convergence.get_dict()['parameters'] 
         if 'parameters' in self.inputs.keys():
              extra['parameters'] = self.inputs.parameters
+             extra['merge_override'] =Bool(1)
         if 'parameters_pw' in self.inputs.keys():
              extra['parameters_pw'] = self.inputs.parameters_pw
         if 'parameters_pw_nscf' in  self.inputs.keys():
