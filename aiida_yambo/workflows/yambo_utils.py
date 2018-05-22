@@ -317,10 +317,10 @@ def set_default_qp_param(parameter=None):
     #     edit_param['GTermEn_units'] = 'eV'
     #     edit_param['GTermKind'] = 'BG'
     if 'SE_CPU' not in  edit_param.keys():
-        edit_param['SE_CPU'] ="1 8 16" 
+        edit_param['SE_CPU'] ="1 2 4" 
         edit_param['SE_ROLEs']= "q qp b"
     if 'X_all_q_CPU' not in  edit_param.keys():
-        edit_param['X_all_q_CPU']= "1 1 16 8"
+        edit_param['X_all_q_CPU']= "1 1 4 2"
         edit_param['X_all_q_ROLEs'] ="q k c v"
     if 'FFTGvecs' not in edit_param.keys():
         edit_param['FFTGvecs'] =  50
