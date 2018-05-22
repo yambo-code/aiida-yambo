@@ -257,10 +257,12 @@ class PwRestartWf(WorkChain):
                      parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*10) # 
             parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
         parameters['CONTROL']['calculation'] = scf
+
         if 'ELECTRONS' not in parameters:
             parameters['ELECTRONS'] = {}
-        parameters['ELECTRONS']['diagonalization'] = 'davidson'
-        parameters['ELECTRONS']['conv_thr'] = 0.000001
+            parameters['ELECTRONS']['diagonalization'] = 'davidson'
+            parameters['ELECTRONS']['conv_thr'] = 0.000001
+
         self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
         parameters = ParameterData(dict=parameters)
         if scf == 'nscf':
