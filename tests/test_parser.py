@@ -1,7 +1,7 @@
 import unittest
 
 
-class TestRentAmtRecognizer (unittest.TestCase):
+class TestHartreeLog (unittest.TestCase):
 
     def setUp(self):
         """
