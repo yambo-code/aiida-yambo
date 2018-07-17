@@ -1,0 +1,22 @@
+notifications:
+    email: false
+dist: trusty
+language: python
+python: 2.7
+services:
+    - postgresql
+addons:
+    postgresql: "9.5"
+cache: pip
+before_install:  # copied from pgtest's travis.yml
+    - sudo apt-get install locate
+    - sudo service postgresql stop
+    - sudo apt-get remove postgresql
+    - sudo apt-get install postgresql
+    - sudo updatedb
+install:
+    - pip install --upgrade pip
+    - pip install -e git+https://github.com/aiidateam/aiida_core#egg=aiida-core
+    - pip install -e .
+    - pip install tox-travis
+script: tox
