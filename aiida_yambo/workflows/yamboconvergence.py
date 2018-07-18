@@ -9,11 +9,11 @@ from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.exceptions import InputValidationError,ValidationError
 from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List, Bool
+from aiida.orm.data.base import Float, Str, NumericType, List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.work.run import run, submit
-from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
+from aiida.work.workchain import WorkChain, while_, ToContext
 from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
@@ -78,10 +78,10 @@ class YamboConvergenceWorkflow(WorkChain):
         """
         super(YamboConvergenceWorkflow, cls).define(spec)
         spec.input("merge_override", valid_type=Bool,required=False, default=Bool(0))
-        spec.input("precode", valid_type=BaseType)
-        spec.input("pwcode", valid_type=BaseType, required=False)
-        spec.input("yambocode", valid_type=BaseType)
-        spec.input("pseudo", valid_type=BaseType,required=True)
+        spec.input("precode", valid_type=Str)
+        spec.input("pwcode", valid_type=Str, required=False)
+        spec.input("yambocode", valid_type=Str)
+        spec.input("pseudo", valid_type=Str,required=True)
         spec.input("calculation_set_pw", valid_type=ParameterData, required=False)
         spec.input("calculation_set_pw_nscf", valid_type=ParameterData, required=False)
         spec.input("calculation_set_p2y", valid_type=ParameterData,required=False)
@@ -110,7 +110,7 @@ class YamboConvergenceWorkflow(WorkChain):
               ),
           cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
 
 
@@ -374,7 +374,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     p2y_done = self.ctx.p2y_parent_folder 
                 except AttributeError:
                     self.report(' no preceeding yambo parent, will run P2Y from NSCF parent first ' )
-                    p2y_res =  submit (YamboRestartWf,
+                    p2y_res =  self.submit (YamboRestartWf,
                                 precode= self.inputs.precode,
                                 yambocode=self.inputs.yambocode,
                                 parameters = self.inputs.parameters_p2y,
@@ -385,7 +385,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.ctx.very_first = True  #  There was a bug  because of this.
                     return ToContext(missing_p2y_parent= p2y_res)
                 self.report(' running from preceeding yambo/p2y calculation  ' )
-                future =  submit  (YamboRestartWf,
+                future =  self.submit  (YamboRestartWf,
                             precode= self.inputs.precode,
                             yambocode=self.inputs.yambocode,
                             parameters = self.ctx.parameters,
@@ -426,7 +426,7 @@ class YamboConvergenceWorkflow(WorkChain):
                 extra_wf['calculation_set_pw'] = self.ctx.calculation_set_pw
                 extra_wf['settings_p2y'] = self.inputs.settings_p2y
                 extra_wf['settings_pw'] = self.ctx.settings_pw
-                future =  submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
+                future =  self.submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
                    codename_yambo= self.inputs.yambocode, pseudo_family= self.inputs.pseudo,
                    calculation_set_yambo = self.inputs.calculation_set,
                    settings_yambo=self.inputs.settings , structure = self.ctx.structure,

@@ -7,7 +7,7 @@ from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.common.datastructures import calc_states
-from aiida_quantumespresso.calculations import  get_input_data_text,_lowercase_dict,_uppercase_dict
+from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from aiida.common.exceptions import UniquenessError, InputValidationError
 from aiida.common.utils import classproperty
 from aiida.orm.data.parameter import ParameterData 
@@ -499,3 +499,4 @@ class YamboCalculation(JobCalculation):
                                   "Yambo calculation")
 
         self.use_parent_folder(remotedata)
+

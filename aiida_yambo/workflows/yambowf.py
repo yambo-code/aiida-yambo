@@ -11,10 +11,9 @@ from aiida.common.datastructures import calc_states
 from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
 import itertools
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, Bool
+from aiida.orm.data.base import Float, Str, NumericType, Bool
 from aiida.work.workchain import WorkChain, while_
 from aiida.work.workchain import ToContext as ResultToContext
-from aiida.work.run import legacy_workflow
 from aiida.work.run import run, submit
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, default_pw_settings, set_default_pw_param,\
@@ -101,7 +100,7 @@ class YamboWorkflow(WorkChain):
             ),
             cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
@@ -278,7 +277,7 @@ class YamboWorkflow(WorkChain):
             extra['restart_options'] = self.inputs.restart_options_pw
         parentcalc = load_node(self.ctx.yambo_res.out.gw.get_dict()["yambo_pk"])
         parent_folder = parentcalc.out.remote_folder 
-        yambo_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
+        yambo_result = self.submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.ctx.parameters_yambo, calculation_set= self.inputs.calculation_set_yambo,
             parent_folder = parent_folder, settings = self.inputs.settings_yambo, **extra )
         self.ctx.last_step_kind = 'yambo'
@@ -292,7 +291,7 @@ class YamboWorkflow(WorkChain):
             extra['restart_options'] = self.inputs.restart_options_pw
         parentcalc = load_node(self.ctx.pw_wf_res.out.pw.get_dict()["nscf_pk"])
         parent_folder = parentcalc.out.remote_folder 
-        p2y_result = submit (YamboRestartWf, precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
+        p2y_result = self.submit (YamboRestartWf, precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.inputs.parameters_p2y , calculation_set= self.inputs.calculation_set_p2y,
             parent_folder = parent_folder, settings = self.inputs.settings_p2y, **extra )
         self.ctx.last_step_kind = 'yambo_p2y'
@@ -300,7 +299,7 @@ class YamboWorkflow(WorkChain):
 
     def run_pw(self, extra):
         """ submit a  PW   calculation """    
-        pw_wf_result = submit(PwRestartWf, codename = self.inputs.codename_pw  , pseudo_family = self.inputs.pseudo_family, 
+        pw_wf_result = self.submit(PwRestartWf, codename = self.inputs.codename_pw  , pseudo_family = self.inputs.pseudo_family, 
                 calculation_set = self.inputs.calculation_set_pw, settings=self.inputs.settings_pw, 
                 kpoints=self.inputs.kpoint_pw, gamma= self.inputs.gamma_pw,
                 structure = self.inputs.structure , parameters = self.inputs.parameters_pw, **extra)
@@ -313,7 +312,7 @@ class YamboWorkflow(WorkChain):
         if 'restart_options_gw' in self.inputs.keys():
             extra['restart_options'] = self.inputs.restart_options_pw
         parent_folder = self.ctx.yambo_res.out.yambo_remote_folder 
-        yambo_result = submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
+        yambo_result = self.submit (YamboRestartWf,precode= self.inputs.codename_p2y, yambocode=self.inputs.codename_yambo,
              parameters = self.ctx.parameters_yambo, calculation_set= self.inputs.calculation_set_yambo,
             parent_folder = parent_folder, settings = self.inputs.settings_yambo , **extra)
         self.ctx.last_step_kind = 'yambo'
