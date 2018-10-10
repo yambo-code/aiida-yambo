@@ -1,8 +1,8 @@
-#import sys
+import sys
 import unittest
 from aiida.utils.fixtures import TestRunner
 
-tests = unittest.defaultTestLoader.discover('.')
+tests = unittest.defaultTestLoader.discover('./tests')
 result = TestRunner().run(tests, backend='django')
 
 # Note: On travis, this will not fail even if the tests fail.

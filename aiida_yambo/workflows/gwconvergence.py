@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 from aiida.common.exceptions import InputValidationError,ValidationError, WorkflowInputValidationError
 from aiida.orm import load_node
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List, Bool
+from aiida.orm.data.base import Float, Str, NumericType,  List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.remote import RemoteData
@@ -16,8 +16,6 @@ import numpy as np
 from scipy.optimize import  curve_fit 
 from aiida_yambo.workflows.yamboconvergence  import  YamboConvergenceWorkflow
 from aiida_yambo.workflows.yambo_utils import default_convergence_settings
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
-from aiida.work.run import run, submit
 from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
@@ -75,10 +73,10 @@ class YamboFullConvergenceWorkflow(WorkChain):
         """
         super(YamboFullConvergenceWorkflow, cls).define(spec)
 
-        spec.input("precode", valid_type=BaseType)
-        spec.input("pwcode", valid_type=BaseType)
-        spec.input("yambocode", valid_type=BaseType)
-        spec.input("pseudo", valid_type=BaseType)
+        spec.input("precode", valid_type=Str)
+        spec.input("pwcode", valid_type=Str)
+        spec.input("yambocode", valid_type=Str)
+        spec.input("pseudo", valid_type=Str)
         spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
@@ -105,7 +103,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
               ),
           cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
     def init_parameters(self):
         self.ctx.first_run = True
@@ -271,7 +269,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                                   'variable_to_converge': 'FFT_cutoff', 'conv_tol':float(self.inputs.threshold), 
                                   'start_value': self.ctx.convergence_settings.dict.start_fft , 'step':20 , # 50
                                   'max_value': self.ctx.convergence_settings.dict.max_fft }) # max 400
-        p2y_result = submit(YamboConvergenceWorkflow,
+        p2y_result = self.submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode ,
                         yambocode=self.inputs.yambocode ,
@@ -364,7 +362,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                                  'max_value': self.ctx.MAX_B_VAL  }) # self.ctx.MAX_B_VAL 
         self.report("converging  BndsRnXp, GbndRnge")
 
-        p2y_result =submit (YamboConvergenceWorkflow,
+        p2y_result = self.submit (YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode,
                         yambocode=self.inputs.yambocode,
@@ -443,7 +441,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                                 'start_value': w_cutoff , 'step': 1 ,# w_cutoff
                                 'max_value': self.ctx.convergence_settings.dict.max_w_cutoff }) #self.ctx.MAX_B_VAL 
         self.report("converging 1-D  W-off")
-        p2y_result = submit(YamboConvergenceWorkflow,
+        p2y_result = self.submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode ,
                         yambocode=self.inputs.yambocode ,
@@ -508,7 +506,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                                   'start_value': self.ctx.convergence_settings.dict.kpoint_starting_distance , 'step':.1, # IGNORE STEP 
                                    'max_value': self.ctx.convergence_settings.dict.kpoint_min_distance }) # 0.34 , 0.0250508117676 
                                    
-        p2y_result = submit(YamboConvergenceWorkflow,
+        p2y_result = self.submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode,
                         yambocode=self.inputs.yambocode,

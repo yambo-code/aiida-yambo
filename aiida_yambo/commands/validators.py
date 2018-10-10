@@ -48,5 +48,5 @@ def validate_output(callback_kwargs, ctx, param, value):
     """
     """
     from aiida.common.exceptions import NotExistent, LoadingPluginFailed, MissingPluginError
-    value = os.path.splitext(value)[0] + '.svg'
+    value = os.path.splitext(value)[0] + '.eps'
     return value

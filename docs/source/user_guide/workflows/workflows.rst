@@ -53,7 +53,7 @@ YamboFullConvergenceWorkflow
 ----------------------------                                                                                                                                                     
                                                                                                                                                                                     
 The `YamboFullConvergenceWorkflow` provides the functionality to run 4-D line search  GW convergence computations.
-These parameters are automtically converged   k-points, FFT,  Bands (GbndRnge,BndsRnXp) and W cutoff (NGsBlkXp). 
+These parameters are automatically converged: the  k-points, the FFT, the Bands (GbndRnge,BndsRnXp) and W cutoff (NGsBlkXp). 
 The algorithm converges the k-points, and uses those converged kpts to converge the FFT grid, and then those converged
 kpts+FFT to converge the Bands, and from there uses the converged kpts+FFT+Bands to converge the W cutoff. The converged
 W cutoff used to redo the Bands step, and should it converged at a different value, the W cutoff is repeated too, otherwise

@@ -20,9 +20,13 @@
           ]
       }, 
     "install_requires": [
-        "aiida_core[docs,atomic_tools]>=0.10.0",
-        "aiida-quantumespresso>=v1.0.1",
+        "aiida_core[docs,atomic_tools]>0.11.0",
+        "aiida-quantumespresso>v1.0.1",
         "reentry>=1.0.2"
+        ],
+    "dependency_links" :[
+        "git+https://github.com/aiidateam/aiida_core.git@b2e37749ab2781099df7b7bb15a603599ccdafdb#egg=aiida_core",
+        "git+https://github.com/aiidateam/aiida-quantumespresso@f7a03009104b0ffb72b64c774b69834afaff1aab#egg=aiida_quantumespresso"
         ],
     "keywords": "yambo aiida workflows",
     "entry_points": {
@@ -34,7 +38,10 @@
         ],
         "aiida.data":[],
         "console_scripts": [
-            "plotyamboconv = aiida_yambo.commands.plotting:plotconv"
+            "plotyamboconv = aiida_yambo.commands.plotting:plotconv",
+            "mock_qe = aiida_yambo.commands.mocks:mock_qe",
+            "mock_yambo = aiida_yambo.commands.mocks:mock_yambo",
+            "mock_p2y = aiida_yambo.commands.mocks:mock_p2y"
         ]
     }
 }
