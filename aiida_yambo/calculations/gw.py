@@ -32,6 +32,8 @@ class YamboCalculation(JobCalculation):
     def _init_internal_params(self):
         super(YamboCalculation, self)._init_internal_params()
 
+        self._PREFIX = 'aiida'
+
         self._INPUT_FILE_NAME = 'aiida.in'
         
         #Maybe the output name is not necessary...
@@ -474,7 +476,7 @@ class YamboCalculation(JobCalculation):
         
         self._check_valid_parent(calc)
         
-        remotedatas = calc.get_outputs(type=RemoteData)
+        remotedatas = calc.get_outputs(node_type=RemoteData)
         if not remotedatas:
             raise NotExistent("No output remotedata found in "
                                   "the parent")

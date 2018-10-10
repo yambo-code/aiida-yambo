@@ -72,7 +72,7 @@ def read_intp_out(jsondata, legendpos, label, output="fullconv"):
             mn,mx= indep_G[0], indep_G[-1]
             dep_G = np.array(data['energy_widths'] )
             independent_ax = np.arange( independent_ax[-1], independent_ax[-1] +  indep_G.size )
-            plotter(fig,gs, ax1, independent_ax, dep_G,  "W {}-{} RL".format(mn,mx))
+            plotter(fig,gs, ax1, independent_ax, dep_G,  "W {}-{} Ry".format(mn,mx))
             mx = np.amax(dep_G)
             mn = np.amin(dep_G)
             min_dependent, max_dependent = get_extremes(mn, mx,min_dependent ,max_dependent )
