@@ -12,8 +12,8 @@ from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType ,Bool, Int
-    from aiida.work.workchain import WorkChain, while_, Outputs
+    from aiida.orm.data.base import Float, Str, NumericType, Bool, Int
+    from aiida.work.workchain import WorkChain, while_ 
     from aiida.work.workchain import ToContext as ResultToContext
     from aiida.work.run import legacy_workflow
     from aiida.work.run import run, submit
@@ -49,7 +49,7 @@ class PwRestartWf(WorkChain):
         can be ignorant about the details of running a PW calculation.
         """
         super(PwRestartWf, cls).define(spec)
-        spec.input("codename", valid_type=BaseType)
+        spec.input("codename", valid_type=Str)
         spec.input("restart_options", valid_type=ParameterData, required=False)
         spec.input("pseudo_family", valid_type=Str)
         spec.input("calculation_set", valid_type=ParameterData) # custom_scheduler_commands,  resources,...
@@ -70,7 +70,7 @@ class PwRestartWf(WorkChain):
             ),
             cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
     def pwbegin(self):
         """This function constructs the correct parameters to be passed to the subworkflow, and will also determine the type (SCF vs NSCF)
@@ -149,14 +149,14 @@ class PwRestartWf(WorkChain):
            inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                         self.inputs.parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma,self.inputs.settings, parent_folder)
 
-        future = submit( PwBaseWorkChain, **inputs)
+        future = self.submit( PwBaseWorkChain, **inputs)
         self.ctx.pw_pks = []
-        self.ctx.pw_pks.append(future.pid)
+        self.ctx.pw_pks.append(future.pk)
         self.ctx.restart = 0 
         self.ctx.success = False
         self.ctx.scf_pk = None 
         self.ctx.nscf_pk = None
-        self.report("submitted subworkflow  {}".format(future.pid))
+        self.report("submitted subworkflow  {}".format(future.pk))
         return ResultToContext(first_calc=future  )
 
     def pw_should_continue(self):
@@ -257,10 +257,12 @@ class PwRestartWf(WorkChain):
                      parameters['SYSTEM']['nbnd'] = int(calc.get_outputs_dict()['output_parameters'].get_dict()['number_of_bands']*10) # 
             parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
         parameters['CONTROL']['calculation'] = scf
+
         if 'ELECTRONS' not in parameters:
             parameters['ELECTRONS'] = {}
-        parameters['ELECTRONS']['diagonalization'] = 'davidson'
-        parameters['ELECTRONS']['conv_thr'] = 0.000001
+            parameters['ELECTRONS']['diagonalization'] = 'davidson'
+            parameters['ELECTRONS']['conv_thr'] = 0.000001
+
         self.report(" calculation type:  {} and system {}".format(parameters['CONTROL']['calculation'], parameters['SYSTEM'])) 
         parameters = ParameterData(dict=parameters)
         if scf == 'nscf':
@@ -269,10 +271,10 @@ class PwRestartWf(WorkChain):
         else:
             inputs = generate_pw_input_params(self.inputs.structure, self.inputs.codename, self.inputs.pseudo_family,
                           parameters, self.inputs.calculation_set, self.inputs.kpoints,self.inputs.gamma, self.inputs.settings, parent_folder )
-        future =  submit (PwBaseWorkChain, **inputs)
-        self.ctx.pw_pks.append(future.pid)
+        future =  self.submit (PwBaseWorkChain, **inputs)
+        self.ctx.pw_pks.append(future.pk)
         self.ctx.restart += 1
-        self.report("submitted pw  subworkflow  {}".format(future.pid))
+        self.report("submitted pw  subworkflow  {}".format(future.pk))
         return  ResultToContext(last_calc=future)
 
     def report_wf(self):

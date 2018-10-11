@@ -5,7 +5,7 @@ if not is_dbenv_loaded():
 
 from aiida.common.exceptions import InputValidationError,ValidationError, WorkflowInputValidationError
 from aiida.orm import load_node
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
+from aiida.orm.data.base import Float, Str, NumericType,  List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.remote import RemoteData
@@ -16,8 +16,6 @@ import numpy as np
 from scipy.optimize import  curve_fit 
 from aiida_yambo.workflows.yamboconvergence  import  YamboConvergenceWorkflow
 from aiida_yambo.workflows.yambo_utils import default_convergence_settings
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
-from aiida.work.run import run, submit
 from aiida.orm.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
@@ -75,10 +73,10 @@ class YamboFullConvergenceWorkflow(WorkChain):
         """
         super(YamboFullConvergenceWorkflow, cls).define(spec)
 
-        spec.input("precode", valid_type=BaseType)
-        spec.input("pwcode", valid_type=BaseType)
-        spec.input("yambocode", valid_type=BaseType)
-        spec.input("pseudo", valid_type=BaseType)
+        spec.input("precode", valid_type=Str)
+        spec.input("pwcode", valid_type=Str)
+        spec.input("yambocode", valid_type=Str)
+        spec.input("pseudo", valid_type=Str)
         spec.input("threshold", valid_type=Float, required=False, default=Float(0.1))
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
@@ -105,7 +103,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
               ),
           cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
     def init_parameters(self):
         self.ctx.first_run = True
@@ -263,13 +261,15 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_1':
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
         if self.ctx.last_step == 'step_0_1' and self.ctx.step_0_done== True:
              extra['parameters'] = ParameterData(dict=self.ctx.step0_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
         convergence_parameters = DataFactory('parameter')(dict= { 
                                   'variable_to_converge': 'FFT_cutoff', 'conv_tol':float(self.inputs.threshold), 
                                   'start_value': self.ctx.convergence_settings.dict.start_fft , 'step':20 , # 50
                                   'max_value': self.ctx.convergence_settings.dict.max_fft }) # max 400
-        p2y_result = submit(YamboConvergenceWorkflow,
+        p2y_result = self.submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode ,
                         yambocode=self.inputs.yambocode ,
@@ -332,6 +332,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                  return 
              #band_cutoff = int(self.ctx.last_used_band *0.7)
              extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              self.report("updated the bands convergence parameters with cut-off from cutoff convergence step")
         if self.ctx.last_step == 'step_3_2':
              # CRUNCH TIME:  use  values from step3_2
@@ -345,6 +346,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              #band_cutoff = self.ctx.last_used_band  ## BUG?
              #band_cutoff = int( self.ctx.last_used_band*0.7) 
              extra['parameters'] = ParameterData(dict=self.ctx.step3_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              self.report("updated the bands convegence parameters with cut-off from cutoff convergence")
         if self.ctx.last_step != 'step_1_1' and self.ctx.last_step != 'step_1_2': # last iteration was W_cutoff not FFT  
              self.ctx.last_used_cutoff = self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp']
@@ -353,13 +355,14 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_1_1':
              params = self.ctx.step1_res.out.convergence.get_dict()['parameters'] 
              extra['parameters'] = ParameterData(dict=params)
+             extra['merge_override'] =Bool(1)
         convergence_parameters = DataFactory('parameter')(dict= { 
                                  'variable_to_converge': 'bands', 'conv_tol':float(self.inputs.threshold),
                                  'start_value': band_cutoff , 'step':10 , #band_cutoff
                                  'max_value': self.ctx.MAX_B_VAL  }) # self.ctx.MAX_B_VAL 
         self.report("converging  BndsRnXp, GbndRnge")
 
-        p2y_result =submit (YamboConvergenceWorkflow,
+        p2y_result = self.submit (YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode,
                         yambocode=self.inputs.yambocode,
@@ -421,6 +424,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                  return 
              self.report("passing parameters from  re-converged bands ")
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              #w_cutoff =  self.ctx.last_used_cutoff  # start  from last used value. ## BUG?
              #w_cutoff =  int(self.ctx.last_used_cutoff*0.7)  
              w_cutoff= int(self.ctx.step3_res.out.convergence.get_dict()['parameters']['NGsBlkXp'])
@@ -428,6 +432,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              self.report("passing parameters from  converged bands ")
              # use cut-off from 2_1
              extra['parameters'] = ParameterData(dict=self.ctx.step2_res.out.convergence.get_dict()['parameters'] )
+             extra['merge_override'] =Bool(1)
              #self.ctx.last_used_band = self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1] 
         self.ctx.last_used_band = self.ctx.step2_res.out.convergence.get_dict()['parameters']['BndsRnXp'][-1]
         self.report("Bands in last  bands convergence:  {}".format(self.ctx.last_used_band))
@@ -436,7 +441,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                                 'start_value': w_cutoff , 'step': 1 ,# w_cutoff
                                 'max_value': self.ctx.convergence_settings.dict.max_w_cutoff }) #self.ctx.MAX_B_VAL 
         self.report("converging 1-D  W-off")
-        p2y_result = submit(YamboConvergenceWorkflow,
+        p2y_result = self.submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode ,
                         yambocode=self.inputs.yambocode ,
@@ -490,6 +495,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
              extra['parameters'] = self.ctx.step1_res.out.convergence.get_dict()['parameters'] 
         if 'parameters' in self.inputs.keys():
              extra['parameters'] = self.inputs.parameters
+             extra['merge_override'] =Bool(1)
         if 'parameters_pw' in self.inputs.keys():
              extra['parameters_pw'] = self.inputs.parameters_pw
         if 'parameters_pw_nscf' in  self.inputs.keys():
@@ -500,7 +506,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                                   'start_value': self.ctx.convergence_settings.dict.kpoint_starting_distance , 'step':.1, # IGNORE STEP 
                                    'max_value': self.ctx.convergence_settings.dict.kpoint_min_distance }) # 0.34 , 0.0250508117676 
                                    
-        p2y_result = submit(YamboConvergenceWorkflow,
+        p2y_result = self.submit(YamboConvergenceWorkflow,
                         pwcode= self.inputs.pwcode,
                         precode= self.inputs.precode,
                         yambocode=self.inputs.yambocode,

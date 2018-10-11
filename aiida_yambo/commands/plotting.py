@@ -9,7 +9,7 @@ import json
 import sys
 from aiida_yambo.commands.utils import command
 from aiida_yambo.commands import options
-
+import os 
 
 def get_extremes(mn, mx, mn_state, mx_state):
     if mx_state == None:
@@ -23,6 +23,7 @@ def get_extremes(mn, mx, mn_state, mx_state):
     return mx_state, mn_state
 
 def plotter(fig, gs , ax1,  ind, dep , var ):
+    print("ind {}   dep {}   var {}".format(ind, dep, var))
     ax1.plot( ind , dep  , label= var, marker='+'  ) 
 
 def read_intp_out(jsondata, legendpos, label, output="fullconv"):
@@ -60,7 +61,7 @@ def read_intp_out(jsondata, legendpos, label, output="fullconv"):
             indep_bands = np.array([ el[-1] for el in data['convergence_space']['GbndRnge'] ] )
             mn,mx= indep_bands[0], indep_bands[-1]
             dep_bands = np.array(data['energy_widths'] )
-            independent_ax = np.arange( independent_ax[-1], independent_ax[-1] +  indep_bands.size  )
+            independent_ax = np.arange( independent_ax[-1], independent_ax[-1] +  np.unique(indep_bands).size  )
             plotter(fig,gs, ax1, independent_ax , dep_bands,  "Bands (1-{})-(1-{})".format(mn,mx)  )
             mx = np.amax(dep_bands)
             mn = np.amin(dep_bands)
@@ -71,7 +72,7 @@ def read_intp_out(jsondata, legendpos, label, output="fullconv"):
             mn,mx= indep_G[0], indep_G[-1]
             dep_G = np.array(data['energy_widths'] )
             independent_ax = np.arange( independent_ax[-1], independent_ax[-1] +  indep_G.size )
-            plotter(fig,gs, ax1, independent_ax, dep_G,  "W {}-{} RL".format(mn,mx))
+            plotter(fig,gs, ax1, independent_ax, dep_G,  "W {}-{} Ry".format(mn,mx))
             mx = np.amax(dep_G)
             mn = np.amin(dep_G)
             min_dependent, max_dependent = get_extremes(mn, mx,min_dependent ,max_dependent )
@@ -84,9 +85,10 @@ def read_intp_out(jsondata, legendpos, label, output="fullconv"):
     fig.suptitle(r'{}'.format(label), size=14)
     
     plt.xticks([], [])
-    plt.ylim(min_dependent*0.7, max_dependent*1.3)
+    print(min_dependent*0.7, max_dependent*1.5)
+    plt.ylim(min_dependent*0.7, max_dependent*1.5)
     plt.xlim(0, independent_ax[-1] )
-    plt.savefig(output)
+    plt.savefig(output,  format='eps', dpi=1200)
     plt.show()
     plt.close()
     mpl.rcParams.update(mpl.rcParamsDefault)

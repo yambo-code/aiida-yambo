@@ -7,7 +7,7 @@ from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.common.datastructures import calc_states
-from aiida_quantumespresso.calculations import  get_input_data_text,_lowercase_dict,_uppercase_dict
+from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from aiida.common.exceptions import UniquenessError, InputValidationError
 from aiida.common.utils import classproperty
 from aiida.orm.data.parameter import ParameterData 
@@ -31,6 +31,8 @@ class YamboCalculation(JobCalculation):
 
     def _init_internal_params(self):
         super(YamboCalculation, self)._init_internal_params()
+
+        self._PREFIX = 'aiida'
 
         self._INPUT_FILE_NAME = 'aiida.in'
         
@@ -474,7 +476,7 @@ class YamboCalculation(JobCalculation):
         
         self._check_valid_parent(calc)
         
-        remotedatas = calc.get_outputs(type=RemoteData)
+        remotedatas = calc.get_outputs(node_type=RemoteData)
         if not remotedatas:
             raise NotExistent("No output remotedata found in "
                                   "the parent")
@@ -499,3 +501,4 @@ class YamboCalculation(JobCalculation):
                                   "Yambo calculation")
 
         self.use_parent_folder(remotedata)
+

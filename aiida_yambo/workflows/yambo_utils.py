@@ -21,26 +21,26 @@ ParameterData = DataFactory("parameter")
 
 def generate_yambo_input_params(precodename,yambocodename, parent_folder, parameters,  calculation_set, settings):
     """Generate yambo plugin  inputs._*  from  given params"""
-    inputs = YamboCalculation.process().get_inputs_template()
+    inputs = YamboCalculation.process().get_builder()
     inputs.preprocessing_code = Code.get_from_string(precodename.value)
     inputs.code = Code.get_from_string(yambocodename.value)
     calculation_set = calculation_set.get_dict()
     resource = calculation_set.pop('resources', {})
     if resource:
-        inputs._options.resources =  resource 
-    inputs._options.max_wallclock_seconds =  calculation_set.pop('max_wallclock_seconds', 86400) 
+        inputs.options.resources =  resource 
+    inputs.options.max_wallclock_seconds =  calculation_set.pop('max_wallclock_seconds', 86400) 
     max_memory_kb = calculation_set.pop('max_memory_kb',None)
     if max_memory_kb:
-        inputs._options.max_memory_kb = max_memory_kb
+        inputs.options.max_memory_kb = max_memory_kb
     queue_name = calculation_set.pop('queue_name',None)
     if queue_name:
-        inputs._options.queue_name = queue_name 
+        inputs.options.queue_name = queue_name 
     custom_scheduler_commands = calculation_set.pop('custom_scheduler_commands',None)
     if custom_scheduler_commands:
-        inputs._options.custom_scheduler_commands = custom_scheduler_commands
+        inputs.options.custom_scheduler_commands = custom_scheduler_commands
     environment_variables = calculation_set.pop("environment_variables",None)
     if environment_variables:
-        inputs._options.environment_variables = environment_variables
+        inputs.options.environment_variables = environment_variables
     label = calculation_set.pop('label',None)
     if label:
         inputs._label = label 
@@ -317,10 +317,10 @@ def set_default_qp_param(parameter=None):
     #     edit_param['GTermEn_units'] = 'eV'
     #     edit_param['GTermKind'] = 'BG'
     if 'SE_CPU' not in  edit_param.keys():
-        edit_param['SE_CPU'] ="1 8 16" 
+        edit_param['SE_CPU'] ="1 2 4" 
         edit_param['SE_ROLEs']= "q qp b"
     if 'X_all_q_CPU' not in  edit_param.keys():
-        edit_param['X_all_q_CPU']= "1 1 16 8"
+        edit_param['X_all_q_CPU']= "1 1 4 2"
         edit_param['X_all_q_ROLEs'] ="q k c v"
     if 'FFTGvecs' not in edit_param.keys():
         edit_param['FFTGvecs'] =  50
@@ -455,3 +455,4 @@ def default_convergence_settings():
           'max_w_cutoff': 40 ,
           'kpoint_starting_distance': 1.,
           'kpoint_min_distance': 0.025}) 
+

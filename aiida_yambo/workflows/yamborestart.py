@@ -10,10 +10,9 @@ from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.data.base import Float, Str, NumericType, BaseType 
-from aiida.work.workchain import WorkChain, while_ , Outputs
+from aiida.orm.data.base import Float, Str, NumericType
+from aiida.work.workchain import WorkChain, while_ 
 from aiida.work.workchain import ToContext as ResultToContext
-from aiida.work.run import legacy_workflow
 from aiida.work.run import run, submit
 from aiida.common.links import LinkType
 from aiida.orm.data.remote import RemoteData 
@@ -70,7 +69,7 @@ class YamboRestartWf(WorkChain):
             ),
             cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
     def yambobegin(self):
         """Submits a calculation  using the  yambo plugin.
@@ -112,7 +111,7 @@ class YamboRestartWf(WorkChain):
             self.inputs.precode,self.inputs.yambocode,
             self.inputs.parent_folder, self.ctx.parameters, self.ctx.calculation_set, ParameterData(dict=new_settings) )
         future = self.run_yambo(inputs)
-        self.report("workflow start, submitted  {}".format(future.pid))
+        self.report("workflow start, submitted  {}".format(future.pk))
         return  ResultToContext(yambo= future)
 
     def interstep(self):
@@ -278,9 +277,9 @@ class YamboRestartWf(WorkChain):
              self.inputs.precode,self.inputs.yambocode,
              parent_folder, self.ctx.parameters, self.ctx.calculation_set, ParameterData(dict=new_settings) )
         future = self.run_yambo(inputs)
-        self.ctx.yambo_pks.append(future.pid )
+        self.ctx.yambo_pks.append(future.pk )
         self.ctx.restart += 1
-        self.report(" restarting from:{}  ".format(future.pid )) 
+        self.report(" restarting from:{}  ".format(future.pk )) 
         return ResultToContext(yambo_restart= future)
 
     def run_yambo(self,inputs):
@@ -288,9 +287,9 @@ class YamboRestartWf(WorkChain):
         
         Takes some inputs and does a submit."""
         YamboProcess = YamboCalculation.process()
-        future =  submit(YamboProcess, **inputs)
-        self.ctx.yambo_pks.append( future.pid )
-        self.report(" submitted a calculation with pk: {} ".format(future.pid ))
+        future =  self.submit(YamboProcess, **inputs)
+        self.ctx.yambo_pks.append( future.pk )
+        self.report(" submitted a calculation with pk: {} ".format(future.pk ))
         return future  # we can not  ReturnToContext since this fuction is not called from the outline 
 
 

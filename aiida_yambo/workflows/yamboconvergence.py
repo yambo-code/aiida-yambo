@@ -9,11 +9,11 @@ from aiida.orm.data.upf import get_pseudos_from_structure
 from aiida.common.exceptions import InputValidationError,ValidationError
 from collections import defaultdict
 from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List, Bool
+from aiida.orm.data.base import Float, Str, NumericType, List, Bool
 from aiida.orm.code import Code
 from aiida.orm.data.structure import StructureData
 from aiida.work.run import run, submit
-from aiida.work.workchain import WorkChain, while_, ToContext, Outputs
+from aiida.work.workchain import WorkChain, while_, ToContext
 from aiida_yambo.calculations.gw  import YamboCalculation
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
@@ -77,10 +77,11 @@ class YamboConvergenceWorkflow(WorkChain):
         restart_options_gw --  GW specific restart options i.e. `{"max_restarts":4}`
         """
         super(YamboConvergenceWorkflow, cls).define(spec)
-        spec.input("precode", valid_type=BaseType)
-        spec.input("pwcode", valid_type=BaseType, required=False)
-        spec.input("yambocode", valid_type=BaseType)
-        spec.input("pseudo", valid_type=BaseType,required=True)
+        spec.input("merge_override", valid_type=Bool,required=False, default=Bool(0))
+        spec.input("precode", valid_type=Str)
+        spec.input("pwcode", valid_type=Str, required=False)
+        spec.input("yambocode", valid_type=Str)
+        spec.input("pseudo", valid_type=Str,required=True)
         spec.input("calculation_set_pw", valid_type=ParameterData, required=False)
         spec.input("calculation_set_pw_nscf", valid_type=ParameterData, required=False)
         spec.input("calculation_set_p2y", valid_type=ParameterData,required=False)
@@ -109,7 +110,7 @@ class YamboConvergenceWorkflow(WorkChain):
               ),
           cls.report_wf
         )
-        spec.dynamic_output()
+        #spec.dynamic_output()
 
 
 
@@ -123,7 +124,9 @@ class YamboConvergenceWorkflow(WorkChain):
         """
         convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
         if 'calculation_set_pw' not in self.inputs.keys():
-            self.inputs.calculation_set_pw = DataFactory('parameter')(dict=self.inputs.calculation_set.get_dict())
+            self.ctx.calculation_set_pw = DataFactory('parameter')(dict=self.inputs.calculation_set.get_dict())
+        else:
+            self.ctx.calculation_set_pw =  self.inputs.calculation_set_pw
 
         if 'calculation_set_p2y' not in self.inputs.keys():
             main_set = self.inputs.calculation_set.get_dict()
@@ -135,7 +138,10 @@ class YamboConvergenceWorkflow(WorkChain):
         if 'parameters' not in self.inputs.keys():
             self.ctx.parameters = set_default_qp_param()
         else:
-            self.ctx.parameters = self.inputs.parameters
+            if self.inputs.merge_override == True:
+                self.ctx.parameters = set_default_qp_param(self.inputs.parameters)
+            else:
+                self.ctx.parameters = self.inputs.parameters
 
         if 'parent_scf_folder' in  self.inputs.keys(): 
             self.report("parent_scf folder was set")
@@ -144,16 +150,24 @@ class YamboConvergenceWorkflow(WorkChain):
                 if parent_calc.get_state()== 'FINISHED': 
                     if 'settings_pw' not in self.inputs.keys():
                         self.ctx.settings_pw = parent_calc.inp.settings
+                    else:
+                        self.ctx.settings_pw = self.inputs.settings_pw
                     if 'structure' not in self.inputs.keys():
-                        self.inputs.structure = parent_calc.inp.structure
+                        self.ctx.structure = parent_calc.inp.structure
+                    else:
+                        self.ctx.structure = self.inputs.structure
                     if 'pseudo' not in self.inputs.keys():
                         raise InputValidationError("Pseudo should be provided")
                     if parent_calc.get_inputs_dict(link_type=LinkType.CREATE)['parameters'].get_dict()['CONTROL']['calculation'] == 'scf':
                         if 'parameters_pw' not in self.inputs.keys():
                             self.ctx.parameters_pw = parent_calc.inp.parameters
+                        else:
+                            self.ctx.parameters_pw = self.inputs.parameters_pw
                     else:
                         if 'parameters_pw_nscf' not in self.inputs.keys():
                             self.ctx.parameters_pw_nscf = parent_calc.inp.parameters
+                        else:
+                            self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
                     self.report("parent_scf_folder defined params {}".format(self.ctx.parameters_pw.get_dict() ))
 
             if isinstance(parent_calc, YamboCalculation):
@@ -161,37 +175,61 @@ class YamboConvergenceWorkflow(WorkChain):
                     if 'parameters' not in self.inputs.keys():
                         self.report("setting default parameters, parent was yambocalc ")
                         self.ctx.parameters = set_default_qp_param()
+                    else:
+                        self.ctx.parameters = self.inputs.parameters 
 
             if 'kpoints'==self.ctx.variable_to_converge:
                 if 'settings_pw' not in self.inputs.keys():
                     self.ctx.settings_pw =  default_pw_settings() 
+                else:
+                    self.ctx.settings_pw =  self.inputs.settings_pw
                 if 'parameters_pw' not in self.inputs.keys():
                     self.ctx.parameters_pw = set_default_pw_param() 
+                else:
+                    self.ctx.parameters_pw = self.inputs.parameters_pw
                 if 'parameters_pw_nscf' not in self.inputs.keys():
                     self.ctx.parameters_pw_nscf = set_default_pw_param(nscf=True) 
+                else:
+                    self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
                       
         else:
             if 'kpoints'==self.ctx.variable_to_converge:
                 self.report(" initializing in a kpoints convergence calculation")
                 if 'settings_pw' not in self.inputs.keys():
-                    self.ctx.settings_pw =  default_pw_settings() 
+                    self.ctx.settings_pw =  default_pw_settings()
+                else:
+                    self.ctx.settings_pw =  self.inputs.settings_pw
                 if 'parameters_pw' not in self.inputs.keys():
                     self.report("  parameters_pw were not found setting them to default pw params")
                     self.ctx.parameters_pw = set_default_pw_param() 
+                else:
+                    self.ctx.parameters_pw =  self.inputs.parameters_pw
                 if 'parameters_pw_nscf' not in self.inputs.keys():
                     self.report("  parameters_pw_nscf were not found setting them to default pw params")
                     self.ctx.parameters_pw_nscf = set_default_pw_param(nscf=True) 
+                else:
+                    self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
             if 'kpoints'!=self.ctx.variable_to_converge:
                 if 'settings_pw' not in self.inputs.keys():
                     self.ctx.settings_pw =  default_pw_settings() 
+                else:
+                    self.ctx.settings_pw = self.inputs.settings_pw
                 if 'parameters' not in self.inputs.keys():
                     self.ctx.parameters = set_default_qp_param()
+                else:
+                    self.ctx.parameters = self.inputs.parameters
             if 'structure' not in self.inputs.keys() :
                 raise InputValidationError("Structure should be provided if parent PW SCF folder is not given when converging kpoints")
+            else:
+                self.ctx.structure = self.inputs.structure
             if 'pseudo' not in self.inputs.keys():
                 raise InputValidationError("Pseudo should be provided if parent PW calculation is not given when converging kpoints")
+            else:
+                self.ctx.pseudo = self.inputs.pseudo
             if 'pwcode' not in self.inputs.keys():
                 raise InputValidationError("PW code  should be provided when converging kpoints")
+            else: 
+                self.ctx.pwcode = self.inputs.pwcode
             if 'kpoints'!=self.ctx.variable_to_converge and\
                                                    'parent_nscf_folder' not in self.inputs.keys():
                 raise InputValidationError("Parent nscf folder should be provided when not converging kpoints")
@@ -209,7 +247,7 @@ class YamboConvergenceWorkflow(WorkChain):
             self.ctx.settings_pw =  self.inputs.settings_pw 
 
         params = self.ctx.parameters.get_dict() 
-        if 'kpoints'!=self.ctx.variable_to_converge:
+        if 'kpoints'!= self.ctx.variable_to_converge:
             for field in self.ctx.conv_elem.keys():
                  self.report("self.ctx.start_value {}  self.ctx.step {}  self.ctx.loop_length {}  self.ctx.iteration {}".format(
                              self.ctx.start_value, self.ctx.step, self.ctx.loop_length, self.ctx.iteration ))
@@ -305,7 +343,7 @@ class YamboConvergenceWorkflow(WorkChain):
         extra_rs={}
         extra_wf={}
         if 'calculation_set_pw_nscf' in self.inputs.keys():
-            extra_wf['calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
+            extra_wf['calculation_set_pw_nscf'] = self.ctx.calculation_set_pw_nscf
         if 'settings_pw_nscf' in self.inputs.keys():
             extra_wf['settings_pw_nscf'] = self.inputs.settings_pw_nscf
         if 'restart_options_pw' in self.inputs.keys():
@@ -336,7 +374,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     p2y_done = self.ctx.p2y_parent_folder 
                 except AttributeError:
                     self.report(' no preceeding yambo parent, will run P2Y from NSCF parent first ' )
-                    p2y_res =  submit (YamboRestartWf,
+                    p2y_res =  self.submit (YamboRestartWf,
                                 precode= self.inputs.precode,
                                 yambocode=self.inputs.yambocode,
                                 parameters = self.inputs.parameters_p2y,
@@ -347,7 +385,7 @@ class YamboConvergenceWorkflow(WorkChain):
                     self.ctx.very_first = True  #  There was a bug  because of this.
                     return ToContext(missing_p2y_parent= p2y_res)
                 self.report(' running from preceeding yambo/p2y calculation  ' )
-                future =  submit  (YamboRestartWf,
+                future =  self.submit  (YamboRestartWf,
                             precode= self.inputs.precode,
                             yambocode=self.inputs.yambocode,
                             parameters = self.ctx.parameters,
@@ -368,7 +406,7 @@ class YamboConvergenceWorkflow(WorkChain):
                 def get_kpoints():
                     self.ctx.distance_kpoints = self.ctx.distance_kpoints* 0.9 # 10% change 
                     kpoints = KpointsData()
-                    kpoints.set_cell_from_structure(self.inputs.structure)
+                    kpoints.set_cell_from_structure(self.ctx.structure)
                     kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=True)
                     return kpoints
                 while True:
@@ -385,13 +423,13 @@ class YamboConvergenceWorkflow(WorkChain):
                 if 'BndsRnXp' not in self.ctx.parameters.get_dict().keys() or 'GbndRnge' not in self.ctx.parameters.get_dict().keys() :
                    extra_wf['to_set_bands'] = Bool(1)
                 extra_wf['calculation_set_p2y'] = self.ctx.calculation_set_p2y
-                extra_wf['calculation_set_pw'] = self.inputs.calculation_set_pw
+                extra_wf['calculation_set_pw'] = self.ctx.calculation_set_pw
                 extra_wf['settings_p2y'] = self.inputs.settings_p2y
                 extra_wf['settings_pw'] = self.ctx.settings_pw
-                future =  submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
+                future =  self.submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
                    codename_yambo= self.inputs.yambocode, pseudo_family= self.inputs.pseudo,
                    calculation_set_yambo = self.inputs.calculation_set,
-                   settings_yambo=self.inputs.settings , structure = self.inputs.structure,
+                   settings_yambo=self.inputs.settings , structure = self.ctx.structure,
                    kpoint_pw = kpoints, parameters_pw= self.ctx.parameters_pw, parameters_pw_nscf= self.ctx.parameters_pw_nscf,
                    parameters_p2y= self.inputs.parameters_p2y, parameters_yambo=  self.ctx.parameters,
                    **extra_wf)
