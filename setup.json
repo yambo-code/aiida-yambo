@@ -21,7 +21,7 @@
       }, 
     "install_requires": [
         "aiida_core[docs,atomic_tools]>=1.0.0a2",
-        "aiida-quantumespresso>2.1.0",
+        "aiida-quantumespresso",
         "reentry>=1.0.2"
         ],
     "dependency_links" :[
