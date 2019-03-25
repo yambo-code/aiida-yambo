@@ -13,7 +13,7 @@ before_install:  # copied from pgtest's travis.yml
     - sudo updatedb
 install:
     - pip install --upgrade pip
-    - pip install -e git+https://github.com/aiidateam/aiida_core#egg=aiida-core
+    - pip install git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core
     - pip install -e .
     - pip install tox-travis
 script: tox
