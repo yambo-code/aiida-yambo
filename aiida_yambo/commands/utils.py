@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import click
 
+
 def command():
     """
     Wrapped decorator for click's command decorator, which makes sure
@@ -13,5 +14,5 @@ def command():
     @click.decorators.command
     def inner():
         func(*args, **kwargs)
-    return inner
 
+    return inner

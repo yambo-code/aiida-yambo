@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import sys
 import unittest
 from aiida.utils.fixtures import TestRunner

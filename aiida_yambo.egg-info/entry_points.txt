@@ -1,0 +1,15 @@
+[aiida.calculations]
+yambo.yambo = aiida_yambo.calculations.gw:YamboCalculation
+
+[aiida.data]
+
+
+[aiida.parsers]
+yambo.yambo = aiida_yambo.parsers.parsers:YamboParser
+
+[console_scripts]
+mock_p2y = aiida_yambo.commands.mocks:mock_p2y
+mock_qe = aiida_yambo.commands.mocks:mock_qe
+mock_yambo = aiida_yambo.commands.mocks:mock_yambo
+plotyamboconv = aiida_yambo.commands.plotting:plotconv
+
