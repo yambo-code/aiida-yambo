@@ -80,17 +80,7 @@ class YamboCalculation(CalcJob):
                 help='Use a node that specifies the input parameters for the yambo precode',dynamic=True)
 
 
-
-    def _prepare_for_submission(self, tempfolder, inputdict):
-        """
-        This is the routine to be called when you want to create
-        the input files and related stuff with a plugin.
-        
-        :param tempfolder: a aiida.common.folders.Folder subclass where
-                           the plugin should put all its files.
-        :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputdata_dict (with the Code(s)!)
-        """
+    def prepare_for_submission(self, folder):
 
         local_copy_list = []
         remote_copy_list = []
@@ -98,69 +88,35 @@ class YamboCalculation(CalcJob):
 
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
-        settings = inputdict.pop(self.get_linkname('settings'), None)
-        if settings is None:
-            settings_dict = {}
-        else:
-            if not isinstance(settings, ParameterData):
-                raise InputValidationError(
-                    "settings, if specified, must be of "
-                    "type ParameterData")
-            # Settings converted to uppercase
-            settings_dict = _uppercase_dict(
-                settings.get_dict(), dict_name='settings')
+        
+        settings = self.inputs.settings
+
         initialise = settings_dict.pop('INITIALISE', None)
         if initialise is not None:
             if not isinstance(initialise, bool):
                 raise InputValidationError("INITIALISE must be " " a boolean")
-        try:
-            parameters = inputdict.pop(self.get_linkname('parameters'))
-        except KeyError:
-            if not initialise:
-                raise InputValidationError(
-                    "No parameters specified for this calculation")
-            else:
-                pass
+        
+        parameters = self.inputs.parameters
+
         if not initialise:
             if not isinstance(parameters, ParameterData):
                 raise InputValidationError(
                     "parameters is not of type ParameterData")
 
-        parent_calc_folder = inputdict.pop(
-            self.get_linkname('parent_folder'), None)
-        if parent_calc_folder is None:
-            raise InputValidationError(
-                "No parent calculation found, it is needed to "
-                "use Yambo")
-        if not isinstance(parent_calc_folder, RemoteData):
-            raise InputValidationError("parent_calc_folder must be of"
-                                       " type RemoteData")
+        parent_calc_folder = self.inputs.parent_folder
 
         main_code = inputdict.pop(self.get_linkname('code'), None)
         if main_code is None:
             raise InputValidationError("No input code found!")
 
-        preproc_code = inputdict.pop(
-            self.get_linkname('preprocessing_code'), None)
-        if preproc_code is not None:
-            if not isinstance(preproc_code, Code):
-                raise InputValidationError("preprocessing_code, if specified,"
-                                           "must be of type Code")
+        preproc_code = self.inputs.preprocessing_code
 
         parent_calc = parent_calc_folder.get_inputs_dict(
             link_type=LinkType.CREATE)['remote_folder']
         yambo_parent = isinstance(parent_calc, YamboCalculation)
 
         # flags for yambo interfaces
-        try:
-            precode_parameters = inputdict.pop(
-                self.get_linkname('precode_parameters'))
-        except KeyError:
-            precode_parameters = Dict(dict={})
-        if not isinstance(precode_parameters, ParameterData):
-            raise InputValidationError('precode_parameters is not '
-                                       'of type ParameterData')
-        precode_param_dict = precode_parameters.get_dict()
+        precode_param_dict = self.inputs.precode_parameters
 
         # check the precode parameters given in input
         input_cmdline = settings_dict.pop('CMDLINE', None)
