@@ -3,7 +3,7 @@ from __future__ import print_function
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 if not is_dbenv_loaded():
     load_dbenv()
-from aiida.orm.utils import DataFactory
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 

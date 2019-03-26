@@ -7,23 +7,23 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.data.upf import get_pseudos_from_structure
+from aiida.orm.nodes.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
-from aiida.orm.utils import DataFactory, CalculationFactory
+from aiida.plugins.utils import DataFactory, CalculationFactory
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, Bool, Int
-    from aiida.work.workchain import WorkChain, while_
-    from aiida.work.workchain import ToContext as ResultToContext
-    from aiida.work.run import legacy_workflow
-    from aiida.work.run import run, submit
+    from aiida.orm.nodes.base import Float, Str, NumericType, Bool, Int
+    from aiida.engine.workchain import WorkChain, while_
+    from aiida.engine.workchain import ToContext as ResultToContext
+    from aiida.engine.run import legacy_workflow
+    from aiida.engine.run import run, submit
 except ImportError:
     pass
 from aiida.common.links import LinkType
-from aiida.orm.data.remote import RemoteData
+from aiida.orm.nodes.remote import RemoteData
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
+from aiida.orm.nodes.structure import StructureData
 from aiida_yambo.workflows.yambo_utils import generate_pw_input_params
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
@@ -134,7 +134,7 @@ class PwRestartWf(WorkChain):
                         parameters['SYSTEM']['nbnd'])
                 parameters['CONTROL']['calculation'] = 'nscf'
                 self.report("NSCF PARAMS {}".format(parameters))
-                self.inputs.parameters_nscf = ParameterData(
+                self.inputs.parameters_nscf = Dict(
                     dict=parameters
                 )  # Added to inputs to allow for RESTART from failed NSCF
                 inputs = generate_pw_input_params(
@@ -309,7 +309,7 @@ class PwRestartWf(WorkChain):
 
         self.report(" calculation type:  {} and system {}".format(
             parameters['CONTROL']['calculation'], parameters['SYSTEM']))
-        parameters = ParameterData(dict=parameters)
+        parameters = Dict(dict=parameters)
         if scf == 'nscf':
             inputs = generate_pw_input_params(
                 self.inputs.structure, self.inputs.codename,
@@ -336,7 +336,7 @@ class PwRestartWf(WorkChain):
         """
         self.report("Workflow Complete : scf {}  nscf {} success {}".format(
             self.ctx.scf_pk, self.ctx.nscf_pk, self.ctx.success))
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         res = {}
         if self.ctx.scf_pk:
             res['scf_pk'] = self.ctx.scf_pk

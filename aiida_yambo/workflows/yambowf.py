@@ -7,22 +7,22 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.data.upf import get_pseudos_from_structure
+from aiida.orm.nodes.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
-from aiida.orm.utils import DataFactory, CalculationFactory
+from aiida.plugins.utils import DataFactory, CalculationFactory
 import itertools
-from aiida.orm.data.base import Float, Str, NumericType, Bool
-from aiida.work.workchain import WorkChain, while_
-from aiida.work.workchain import ToContext as ResultToContext
-from aiida.work.run import run, submit
+from aiida.orm.nodes.base import Float, Str, NumericType, Bool
+from aiida.engine.workchain import WorkChain, while_
+from aiida.engine.workchain import ToContext as ResultToContext
+from aiida.engine.run import run, submit
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, default_pw_settings, set_default_pw_param,\
                default_qpkrange, default_bands
-from aiida.orm.data.remote import RemoteData
-from aiida.orm.data.array.kpoints import KpointsData
+from aiida.orm.nodes.remote import RemoteData
+from aiida.orm.nodes.array.kpoints import KpointsData
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
+from aiida.orm.nodes.structure import StructureData
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 from aiida_yambo.workflows.pwplaceholder import PwRestartWf
 from aiida_yambo.calculations.gw import YamboCalculation
@@ -400,7 +400,7 @@ class YamboWorkflow(WorkChain):
         """
         """
         self.report('Final step.')
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         try:
             pw = self.ctx.pw_wf_res.out.pw.get_dict()
         except Exception:

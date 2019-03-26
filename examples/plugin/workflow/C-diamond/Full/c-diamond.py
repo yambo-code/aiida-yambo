@@ -5,9 +5,9 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida_yambo.workflows.gwconvergence import YamboFullConvergenceWorkflow
-from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
-from aiida.work.run import run, submit
-from aiida.orm.utils import DataFactory
+from aiida.orm.nodes.base import Float, Str, NumericType, BaseType, List
+from aiida.engine.run import run, submit
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 
@@ -99,8 +99,8 @@ if __name__ == "__main__":
         pseudo=Str(args.pseudo),
         yambocode=Str(args.yambocode),
         structure=structure,
-        calculation_set=ParameterData(dict=calculation_set_yambo),
-        calculation_set_pw=ParameterData(dict=calculation_set_pw),
+        calculation_set=Dict(dict=calculation_set_yambo),
+        calculation_set_pw=Dict(dict=calculation_set_pw),
         threshold=threshold,
         **extra)
     print(("Wf launched", p2y_result))

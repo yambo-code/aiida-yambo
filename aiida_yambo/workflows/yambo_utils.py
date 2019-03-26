@@ -11,11 +11,11 @@ if not is_dbenv_loaded():
 
 from aiida.common.exceptions import InputValidationError, ValidationError, WorkflowInputValidationError
 from aiida.orm import load_node
-from aiida.orm.data.upf import get_pseudos_from_structure
+from aiida.orm.nodes.upf import get_pseudos_from_structure
 from collections import defaultdict
-from aiida.orm.utils import DataFactory, CalculationFactory
+from aiida.plugins.utils import DataFactory, CalculationFactory
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
+from aiida.orm.nodes.structure import StructureData
 from aiida.common.links import LinkType
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_yambo.calculations.gw import YamboCalculation
@@ -115,7 +115,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
             v, c = split_incom(tot_mpi)
             edit_parameters['X_all_q_CPU'] = "1 1 {c} {v}".format(c=c, v=v)
             edit_parameters['X_all_q_ROLEs'] = "q k c v"
-    inputs.parameters = ParameterData(dict=edit_parameters)
+    inputs.parameters = Dict(dict=edit_parameters)
     return inputs
 
 
@@ -144,7 +144,7 @@ def generate_pw_input_params(structure, codename, pseudo_family, parameters,
     inputs['structure'] = structure
     inputs['code'] = Code.get_from_string(codename.value)
     calculation_set = calculation_set.get_dict()
-    inputs['options'] = ParameterData(dict=calculation_set)
+    inputs['options'] = Dict(dict=calculation_set)
     if parent_folder:
         inputs['parent_folder'] = parent_folder
     inputs['kpoints'] = kpoints
@@ -317,7 +317,7 @@ def update_parameter_field(field, starting_point, update_delta):
 def set_default_qp_param(parameter=None):
     """Create a default QP parameter object"""
     if not parameter:
-        parameter = ParameterData(dict={})
+        parameter = Dict(dict={})
     edit_param = parameter.get_dict()
     if 'ppa' not in list(edit_param.keys()):
         edit_param['ppa'] = True
@@ -356,7 +356,7 @@ def set_default_qp_param(parameter=None):
     if 'NGsBlkXp' not in list(edit_param.keys()):
         edit_param['NGsBlkXp'] = 2
         edit_param['NGsBlkXp_units'] = 'Ry'
-    return ParameterData(dict=edit_param)
+    return Dict(dict=edit_param)
 
 
 def set_default_pw_param(nscf=False):
@@ -383,15 +383,15 @@ def set_default_pw_param(nscf=False):
     if nscf:
         pw_parameters['CONTROL']['calculation'] = 'nscf'
         pw_parameters['SYSTEM']['force_symmorphic'] = True
-    return ParameterData(dict=pw_parameters)
+    return Dict(dict=pw_parameters)
 
 
 def default_pw_settings():
-    return ParameterData(dict={})
+    return Dict(dict={})
 
 
 def yambo_default_settings():
-    return ParameterData(
+    return Dict(
         dict={
             "ADDITIONAL_RETRIEVE_LIST": [
                 'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -401,7 +401,7 @@ def yambo_default_settings():
 
 
 def p2y_default_settings():
-    return ParameterData(
+    return Dict(
         dict={
             "ADDITIONAL_RETRIEVE_LIST":
             ['r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1'],
@@ -428,7 +428,7 @@ def default_qpkrange(calc_pk, parameters):
         if 'QPkrange' not in list(edit_parameters.keys()):
             edit_parameters['QPkrange'] = [(1, nkpts, int(nocc) - 1,
                                             int(nocc) + 1)]
-    return ParameterData(dict=edit_parameters)
+    return Dict(dict=edit_parameters)
 
 
 def default_bands(calc_pk, parameters):
@@ -446,7 +446,7 @@ def default_bands(calc_pk, parameters):
             nocc = nelec / 2
         edit_parameters['BndsRnXp'] = (1.0, nocc * 12)
         edit_parameters['GbndRnge'] = (1.0, nocc * 12)
-    return ParameterData(dict=edit_parameters)
+    return Dict(dict=edit_parameters)
 
 
 def split_incom(num):
@@ -491,7 +491,7 @@ def is_converged(values, conv_tol=1e-5, conv_window=3):
 
 
 def default_convergence_settings():
-    return ParameterData(
+    return Dict(
         dict={
             'start_fft': 20,
             'max_fft': 400,

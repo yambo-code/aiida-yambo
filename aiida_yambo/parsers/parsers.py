@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
-from aiida.orm.data.folder import FolderData
+from aiida.orm.nodes.folder import FolderData
 from aiida.parsers.parser import Parser
 from aiida.common.datastructures import calc_states
-from aiida.parsers.exceptions import OutputParsingError
+from aiida.common.exceptions import OutputParsingError
 from aiida.common.exceptions import UniquenessError
 from aiida.common.exceptions import ValidationError, ParsingError
 import numpy
 import copy
-from aiida.orm.data.array import ArrayData
-from aiida.orm.data.array.bands import BandsData
-from aiida.orm.data.array.kpoints import KpointsData
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.structure import StructureData
-from aiida.orm.utils import DataFactory, CalculationFactory
+from aiida.orm.nodes.array import ArrayData
+from aiida.orm.nodes.array.bands import BandsData
+from aiida.orm.nodes.array.kpoints import KpointsData
+from aiida.orm.nodes.parameter import Dict
+from aiida.orm.nodes.structure import StructureData
+from aiida.plugins.utils import DataFactory, CalculationFactory
 import glob, os, re
 from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
 from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder
@@ -260,7 +260,7 @@ class YamboParser(Parser):
                 new_nodes_list.append((self._ndb_HF_linkname,
                                        self._aiida_ndb_hf(ndbhf)))
 
-        param = ParameterData(dict=output_params)
+        param = Dict(dict=output_params)
         new_nodes_list.append((self._parameter_linkname,
                                param))  # output_parameters
 

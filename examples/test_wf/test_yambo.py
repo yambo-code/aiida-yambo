@@ -7,15 +7,15 @@ if not is_dbenv_loaded():
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType
-    from aiida.work.run import run, submit
+    from aiida.orm.nodes.base import Float, Str, NumericType, BaseType
+    from aiida.engine.run import run, submit
 except ImportError:
     from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
     from aiida.workflows2.db_types import SimpleData as BaseType
-    from aiida.orm.data.simple import SimpleData as SimpleData_
+    from aiida.orm.nodes.simple import SimpleData as SimpleData_
     from aiida.workflows2.run import run, submit
 
-from aiida.orm.utils import DataFactory
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 
@@ -99,9 +99,9 @@ calculation_set_yambo = {
     }
 }
 
-settings_pw = ParameterData(dict={})
+settings_pw = Dict(dict={})
 
-settings_p2y = ParameterData(
+settings_p2y = Dict(
     dict={
         "ADDITIONAL_RETRIEVE_LIST": [
             'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -111,7 +111,7 @@ settings_p2y = ParameterData(
         True
     })
 
-settings_yambo = ParameterData(
+settings_yambo = Dict(
     dict={
         "ADDITIONAL_RETRIEVE_LIST": [
             'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -175,8 +175,8 @@ if __name__ == "__main__":
         YamboRestartWf,
         precode=Str(args.precode),
         yambocode=Str(args.yambocode),
-        parameters=ParameterData(dict=yambo_parameters),
-        calculation_set=ParameterData(dict=calculation_set_yambo),
+        parameters=Dict(dict=yambo_parameters),
+        calculation_set=Dict(dict=calculation_set_yambo),
         parent_folder=parent_folder_,
         settings=settings_yambo)
 

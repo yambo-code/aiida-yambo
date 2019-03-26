@@ -7,15 +7,15 @@ if not is_dbenv_loaded():
 from aiida_yambo.workflows.yamboconvergence import YamboConvergenceWorkflow
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
-    from aiida.work.run import run, submit
+    from aiida.orm.nodes.base import Float, Str, NumericType, BaseType, List
+    from aiida.engine.run import run, submit
 except ImportError:
     from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
     from aiida.workflows2.db_types import SimpleData as BaseType
-    from aiida.orm.data.simple import SimpleData as SimpleData_
+    from aiida.orm.nodes.simple import SimpleData as SimpleData_
     from aiida.workflows2.run import run
 
-from aiida.orm.utils import DataFactory
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
 StructureData = DataFactory('structure')
@@ -114,8 +114,8 @@ if __name__ == "__main__":
         pwcode=Str(args.pwcode),
         precode=Str(args.precode),
         yambocode=Str(args.yambocode),
-        calculation_set=ParameterData(dict=calculation_set_yambo),
-        calculation_set_pw=ParameterData(dict=calculation_set_pw),
+        calculation_set=Dict(dict=calculation_set_yambo),
+        calculation_set_pw=Dict(dict=calculation_set_pw),
         convergence_parameters=convergence_parameters,
         structure=structure,
         pseudo=Str(args.pseudo),

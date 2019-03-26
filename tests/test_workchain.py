@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 import unittest
-from aiida.utils.fixtures import PluginTestCase
+from aiida.manage.fixtures import PluginTestCase
 import subprocess, os
 
 
@@ -55,16 +55,16 @@ class TestWf(PluginTestCase):
         """
         from aiida import work
         from aiida.orm.code import Code
-        from aiida.orm.data.parameter import ParameterData
-        from aiida.orm.data.structure import StructureData
-        from aiida.orm.data.remote import RemoteData
+        from aiida.orm.nodes.parameter import Dict
+        from aiida.orm.nodes.structure import StructureData
+        from aiida.orm.nodes.remote import RemoteData
         from ase.spacegroup import crystal
         from aiida_quantumespresso.calculations.pw import PwCalculation
         from aiida_yambo.calculations.gw import YamboCalculation
         from aiida.common.links import LinkType
         from aiida.orm.computer import Computer as AiidaOrmComputer
         from aiida.common.datastructures import calc_states
-        from aiida.orm.utils import DataFactory
+        from aiida.plugins.utils import DataFactory
         runner = work.Runner(
             poll_interval=0., rmq_config=None, enable_persistence=None)
         work.set_runner(runner)
@@ -116,7 +116,7 @@ class TestWf(PluginTestCase):
         pw_remote_folder.add_link_from(
             self.calc_pw, label='remote_folder', link_type=LinkType.CREATE)
 
-        outputs = ParameterData(
+        outputs = Dict(
             dict={
                 "lsda": False,
                 "number_of_bands": 80,
@@ -141,7 +141,7 @@ class TestWf(PluginTestCase):
             u'ADDITIONAL_RETRIEVE_LIST':
             [u'r-*', u'o-*', u'l-*', u'l_*', u'LOG/l-*_CPU_1']
         }
-        self.calc.use_settings(ParameterData(dict=p2y_settings))
+        self.calc.use_settings(Dict(dict=p2y_settings))
         self.calc.set_resources({
             "num_machines": 1,
             "num_mpiprocs_per_machine": 16,
@@ -158,7 +158,7 @@ class TestWf(PluginTestCase):
             primitive_cell=True)
         self.struc = StructureData(ase=cell)
         self.struc.store()
-        self.parameters = ParameterData(
+        self.parameters = Dict(
             dict={
                 "BndsRnXp": [1.0, 48.0],
                 "Chimod": "Hartree",
@@ -180,14 +180,14 @@ class TestWf(PluginTestCase):
                 "ppa": True,
                 "rim_cut": True
             })
-        self.yambo_settings = ParameterData(
+        self.yambo_settings = Dict(
             dict={
                 "ADDITIONAL_RETRIEVE_LIST": [
                     "r-*", "o-*", "l-*", "l_*", "LOG/l-*_CPU_1",
                     "aiida/ndb.QP", "aiida/ndb.HF_and_locXC"
                 ]
             })
-        self.p2y_settings = ParameterData(
+        self.p2y_settings = Dict(
             dict={
                 "ADDITIONAL_RETRIEVE_LIST": [
                     'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1',
@@ -196,7 +196,7 @@ class TestWf(PluginTestCase):
                 'INITIALISE':
                 True
             })
-        self.yambo_calc_set = ParameterData(
+        self.yambo_calc_set = Dict(
             dict={
                 'resources': {
                     "num_machines": 1,
@@ -210,7 +210,7 @@ class TestWf(PluginTestCase):
                     "OMP_NUM_THREADS": "1"
                 }
             })
-        self.p2y_calc_set = ParameterData(
+        self.p2y_calc_set = Dict(
             dict={
                 'resources': {
                     "num_machines": 1,
@@ -238,8 +238,8 @@ class TestWf(PluginTestCase):
         pass
 
     def test_simple_log(self):
-        from aiida.work.launch import run
-        from aiida.orm.data.base import Float, Str, NumericType, List, Bool
+        from aiida.engine.launch import run
+        from aiida.orm.nodes.base import Float, Str, NumericType, List, Bool
         from aiida_yambo.workflows.yamborestart import YamboRestartWf
         p2y_result = run(
             YamboRestartWf,

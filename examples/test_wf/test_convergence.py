@@ -7,15 +7,15 @@ if not is_dbenv_loaded():
 from aiida_yambo.workflows.yamboconvergence import YamboConvergenceWorkflow
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType, List
-    from aiida.work.run import run, submit
+    from aiida.orm.nodes.base import Float, Str, NumericType, BaseType, List
+    from aiida.engine.run import run, submit
 except ImportError:
     from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
     from aiida.workflows2.db_types import SimpleData as BaseType
-    from aiida.orm.data.simple import SimpleData as SimpleData_
+    from aiida.orm.nodes.simple import SimpleData as SimpleData_
     from aiida.workflows2.run import run
 
-from aiida.orm.utils import DataFactory
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
 yambo_parameters = {
@@ -66,10 +66,10 @@ calculation_set_yambo = {
     }
 }
 
-settings_pw = ParameterData(
+settings_pw = Dict(
     dict={'cmdline': ['-npool', '2', '-ndiag', '8', '-ntg', '2']})
 
-settings_p2y = ParameterData(
+settings_p2y = Dict(
     dict={
         "ADDITIONAL_RETRIEVE_LIST": [
             'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -79,7 +79,7 @@ settings_p2y = ParameterData(
         True
     })
 
-settings_yambo = ParameterData(
+settings_yambo = Dict(
     dict={
         "ADDITIONAL_RETRIEVE_LIST": [
             'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -156,12 +156,12 @@ if __name__ == "__main__":
         pwcode=Str(args.pwcode),
         precode=Str(args.precode),
         yambocode=Str(args.yambocode),
-        calculation_set=ParameterData(dict=calculation_set_yambo),
+        calculation_set=Dict(dict=calculation_set_yambo),
         settings=settings_yambo,
-        convergence_parameters=ParameterData(dict=convergence_parameters),
+        convergence_parameters=Dict(dict=convergence_parameters),
         #parent_scf_folder = parent_folder_,
         #parent_nscf_folder = parent_nscf_folder_,
-        parameters=ParameterData(dict=yambo_parameters),
+        parameters=Dict(dict=yambo_parameters),
         structure=structure,
         pseudo=Str(args.pseudo),
     )

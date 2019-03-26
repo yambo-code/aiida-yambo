@@ -7,18 +7,18 @@ if not is_dbenv_loaded():
 
 from aiida.orm import load_node
 from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.data.upf import get_pseudos_from_structure
+from aiida.orm.nodes.upf import get_pseudos_from_structure
 from aiida.common.datastructures import calc_states
 from collections import defaultdict
-from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.data.base import Float, Str, NumericType
-from aiida.work.workchain import WorkChain, while_
-from aiida.work.workchain import ToContext as ResultToContext
-from aiida.work.run import run, submit
+from aiida.plugins.utils import DataFactory, CalculationFactory
+from aiida.orm.nodes.base import Float, Str, NumericType
+from aiida.engine.workchain import WorkChain, while_
+from aiida.engine.workchain import ToContext as ResultToContext
+from aiida.engine.run import run, submit
 from aiida.common.links import LinkType
-from aiida.orm.data.remote import RemoteData
+from aiida.orm.nodes.remote import RemoteData
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
+from aiida.orm.nodes.structure import StructureData
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import generate_yambo_input_params, reduce_parallelism
 from aiida_quantumespresso.calculations.pw import PwCalculation
@@ -110,7 +110,7 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_input_params(
             self.inputs.precode, self.inputs.yambocode,
             self.inputs.parent_folder, self.ctx.parameters,
-            self.ctx.calculation_set, ParameterData(dict=new_settings))
+            self.ctx.calculation_set, Dict(dict=new_settings))
         future = self.run_yambo(inputs)
         self.report("workflow start, submitted  {}".format(future.pk))
         return ResultToContext(yambo=future)
@@ -331,7 +331,7 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_input_params(
             self.inputs.precode, self.inputs.yambocode, parent_folder,
             self.ctx.parameters, self.ctx.calculation_set,
-            ParameterData(dict=new_settings))
+            Dict(dict=new_settings))
         future = self.run_yambo(inputs)
         self.ctx.yambo_pks.append(future.pk)
         self.ctx.restart += 1
@@ -368,7 +368,7 @@ class YamboRestartWf(WorkChain):
         return information that may be used to figure out
         the status of the calculation.
         """
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         success = load_node(self.ctx.yambo_pks[-1]).get_state() == 'FINISHED'
         self.out(
             "gw",

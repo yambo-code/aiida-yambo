@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import unittest
-from aiida.utils.fixtures import PluginTestCase
+from aiida.manage.fixtures import PluginTestCase
 
 
 class TestHartreeLog(PluginTestCase):
@@ -8,9 +8,9 @@ class TestHartreeLog(PluginTestCase):
         """
         """
         example_out = {"errors": [], "warnings": [], "yambo_wrote": False}
-        from aiida.orm.utils import DataFactory
-        from aiida.orm.data.parameter import ParameterData
-        self.exampleparam = ParameterData(dict=example_out)
+        from aiida.plugins.utils import DataFactory
+        from aiida.orm.nodes.parameter import Dict
+        self.exampleparam = Dict(dict=example_out)
         self.exampleparam.store()
 
     def tearDown(self):

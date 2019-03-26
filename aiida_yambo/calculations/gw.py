@@ -4,19 +4,19 @@ Plugin to create a Yambo input file.
 """
 from __future__ import absolute_import
 import os
-from aiida.orm.calculation.job import JobCalculation
+from aiida.engine import CalcJob
 from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.datastructures import CalcInfo
-from aiida.common.datastructures import calc_states
+from aiida.common.datastructures import CalcJobState
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from aiida.common.exceptions import UniquenessError, InputValidationError
 from aiida.common.utils import classproperty
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.remote import RemoteData
-from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.code import Code
-from aiida.common import aiidalogger
-from aiida.common.links import LinkType
+from aiida.orm.nodes import Dict
+from aiida.orm.nodes import RemoteData
+from aiida.plugins import DataFactory, CalculationFactory
+from aiida.orm import Code
+from aiida.common import AIIDA_LOGGER
+from aiida.common import LinkType
 import six
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
@@ -25,33 +25,32 @@ __authors__ = " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
               " Michael Atambo (michaelontita.atambo@unimore.it)."
 
 
-class YamboCalculation(JobCalculation):
+class YamboCalculation(CalcJob):
     """
     AiiDA plugin for the Yambo code.
     For more information, refer to http://www.yambo-code.org/
     https://github.com/yambo-code/yambo-aiida and http://aiida-yambo.readthedocs.io/en/latest/
     """
 
-    def _init_internal_params(self):
-        super(YamboCalculation, self)._init_internal_params()
+    # Default input and output files
+    _DEFAULT_INPUT_FILE = 'aiida.in'
+    _DEFAULT_OUTPUT_FILE = 'aiida.out'
 
-        self._PREFIX = 'aiida'
+    @classmethod
+    def define(cls,spec):
+        super(YamboCalculation, self).define(spec)
+        spec.input('metadata.options.input_filename', valid_type=six.string_types, default=cls._DEFAULT_INPUT_FILE)
+        spec.input('metadata.options.output_filename', valid_type=six.string_types, default=cls._DEFAULT_OUTPUT_FILE)
 
-        self._INPUT_FILE_NAME = 'aiida.in'
+       # Default output parser provided by AiiDA
+        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='yambo.yambo')
+ 
+       # self._SCRATCH_FOLDER = 'SAVE'
+        spec.input('metadata.options.scratch_folder', valid_type=six.string_types, default='SAVE')
+   
 
-        #Maybe the output name is not necessary...
-        self._OUTPUT_FILE_NAME = 'aiida'
-
-        # Default output parser provided by AiiDA
-        self._default_parser = 'yambo.yambo'
-
-        # Default input and output files
-        self._DEFAULT_INPUT_FILE = 'aiida.in'
-        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
-
-        self._SCRATCH_FOLDER = 'SAVE'
-
-        self._LOGOSTRING = """#                                                           
+        spec.input('metadata.options.logostring', valid_type=six.string_types, default="""
+#                                                           
 # Y88b    /   e           e    e      888~~\    ,88~-_      
 #  Y88b  /   d8b         d8b  d8b     888   |  d888   \     
 #   Y88b/   /Y88b       d888bdY88b    888 _/  88888    |    
@@ -63,13 +62,21 @@ class YamboCalculation(JobCalculation):
 #               http://www.yambo-code.org                   
 #
 """
+)
 
-    @classproperty
-    def _use_methods(cls):
-        """
-        Additional use_* methods for the YamboCalculation class.
-        """
-        retdict = JobCalculation._use_methods
+    @classmethod
+    def define(cls,spec):
+        super(YamboCalculation,cls).define(spec)
+        
+        spec.input_namespace('settings',valid_type=Dict,
+                help='Use an additional node for special settings',dynamic=True)
+        spec.input_namespace('parameters',valid_type=Dict,
+                help='Use a node that specifies the input parameters',dynamic=True)
+        spec.input_namespace('parent_folder',valid_type=RemoteData,
+                help='Use a remote folder as parent folder (for "restarts and similar")',dynamic=True)
+        spec.input_namespace('preprocessing_code',valid_type=Code,
+                help='Use a preprocessing code for starting yambo',dynamic=True)
+
         retdict.update({
             "settings": {
                 'valid_types': ParameterData,
@@ -192,7 +199,7 @@ class YamboCalculation(JobCalculation):
             precode_parameters = inputdict.pop(
                 self.get_linkname('precode_parameters'))
         except KeyError:
-            precode_parameters = ParameterData(dict={})
+            precode_parameters = Dict(dict={})
         if not isinstance(precode_parameters, ParameterData):
             raise InputValidationError('precode_parameters is not '
                                        'of type ParameterData')

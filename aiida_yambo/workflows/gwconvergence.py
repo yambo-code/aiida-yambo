@@ -6,18 +6,18 @@ if not is_dbenv_loaded():
 
 from aiida.common.exceptions import InputValidationError, ValidationError, WorkflowInputValidationError
 from aiida.orm import load_node
-from aiida.orm.data.base import Float, Str, NumericType, List, Bool
+from aiida.orm.nodes.base import Float, Str, NumericType, List, Bool
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
-from aiida.orm.data.remote import RemoteData
+from aiida.orm.nodes.structure import StructureData
+from aiida.orm.nodes.remote import RemoteData
 from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.work.run import run, submit
-from aiida.work.workchain import WorkChain, while_, ToContext
+from aiida.engine.run import run, submit
+from aiida.engine.workchain import WorkChain, while_, ToContext
 import numpy as np
 from scipy.optimize import curve_fit
 from aiida_yambo.workflows.yamboconvergence import YamboConvergenceWorkflow
 from aiida_yambo.workflows.yambo_utils import default_convergence_settings
-from aiida.orm.utils import DataFactory
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 
 
@@ -279,12 +279,12 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if 'structure' in list(self.inputs.keys()):
             extra['structure'] = self.inputs.structure
         if self.ctx.last_step == 'step_2_1':
-            extra['parameters'] = ParameterData(
+            extra['parameters'] = Dict(
                 dict=self.ctx.step2_res.out.convergence.get_dict()
                 ['parameters'])
             extra['merge_override'] = Bool(1)
         if self.ctx.last_step == 'step_0_1' and self.ctx.step_0_done == True:
-            extra['parameters'] = ParameterData(
+            extra['parameters'] = Dict(
                 dict=self.ctx.step0_res.out.convergence.get_dict()
                 ['parameters'])
             extra['merge_override'] = Bool(1)
@@ -366,7 +366,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                 self.ctx.bands_n_cutoff_consistent = True
                 return
             #band_cutoff = int(self.ctx.last_used_band *0.7)
-            extra['parameters'] = ParameterData(
+            extra['parameters'] = Dict(
                 dict=self.ctx.step3_res.out.convergence.get_dict()
                 ['parameters'])
             extra['merge_override'] = Bool(1)
@@ -389,7 +389,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
             )
             #band_cutoff = self.ctx.last_used_band  ## BUG?
             #band_cutoff = int( self.ctx.last_used_band*0.7)
-            extra['parameters'] = ParameterData(
+            extra['parameters'] = Dict(
                 dict=self.ctx.step3_res.out.convergence.get_dict()
                 ['parameters'])
             extra['merge_override'] = Bool(1)
@@ -405,7 +405,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_1_1':
             params = self.ctx.step1_res.out.convergence.get_dict(
             )['parameters']
-            extra['parameters'] = ParameterData(dict=params)
+            extra['parameters'] = Dict(dict=params)
             extra['merge_override'] = Bool(1)
         convergence_parameters = DataFactory('parameter')(
             dict={
@@ -484,7 +484,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
                 self.ctx.bands_n_cutoff_consistent = True
                 return
             self.report("passing parameters from  re-converged bands ")
-            extra['parameters'] = ParameterData(
+            extra['parameters'] = Dict(
                 dict=self.ctx.step2_res.out.convergence.get_dict()
                 ['parameters'])
             extra['merge_override'] = Bool(1)
@@ -495,7 +495,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
         if self.ctx.last_step == 'step_2_1':
             self.report("passing parameters from  converged bands ")
             # use cut-off from 2_1
-            extra['parameters'] = ParameterData(
+            extra['parameters'] = Dict(
                 dict=self.ctx.step2_res.out.convergence.get_dict()
                 ['parameters'])
             extra['merge_override'] = Bool(1)
@@ -632,7 +632,7 @@ class YamboFullConvergenceWorkflow(WorkChain):
 
     def report_wf(self):
         """Output final quantities"""
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         self.out(
             "result",
             DataFactory('parameter')(

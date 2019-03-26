@@ -7,15 +7,15 @@ if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.orm import load_node
-from aiida.orm.data.upf import get_pseudos_from_structure
+from aiida.orm.nodes.upf import get_pseudos_from_structure
 from aiida.common.exceptions import InputValidationError, ValidationError
 from collections import defaultdict
-from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.data.base import Float, Str, NumericType, List, Bool
+from aiida.plugins.utils import DataFactory, CalculationFactory
+from aiida.orm.nodes.base import Float, Str, NumericType, List, Bool
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
-from aiida.work.run import run, submit
-from aiida.work.workchain import WorkChain, while_, ToContext
+from aiida.orm.nodes.structure import StructureData
+from aiida.engine.run import run, submit
+from aiida.engine.workchain import WorkChain, while_, ToContext
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
@@ -23,7 +23,7 @@ from aiida_yambo.workflows.yambo_utils import default_step_size, update_paramete
                p2y_default_settings, is_converged
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida.orm.data.remote import RemoteData
+from aiida.orm.nodes.remote import RemoteData
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_yambo.calculations.gw import YamboCalculation
 import numpy as np
@@ -735,7 +735,7 @@ class YamboConvergenceWorkflow(WorkChain):
         nscf_pk = False
         scf_pk = False
         parameters = None
-        from aiida.orm import DataFactory
+        from aiida.plugins import DataFactory
         if 'pw' in self.ctx.zero_calc.out:
             if 'nscf_pk' in self.ctx.zero_calc.out.pw.get_dict():
                 nscf_pk = self.ctx.zero_calc.out.pw.get_dict()['nscf_pk']

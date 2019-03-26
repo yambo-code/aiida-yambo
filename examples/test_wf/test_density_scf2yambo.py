@@ -7,15 +7,15 @@ if not is_dbenv_loaded():
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 
 try:
-    from aiida.orm.data.base import Float, Str, NumericType, BaseType, Bool, List
-    from aiida.work.run import run, submit
+    from aiida.orm.nodes.base import Float, Str, NumericType, BaseType, Bool, List
+    from aiida.engine.run import run, submit
 except ImportError:
     from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
     from aiida.workflows2.db_types import SimpleData as BaseType
-    from aiida.orm.data.simple import SimpleData as SimpleData_
+    from aiida.orm.nodes.simple import SimpleData as SimpleData_
     from aiida.workflows2.run import run
 
-from aiida.orm.utils import DataFactory
+from aiida.plugins.utils import DataFactory
 ParameterData = DataFactory("parameter")
 StructureData = DataFactory('structure')
 
@@ -136,9 +136,9 @@ calculation_set_yambo = {
     }
 }
 
-settings_pw = ParameterData(dict={})
+settings_pw = Dict(dict={})
 
-settings_p2y = ParameterData(
+settings_p2y = Dict(
     dict={
         "ADDITIONAL_RETRIEVE_LIST": [
             'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -148,7 +148,7 @@ settings_p2y = ParameterData(
         True
     })
 
-settings_yambo = ParameterData(
+settings_yambo = Dict(
     dict={
         "ADDITIONAL_RETRIEVE_LIST": [
             'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1', 'aiida/ndb.QP',
@@ -227,20 +227,20 @@ if __name__ == "__main__":
         "codename_p2y": Str(args.precode),
         "codename_yambo": Str(args.yambocode),
         "pseudo_family": Str(args.pseudo),
-        "calculation_set_pw": ParameterData(dict=calculation_set_pw),
-        "calculation_set_p2y": ParameterData(dict=calculation_set_p2y),
-        "calculation_set_yambo": ParameterData(dict=calculation_set_yambo),
+        "calculation_set_pw": Dict(dict=calculation_set_pw),
+        "calculation_set_p2y": Dict(dict=calculation_set_p2y),
+        "calculation_set_yambo": Dict(dict=calculation_set_yambo),
         "settings_pw": settings_pw,
         "settings_p2y": settings_p2y,
         "settings_yambo": settings_yambo,
-        "input_pw": ParameterData(dict={}),
+        "input_pw": Dict(dict={}),
         "structure": structure,
         "kpoint_pw": kpoints,
         "gamma_pw": Bool(False),
-        "parameters_pw": ParameterData(dict=pw_parameters),
-        "parameters_pw_nscf": ParameterData(dict=pw_nscf_parameters),
-        "parameters_p2y": ParameterData(dict=yambo_parameters),
-        "parameters_yambo": ParameterData(dict=yambo_parameters),
+        "parameters_pw": Dict(dict=pw_parameters),
+        "parameters_pw_nscf": Dict(dict=pw_nscf_parameters),
+        "parameters_p2y": Dict(dict=yambo_parameters),
+        "parameters_yambo": Dict(dict=yambo_parameters),
     }
     if parent_calc:
         kwargs["parent_folder"] = parent_calc.out.remote_folder

@@ -4,20 +4,20 @@ from __future__ import absolute_import
 from __future__ import print_function
 import sys
 import os
-from aiida.orm import DataFactory, CalculationFactory
+from aiida.plugins import DataFactory, CalculationFactory
 from aiida.common.example_helpers import test_and_get_code
-from aiida.orm.data.base import List
+from aiida.orm.nodes.base import List
 from aiida.orm import Code
-from aiida.orm import DataFactory
+from aiida.plugins import DataFactory
 import pymatgen
-from aiida.work.run import submit
+from aiida.engine.run import submit
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida.orm.data.upf import UpfData, get_pseudos_from_structure
+from aiida.orm.nodes.upf import UpfData, get_pseudos_from_structure
 
 ParameterData = DataFactory('parameter')
 
-parameters = ParameterData(
+parameters = Dict(
     dict={
         'CONTROL': {
             'calculation': 'nscf',
@@ -58,7 +58,7 @@ inputs['_options'] = {
 }
 
 num_pools = 8
-inputs['settings'] = ParameterData(dict={'cmdline': ['-nk', str(num_pools)]})
+inputs['settings'] = Dict(dict={'cmdline': ['-nk', str(num_pools)]})
 
 if __name__ == "__main__":
     import argparse
