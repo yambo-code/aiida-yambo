@@ -38,7 +38,7 @@ class YamboCalculation(CalcJob):
 
     @classmethod
     def define(cls,spec):
-        super(YamboCalculation, self).define(spec)
+        super(YamboCalculation, cls).define(spec)
         spec.input('metadata.options.input_filename', valid_type=six.string_types, default=cls._DEFAULT_INPUT_FILE)
         spec.input('metadata.options.output_filename', valid_type=six.string_types, default=cls._DEFAULT_OUTPUT_FILE)
 
@@ -78,7 +78,8 @@ class YamboCalculation(CalcJob):
                 help='Use a preprocessing code for starting yambo',dynamic=True)
         spec.input_namespace('precode_parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters for the yambo precode',dynamic=True)
-
+        spec.input_namespace('main_code',valid_type=Code,
+                help='Use a main code for yambo calculation',dynamic=True)
 
     def prepare_for_submission(self, folder):
 
@@ -91,7 +92,7 @@ class YamboCalculation(CalcJob):
         
         settings = self.inputs.settings
 
-        initialise = settings_dict.pop('INITIALISE', None)
+        initialise = settings.pop('INITIALISE', None)
         if initialise is not None:
             if not isinstance(initialise, bool):
                 raise InputValidationError("INITIALISE must be " " a boolean")
@@ -99,15 +100,13 @@ class YamboCalculation(CalcJob):
         parameters = self.inputs.parameters
 
         if not initialise:
-            if not isinstance(parameters, ParameterData):
+            if not isinstance(parameters, Dict):
                 raise InputValidationError(
-                    "parameters is not of type ParameterData")
+                    "parameters is not of type Dict")
 
         parent_calc_folder = self.inputs.parent_folder
 
-        main_code = inputdict.pop(self.get_linkname('code'), None)
-        if main_code is None:
-            raise InputValidationError("No input code found!")
+        main_code = self.inputs.main_code
 
         preproc_code = self.inputs.preprocessing_code
 
@@ -119,7 +118,7 @@ class YamboCalculation(CalcJob):
         precode_param_dict = self.inputs.precode_parameters
 
         # check the precode parameters given in input
-        input_cmdline = settings_dict.pop('CMDLINE', None)
+        input_cmdline = settings.pop('CMDLINE', None)
         import re
         precode_params_list = []
         pattern = re.compile(r"(^\-)([a-zA-Z])")
@@ -298,7 +297,7 @@ class YamboCalculation(CalcJob):
                 parent_initialise = False
 
         if yambo_parent:
-            remote_copy_list.append((parent_calc_folder.get_computer().uuid,
+            remote_copy_list.append((parent_calc_folder.computer.uuid,
                                      os.path.join(
                                          parent_calc_folder.get_remote_path(),
                                          "SAVE"), "SAVE/"))
@@ -317,12 +316,12 @@ class YamboCalculation(CalcJob):
                         cancopy = False
                 if cancopy:
                     remote_copy_list.append(
-                        (parent_calc_folder.get_computer().uuid,
+                        (parent_calc_folder.computer.uuid,
                          os.path.join(parent_calc_folder.get_remote_path(),
                                       "aiida"), "aiida/"))
         else:
             remote_copy_list.append(
-                (parent_calc_folder.get_computer().uuid,
+                (parent_calc_folder.computer.uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               PwCalculation._OUTPUT_SUBFOLDER,
                               "{}.save".format(parent_calc._PREFIX), "*"),
@@ -398,11 +397,11 @@ class YamboCalculation(CalcJob):
 
         calcinfo.codes_run_mode = code_run_modes.SERIAL
 
-        if settings_dict:
+        if settings:
             raise InputValidationError(
                 "The following keys have been found in "
                 "the settings input node, but were not understood: {}".format(
-                    ",".join(list(settings_dict.keys()))))
+                    ",".join(list(settings.keys()))))
 
         return calcinfo
 
