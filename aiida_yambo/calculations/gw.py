@@ -76,53 +76,10 @@ class YamboCalculation(CalcJob):
                 help='Use a remote folder as parent folder (for "restarts and similar")',dynamic=True)
         spec.input_namespace('preprocessing_code',valid_type=Code,
                 help='Use a preprocessing code for starting yambo',dynamic=True)
+        spec.input_namespace('precode_parameters',valid_type=Dict,
+                help='Use a node that specifies the input parameters for the yambo precode',dynamic=True)
 
-        retdict.update({
-            "settings": {
-                'valid_types': ParameterData,
-                'additional_parameter': None,
-                'linkname': 'settings',
-                'docstring': "Use an additional node for special settings",
-            },
-            "parameters": {
-                'valid_types':
-                ParameterData,
-                'additional_parameter':
-                None,
-                'linkname':
-                'parameters',
-                'docstring': ("Use a node that specifies the input parameters "
-                              "for the namelists"),
-            },
-            "parent_folder": {
-                'valid_types':
-                RemoteData,
-                'additional_parameter':
-                None,
-                'linkname':
-                'parent_calc_folder',
-                'docstring': ("Use a remote folder as parent folder (for "
-                              "restarts and similar"),
-            },
-            "preprocessing_code": {
-                'valid_types': Code,
-                'additional_parameter': None,
-                'linkname': 'preprocessing_code',
-                'docstring': ("Use a preprocessing code for "
-                              "starting yambo"),
-            },
-            "precode_parameters": {
-                'valid_types':
-                ParameterData,
-                'additional_parameter':
-                None,
-                'linkname':
-                'precode_parameters',
-                'docstring': ("Use a node that specifies the input parameters "
-                              "for the yambo precode"),
-            },
-        })
-        return retdict
+
 
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
