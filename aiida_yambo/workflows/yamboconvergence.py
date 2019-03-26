@@ -1,32 +1,33 @@
+from __future__ import absolute_import
 import sys
 from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+from six.moves import range
 
 if not is_dbenv_loaded():
     load_dbenv()
 
 from aiida.orm import load_node
-from aiida.orm.data.upf import get_pseudos_from_structure
-from aiida.common.exceptions import InputValidationError,ValidationError
+from aiida.orm.nodes.upf import get_pseudos_from_structure
+from aiida.common.exceptions import InputValidationError, ValidationError
 from collections import defaultdict
-from aiida.orm.utils import DataFactory, CalculationFactory
-from aiida.orm.data.base import Float, Str, NumericType, List, Bool
+from aiida.plugins.utils import DataFactory, CalculationFactory
+from aiida.orm.nodes.base import Float, Str, NumericType, List, Bool
 from aiida.orm.code import Code
-from aiida.orm.data.structure import StructureData
-from aiida.work.run import run, submit
-from aiida.work.workchain import WorkChain, while_, ToContext
-from aiida_yambo.calculations.gw  import YamboCalculation
+from aiida.orm.nodes.structure import StructureData
+from aiida.engine.run import run, submit
+from aiida.engine.workchain import WorkChain, while_, ToContext
+from aiida_yambo.calculations.gw import YamboCalculation
 from aiida.common.links import LinkType
 from aiida_yambo.workflows.yambo_utils import default_step_size, update_parameter_field, set_default_qp_param,\
                default_pw_settings, set_default_pw_param, yambo_default_settings, default_qpkrange,\
                p2y_default_settings, is_converged
-from aiida_yambo.workflows.yamborestart  import YamboRestartWf
-from aiida_yambo.workflows.yambowf  import YamboWorkflow
-from aiida.orm.data.remote import RemoteData
+from aiida_yambo.workflows.yamborestart import YamboRestartWf
+from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida.orm.nodes.remote import RemoteData
 from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida_yambo.calculations.gw  import YamboCalculation
-import numpy as np 
-from scipy.optimize import  curve_fit 
-
+from aiida_yambo.calculations.gw import YamboCalculation
+import numpy as np
+from scipy.optimize import curve_fit
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
@@ -77,44 +78,62 @@ class YamboConvergenceWorkflow(WorkChain):
         restart_options_gw --  GW specific restart options i.e. `{"max_restarts":4}`
         """
         super(YamboConvergenceWorkflow, cls).define(spec)
-        spec.input("merge_override", valid_type=Bool,required=False, default=Bool(0))
+        spec.input(
+            "merge_override", valid_type=Bool, required=False, default=Bool(0))
         spec.input("precode", valid_type=Str)
         spec.input("pwcode", valid_type=Str, required=False)
         spec.input("yambocode", valid_type=Str)
-        spec.input("pseudo", valid_type=Str,required=True)
-        spec.input("calculation_set_pw", valid_type=ParameterData, required=False)
-        spec.input("calculation_set_pw_nscf", valid_type=ParameterData, required=False)
-        spec.input("calculation_set_p2y", valid_type=ParameterData,required=False)
-        spec.input("calculation_set", valid_type=ParameterData )
+        spec.input("pseudo", valid_type=Str, required=True)
+        spec.input(
+            "calculation_set_pw", valid_type=ParameterData, required=False)
+        spec.input(
+            "calculation_set_pw_nscf",
+            valid_type=ParameterData,
+            required=False)
+        spec.input(
+            "calculation_set_p2y", valid_type=ParameterData, required=False)
+        spec.input("calculation_set", valid_type=ParameterData)
         spec.input("parent_scf_folder", valid_type=RemoteData, required=False)
-        spec.input("settings_p2y", valid_type=ParameterData, required=False, default = p2y_default_settings())
-        spec.input("settings", valid_type=ParameterData, required=False, default = yambo_default_settings())
-        spec.input("settings_pw", valid_type=ParameterData, required=False )
-        spec.input("settings_pw_nscf", valid_type=ParameterData, required=False )
-        spec.input("structure", valid_type=StructureData,required=False)
+        spec.input(
+            "settings_p2y",
+            valid_type=ParameterData,
+            required=False,
+            default=p2y_default_settings())
+        spec.input(
+            "settings",
+            valid_type=ParameterData,
+            required=False,
+            default=yambo_default_settings())
+        spec.input("settings_pw", valid_type=ParameterData, required=False)
+        spec.input(
+            "settings_pw_nscf", valid_type=ParameterData, required=False)
+        spec.input("structure", valid_type=StructureData, required=False)
         spec.input("parent_nscf_folder", valid_type=RemoteData, required=False)
-        spec.input("parameters_p2y", valid_type=ParameterData, required=False, default=set_default_qp_param()  )
-        spec.input("parameters", valid_type=ParameterData, required=False  )
-        spec.input("parameters_pw", valid_type=ParameterData, required=False  )
-        spec.input("parameters_pw_nscf", valid_type=ParameterData, required=False  )
-        spec.input("convergence_parameters", valid_type=ParameterData, required=True)
-        spec.input("restart_options_pw", valid_type=ParameterData, required=False)
-        spec.input("restart_options_gw", valid_type=ParameterData, required=False)
+        spec.input(
+            "parameters_p2y",
+            valid_type=ParameterData,
+            required=False,
+            default=set_default_qp_param())
+        spec.input("parameters", valid_type=ParameterData, required=False)
+        spec.input("parameters_pw", valid_type=ParameterData, required=False)
+        spec.input(
+            "parameters_pw_nscf", valid_type=ParameterData, required=False)
+        spec.input(
+            "convergence_parameters", valid_type=ParameterData, required=True)
+        spec.input(
+            "restart_options_pw", valid_type=ParameterData, required=False)
+        spec.input(
+            "restart_options_gw", valid_type=ParameterData, required=False)
 
         spec.outline(
-          cls.start,
-          cls.iterate,
-          while_(cls.is_not_converged)(
-              cls.run_next_update,
-              cls.iterate,
-              ),
-          cls.report_wf
-        )
+            cls.start, cls.iterate,
+            while_(cls.is_not_converged)(
+                cls.run_next_update,
+                cls.iterate,
+            ), cls.report_wf)
         #spec.dynamic_output()
 
-
-
-    def init_parameters(self,paging):
+    def init_parameters(self, paging):
         """This function initializes the  settings and parameters needed for  a convergence calculations.
 
         This function will store all needed parameters each in a self.ctx variable, and generate from
@@ -122,181 +141,218 @@ class YamboConvergenceWorkflow(WorkChain):
         generates the defaults. This function is only called once,  after which the only update parameter
         is called.
         """
-        convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
-        if 'calculation_set_pw' not in self.inputs.keys():
-            self.ctx.calculation_set_pw = DataFactory('parameter')(dict=self.inputs.calculation_set.get_dict())
+        convergence_parameters_dict = self.inputs.convergence_parameters.get_dict(
+        )
+        if 'calculation_set_pw' not in list(self.inputs.keys()):
+            self.ctx.calculation_set_pw = DataFactory('parameter')(
+                dict=self.inputs.calculation_set.get_dict())
         else:
-            self.ctx.calculation_set_pw =  self.inputs.calculation_set_pw
+            self.ctx.calculation_set_pw = self.inputs.calculation_set_pw
 
-        if 'calculation_set_p2y' not in self.inputs.keys():
+        if 'calculation_set_p2y' not in list(self.inputs.keys()):
             main_set = self.inputs.calculation_set.get_dict()
-            main_set['resources'] = {"num_machines": 1,"num_mpiprocs_per_machine":  1}
-            self.ctx.calculation_set_p2y = DataFactory('parameter')(dict=main_set)
+            main_set['resources'] = {
+                "num_machines": 1,
+                "num_mpiprocs_per_machine": 1
+            }
+            self.ctx.calculation_set_p2y = DataFactory('parameter')(
+                dict=main_set)
         else:
-            self.ctx.calculation_set_p2y =  self.inputs.calculation_set_p2y 
+            self.ctx.calculation_set_p2y = self.inputs.calculation_set_p2y
 
-        if 'parameters' not in self.inputs.keys():
+        if 'parameters' not in list(self.inputs.keys()):
             self.ctx.parameters = set_default_qp_param()
         else:
             if self.inputs.merge_override == True:
-                self.ctx.parameters = set_default_qp_param(self.inputs.parameters)
+                self.ctx.parameters = set_default_qp_param(
+                    self.inputs.parameters)
             else:
                 self.ctx.parameters = self.inputs.parameters
 
-        if 'parent_scf_folder' in  self.inputs.keys(): 
+        if 'parent_scf_folder' in list(self.inputs.keys()):
             self.report("parent_scf folder was set")
-            parent_calc = self.inputs.parent_scf_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder']
+            parent_calc = self.inputs.parent_scf_folder.get_inputs_dict(
+                link_type=LinkType.CREATE)['remote_folder']
             if isinstance(parent_calc, PwCalculation):
-                if parent_calc.get_state()== 'FINISHED': 
-                    if 'settings_pw' not in self.inputs.keys():
+                if parent_calc.get_state() == 'FINISHED':
+                    if 'settings_pw' not in list(self.inputs.keys()):
                         self.ctx.settings_pw = parent_calc.inp.settings
                     else:
                         self.ctx.settings_pw = self.inputs.settings_pw
-                    if 'structure' not in self.inputs.keys():
+                    if 'structure' not in list(self.inputs.keys()):
                         self.ctx.structure = parent_calc.inp.structure
                     else:
                         self.ctx.structure = self.inputs.structure
-                    if 'pseudo' not in self.inputs.keys():
+                    if 'pseudo' not in list(self.inputs.keys()):
                         raise InputValidationError("Pseudo should be provided")
-                    if parent_calc.get_inputs_dict(link_type=LinkType.CREATE)['parameters'].get_dict()['CONTROL']['calculation'] == 'scf':
-                        if 'parameters_pw' not in self.inputs.keys():
+                    if parent_calc.get_inputs_dict(
+                            link_type=LinkType.CREATE)['parameters'].get_dict(
+                            )['CONTROL']['calculation'] == 'scf':
+                        if 'parameters_pw' not in list(self.inputs.keys()):
                             self.ctx.parameters_pw = parent_calc.inp.parameters
                         else:
                             self.ctx.parameters_pw = self.inputs.parameters_pw
                     else:
-                        if 'parameters_pw_nscf' not in self.inputs.keys():
+                        if 'parameters_pw_nscf' not in list(
+                                self.inputs.keys()):
                             self.ctx.parameters_pw_nscf = parent_calc.inp.parameters
                         else:
                             self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
-                    self.report("parent_scf_folder defined params {}".format(self.ctx.parameters_pw.get_dict() ))
+                    self.report("parent_scf_folder defined params {}".format(
+                        self.ctx.parameters_pw.get_dict()))
 
             if isinstance(parent_calc, YamboCalculation):
-                if parent_calc.get_state()== 'FINISHED': 
-                    if 'parameters' not in self.inputs.keys():
-                        self.report("setting default parameters, parent was yambocalc ")
+                if parent_calc.get_state() == 'FINISHED':
+                    if 'parameters' not in list(self.inputs.keys()):
+                        self.report(
+                            "setting default parameters, parent was yambocalc "
+                        )
                         self.ctx.parameters = set_default_qp_param()
                     else:
-                        self.ctx.parameters = self.inputs.parameters 
+                        self.ctx.parameters = self.inputs.parameters
 
-            if 'kpoints'==self.ctx.variable_to_converge:
-                if 'settings_pw' not in self.inputs.keys():
-                    self.ctx.settings_pw =  default_pw_settings() 
-                else:
-                    self.ctx.settings_pw =  self.inputs.settings_pw
-                if 'parameters_pw' not in self.inputs.keys():
-                    self.ctx.parameters_pw = set_default_pw_param() 
-                else:
-                    self.ctx.parameters_pw = self.inputs.parameters_pw
-                if 'parameters_pw_nscf' not in self.inputs.keys():
-                    self.ctx.parameters_pw_nscf = set_default_pw_param(nscf=True) 
-                else:
-                    self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
-                      
-        else:
-            if 'kpoints'==self.ctx.variable_to_converge:
-                self.report(" initializing in a kpoints convergence calculation")
-                if 'settings_pw' not in self.inputs.keys():
-                    self.ctx.settings_pw =  default_pw_settings()
-                else:
-                    self.ctx.settings_pw =  self.inputs.settings_pw
-                if 'parameters_pw' not in self.inputs.keys():
-                    self.report("  parameters_pw were not found setting them to default pw params")
-                    self.ctx.parameters_pw = set_default_pw_param() 
-                else:
-                    self.ctx.parameters_pw =  self.inputs.parameters_pw
-                if 'parameters_pw_nscf' not in self.inputs.keys():
-                    self.report("  parameters_pw_nscf were not found setting them to default pw params")
-                    self.ctx.parameters_pw_nscf = set_default_pw_param(nscf=True) 
-                else:
-                    self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
-            if 'kpoints'!=self.ctx.variable_to_converge:
-                if 'settings_pw' not in self.inputs.keys():
-                    self.ctx.settings_pw =  default_pw_settings() 
+            if 'kpoints' == self.ctx.variable_to_converge:
+                if 'settings_pw' not in list(self.inputs.keys()):
+                    self.ctx.settings_pw = default_pw_settings()
                 else:
                     self.ctx.settings_pw = self.inputs.settings_pw
-                if 'parameters' not in self.inputs.keys():
+                if 'parameters_pw' not in list(self.inputs.keys()):
+                    self.ctx.parameters_pw = set_default_pw_param()
+                else:
+                    self.ctx.parameters_pw = self.inputs.parameters_pw
+                if 'parameters_pw_nscf' not in list(self.inputs.keys()):
+                    self.ctx.parameters_pw_nscf = set_default_pw_param(
+                        nscf=True)
+                else:
+                    self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
+
+        else:
+            if 'kpoints' == self.ctx.variable_to_converge:
+                self.report(
+                    " initializing in a kpoints convergence calculation")
+                if 'settings_pw' not in list(self.inputs.keys()):
+                    self.ctx.settings_pw = default_pw_settings()
+                else:
+                    self.ctx.settings_pw = self.inputs.settings_pw
+                if 'parameters_pw' not in list(self.inputs.keys()):
+                    self.report(
+                        "  parameters_pw were not found setting them to default pw params"
+                    )
+                    self.ctx.parameters_pw = set_default_pw_param()
+                else:
+                    self.ctx.parameters_pw = self.inputs.parameters_pw
+                if 'parameters_pw_nscf' not in list(self.inputs.keys()):
+                    self.report(
+                        "  parameters_pw_nscf were not found setting them to default pw params"
+                    )
+                    self.ctx.parameters_pw_nscf = set_default_pw_param(
+                        nscf=True)
+                else:
+                    self.ctx.parameters_pw_nscf = self.inputs.parameters_pw_nscf
+            if 'kpoints' != self.ctx.variable_to_converge:
+                if 'settings_pw' not in list(self.inputs.keys()):
+                    self.ctx.settings_pw = default_pw_settings()
+                else:
+                    self.ctx.settings_pw = self.inputs.settings_pw
+                if 'parameters' not in list(self.inputs.keys()):
                     self.ctx.parameters = set_default_qp_param()
                 else:
                     self.ctx.parameters = self.inputs.parameters
-            if 'structure' not in self.inputs.keys() :
-                raise InputValidationError("Structure should be provided if parent PW SCF folder is not given when converging kpoints")
+            if 'structure' not in list(self.inputs.keys()):
+                raise InputValidationError(
+                    "Structure should be provided if parent PW SCF folder is not given when converging kpoints"
+                )
             else:
                 self.ctx.structure = self.inputs.structure
-            if 'pseudo' not in self.inputs.keys():
-                raise InputValidationError("Pseudo should be provided if parent PW calculation is not given when converging kpoints")
+            if 'pseudo' not in list(self.inputs.keys()):
+                raise InputValidationError(
+                    "Pseudo should be provided if parent PW calculation is not given when converging kpoints"
+                )
             else:
                 self.ctx.pseudo = self.inputs.pseudo
-            if 'pwcode' not in self.inputs.keys():
-                raise InputValidationError("PW code  should be provided when converging kpoints")
-            else: 
+            if 'pwcode' not in list(self.inputs.keys()):
+                raise InputValidationError(
+                    "PW code  should be provided when converging kpoints")
+            else:
                 self.ctx.pwcode = self.inputs.pwcode
             if 'kpoints'!=self.ctx.variable_to_converge and\
-                                                   'parent_nscf_folder' not in self.inputs.keys():
-                raise InputValidationError("Parent nscf folder should be provided when not converging kpoints")
+                                                   'parent_nscf_folder' not in list(self.inputs.keys()):
+                raise InputValidationError(
+                    "Parent nscf folder should be provided when not converging kpoints"
+                )
 
-        if 'parent_nscf_folder' in  self.inputs.keys():
-              parent_calc = load_node(self.inputs.parent_nscf_folder.get_inputs_dict()['remote_folder'].pk)
-              if isinstance(parent_calc, PwCalculation):
-                  if parent_calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf'\
-                                      and parent_calc.get_state()== 'FINISHED'\
-                                      and 'QPkrange' not in self.ctx.parameters.get_dict().keys():
-                      self.ctx.parameters = default_qpkrange(parent_calc.pk, self.ctx.parameters)
-                      self.report("QPkrange not in  self.ctx.parameters.get_dict keys ")
+        if 'parent_nscf_folder' in list(self.inputs.keys()):
+            parent_calc = load_node(self.inputs.parent_nscf_folder.
+                                    get_inputs_dict()['remote_folder'].pk)
+            if isinstance(parent_calc, PwCalculation):
+                if parent_calc.get_inputs_dict()['parameters'].get_dict()['CONTROL']['calculation'] == 'nscf'\
+                                    and parent_calc.get_state()== 'FINISHED'\
+                                    and 'QPkrange' not in list(self.ctx.parameters.get_dict().keys()):
+                    self.ctx.parameters = default_qpkrange(
+                        parent_calc.pk, self.ctx.parameters)
+                    self.report(
+                        "QPkrange not in  self.ctx.parameters.get_dict keys ")
 
-        if 'settings_pw' in self.inputs.keys():
-            self.ctx.settings_pw =  self.inputs.settings_pw 
+        if 'settings_pw' in list(self.inputs.keys()):
+            self.ctx.settings_pw = self.inputs.settings_pw
 
-        params = self.ctx.parameters.get_dict() 
-        if 'kpoints'!= self.ctx.variable_to_converge:
+        params = self.ctx.parameters.get_dict()
+        if 'kpoints' != self.ctx.variable_to_converge:
             for field in self.ctx.conv_elem.keys():
-                 self.report("self.ctx.start_value {}  self.ctx.step {}  self.ctx.loop_length {}  self.ctx.iteration {}".format(
-                             self.ctx.start_value, self.ctx.step, self.ctx.loop_length, self.ctx.iteration ))
-                 starting_point = self.ctx.start_value +\
-                                  self.ctx.step * self.ctx.loop_length * self.ctx.iteration  
-                 new_ind_var = update_parameter_field( field, starting_point, self.ctx.step*paging)   
-                 if len(self.ctx.conv_elem[field ]) == 1:
-                     if self.ctx.conv_elem[field][0] == new_ind_var:
+                self.report(
+                    "self.ctx.start_value {}  self.ctx.step {}  self.ctx.loop_length {}  self.ctx.iteration {}"
+                    .format(self.ctx.start_value, self.ctx.step,
+                            self.ctx.loop_length, self.ctx.iteration))
+                starting_point = self.ctx.start_value +\
+                                 self.ctx.step * self.ctx.loop_length * self.ctx.iteration
+                new_ind_var = update_parameter_field(field, starting_point,
+                                                     self.ctx.step * paging)
+                if len(self.ctx.conv_elem[field]) == 1:
+                    if self.ctx.conv_elem[field][0] == new_ind_var:
                         pass
-                     else:
-                        params[ field ] = new_ind_var 
+                    else:
+                        params[field] = new_ind_var
                         self.ctx.conv_elem[field].append(params[field])
-                        self.report("initialized {} ".format( params[ field ]  ) )
-                 else:
-                     params[ field ] = new_ind_var
-                     self.ctx.conv_elem[field].append(params[field])
-                     self.report("initialized {} ".format( params[ field ]  ) )
-            self.ctx.parameters = DataFactory('parameter')(dict= params)
-        self.report('Initialization step completed.' )
+                        self.report("initialized {} ".format(params[field]))
+                else:
+                    params[field] = new_ind_var
+                    self.ctx.conv_elem[field].append(params[field])
+                    self.report("initialized {} ".format(params[field]))
+            self.ctx.parameters = DataFactory('parameter')(dict=params)
+        self.report('Initialization step completed.')
 
     def start(self):
         """This function performs some neccessary checks to ensure all neccessary information is provided, and stores  the provided parameters in  self.ctx variables."""
-        self.ctx.max_iterations = 20 
+        self.ctx.max_iterations = 20
         self.ctx.iteration = 0
         self.ctx.skip_prescf = False
         self.ctx.very_first = True
-        convergence_parameters_dict = self.inputs.convergence_parameters.get_dict()
+        convergence_parameters_dict = self.inputs.convergence_parameters.get_dict(
+        )
         # Mandatory inputs
         try:
-            self.ctx.variable_to_converge = convergence_parameters_dict['variable_to_converge']
+            self.ctx.variable_to_converge = convergence_parameters_dict[
+                'variable_to_converge']
         except KeyError:
-            raise InputValidationError('variable_to_converge not defined in input!')
+            raise InputValidationError(
+                'variable_to_converge not defined in input!')
         try:
             self.ctx.start_value = convergence_parameters_dict['start_value']
         except KeyError:
-            raise InputValidationError('start_value not defined in input!')  
+            raise InputValidationError('start_value not defined in input!')
         try:
             self.ctx.step = convergence_parameters_dict['step']
         except KeyError:
-            raise InputValidationError('step not defined in input!')  
+            raise InputValidationError('step not defined in input!')
         try:
             self.ctx.max_value = convergence_parameters_dict['max_value']
-        except KeyError:            
-            raise InputValidationError('max_value not defined in input!') 
-        try:                        
+        except KeyError:
+            raise InputValidationError('max_value not defined in input!')
+        try:
             self.ctx.conv_tol = convergence_parameters_dict['conv_tol']
         except KeyError:
-            raise InputValidationError('conv_tol not defined in input!')  
-        # Optional inputs          
+            raise InputValidationError('conv_tol not defined in input!')
+        # Optional inputs
         try:
             self.ctx.conv_window = convergence_parameters_dict['conv_window']
         except KeyError:
@@ -305,19 +361,21 @@ class YamboConvergenceWorkflow(WorkChain):
             self.ctx.loop_length = convergence_parameters_dict['loop_length']
         except KeyError:
             self.ctx.loop_length = 4
-        self.ctx.distance_kpoints = self.ctx.start_value 
+        self.ctx.distance_kpoints = self.ctx.start_value
         self.ctx.en_diffs = []
-        if self.ctx.variable_to_converge=='bands':
-            self.ctx.conv_elem = {'BndsRnXp':[],'GbndRnge': []}
-        elif self.ctx.variable_to_converge=='W_cutoff':
-            self.ctx.conv_elem = {'NGsBlkXp':[]}
-        elif self.ctx.variable_to_converge=='FFT_cutoff':
-            self.ctx.conv_elem = {'FFTGvecs':[]}
-        elif self.ctx.variable_to_converge=='kpoints':
-            self.ctx.conv_elem = {'kpoints':[]}
+        if self.ctx.variable_to_converge == 'bands':
+            self.ctx.conv_elem = {'BndsRnXp': [], 'GbndRnge': []}
+        elif self.ctx.variable_to_converge == 'W_cutoff':
+            self.ctx.conv_elem = {'NGsBlkXp': []}
+        elif self.ctx.variable_to_converge == 'FFT_cutoff':
+            self.ctx.conv_elem = {'FFTGvecs': []}
+        elif self.ctx.variable_to_converge == 'kpoints':
+            self.ctx.conv_elem = {'kpoints': []}
         else:
-            self.ctx.conv_elem = {self.ctx.variable_to_converge:[]}
-            self.report('WARNING: the variable to converge is {}, not recognized but I try anyway to converge it') 
+            self.ctx.conv_elem = {self.ctx.variable_to_converge: []}
+            self.report(
+                'WARNING: the variable to converge is {}, not recognized but I try anyway to converge it'
+            )
         self.report("Setup step completed.")
 
     def run_next_update(self):
@@ -325,183 +383,232 @@ class YamboConvergenceWorkflow(WorkChain):
         
         This stores a complete P2Y in the ctx to continue from a provided NSCF calculation. 
         """
-        if self.ctx.skip_prescf: 
-            p2y_parent = load_node( self.ctx.missing_p2y_parent.out.gw.get_dict()["yambo_pk"])
+        if self.ctx.skip_prescf:
+            p2y_parent = load_node(
+                self.ctx.missing_p2y_parent.out.gw.get_dict()["yambo_pk"])
             self.ctx.p2y_parent_folder = p2y_parent.out.remote_folder
             self.ctx.skip_prescf = False
 
     def iterate(self):
         """This function  creates (and on subsequent iteration updates) the parameters and submits subworkflows  for each parameter step"""
         self.report("Convergence iteration {}".format(str(self.ctx.iteration)))
-        loop_items = range(1,self.ctx.loop_length+1)
+        loop_items = list(range(1, self.ctx.loop_length + 1))
         if self.ctx.very_first == True:
-            loop_items = range(self.ctx.loop_length)
+            loop_items = list(range(self.ctx.loop_length))
             self.ctx.very_first = False
-        self.report('will run four calculations in parallel' )
-        outs={}
-        # Extras: restart_options_pw, restart_options_gw, calculation_set_pw_nscf, settings_pw_nscf, kpoint_pw_nscf, kpoint_pw, 
-        extra_rs={}
-        extra_wf={}
-        if 'calculation_set_pw_nscf' in self.inputs.keys():
-            extra_wf['calculation_set_pw_nscf'] = self.ctx.calculation_set_pw_nscf
-        if 'settings_pw_nscf' in self.inputs.keys():
+        self.report('will run four calculations in parallel')
+        outs = {}
+        # Extras: restart_options_pw, restart_options_gw, calculation_set_pw_nscf, settings_pw_nscf, kpoint_pw_nscf, kpoint_pw,
+        extra_rs = {}
+        extra_wf = {}
+        if 'calculation_set_pw_nscf' in list(self.inputs.keys()):
+            extra_wf[
+                'calculation_set_pw_nscf'] = self.ctx.calculation_set_pw_nscf
+        if 'settings_pw_nscf' in list(self.inputs.keys()):
             extra_wf['settings_pw_nscf'] = self.inputs.settings_pw_nscf
-        if 'restart_options_pw' in self.inputs.keys():
+        if 'restart_options_pw' in list(self.inputs.keys()):
             extra_wf['restart_options_pw'] = self.inputs.restart_options_pw
-        if 'restart_options_gw' in self.inputs.keys():
+        if 'restart_options_gw' in list(self.inputs.keys()):
             extra_wf['restart_options_gw'] = self.inputs.restart_options_gw
             extra_rs['restart_options'] = self.inputs.restart_options_gw
 
-        if 'kpoints'!=self.ctx.variable_to_converge:
+        if 'kpoints' != self.ctx.variable_to_converge:
             self.report("this is not a K-point convergence ")
-            for num in loop_items: # includes 0 because of starting point
-                # There is a bug here, for Bands we might end up 
+            for num in loop_items:  # includes 0 because of starting point
+                # There is a bug here, for Bands we might end up
                 # with a situation like BandsRnXP  %   12 | 12  % where both
                 # are equal at the very start, this is due to the fact that we need
                 # to be able to support BSE calculations too.
                 # TODO
                 if loop_items[0] == 0:
-                    if  'bands' == self.ctx.variable_to_converge:
-                        self.init_parameters(num+1) # see above comment
+                    if 'bands' == self.ctx.variable_to_converge:
+                        self.init_parameters(num + 1)  # see above comment
                     else:
                         self.init_parameters(num)
                 else:
-                    if  'bands' == self.ctx.variable_to_converge:
-                        self.update_parameters(num+1)
+                    if 'bands' == self.ctx.variable_to_converge:
+                        self.update_parameters(num + 1)
                     else:
                         self.update_parameters(num)
-                try: 
-                    p2y_done = self.ctx.p2y_parent_folder 
+                try:
+                    p2y_done = self.ctx.p2y_parent_folder
                 except AttributeError:
-                    self.report(' no preceeding yambo parent, will run P2Y from NSCF parent first ' )
-                    p2y_res =  self.submit (YamboRestartWf,
-                                precode= self.inputs.precode,
-                                yambocode=self.inputs.yambocode,
-                                parameters = self.inputs.parameters_p2y,
-                                calculation_set= self.ctx.calculation_set_p2y,
-                                parent_folder = self.inputs.parent_nscf_folder, settings = self.inputs.settings_p2y, **extra_rs) 
+                    self.report(
+                        ' no preceeding yambo parent, will run P2Y from NSCF parent first '
+                    )
+                    p2y_res = self.submit(
+                        YamboRestartWf,
+                        precode=self.inputs.precode,
+                        yambocode=self.inputs.yambocode,
+                        parameters=self.inputs.parameters_p2y,
+                        calculation_set=self.ctx.calculation_set_p2y,
+                        parent_folder=self.inputs.parent_nscf_folder,
+                        settings=self.inputs.settings_p2y,
+                        **extra_rs)
                     self.ctx.skip_prescf = True
-                    #self.ctx.iteration-=1  
+                    #self.ctx.iteration-=1
                     self.ctx.very_first = True  #  There was a bug  because of this.
-                    return ToContext(missing_p2y_parent= p2y_res)
-                self.report(' running from preceeding yambo/p2y calculation  ' )
-                future =  self.submit  (YamboRestartWf,
-                            precode= self.inputs.precode,
-                            yambocode=self.inputs.yambocode,
-                            parameters = self.ctx.parameters,
-                            calculation_set= self.inputs.calculation_set,
-                            parent_folder = self.ctx.p2y_parent_folder, settings = self.inputs.settings,**extra_rs)
-                outs[ 'r'+str(num) ] =  future
+                    return ToContext(missing_p2y_parent=p2y_res)
+                self.report(' running from preceeding yambo/p2y calculation  ')
+                future = self.submit(
+                    YamboRestartWf,
+                    precode=self.inputs.precode,
+                    yambocode=self.inputs.yambocode,
+                    parameters=self.ctx.parameters,
+                    calculation_set=self.inputs.calculation_set,
+                    parent_folder=self.ctx.p2y_parent_folder,
+                    settings=self.inputs.settings,
+                    **extra_rs)
+                outs['r' + str(num)] = future
             self.ctx.iteration = self.ctx.iteration + 1
-            return ToContext(**outs )
+            return ToContext(**outs)
         else:
             # run yambowf, four times. with a different  nscf kpoint starting mesh
             self.report("  K-point convergence commencing")
             mesh = False
-            for num in loop_items: # includes 0 because of starting point
+            for num in loop_items:  # includes 0 because of starting point
                 if loop_items[0] == 0:
                     self.init_parameters(num)
                 #else:
                 #    self.update_parameters(num)  # Not neccessary, kpoint variation is done at PBE level with the self.ctx.distance_kpoints
                 def get_kpoints():
-                    self.ctx.distance_kpoints = self.ctx.distance_kpoints* 0.9 # 10% change 
+                    self.ctx.distance_kpoints = self.ctx.distance_kpoints * 0.9  # 10% change
                     kpoints = KpointsData()
                     kpoints.set_cell_from_structure(self.ctx.structure)
-                    kpoints.set_kpoints_mesh_from_density(distance= self.ctx.distance_kpoints,force_parity=True)
+                    kpoints.set_kpoints_mesh_from_density(
+                        distance=self.ctx.distance_kpoints, force_parity=True)
                     return kpoints
+
                 while True:
                     kpoints = get_kpoints()
-                    if mesh == kpoints.get_kpoints_mesh(): # deduplicate
+                    if mesh == kpoints.get_kpoints_mesh():  # deduplicate
                         continue
                     else:
                         break
-                mesh =  kpoints.get_kpoints_mesh() 
-                if 'parent_scf_folder' in self.inputs.keys():
-                   extra_wf['parent_folder'] = self.inputs.parent_scf_folder
-                if 'QPkrange' not in self.ctx.parameters.get_dict().keys():
-                   extra_wf['to_set_qpkrange'] = Bool(1)
-                if 'BndsRnXp' not in self.ctx.parameters.get_dict().keys() or 'GbndRnge' not in self.ctx.parameters.get_dict().keys() :
-                   extra_wf['to_set_bands'] = Bool(1)
+                mesh = kpoints.get_kpoints_mesh()
+                if 'parent_scf_folder' in list(self.inputs.keys()):
+                    extra_wf['parent_folder'] = self.inputs.parent_scf_folder
+                if 'QPkrange' not in list(
+                        self.ctx.parameters.get_dict().keys()):
+                    extra_wf['to_set_qpkrange'] = Bool(1)
+                if 'BndsRnXp' not in list(self.ctx.parameters.get_dict().keys(
+                )) or 'GbndRnge' not in list(
+                        self.ctx.parameters.get_dict().keys()):
+                    extra_wf['to_set_bands'] = Bool(1)
                 extra_wf['calculation_set_p2y'] = self.ctx.calculation_set_p2y
                 extra_wf['calculation_set_pw'] = self.ctx.calculation_set_pw
                 extra_wf['settings_p2y'] = self.inputs.settings_p2y
                 extra_wf['settings_pw'] = self.ctx.settings_pw
-                future =  self.submit (YamboWorkflow, codename_pw= self.inputs.pwcode, codename_p2y=self.inputs.precode,
-                   codename_yambo= self.inputs.yambocode, pseudo_family= self.inputs.pseudo,
-                   calculation_set_yambo = self.inputs.calculation_set,
-                   settings_yambo=self.inputs.settings , structure = self.ctx.structure,
-                   kpoint_pw = kpoints, parameters_pw= self.ctx.parameters_pw, parameters_pw_nscf= self.ctx.parameters_pw_nscf,
-                   parameters_p2y= self.inputs.parameters_p2y, parameters_yambo=  self.ctx.parameters,
-                   **extra_wf)
-                outs[ 'r'+str(num) ] = future
+                future = self.submit(
+                    YamboWorkflow,
+                    codename_pw=self.inputs.pwcode,
+                    codename_p2y=self.inputs.precode,
+                    codename_yambo=self.inputs.yambocode,
+                    pseudo_family=self.inputs.pseudo,
+                    calculation_set_yambo=self.inputs.calculation_set,
+                    settings_yambo=self.inputs.settings,
+                    structure=self.ctx.structure,
+                    kpoint_pw=kpoints,
+                    parameters_pw=self.ctx.parameters_pw,
+                    parameters_pw_nscf=self.ctx.parameters_pw_nscf,
+                    parameters_p2y=self.inputs.parameters_p2y,
+                    parameters_yambo=self.ctx.parameters,
+                    **extra_wf)
+                outs['r' + str(num)] = future
                 self.ctx.conv_elem['kpoints'].append(self.ctx.distance_kpoints)
             self.ctx.iteration = self.ctx.iteration + 1
-            return ToContext(**outs )  
-        return outs 
-
+            return ToContext(**outs)
+        return outs
 
     def update_parameters(self, paging):
         params = self.ctx.parameters.get_dict()
         for field in self.ctx.conv_elem.keys():
-             starting_point = self.ctx.start_value +\
-                              self.ctx.step * self.ctx.loop_length* self.ctx.iteration
-             if starting_point <0 :
-                 self.report("*** ERROR:  updating in the negative direction, please check: starting_point {}".format(starting_point))
-                 self.report("*** ERROR:  self.ctx.start_value  {}".format(self.ctx.start_value))
-                 self.report("*** ERROR:  self.ctx.step  {}".format(self.ctx.step))
-                 self.report("*** ERROR:  self.ctx.loop_length  {}".format(self.ctx.loop_length))
-                 self.report("*** ERROR:  self.ctx.iteration  {}".format(self.ctx.iteration))
-             params[ field ] = update_parameter_field( field, starting_point, self.ctx.step*paging)
-             self.ctx.conv_elem[field].append(params[field])
-        self.report(" extended convergence points: {}".format(self.ctx.conv_elem))
-        self.ctx.parameters = DataFactory('parameter')(dict= params)
-
+            starting_point = self.ctx.start_value +\
+                             self.ctx.step * self.ctx.loop_length* self.ctx.iteration
+            if starting_point < 0:
+                self.report(
+                    "*** ERROR:  updating in the negative direction, please check: starting_point {}"
+                    .format(starting_point))
+                self.report("*** ERROR:  self.ctx.start_value  {}".format(
+                    self.ctx.start_value))
+                self.report("*** ERROR:  self.ctx.step  {}".format(
+                    self.ctx.step))
+                self.report("*** ERROR:  self.ctx.loop_length  {}".format(
+                    self.ctx.loop_length))
+                self.report("*** ERROR:  self.ctx.iteration  {}".format(
+                    self.ctx.iteration))
+            params[field] = update_parameter_field(field, starting_point,
+                                                   self.ctx.step * paging)
+            self.ctx.conv_elem[field].append(params[field])
+        self.report(" extended convergence points: {}".format(
+            self.ctx.conv_elem))
+        self.ctx.parameters = DataFactory('parameter')(dict=params)
 
     def is_not_converged(self):
         """This function check is there has been convergence reached or not."""
         if self.ctx.skip_prescf == True:
-            return True 
+            return True
         try:
-            r0_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
-            r1_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
-            r2_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
-            r3_width = self.get_total_range(self.ctx.r4.out.gw.get_dict()['yambo_pk'])
-            self.ctx.zero_calc = self.ctx.r1 
-        except AttributeError: # for yamboworkflow
-            r0_width = self.get_total_range(self.ctx.r0.out.gw.get_dict()['yambo_pk'])
-            r1_width = self.get_total_range(self.ctx.r1.out.gw.get_dict()['yambo_pk'])
-            r2_width = self.get_total_range(self.ctx.r2.out.gw.get_dict()['yambo_pk'])
-            r3_width = self.get_total_range(self.ctx.r3.out.gw.get_dict()['yambo_pk'])
-            self.ctx.zero_calc = self.ctx.r0 
+            r0_width = self.get_total_range(
+                self.ctx.r1.out.gw.get_dict()['yambo_pk'])
+            r1_width = self.get_total_range(
+                self.ctx.r2.out.gw.get_dict()['yambo_pk'])
+            r2_width = self.get_total_range(
+                self.ctx.r3.out.gw.get_dict()['yambo_pk'])
+            r3_width = self.get_total_range(
+                self.ctx.r4.out.gw.get_dict()['yambo_pk'])
+            self.ctx.zero_calc = self.ctx.r1
+        except AttributeError:  # for yamboworkflow
+            r0_width = self.get_total_range(
+                self.ctx.r0.out.gw.get_dict()['yambo_pk'])
+            r1_width = self.get_total_range(
+                self.ctx.r1.out.gw.get_dict()['yambo_pk'])
+            r2_width = self.get_total_range(
+                self.ctx.r2.out.gw.get_dict()['yambo_pk'])
+            r3_width = self.get_total_range(
+                self.ctx.r3.out.gw.get_dict()['yambo_pk'])
+            self.ctx.zero_calc = self.ctx.r0
 
-        self.ctx.en_diffs.extend([r0_width,r1_width,r2_width,r3_width])
-        if 'scf_pk' in self.ctx.r1.out.gw.get_dict() and 'parent_scf_folder' not in self.inputs.keys():
-            self.inputs.parent_scf_folder =  load_node(self.ctx.r1.out.gw.get_dict()['scf_pk']).out.remote_folder
-        if len(self.ctx.en_diffs) > self.ctx.max_iterations: # no more than 16 calcs
-            self.report("Aborting after max_iterations={} calculations with no convergence ".format(self.ctx.max_iterations))
+        self.ctx.en_diffs.extend([r0_width, r1_width, r2_width, r3_width])
+        if 'scf_pk' in self.ctx.r1.out.gw.get_dict(
+        ) and 'parent_scf_folder' not in list(self.inputs.keys()):
+            self.inputs.parent_scf_folder = load_node(
+                self.ctx.r1.out.gw.get_dict()['scf_pk']).out.remote_folder
+        if len(self.ctx.
+               en_diffs) > self.ctx.max_iterations:  # no more than 16 calcs
+            self.report(
+                "Aborting after max_iterations={} calculations with no convergence "
+                .format(self.ctx.max_iterations))
             return False
-        if 'kpoints' ==self.ctx.variable_to_converge:
+        if 'kpoints' == self.ctx.variable_to_converge:
             if self.ctx.distance_kpoints <= self.ctx.max_value:
-                self.report("Aborting, k-point  convergence not achived within given mesh density range {}- {}".format(0.5,self.ctx.max_value))
+                self.report(
+                    "Aborting, k-point  convergence not achived within given mesh density range {}- {}"
+                    .format(0.5, self.ctx.max_value))
                 return False
-          
-        field = self.ctx.conv_elem.keys()[0]
+
+        field = list(self.ctx.conv_elem.keys())[0]
         independent = np.array(self.ctx.conv_elem[field])
         dependent = np.array(self.ctx.en_diffs)
         values = dependent[-4:]
-        is_conv =  is_converged(values,conv_tol=self.ctx.conv_tol,conv_window=self.ctx.conv_window)
+        is_conv = is_converged(
+            values,
+            conv_tol=self.ctx.conv_tol,
+            conv_window=self.ctx.conv_window)
         if is_conv:
             converged_fit = self.analyse_fit(field)
             if converged_fit:
-               self.report("Fit convergence achieved. ")
+                self.report("Fit convergence achieved. ")
             else:
-               self.report("Fit convergence not achieved.")
+                self.report("Fit convergence not achieved.")
             self.report("Absolute  convergence achieved")
             return False
-        self.report(" k-point convergence has not been achieved, continuing iterations")
+        self.report(
+            " k-point convergence has not been achieved, continuing iterations"
+        )
         return True
 
-    def analyse_fit(self,field):
+    def analyse_fit(self, field):
         """This function implements the logic to decide if any >3 calculations have converged.
 
         arguments:
@@ -516,25 +623,32 @@ class YamboConvergenceWorkflow(WorkChain):
         therefore  d1 and d2 and d3   must be ALL less than the convergence threshold.
         """
         independent = np.array(self.ctx.conv_elem[field])
-        if self.ctx.variable_to_converge== 'bands':
-            if len(independent.shape) >1:
-                independent = independent[:,1]
+        if self.ctx.variable_to_converge == 'bands':
+            if len(independent.shape) > 1:
+                independent = independent[:, 1]
         dependent = np.array(self.ctx.en_diffs)
-        self.report("indep and dependent  {}  {} ".format(independent, dependent))
-        def func(x,a,b):
-            y = 1.0
-            y = y*(a/x+b)
-            return y
-        popt,pcov = curve_fit(func,independent[-4:],dependent[-4:])
-        a,b = popt
-        fit_data = func(independent, a,b)      
-        deviations = np.abs(dependent[-4:] - fit_data[-4:])  # deviation of last four from extrapolated values at those points
-        converged_fit = np.allclose(deviations, np.linspace(0.01,0.01, 4), atol=self.ctx.conv_tol) # last four are within 0.01 of predicted value
-        self.report("Fitting_deviation: converged_fit {}".format(converged_fit))
-        return converged_fit
- 
+        self.report("indep and dependent  {}  {} ".format(
+            independent, dependent))
 
-    def get_total_range(self,node_id):
+        def func(x, a, b):
+            y = 1.0
+            y = y * (a / x + b)
+            return y
+
+        popt, pcov = curve_fit(func, independent[-4:], dependent[-4:])
+        a, b = popt
+        fit_data = func(independent, a, b)
+        deviations = np.abs(
+            dependent[-4:] - fit_data[-4:]
+        )  # deviation of last four from extrapolated values at those points
+        converged_fit = np.allclose(
+            deviations, np.linspace(0.01, 0.01, 4), atol=self.ctx.
+            conv_tol)  # last four are within 0.01 of predicted value
+        self.report(
+            "Fitting_deviation: converged_fit {}".format(converged_fit))
+        return converged_fit
+
+    def get_total_range(self, node_id):
         """
         compute the gap in energy between two bands along the kpoints listed in QPkrange
 
@@ -544,19 +658,21 @@ class YamboConvergenceWorkflow(WorkChain):
                  kpoint 1  band 30 and kpoint  1 band 31. 
         """
         calc = load_node(node_id)
-        table=calc.out.array_qp.get_array('qp_table')
-        parent_calc =  calc.inp.parent_calc_folder.inp.remote_folder
+        table = calc.out.array_qp.get_array('qp_table')
+        parent_calc = calc.inp.parent_calc_folder.inp.remote_folder
         e_m_eo = calc.out.array_qp.get_array('E_minus_Eo')
         eo = calc.out.array_qp.get_array('Eo')
-        corrected = eo+e_m_eo
-        spinp=False
-        nelec=None
+        corrected = eo + e_m_eo
+        spinp = False
+        nelec = None
         if isinstance(parent_calc, YamboCalculation):
             has_found_nelec = False
             while (not has_found_nelec):
                 try:
-                    nelec = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
-                    nbands = parent_calc.out.output_parameters.get_dict()['number_of_bands']
+                    nelec = parent_calc.out.output_parameters.get_dict(
+                    )['number_of_electrons']
+                    nbands = parent_calc.out.output_parameters.get_dict(
+                    )['number_of_bands']
                     has_found_nelec = True
                     if parent_calc.out.output_parameters.get_dict()['lsda']== True or\
                         parent_calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True :
@@ -568,36 +684,45 @@ class YamboConvergenceWorkflow(WorkChain):
                 except KeyError:
                     parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
         elif isinstance(parent_calc, PwCalculation):
-            nelec  = parent_calc.out.output_parameters.get_dict()['number_of_electrons']
-            nbands  = parent_calc.out.output_parameters.get_dict()['number_of_bands']
+            nelec = parent_calc.out.output_parameters.get_dict(
+            )['number_of_electrons']
+            nbands = parent_calc.out.output_parameters.get_dict(
+            )['number_of_bands']
             if parent_calc.out.output_parameters.get_dict()['lsda']== True or\
                     parent_calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True:
                 spinp = True
             else:
-                spinp =  False
-        # Filter rows with bands  nocc and nocc+1 
-        vbm=int(nelec/2)
-        cbm = vbm+1
-        table = np.append(table, corrected[:,None], axis=1) # appending the correction to the table as the last column
+                spinp = False
+        # Filter rows with bands  nocc and nocc+1
+        vbm = int(nelec / 2)
+        cbm = vbm + 1
+        table = np.append(
+            table, corrected[:, None],
+            axis=1)  # appending the correction to the table as the last column
         if spinp:
-            table = table[ table[:,-2]==1.000]   # we look at the majority spin only, spin is at -2 since we appended the corrected column
-        vbm_cbm = table[ ( table[:,1]>=vbm ) & ( table[:,1] <=cbm) ]
+            table = table[
+                table[:, -2] ==
+                1.000]  # we look at the majority spin only, spin is at -2 since we appended the corrected column
+        vbm_cbm = table[(table[:, 1] >= vbm) & (table[:, 1] <= cbm)]
         # find the max vbm from all vbm rows,  same for cbm, subtract, and get their associated kpt, band info
-        vbm_only = vbm_cbm[vbm_cbm[:,1]==vbm]
-        cbm_only = vbm_cbm[vbm_cbm[:,1]==cbm]
-        vbm_arg_max = np.argmax(vbm_only[:,-1])
-        cbm_arg_max = np.argmin(cbm_only[:,-1])
-        vbm_arg= np.argwhere(table[:,-1] == vbm_only[:,-1][vbm_arg_max])[0][0]
-        cbm_arg= np.argwhere(table[:,-1] == cbm_only[:,-1][cbm_arg_max])[0][0]
-        kpt_vbm = table[:,0][vbm_arg]
-        band_vbm= table[:,1][vbm_arg]
-        kpt_cbm = table[:,0][cbm_arg]
-        band_cbm = table[:,1][cbm_arg]
+        vbm_only = vbm_cbm[vbm_cbm[:, 1] == vbm]
+        cbm_only = vbm_cbm[vbm_cbm[:, 1] == cbm]
+        vbm_arg_max = np.argmax(vbm_only[:, -1])
+        cbm_arg_max = np.argmin(cbm_only[:, -1])
+        vbm_arg = np.argwhere(
+            table[:, -1] == vbm_only[:, -1][vbm_arg_max])[0][0]
+        cbm_arg = np.argwhere(
+            table[:, -1] == cbm_only[:, -1][cbm_arg_max])[0][0]
+        kpt_vbm = table[:, 0][vbm_arg]
+        band_vbm = table[:, 1][vbm_arg]
+        kpt_cbm = table[:, 0][cbm_arg]
+        band_cbm = table[:, 1][cbm_arg]
         gap = table[:, -1][cbm_arg] - table[:, -1][vbm_arg]
 
-        self.report(" corrected gap(s) {}  at K-points {}, {}, between bands {} and {} for calc {}".format(
-                    gap, kpt_vbm ,kpt_cbm,  band_vbm, band_cbm , node_id))
-        return  gap  # for spin polarized there will be two almost equivalent, else just one value.
+        self.report(
+            " corrected gap(s) {}  at K-points {}, {}, between bands {} and {} for calc {}"
+            .format(gap, kpt_vbm, kpt_cbm, band_vbm, band_cbm, node_id))
+        return gap  # for spin polarized there will be two almost equivalent, else just one value.
 
     def report_wf(self):
         """Output final quantities
@@ -610,26 +735,34 @@ class YamboConvergenceWorkflow(WorkChain):
         nscf_pk = False
         scf_pk = False
         parameters = None
-        from aiida.orm import DataFactory
-        if 'pw' in self.ctx.zero_calc.out: 
-          if 'nscf_pk' in self.ctx.zero_calc.out.pw.get_dict():
-              nscf_pk = self.ctx.zero_calc.out.pw.get_dict()['nscf_pk'] 
-              self.out("nscf_remote_folder", self.ctx.zero_calc.out.nscf_remote_folder)
-          if 'scf_pk' in self.ctx.zero_calc.out.pw.get_dict():
-              scf_pk = self.ctx.zero_calc.out.pw.get_dict()['scf_pk'] 
-              self.out("scf_remote_folder", self.ctx.zero_calc.out.scf_remote_folder)
+        from aiida.plugins import DataFactory
+        if 'pw' in self.ctx.zero_calc.out:
+            if 'nscf_pk' in self.ctx.zero_calc.out.pw.get_dict():
+                nscf_pk = self.ctx.zero_calc.out.pw.get_dict()['nscf_pk']
+                self.out("nscf_remote_folder",
+                         self.ctx.zero_calc.out.nscf_remote_folder)
+            if 'scf_pk' in self.ctx.zero_calc.out.pw.get_dict():
+                scf_pk = self.ctx.zero_calc.out.pw.get_dict()['scf_pk']
+                self.out("scf_remote_folder",
+                         self.ctx.zero_calc.out.scf_remote_folder)
         if 'yambo_pk' in self.ctx.zero_calc.out.gw.get_dict():
-            parameters = load_node( self.ctx.zero_calc.out.gw.get_dict()['yambo_pk']).inp.parameters.get_dict()
-            self.out("yambo_remote_folder", self.ctx.zero_calc.out.yambo_remote_folder)
-        self.out("convergence", DataFactory('parameter')(dict={
-            "parameters": parameters,
-            "yambo_pk": self.ctx.zero_calc.out.gw.get_dict()['yambo_pk'],
-            "convergence_space": self.ctx.conv_elem,
-            "energy_widths":  self.ctx.en_diffs ,
-            "nscf_pk":  nscf_pk, 
-            "scf_pk":  scf_pk , 
+            parameters = load_node(self.ctx.zero_calc.out.gw.get_dict()
+                                   ['yambo_pk']).inp.parameters.get_dict()
+            self.out("yambo_remote_folder",
+                     self.ctx.zero_calc.out.yambo_remote_folder)
+        self.out(
+            "convergence",
+            DataFactory('parameter')
+            (dict={
+                "parameters": parameters,
+                "yambo_pk": self.ctx.zero_calc.out.gw.get_dict()['yambo_pk'],
+                "convergence_space": self.ctx.conv_elem,
+                "energy_widths": self.ctx.en_diffs,
+                "nscf_pk": nscf_pk,
+                "scf_pk": scf_pk,
             }))
         self.report("completed 1-D convergence workflow")
+
 
 if __name__ == "__main__":
     pass

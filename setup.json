@@ -17,7 +17,14 @@
             "Sphinx", 
             "docutils", 
             "sphinx_rtd_theme"
+          ],
+         "pre-commit": [
+            "pre-commit==1.11.0",
+            "yapf==0.24.0",
+            "prospector==0.12.11",
+            "pylint==1.9.3"
           ]
+
       }, 
     "install_requires": [
         "aiida_core[docs,atomic_tools]>=1.0.0a2",
