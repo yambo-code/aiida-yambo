@@ -6,17 +6,15 @@ python: 2.7
 services:
     - postgresql
 addons:
-    postgresql: "9.5"
+    postgresql: "9.6"
 cache: pip
 before_install:  # copied from pgtest's travis.yml
     - sudo apt-get install locate
-    - sudo service postgresql stop
-    - sudo apt-get remove postgresql
-    - sudo apt-get install postgresql
     - sudo updatedb
 install:
     - pip install --upgrade pip
-    - pip install -e git+https://github.com/aiidateam/aiida_core#egg=aiida-core
+    - pip install wheel setuptools reentry
+    - pip install --no-use-pep517 git+https://github.com/aiidateam/aiida_core.git#egg=aiida_core
     - pip install -e .
     - pip install tox-travis
 script: tox
