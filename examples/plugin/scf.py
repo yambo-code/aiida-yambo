@@ -5,15 +5,18 @@ from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.common.example_helpers import test_and_get_code
-from aiida.orm.nodes.base import List
+#from aiida.common.example_helpers import test_and_get_code
+from aiida.orm import List
 from aiida.orm import Code
 from aiida.plugins import DataFactory
 import pymatgen
-from aiida.engine.run import submit
+from aiida.engine import submit
+from aiida.engine import run_get_node
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida.orm.nodes.upf import UpfData, get_pseudos_from_structure
+from aiida.orm import UpfData
+from aiida.orm.nodes.data.upf import get_pseudos_from_structure
+
 
 StructureData = DataFactory('structure')
 
@@ -25,9 +28,9 @@ structure_pmg = pymatgen.Structure(
 structure = StructureData()
 structure.set_pymatgen_structure(structure_pmg)
 
-ParameterData = DataFactory('parameter')
+ParameterData = DataFactory('dict')
 
-parameters = Dict(
+parameters = ParameterData(
     dict={
         'CONTROL': {
             'calculation': 'scf',
@@ -54,13 +57,16 @@ inputs = {}
 inputs['structure'] = structure
 inputs['kpoints'] = kpoints
 inputs['parameters'] = parameters
-inputs['_options'] = {
+options =  {
     'max_wallclock_seconds': 30 * 60,
     'resources': {
         "num_machines": 1,
-        #"num_mpiprocs_per_machine":2
+        "num_mpiprocs_per_machine":2,
     },
-    #'custom_scheduler_commands':u"#PBS -A Pra15_3963",
+}
+inputs['metadata']={
+    'options' : options,
+    'label':'prova',
 }
 
 if __name__ == "__main__":
@@ -82,7 +88,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     code = Code.get_from_string(args.codename)
     inputs['code'] = code
-    inputs['pseudo'] = get_pseudos_from_structure(structure, args.pseudo)
-    process = PwCalculation.process()
-    running = submit(process, **inputs)
+    inputs['pseudos'] = get_pseudos_from_structure(structure, args.pseudo)
+    #process = PwCalculation.process()
+    running = run_get_node(PwCalculation, **inputs)
     print("Created calculation; with pid={}".format(running.pid))

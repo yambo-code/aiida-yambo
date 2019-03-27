@@ -64,22 +64,22 @@ class YamboCalculation(CalcJob):
 """
 )
 
-    @classmethod
-    def define(cls,spec):
-        super(YamboCalculation,cls).define(spec)
+#    @classmethod
+#    def define(cls,spec):
+#        super(YamboCalculation,cls).define(spec)
         
-        spec.input_namespace('settings',valid_type=Dict,
-                help='Use an additional node for special settings',dynamic=True)
-        spec.input_namespace('parameters',valid_type=Dict,
-                help='Use a node that specifies the input parameters',dynamic=True)
-        spec.input_namespace('parent_folder',valid_type=RemoteData,
-                help='Use a remote folder as parent folder (for "restarts and similar")',dynamic=True)
-        spec.input_namespace('preprocessing_code',valid_type=Code,
-                help='Use a preprocessing code for starting yambo',dynamic=True)
-        spec.input_namespace('precode_parameters',valid_type=Dict,
-                help='Use a node that specifies the input parameters for the yambo precode',dynamic=True)
-        spec.input_namespace('main_code',valid_type=Code,
-                help='Use a main code for yambo calculation',dynamic=True)
+        spec.input('settings',valid_type=Dict,
+                help='Use an additional node for special settings')
+        spec.input('parameters',valid_type=Dict,
+                help='Use a node that specifies the input parameters')
+        spec.input('parent_folder',valid_type=RemoteData,
+                help='Use a remote folder as parent folder (for "restarts and similar"')
+        spec.input('preprocessing_code',valid_type=Code,
+                help='Use a preprocessing code for starting yambo')
+        spec.input('precode_parameters',valid_type=Dict,
+                help='Use a node that specifies the input parameters for the yambo precode')
+        spec.input('main_code',valid_type=Code,
+                help='Use a main code for yambo calculation')#,dynamic=False)
 
     def prepare_for_submission(self, folder):
 
