@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
-from aiida.orm.nodes.folder import FolderData
+from aiida.orm import FolderData
 from aiida.parsers.parser import Parser
-from aiida.common.datastructures import calc_states
+from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import OutputParsingError
 from aiida.common.exceptions import UniquenessError
 from aiida.common.exceptions import ValidationError, ParsingError
 import numpy
 import copy
-from aiida.orm.nodes.array import ArrayData
-from aiida.orm.nodes.array.bands import BandsData
-from aiida.orm.nodes.array.kpoints import KpointsData
-from aiida.orm.nodes.parameter import Dict
-from aiida.orm.nodes.structure import StructureData
-from aiida.plugins.utils import DataFactory, CalculationFactory
+from aiida.orm import ArrayData
+from aiida.orm import BandsData
+from aiida.orm import KpointsData
+from aiida.orm import Dict
+from aiida.orm import StructureData
+from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
 from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder

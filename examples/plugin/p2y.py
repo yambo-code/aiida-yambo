@@ -23,7 +23,7 @@ from aiida.orm.nodes.data.upf import get_pseudos_from_structure
 Dict = DataFactory('dict')
 
 inputs = {}
-inputs['settings'] = Dict(dict={'initialise': True})
+inputs['settings'] = Dict(dict={'INITIALISE': True})
 #inputs['options'] = {
 #    'max_wallclock_seconds': 30 * 60,
 #    'resources': {
@@ -78,6 +78,5 @@ if __name__ == "__main__":
     inputs['main_code'] = code
     inputs['code'] = code
     inputs['parent_folder'] = load_node(args.parent).outputs.remote_folder
-    #process = YamboCalculation.process()
-    running = run_get_node(YamboCalculation, **inputs)
-    print("Created calculation; with pid={}".format(running.pid))
+    running = submit(YamboCalculation, **inputs)
+    print("Created calculation; with pk={}".format(running.pk))

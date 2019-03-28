@@ -80,8 +80,8 @@ class YamboCalculation(CalcJob):
                 help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('main_code',valid_type=Code,
                 help='Use a main code for yambo calculation')#,dynamic=False)
-
-    def prepare_for_submission(self, folder):
+    
+    def prepare_for_submission(self, tempfolder):
 
         local_copy_list = []
         remote_copy_list = []
@@ -90,7 +90,7 @@ class YamboCalculation(CalcJob):
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
         
-        settings = self.inputs.settings
+        settings = self.inputs.settings.get_dict()
 
         initialise = settings.pop('INITIALISE', None)
         if initialise is not None:
@@ -98,22 +98,22 @@ class YamboCalculation(CalcJob):
                 raise InputValidationError("INITIALISE must be " " a boolean")
         
         parameters = self.inputs.parameters
-
+        
         if not initialise:
             if not isinstance(parameters, Dict):
                 raise InputValidationError(
                     "parameters is not of type Dict")
-
+        
         parent_calc_folder = self.inputs.parent_folder
 
         main_code = self.inputs.main_code
 
         preproc_code = self.inputs.preprocessing_code
-
-        parent_calc = parent_calc_folder.get_inputs_dict(
-            link_type=LinkType.CREATE)['remote_folder']
+        
+        parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+        
         yambo_parent = isinstance(parent_calc, YamboCalculation)
-
+        
         # flags for yambo interfaces
         precode_param_dict = self.inputs.precode_parameters
 
@@ -122,7 +122,7 @@ class YamboCalculation(CalcJob):
         import re
         precode_params_list = []
         pattern = re.compile(r"(^\-)([a-zA-Z])")
-        for key, value in six.iteritems(precode_param_dict):
+        for key, value in six.iteritems(precode_param_dict.get_dict()):
             if re.search(pattern, key) is not None:
                 if key == '-O' or key == '-H' or key == '-h' or key == '-F':
                     raise InputValidationError(
@@ -186,10 +186,10 @@ class YamboCalculation(CalcJob):
 
                 parameters_list.append(this_dict)
 
-            input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
-
+            input_filename = tempfolder.get_abs_path(self.metadata.options.input_filename)
+            
             with open(input_filename, 'w') as infile:
-                infile.write(self._LOGOSTRING)
+                infile.write(self.metadata.options.logostring)
 
                 for k, v in six.iteritems(boolean_dict):
                     if v:
@@ -270,11 +270,11 @@ class YamboCalculation(CalcJob):
                             the_string += " {}".format(units)
 
                     infile.write(the_string + "\n")
-
+        
         ############################################
         # set copy of the parent calculation
         ############################################
-
+        '''
         parent_calcs = parent_calc_folder.get_inputs(link_type=LinkType.CREATE)
         if len(parent_calcs) > 1:
             raise UniquenessError(
@@ -286,11 +286,12 @@ class YamboCalculation(CalcJob):
                 "No parent calculation associated with parent_folder {}".
                 format(parent_calc_folder))
         parent_calc = parent_calcs[0]
-
+        '''
+        parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
         if yambo_parent:
             try:
                 parent_settings = _uppercase_dict(
-                    parent_calc.inp.settings.get_dict(),
+                    parent_calc.inp.settings,
                     dict_name='parent settings')
                 parent_initialise = parent_settings['INITIALISE']
             except KeyError:
@@ -324,12 +325,12 @@ class YamboCalculation(CalcJob):
                 (parent_calc_folder.computer.uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               PwCalculation._OUTPUT_SUBFOLDER,
-                              "{}.save".format(parent_calc._PREFIX), "*"),
+                              "aiida.save"), #.format(parent_calc._PREFIX), "*"),  ########################################à
                  "."))
         ############################################
         # set Calcinfo
         ############################################
-
+                
         calcinfo = CalcInfo()
 
         calcinfo.uuid = self.uuid
@@ -344,13 +345,13 @@ class YamboCalculation(CalcJob):
         calcinfo.retrieve_list.append('l*')
         calcinfo.retrieve_list.append('o*')
         calcinfo.retrieve_list.append('LOG/l-*_CPU_1')
-        extra_retrieved = settings_dict.pop(
+        extra_retrieved = settings.pop(
             'ADDITIONAL_RETRIEVE_LIST',
             ['aiida/ndb.QP', 'aiida/ndb.HF_and_locXC'])
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append(extra)
 
-        from aiida.common.datastructures import code_run_modes, CodeInfo
+        from aiida.common.datastructures import CodeRunMode, CodeInfo
 
         # c1 = interface dft codes and yambo (ex. p2y or a2y)
         c1 = CodeInfo()
@@ -376,7 +377,7 @@ class YamboCalculation(CalcJob):
         c3 = CodeInfo()
         c3.withmpi = self.get_withmpi()
         c3.cmdline_params = [
-            "-F", self._INPUT_FILE_NAME, '-J', self._OUTPUT_FILE_NAME
+            "-F", self.metadata.options.input_filename, '-J', self.metadata.options.output_filename
         ]
         c3.code_uuid = main_code.uuid
 
@@ -395,7 +396,8 @@ class YamboCalculation(CalcJob):
         else:
             calcinfo.codes_info = [c1, c2, c3]
 
-        calcinfo.codes_run_mode = code_run_modes.SERIAL
+        
+        calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
         if settings:
             raise InputValidationError(

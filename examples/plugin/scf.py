@@ -91,4 +91,4 @@ if __name__ == "__main__":
     inputs['pseudos'] = get_pseudos_from_structure(structure, args.pseudo)
     #process = PwCalculation.process()
     running = run_get_node(PwCalculation, **inputs)
-    print("Created calculation; with pid={}".format(running.pid))
+    print("Created calculation; with pk={}".format(running.pk))
