@@ -71,13 +71,19 @@ class YamboParser(Parser):
 
     def __init__(self, calculation):
         """Initialize the instance of YamboParser"""
-        from aiida.common import aiidalogger
-        self._logger = aiidalogger.getChild('parser').getChild(
+        from aiida.common import AIIDA_LOGGER
+        self._logger = AIIDA_LOGGER.getChild('parser').getChild(
             self.__class__.__name__)
-        # check for valid input
-        if not isinstance(calculation, YamboCalculation):
+       # check for valid input
+        if calculation.process_type=='aiida.calculations:yambo.yambo':
+            yambo_parent=True
+        else:
             raise OutputParsingError(
                 "Input calculation must be a YamboCalculation")
+
+      #  if not isinstance(calculation, YamboCalculation):
+      #      raise OutputParsingError(
+      #          "Input calculation must be a YamboCalculation")
         self._calc = calculation
 
         self._eels_array_linkname = 'array_eels'
@@ -92,20 +98,21 @@ class YamboParser(Parser):
         self._parameter_linkname = 'output_parameters'
         super(YamboParser, self).__init__(calculation)
 
-    def parse_with_retrieved(self, retreived):
+    def parse(self, retrieved, **kwargs):
         """Parses the datafolder, stores results.
 
         This parser for this code ...
         """
         from aiida.common.exceptions import InvalidOperation
-        from aiida.common import aiidalogger
+        from aiida.common import exceptions
+        from aiida.common import AIIDA_LOGGER
 
         # suppose at the start that the job is unsuccessful, unless proven otherwise
         successful = False
-
+        
         # check whether the yambo calc was an initialisation (p2y)
         try:
-            settings_dict = self._calc.inp.settings.get_dict()
+            settings_dict = self._calc.inputs.settings.get_dict()
             settings_dict = _uppercase_dict(
                 settings_dict, dict_name='settings')
         except AttributeError:
@@ -125,10 +132,10 @@ class YamboParser(Parser):
        #out_folder = self._calc.get_retrieved_node() ##old way
 
         # check what is inside the folder
-        list_of_files = out_folder.get_folder_list()
+        #list_of_files = out_folder.get_folder_list()
 
         try:
-            input_params = self._calc.inp.parameters.get_dict()
+            input_params = self._calc.inputs.parameters.get_dict()
         except AttributeError:
             if not initialise:
                 raise ParsingError("Input parameters not found!")
@@ -136,7 +143,7 @@ class YamboParser(Parser):
                 input_params = {}
         # retrieve the cell: if parent_calc is a YamboCalculation we must find the original PwCalculation
         # going back through the graph tree.
-        parent_calc = self._calc.inp.parent_calc_folder.inp.remote_folder
+        parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         cell = {}
         if isinstance(parent_calc, YamboCalculation):
             has_found_cell = False
@@ -145,16 +152,16 @@ class YamboParser(Parser):
                     cell = parent_calc.inp.structure.cell
                     has_found_cell = True
                 except AttributeError:
-                    parent_calc = parent_calc.inp.parent_calc_folder.inp.remote_folder
+                    parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         elif isinstance(parent_calc, PwCalculation):
-            cell = self._calc.inp.parent_calc_folder.inp.remote_folder.inp.structure.cell
+            cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False}
         new_nodes_list = []
         ndbqp = {}
         ndbhf = {}
         try:
-            results = YamboFolder(out_folder.get_abs_path())
+            results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
             success = False
             raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)

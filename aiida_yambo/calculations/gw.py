@@ -75,7 +75,7 @@ class YamboCalculation(CalcJob):
         spec.input('parent_folder',valid_type=RemoteData,
                 help='Use a remote folder as parent folder (for "restarts and similar"')
         spec.input('preprocessing_code',valid_type=Code,
-                help='Use a preprocessing code for starting yambo')
+                help='Use a preprocessing code for starting yambo',required=False)
         spec.input('precode_parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('main_code',valid_type=Code,
@@ -112,8 +112,12 @@ class YamboCalculation(CalcJob):
         
         parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
         
-        yambo_parent = isinstance(parent_calc, YamboCalculation)
-        
+       # yambo_parent = isinstance(parent_calc, YamboCalculation)    old row
+        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
+            yambo_parent=True
+        else:
+            yambo_parent=False
+               
         # flags for yambo interfaces
         precode_param_dict = self.inputs.precode_parameters
 
@@ -291,7 +295,7 @@ class YamboCalculation(CalcJob):
         if yambo_parent:
             try:
                 parent_settings = _uppercase_dict(
-                    parent_calc.inp.settings,
+                    parent_calc.inputs.settings.get_dict(),
                     dict_name='parent settings')
                 parent_initialise = parent_settings['INITIALISE']
             except KeyError:
@@ -325,8 +329,10 @@ class YamboCalculation(CalcJob):
                 (parent_calc_folder.computer.uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               PwCalculation._OUTPUT_SUBFOLDER,
-                              "aiida.save"), #.format(parent_calc._PREFIX), "*"),  ########################################à
-                 "."))
+                              "aiida.save","*" ),  ##.format(parent_calc_folder._PREFIX)
+                                     "."
+                                     )
+                                    )     
         ############################################
         # set Calcinfo
         ############################################
@@ -355,7 +361,7 @@ class YamboCalculation(CalcJob):
 
         # c1 = interface dft codes and yambo (ex. p2y or a2y)
         c1 = CodeInfo()
-        c1.withmpi = True
+        c1.withmpi = False
         c1.cmdline_params = precode_params_list
 
         # c2 = yambo initialization
@@ -375,7 +381,8 @@ class YamboCalculation(CalcJob):
 
         # c3 = yambo calculation
         c3 = CodeInfo()
-        c3.withmpi = self.get_withmpi()
+        c3.withmpi = True
+        #c3.withmpi = self.get_withmpi()
         c3.cmdline_params = [
             "-F", self.metadata.options.input_filename, '-J', self.metadata.options.output_filename
         ]

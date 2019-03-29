@@ -7,11 +7,11 @@ Author: Michael Atambo, Antimo Marrazzo, Prandini Gianluca
 Author-email: m.atambo@nano.cnr.it
 License: MIT
 Description: UNKNOWN
-Keywords: yambo aiida workflows
+Keywords: y,a,m,b,o, ,a,i,i,d,a, ,w,o,r,k,f,l,o,w,s
 Platform: UNKNOWN
 Classifier: Programming Language :: Python
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Environment :: Plugins
 Classifier: Topic :: Scientific/Engineering :: Physics
-Provides-Extra: pre-commit
 Provides-Extra: docs
+Provides-Extra: pre-commit

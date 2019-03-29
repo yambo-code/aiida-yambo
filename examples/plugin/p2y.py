@@ -1,4 +1,4 @@
-#!/usr/bin/env runaiida
+#!/usr/bin/env runaiia
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import print_function
@@ -37,7 +37,7 @@ options =  {
     'max_wallclock_seconds': 30 * 60,
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine":12,
+        "num_mpiprocs_per_machine":1,
         },
     'custom_scheduler_commands': u"#PBS -q s3par6c",
     }

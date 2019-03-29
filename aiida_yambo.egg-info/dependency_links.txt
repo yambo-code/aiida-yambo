@@ -1,2 +1,2 @@
 git+https://github.com/aiidateam/aiida_core.git@b2e37749ab2781099df7b7bb15a603599ccdafdb#egg=aiida_core
-git+https://github.com/aiidateam/aiida-quantumespresso@f7a03009104b0ffb72b64c774b69834afaff1aab#egg=aiida_quantumespresso
+git+https://github.com/aiidateam/aiida-quantumespresso.git@b1e074f31cc604b43c7803344cf2cee45503c6df#egg=aiida_quantumespresso
