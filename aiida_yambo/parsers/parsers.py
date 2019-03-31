@@ -149,12 +149,12 @@ class YamboParser(Parser):
             has_found_cell = False
             while (not has_found_cell):
                 try:
-                    cell = parent_calc.inp.structure.cell
+                    cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell  #before: self._calc.inputs. ...
                     has_found_cell = True
                 except AttributeError:
                     parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         elif isinstance(parent_calc, PwCalculation):
-            cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
+            cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell #testare
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False}
         new_nodes_list = []
