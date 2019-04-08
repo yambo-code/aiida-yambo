@@ -33,11 +33,11 @@ __authors__ = "Michael Atambo, Antimo Marrazzo, Gianluca Prandini and the AiiDA 
 class YamboParser(Parser):
     """This class is a wrapper class for the Parser class for Yambo calculators from yambopy.
 
-    *IMPORTANT:* This plugin can parse netcdf files produced by yambo if the 
+    *IMPORTANT:* This plugin can parse netcdf files produced by yambo if the
     python netcdf libraries are installed, otherwise they are ignored.
-    Accepts data from yambopy's YamboFolder  as a list of YamboFile instances. 
+    Accepts data from yambopy's YamboFolder  as a list of YamboFile instances.
     The instances of YamboFile have the following attributes:
-   
+
     ::
       .data: A Dict, with k-points as keys and  in each futher a dict with obeservalbe:value pairs ie. { '1' : {'Eo': 5, 'B':1,..}, '15':{'Eo':5.55,'B': 30}... }
       .warnings:     list of strings, one warning  per string.
@@ -50,11 +50,11 @@ class YamboParser(Parser):
       .wall_time     duration of the run (as parsed from the log file)
       .last_time     last time reported (as parsed from the log file)
       .kpoints: When non empty is a Dict of kpoint_index: kpoint_triplet values i.e.                  { '1':[0,0,0], '5':[0.5,0.0,5] .. }
-      .type:   type of file according to YamboFile types include: 
+      .type:   type of file according to YamboFile types include:
       1. 'report'    : 'r-..' report files
       2. 'output_gw'  : 'o-...qp': quasiparticle output file   ...           .. etc
       N. 'unknown' : when YamboFile was unable to deduce what type of file
-      .timing: list of timing info.  
+      .timing: list of timing info.
 
     Saved data:
 
@@ -65,7 +65,7 @@ class YamboParser(Parser):
              and spin index if spin polarized else 0. BandsData can not be used as the k-point triplets
              are not available in the o-.qp file.
 
-    r-..    : BandsData is stored with the proper list of K-points, bands_labels. 
+    r-..    : BandsData is stored with the proper list of K-points, bands_labels.
 
     """
 
@@ -109,7 +109,7 @@ class YamboParser(Parser):
 
         # suppose at the start that the job is unsuccessful, unless proven otherwise
         successful = False
-        
+
         # check whether the yambo calc was an initialisation (p2y)
         try:
             settings_dict = self._calc.inputs.settings.get_dict()
@@ -125,7 +125,7 @@ class YamboParser(Parser):
             out_folder = self.retrieved
         except exceptions.NotExistent:
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
-        
+
        # with out_folder.open('output_file_name') as handle:
        #      self.out('output_link_label', SinglefileData(file=handle))
 
@@ -145,7 +145,7 @@ class YamboParser(Parser):
         # going back through the graph tree.
         parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         cell = {}
-        if isinstance(parent_calc, YamboCalculation):
+        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             has_found_cell = False
             while (not has_found_cell):
                 try:
@@ -153,7 +153,7 @@ class YamboParser(Parser):
                     has_found_cell = True
                 except AttributeError:
                     parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-        elif isinstance(parent_calc, PwCalculation):
+        elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
             cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell #testare
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False}
@@ -373,7 +373,7 @@ class YamboParser(Parser):
         return pdata
 
     def _aiida_ndb_hf(self, data):
-        """Save the data from ndb.HF_and_locXC  
+        """Save the data from ndb.HF_and_locXC
 
         """
         pdata = ArrayData()
