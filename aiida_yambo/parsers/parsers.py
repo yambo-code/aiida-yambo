@@ -126,8 +126,8 @@ class YamboParser(Parser):
         except exceptions.NotExistent:
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
-       # with out_folder.open('output_file_name') as handle:
-       #      self.out('output_link_label', SinglefileData(file=handle))
+        with out_folder.open('output_file_name') as handle:
+             self.out('output_link_label', SinglefileData(file=handle))
 
        #out_folder = self._calc.get_retrieved_node() ##old way
 
