@@ -44,30 +44,27 @@ class YamboCalculation(CalcJob):
 
        # Default output parser provided by AiiDA
         spec.input('metadata.options.parser_name', valid_type=six.string_types, default='yambo.yambo')
- 
+
        # self._SCRATCH_FOLDER = 'SAVE'
         spec.input('metadata.options.scratch_folder', valid_type=six.string_types, default='SAVE')
-   
+
 
         spec.input('metadata.options.logostring', valid_type=six.string_types, default="""
-#                                                           
-# Y88b    /   e           e    e      888~~\    ,88~-_      
-#  Y88b  /   d8b         d8b  d8b     888   |  d888   \     
-#   Y88b/   /Y88b       d888bdY88b    888 _/  88888    |    
-#    Y8Y   /  Y88b     / Y88Y Y888b   888  \  88888    |    
-#     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /     
-#    /   /      Y88b /          Y888b 888__/    `88_-~      
-#                                                           
+#
+# Y88b    /   e           e    e      888~~\    ,88~-_
+#  Y88b  /   d8b         d8b  d8b     888   |  d888   \
+#   Y88b/   /Y88b       d888bdY88b    888 _/  88888    |
+#    Y8Y   /  Y88b     / Y88Y Y888b   888  \  88888    |
+#     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /
+#    /   /      Y88b /          Y888b 888__/    `88_-~
+#
 #             AIIDA input plugin.  YAMBO 4.x compatible
-#               http://www.yambo-code.org                   
+#               http://www.yambo-code.org
 #
 """
 )
 
-#    @classmethod
-#    def define(cls,spec):
-#        super(YamboCalculation,cls).define(spec)
-        
+
         spec.input('settings',valid_type=Dict,
                 help='Use an additional node for special settings')
         spec.input('parameters',valid_type=Dict,
@@ -80,7 +77,12 @@ class YamboCalculation(CalcJob):
                 help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('main_code',valid_type=Code,
                 help='Use a main code for yambo calculation')#,dynamic=False)
-    
+        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.')
+
+        #outputs definition:
+
+        spec.output('bandsdata', valid_type=BandsData, required=True, help='quasiparticle band structure') #try
+
     def prepare_for_submission(self, tempfolder):
 
         local_copy_list = []
@@ -89,35 +91,35 @@ class YamboCalculation(CalcJob):
 
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
-        
+
         settings = self.inputs.settings.get_dict()
 
         initialise = settings.pop('INITIALISE', None)
         if initialise is not None:
             if not isinstance(initialise, bool):
                 raise InputValidationError("INITIALISE must be " " a boolean")
-        
+
         parameters = self.inputs.parameters
-        
+
         if not initialise:
             if not isinstance(parameters, Dict):
                 raise InputValidationError(
                     "parameters is not of type Dict")
-        
+
         parent_calc_folder = self.inputs.parent_folder
 
         main_code = self.inputs.main_code
 
         preproc_code = self.inputs.preprocessing_code
-        
+
         parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
-        
+
        # yambo_parent = isinstance(parent_calc, YamboCalculation)    old row
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
             yambo_parent=False
-               
+
         # flags for yambo interfaces
         precode_param_dict = self.inputs.precode_parameters
 
@@ -191,7 +193,7 @@ class YamboCalculation(CalcJob):
                 parameters_list.append(this_dict)
 
             input_filename = tempfolder.get_abs_path(self.metadata.options.input_filename)
-            
+
             with open(input_filename, 'w') as infile:
                 infile.write(self.metadata.options.logostring)
 
@@ -274,7 +276,7 @@ class YamboCalculation(CalcJob):
                             the_string += " {}".format(units)
 
                     infile.write(the_string + "\n")
-        
+
         ############################################
         # set copy of the parent calculation
         ############################################
@@ -332,11 +334,11 @@ class YamboCalculation(CalcJob):
                               "aiida.save","*" ),  ##.format(parent_calc_folder._PREFIX)
                                      "."
                                      )
-                                    )     
+                                    )
         ############################################
         # set Calcinfo
         ############################################
-                
+
         calcinfo = CalcInfo()
 
         calcinfo.uuid = self.uuid
@@ -403,7 +405,7 @@ class YamboCalculation(CalcJob):
         else:
             calcinfo.codes_info = [c1, c2, c3]
 
-        
+
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
         if settings:
@@ -436,9 +438,9 @@ class YamboCalculation(CalcJob):
 
     def use_parent_calculation(self, calc):
         """
-        Set the parent calculation of Yambo, 
+        Set the parent calculation of Yambo,
         from which it will inherit the outputsubfolder.
-        The link will be created from parent RemoteData to YamboCalculation 
+        The link will be created from parent RemoteData to YamboCalculation
         """
         from aiida.common.exceptions import NotExistent
 

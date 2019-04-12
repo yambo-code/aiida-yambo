@@ -124,10 +124,10 @@ class YamboParser(Parser):
         try:
             out_folder = self.retrieved
         except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER                #spec.exit_code(...)??
 
-        with out_folder.open('output_file_name') as handle:
-             self.out('output_link_label', SinglefileData(file=handle))
+        #with out_folder.open('output_file_name') as handle:                #we deleted this two lines...why?
+        #     self.out('output_link_label', SinglefileData(file=handle))
 
        #out_folder = self._calc.get_retrieved_node() ##old way
 
@@ -242,6 +242,7 @@ class YamboParser(Parser):
                     ) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
                         new_nodes_list.append(
                             (self._quasiparticle_bands_linkname, arr))
+                        self.out('bandsdata',BandsData(file=arr))
                     if type(arr) == ArrayData:  #
                         new_nodes_list.append((self._qp_array_linkname, arr))
 
@@ -280,7 +281,7 @@ class YamboParser(Parser):
                                param))  # output_parameters
 
         # successful=False -> Calc state = FAILED
-        return successful, new_nodes_list
+        #return successful, new_nodes_list         #in aiida 1 we replace with an exitcode if errors, otherwise nothing(no return)
 
     def _aiida_array(self, data):
         arraydata = ArrayData()
