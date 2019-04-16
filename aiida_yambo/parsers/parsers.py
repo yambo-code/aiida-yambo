@@ -157,7 +157,6 @@ class YamboParser(Parser):
             cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell #testare
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False}
-        new_nodes_list = []
         ndbqp = {}
         ndbhf = {}
         try:
@@ -218,14 +217,13 @@ class YamboParser(Parser):
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
-                new_nodes_list.append((self._eels_array_linkname, eels_array))
+                self.out(self._eels_array_linkname, eels_array)
             elif 'eps' in result.filename:
                 eps_array = self._aiida_array(result.data)
-                new_nodes_list.append((self._eps_array_linkname, eps_array))
+                self.out(self._eps_array_linkname, eps_array)
             elif 'alpha' in result.filename:
                 alpha_array = self._aiida_array(result.data)
-                new_nodes_list.append((self._alpha_array_linkname,
-                                       alpha_array))
+                self.out(self._alpha_array_linkname,alpha_array)
 
             elif 'ndb.QP' == result.filename:
                 ndbqp = copy.deepcopy(result.data)
@@ -237,25 +235,19 @@ class YamboParser(Parser):
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
-                    if type(
-                            arr
-                    ) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
-                        new_nodes_list.append(
-                            (self._quasiparticle_bands_linkname, arr))
-                        self.out('bandsdata',BandsData(file=arr))
+                    if type(arr) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
+                        self.out(self._quasiparticle_bands_linkname,arr)
                     if type(arr) == ArrayData:  #
-                        new_nodes_list.append((self._qp_array_linkname, arr))
+                        self.out(self._qp_array_linkname,arr)
 
             elif 'life' in input_params:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
                     if type(arr) == BandsData:
-                        new_nodes_list.append((self._alpha_array_linkname,
-                                               arr))
+                        self.out(self._alpha_array_linkname+'_bands',arr)
                     elif type(arr) == ArrayData:
-                        new_nodes_list.append(
-                            (self._alpha_array_linkname + '_', arr))
+                        self.out(self._alpha_array_linkname + '_arr', arr)
 
             else:
                 if not initialise:
@@ -263,6 +255,9 @@ class YamboParser(Parser):
                         'Parser output format is invalid')
                 else:
                     pass
+
+        self.out(self._parameter_linkname,param)  # output_parameters
+        
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:  #
@@ -276,12 +271,9 @@ class YamboParser(Parser):
                 new_nodes_list.append((self._ndb_HF_linkname,
                                        self._aiida_ndb_hf(ndbhf)))
 
-        param = Dict(dict=output_params)
-        new_nodes_list.append((self._parameter_linkname,
-                               param))  # output_parameters
 
-        # successful=False -> Calc state = FAILED
-        #return successful, new_nodes_list         #in aiida 1 we replace with an exitcode if errors, otherwise nothing(no return)
+
+
 
     def _aiida_array(self, data):
         arraydata = ArrayData()

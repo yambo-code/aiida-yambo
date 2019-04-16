@@ -30,7 +30,7 @@ parameters = dict={
         'NGsBlkXp_units': 'Ry',
         'GbndRnge': (1, 30),
         'DysSolver': "n",
-        'QPkrange': [(1, 1, 1, 1)],
+        'QPkrange': [(1, 1, 1, 15)],
         'X_all_q_CPU': "1 1 6 2",
         'X_all_q_ROLEs': "q k c v",
         #'SE_CPU': "1 1 12",

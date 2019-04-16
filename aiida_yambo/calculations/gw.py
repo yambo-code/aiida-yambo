@@ -12,7 +12,7 @@ from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from aiida.common.exceptions import UniquenessError, InputValidationError
 from aiida.common.utils import classproperty
 from aiida.orm.nodes import Dict
-from aiida.orm.nodes import RemoteData
+from aiida.orm.nodes import RemoteData, BandsData, ArrayData
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import Code
 from aiida.common import AIIDA_LOGGER
@@ -81,7 +81,14 @@ class YamboCalculation(CalcJob):
 
         #outputs definition:
 
-        spec.output('bandsdata', valid_type=BandsData, required=True, help='quasiparticle band structure') #try
+        spec.output('output_parameters', valid_type=Dict, required=True, help='output params')
+        spec.output('array_alpha_bands', valid_type=ArrayData, required=False, help='alpha array')
+        spec.output('array_alpha_array', valid_type=ArrayData, required=False, help='alpha array')
+        spec.output('bands_quasiparticle', valid_type=BandsData, required=False, help='quasiparticle band structure')
+        spec.output('array_qp', valid_type=ArrayData, required=False, help='quasiparticle array band structure')
+        spec.output('array_eels', valid_type=ArrayData, required=False, help='eels array')
+        spec.output('array_eps', valid_type=ArrayData, required=False, help='eps array')
+
 
     def prepare_for_submission(self, tempfolder):
 
