@@ -52,7 +52,7 @@ options =  {
 
 inputs['metadata']={
     'options' : options,
-    'label':'ip-rpa',
+    'label':'yambo_ip-rpa example',
 }
 inputs['parameters']=Dict(dict=parameters)
 inputs['precode_parameters']=Dict(dict={})
