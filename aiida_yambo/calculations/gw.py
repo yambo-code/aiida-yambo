@@ -77,20 +77,34 @@ class YamboCalculation(CalcJob):
                 help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('main_code',valid_type=Code,
                 help='Use a main code for yambo calculation')#,dynamic=False)
-        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved folder data node could not be accessed.')
+        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
+                message='The retrieved folder data node could not be accessed.')
 
         #outputs definition:
 
-        spec.output('output_parameters', valid_type=Dict, required=True, help='output params')
-        spec.output('array_alpha_bands', valid_type=ArrayData, required=False, help='alpha array')
-        spec.output('array_alpha_array', valid_type=ArrayData, required=False, help='alpha array')
-        spec.output('bands_quasiparticle', valid_type=BandsData, required=False, help='quasiparticle band structure')
-        spec.output('array_qp', valid_type=ArrayData, required=False, help='quasiparticle array band structure')
-        spec.output('array_eels', valid_type=ArrayData, required=False, help='eels array')
-        spec.output('array_eps', valid_type=ArrayData, required=False, help='eps array')
-        spec.output('array_ndb', valid_type=ArrayData, required=False, help='array_ndb')
-        spec.output('array_ndb_QP', valid_type=ArrayData, required=False, help='array_ndb_QP')
-        spec.output('array_ndb_HFlocXC', valid_type=ArrayData, required=False, help='array_ndb_HFlocXC')
+        spec.output('output_parameters', valid_type=Dict,
+                required=True, help='returns the output parameters')
+        spec.output('array_alpha', valid_type=ArrayData,
+                required=False, help='returns the alpha array')
+        spec.output('array_alpha_bands', valid_type=ArrayData,
+                required=False, help='returns the alpha array bands')
+        spec.output('array_alpha_array', valid_type=ArrayData,
+                required=False, help='returns the alpha array')
+        spec.output('bands_quasiparticle', valid_type=BandsData,
+                required=False, help='returns the quasiparticle band structure')
+        spec.output('array_qp', valid_type=ArrayData,
+                required=False, help='returns the quasiparticle array band structure')
+        spec.output('array_eels', valid_type=ArrayData,
+                required=False, help='returns the eels array')
+        spec.output('array_eps', valid_type=ArrayData,
+                required=False, help='returns the eps array')
+        spec.output('array_ndb', valid_type=ArrayData,
+                required=False, help='returns the array for ndb')
+        spec.output('array_ndb_QP', valid_type=ArrayData,
+                required=False, help='returns the array for ndbQP')
+        spec.output('array_ndb_HFlocXC', valid_type=ArrayData,
+                required=False, help='returns the array ndb for HFlocXC')
+
 
     def prepare_for_submission(self, tempfolder):
 
