@@ -75,8 +75,8 @@ class YamboCalculation(CalcJob):
                 help='Use a preprocessing code for starting yambo',required=False)
         spec.input('precode_parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters for the yambo precode')
-        spec.input('main_code',valid_type=Code,
-                help='Use a main code for yambo calculation')#,dynamic=False)
+        spec.input('code',valid_type=Code,
+                help='Use a main code for yambo calculation')
         spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
 
@@ -131,7 +131,7 @@ class YamboCalculation(CalcJob):
 
         parent_calc_folder = self.inputs.parent_folder
 
-        main_code = self.inputs.main_code
+        main_code = self.inputs.code
 
         preproc_code = self.inputs.preprocessing_code
 
