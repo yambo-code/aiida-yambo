@@ -88,7 +88,9 @@ class YamboCalculation(CalcJob):
         spec.output('array_qp', valid_type=ArrayData, required=False, help='quasiparticle array band structure')
         spec.output('array_eels', valid_type=ArrayData, required=False, help='eels array')
         spec.output('array_eps', valid_type=ArrayData, required=False, help='eps array')
-
+        spec.output('array_ndb', valid_type=ArrayData, required=False, help='array_ndb')
+        spec.output('array_ndb_QP', valid_type=ArrayData, required=False, help='array_ndb_QP')
+        spec.output('array_ndb_HFlocXC', valid_type=ArrayData, required=False, help='array_ndb_HFlocXC')
 
     def prepare_for_submission(self, tempfolder):
 
@@ -317,22 +319,20 @@ class YamboCalculation(CalcJob):
                                          "SAVE"), "SAVE/"))
             if not parent_initialise:
                 cancopy = False
-                if parent_calc.get_state() == calc_states.FINISHED:
+                if parent_calc.is_finished:
                     cancopy = True
                 if 'yambo_wrote' in list(
-                        parent_calc.get_outputs_dict()['output_parameters'].
+                        parent_calc.outputs.output_parameters.
                         get_dict().keys()):
-                    if parent_calc.get_outputs_dict(
-                    )['output_parameters'].get_dict()['yambo_wrote'] == True:
+                    if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == True:
                         cancopy = True
-                    if parent_calc.get_outputs_dict(
-                    )['output_parameters'].get_dict()['yambo_wrote'] == False:
+                    if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == False:
                         cancopy = False
                 if cancopy:
                     remote_copy_list.append(
                         (parent_calc_folder.computer.uuid,
                          os.path.join(parent_calc_folder.get_remote_path(),
-                                      "aiida"), "aiida/"))
+                                      ".aiida"), "aiida/"))
         else:
             remote_copy_list.append(
                 (parent_calc_folder.computer.uuid,

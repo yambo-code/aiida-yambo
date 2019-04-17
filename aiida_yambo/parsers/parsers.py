@@ -19,7 +19,6 @@ import glob, os, re
 from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
 from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder
 from aiida_yambo.calculations.gw import YamboCalculation
-#PwCalculation = CalculationFactory('quantumespresso.pw')
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
@@ -255,21 +254,18 @@ class YamboParser(Parser):
                         'Parser output format is invalid')
                 else:
                     pass
+        params=Dict(dict=output_params)
+        self.out(self._parameter_linkname,params)  # output_parameters
 
-        self.out(self._parameter_linkname,param)  # output_parameters
-        
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:  #
-            new_nodes_list.append((self._ndb_linkname,
-                                   self._sigma_c(ndbqp, ndbhf)))
+            self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
         else:
             if ndbqp:
-                new_nodes_list.append((self._ndb_QP_linkname,
-                                       self._aiida_ndb_qp(ndbqp)))
+                self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
             if ndbhf:
-                new_nodes_list.append((self._ndb_HF_linkname,
-                                       self._aiida_ndb_hf(ndbhf)))
+                self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
 
 
