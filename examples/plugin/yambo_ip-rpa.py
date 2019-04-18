@@ -83,7 +83,6 @@ if __name__ == "__main__":
     precode = Code.get_from_string(args.precodename)
     code = Code.get_from_string(args.codename)
     inputs['preprocessing_code'] = precode
-    inputs['main_code'] = code
     inputs['code'] = code
     inputs['parent_folder'] = load_node(args.parent).outputs.remote_folder
     running = submit(YamboCalculation, **inputs)
