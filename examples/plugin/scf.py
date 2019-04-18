@@ -5,7 +5,6 @@ from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-#from aiida.common.example_helpers import test_and_get_code
 from aiida.orm import List
 from aiida.orm import Code
 from aiida.plugins import DataFactory
@@ -55,18 +54,24 @@ kpoints.set_kpoints_mesh([8, 8, 8])
 
 inputs = {}
 inputs['structure'] = structure
+inputs['settings'] = Dict(dict={})
 inputs['kpoints'] = kpoints
 inputs['parameters'] = parameters
 options =  {
     'max_wallclock_seconds': 30 * 60,
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine":2,
+        "num_mpiprocs_per_machine":12,
     },
+    'queue_name':'s3par6c',
+#   'custom_scheduler_commands':
+#   u"#SBATCH --account=Pra15_3963 \n" + "#SBATCH --partition=knl_usr_dbg \n" +
+#   "#SBATCH --mem=86000 \n" + "\n" +
+#   "\nexport OMP_NUM_THREADS=1\nexport MKL_NUM_THREADS=1"
 }
 inputs['metadata']={
     'options' : options,
-    'label':'prova',
+    'label':'scf example',
 }
 
 if __name__ == "__main__":
@@ -89,6 +94,5 @@ if __name__ == "__main__":
     code = Code.get_from_string(args.codename)
     inputs['code'] = code
     inputs['pseudos'] = get_pseudos_from_structure(structure, args.pseudo)
-    #process = PwCalculation.process()
-    running = run_get_node(PwCalculation, **inputs)
+    running = submit(PwCalculation, **inputs)
     print("Created calculation; with pk={}".format(running.pk))

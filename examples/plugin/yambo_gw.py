@@ -63,7 +63,7 @@ if __name__ == "__main__":
         type=str,
         dest='codename',
         required=True,
-        help='The yambo(main_code) codename to use')
+        help='The yambo(main code) codename to use')
     parser.add_argument(
         '--parent',
         type=int,

@@ -24,14 +24,6 @@ Dict = DataFactory('dict')
 
 inputs = {}
 inputs['settings'] = Dict(dict={'INITIALISE': True})
-#inputs['options'] = {
-#    'max_wallclock_seconds': 30 * 60,
-#    'resources': {
-#        "num_machines": 1,
-#        "num_mpiprocs_per_machine": 12,
-#    },
-#    'custom_scheduler_commands': u"#PBS -q s3par6c",
-#}
 
 options =  {
     'max_wallclock_seconds': 30 * 60,
@@ -44,7 +36,7 @@ options =  {
 
 inputs['metadata']={
     'options' : options,
-    'label':'prova',
+    'label':'p2y example',
 }
 inputs['parameters']=Dict(dict={})
 inputs['precode_parameters']=Dict(dict={})
@@ -75,7 +67,6 @@ if __name__ == "__main__":
     precode = Code.get_from_string(args.precodename)
     code = Code.get_from_string(args.codename)
     inputs['preprocessing_code'] = precode
-    inputs['main_code'] = code
     inputs['code'] = code
     inputs['parent_folder'] = load_node(args.parent).outputs.remote_folder
     running = submit(YamboCalculation, **inputs)
