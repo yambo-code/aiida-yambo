@@ -145,15 +145,14 @@ class YamboParser(Parser):
         parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         cell = {}
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
-            has_found_cell = False
-            while (not has_found_cell):
-                try:
-                    cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell  #before: self._calc.inputs. ...
-                    has_found_cell = True
-                except AttributeError:
-                    parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+            has_found_pw = False
+            while (not has_found_pw):
+                parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
+                    cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
+                    has_found_pw = True
         elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
-            cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell #testare
+            cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False}
         ndbqp = {}
