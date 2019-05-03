@@ -437,6 +437,7 @@ class YamboCalculation(CalcJob):
 
         return calcinfo
 
+    #the following functions are not used, so why are they here?
     def _check_valid_parent(self, calc):
         """
         Check that calc is a valid parent for a YamboCalculation.
