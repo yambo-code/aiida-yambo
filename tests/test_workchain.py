@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+
 from __future__ import print_function
 import unittest
 from aiida.manage.fixtures import PluginTestCase
@@ -33,9 +34,8 @@ def create_authinfo(computer):
     Allow the current user to use the given computer.
     Deal with backwards compatibility down to aiida 0.11
     """
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
+    from aiida import load_profile
+    load_profile()
     from aiida.orm import backend as orm_backend
     authinfo = None
     if hasattr(orm_backend, 'construct_backend'):
@@ -239,7 +239,7 @@ class TestWf(PluginTestCase):
 
     def test_simple_log(self):
         from aiida.engine.launch import run
-        from aiida.orm.nodes.base import Float, Str, NumericType, List, Bool
+        from aiida.orm.nodes import Float, Str, NumericType, List, Bool
         from aiida_yambo.workflows.yamborestart import YamboRestartWf
         p2y_result = run(
             YamboRestartWf,

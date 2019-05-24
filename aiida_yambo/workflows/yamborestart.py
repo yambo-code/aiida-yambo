@@ -1,14 +1,13 @@
 from __future__ import absolute_import
 import sys
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
-if not is_dbenv_loaded():
-    load_dbenv()
+from aiida import load_profile
+load_profile()
 
 from aiida.orm import load_node
 from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.nodes.upf import get_pseudos_from_structure
-from aiida.common.datastructures import calc_states
+from aiida.orm.nodes.data.upf import get_pseudos_from_structure
+#from aiida.common.datastructures import calc_state
+from aiida.common.datastructures import CalcJobState
 from collections import defaultdict
 from aiida.plugins.utils import DataFactory, CalculationFactory
 from aiida.orm.nodes.base import Float, Str, NumericType
@@ -145,12 +144,6 @@ class YamboRestartWf(WorkChain):
         calc = load_node(self.ctx.yambo_pks[-1])
         if self.ctx.last == 'INITIALISE':
             return True
-
-        if calc.get_state() == calc_states.SUBMISSIONFAILED:
-            self.report(
-                "I will not resubmit calc pk: {}, submission failed: {}, check the log or you settings "
-                .format(calc.pk, calc.get_state()))
-            return False
 
         max_input_seconds = self.ctx.calculation_set.get_dict(
         )['max_wallclock_seconds']
