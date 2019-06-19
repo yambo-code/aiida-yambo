@@ -3,24 +3,27 @@ import sys
 from aiida import load_profile
 load_profile()
 
-from aiida.orm import load_node
-from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.nodes.data.upf import get_pseudos_from_structure
-#from aiida.common.datastructures import calc_state
+from aiida.orm import RemoteData
+from aiida.orm import Code
+from aiida.orm import StructureData
+from aiida.orm import Float, Str, NumericType
+
 from aiida.common.datastructures import CalcJobState
 from collections import defaultdict
-from aiida.plugins.utils import DataFactory, CalculationFactory
-from aiida.orm.nodes.base import Float, Str, NumericType
-from aiida.engine.workchain import WorkChain, while_
-from aiida.engine.workchain import ToContext as ResultToContext
-from aiida.engine.run import run, submit
+from aiida.plugins import DataFactory, CalculationFactory
+
+from aiida.engine import WorkChain, while_
+from aiida.engine import ToContext as ResultToContext
+from aiida.engine import run, submit
+
+from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.links import LinkType
-from aiida.orm.nodes.remote import RemoteData
-from aiida.orm.code import Code
-from aiida.orm.nodes.structure import StructureData
+
+from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structure
+
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import generate_yambo_input_params, reduce_parallelism
-from aiida_quantumespresso.calculations.pw import PwCalculation
 
 ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
@@ -31,7 +34,7 @@ class YamboRestartWf(WorkChain):
 
     This module submits calculations using the yambo plugin, and manages them, including
     restarting the calculation in case of:
-    1. Memory problems ( will reduce MPI parallelism before resubmitting)
+    1. Memory problems (will reduce MPI parallelism before resubmitting)
     2. Queue time exhaustions (will increase time by a fraction before resubmitting)
     3. Parallelism errors (will reduce the MPI the parallelism before resbmitting)
     4. Errors originating from a few select unphysical input parameters like too low bands.
@@ -43,15 +46,15 @@ class YamboRestartWf(WorkChain):
 
         This function has a list of inputs that this workflow accepts, as well as the
         high level workflow iteration logic
-        
+
         Keyword arguments:
-        precode -- the P2Y code  (required) 
-        yambocode -- the yambp code  (required) 
-        calculation_set -- scheduler settings  (required) 
-        settings -- code settings  (required) 
-        parent_folder -- parent NSCF/P2Y/YAMBO calculation  (required) 
-        parameters -- yambo parameter  (required)  
-        restart_options -- the P2Y code  (optional) 
+        precode -- the P2Y code  (required)
+        yambocode -- the yambp code  (required)
+        calculation_set -- scheduler settings  (required)
+        settings -- code settings  (required)
+        parent_folder -- parent NSCF/P2Y/YAMBO calculation  (required)
+        parameters -- yambo parameter  (required)
+        restart_options -- the P2Y code  (optional)
         """
         super(YamboRestartWf, cls).define(spec)
         spec.input("precode", valid_type=Str)
@@ -74,7 +77,7 @@ class YamboRestartWf(WorkChain):
 
         This function takes inputs provided and using the YamboCalculation class
         submits a calculation.
-        This will run only *ONE* calculation at a time,  it may be a p2y conversion or a yambo init or  a yambo calculation run, 
+        This will run only *ONE* calculation at a time,  it may be a p2y conversion or a yambo init or  a yambo calculation run,
         P2Y conversion will be done by providing a parent calculation of type PW,
         Initialize (yambo init) calculation can be done independently by having the INITIALISE key in the settings dict.
         Yambo Calc will be done when the parent calculation is P2Y/other yambo calculation, and INITIALISE is not provided.
@@ -288,7 +291,7 @@ class YamboRestartWf(WorkChain):
     def yambo_restart(self):
         """Submits a yambo calculation using the yambo plugin
 
-        This function submits a calculation, usually this represents a 
+        This function submits a calculation, usually this represents a
         resubmission of a failed calculation, or a continuation from P2Y/Init run.
         """
 
@@ -332,8 +335,8 @@ class YamboRestartWf(WorkChain):
         return ResultToContext(yambo_restart=future)
 
     def run_yambo(self, inputs):
-        """Call submit with the inputs  
-        
+        """Call submit with the inputs
+
         Takes some inputs and does a submit."""
         YamboProcess = YamboCalculation.process()
         future = self.submit(YamboProcess, **inputs)
@@ -355,7 +358,7 @@ class YamboRestartWf(WorkChain):
         return submited
 
     def report_wf(self):
-        """Report the outputs fof the workchain 
+        """Report the outputs fof the workchain
 
         Output final quantities
         return information that may be used to figure out

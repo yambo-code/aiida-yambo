@@ -80,9 +80,6 @@ class YamboParser(Parser):
             raise OutputParsingError(
                 "Input calculation must be a YamboCalculation")
 
-      #  if not isinstance(calculation, YamboCalculation):
-      #      raise OutputParsingError(
-      #          "Input calculation must be a YamboCalculation")
         self._calc = calculation
 
         self._eels_array_linkname = 'array_eels'
@@ -128,10 +125,6 @@ class YamboParser(Parser):
         #with out_folder.open('output_file_name') as handle:                #we deleted this two lines...why?
         #     self.out('output_link_label', SinglefileData(file=handle))
 
-       #out_folder = self._calc.get_retrieved_node() ##old way
-
-        # check what is inside the folder
-        #list_of_files = out_folder.get_folder_list()
 
         try:
             input_params = self._calc.inputs.parameters.get_dict()
