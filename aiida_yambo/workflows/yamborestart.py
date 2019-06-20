@@ -25,8 +25,6 @@ from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structu
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import generate_yambo_input_params, reduce_parallelism
 
-ParameterData = DataFactory("parameter")
-KpointsData = DataFactory("array.kpoints")
 
 
 class YamboRestartWf(WorkChain):
@@ -267,7 +265,7 @@ class YamboRestartWf(WorkChain):
         #self.ctx.yambo_pks.append(future.pk) lo fa gia' in run_yambo...?
         self.ctx.restart += 1
         self.report(" restarting from:{}  ".format(future.pk))
-        return ResultToContext(yambo_restart=future)   
+        return ResultToContext(yambo_restart=future)
 
     def run_yambo(self, inputs):
         """Call submit with the inputs

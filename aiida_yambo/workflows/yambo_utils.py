@@ -58,6 +58,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
         inputs._label = label
     inputs.parent_folder = parent_folder
     inputs.settings = settings
+
     # Get defaults:
     edit_parameters = parameters.get_dict()
     try:
@@ -67,7 +68,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
         calc = None
     is_pw = False
 
-    if isinstance(calc, PwCalculation):
+    if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
         is_pw = True
         nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
         nbands = calc.out.output_parameters.get_dict()['number_of_bands']
@@ -80,6 +81,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
         #ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4
         ngsblxpp = 2
         nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
+
         if not resource:
             resource = {
                 "num_mpiprocs_per_machine": 8,
@@ -87,18 +89,22 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
             }  # safe trivial defaults
         tot_mpi = resource[u'num_mpiprocs_per_machine'] * resource[
             u'num_machines']
-        if 'FFTGvecs' not in list(edit_parameters.keys()):
-            edit_parameters['FFTGvecs'] = 50
-            edit_parameters['FFTGvecs_units'] = 'Ry'
+
+        #if 'FFTGvecs' not in list(edit_parameters.keys()):
+        #    edit_parameters['FFTGvecs'] = 50
+        #    edit_parameters['FFTGvecs_units'] = 'Ry'
+
         if 'BndsRnXp' not in list(edit_parameters.keys()):
             edit_parameters['BndsRnXp'] = (1.0, nocc * 12)
         if 'GbndRnge' not in list(edit_parameters.keys()):
             edit_parameters['GbndRnge'] = (1.0, nocc * 12)
+
         if 'NGsBlkXp' not in list(edit_parameters.keys()):
             edit_parameters['NGsBlkXp'] = ngsblxpp
             edit_parameters['NGsBlkXp_units'] = 'Ry'
-        if 'rim_cut' not in list(edit_parameters.keys()):
-            edit_parameters['rim_cut'] = True
+
+        #if 'rim_cut' not in list(edit_parameters.keys()):
+        #    edit_parameters['rim_cut'] = True
         #if 'GTermEn' not in edit_parameters.keys():
         #     edit_parameters['GTermEn'] = 40.81708
         #     edit_parameters['GTermEn_units'] = 'eV'
@@ -110,6 +116,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
         #     edit_parameters['RandGvec_units'] = 'RL'
         #if 'CUTGeo' not in edit_parameters.keys():
         #     edit_parameters['CUTGeo'] = 'none'
+
         if 'QPkrange' not in list(edit_parameters.keys()):
             edit_parameters['QPkrange'] = [(1, nkpts, int(nocc) - 1,
                                             int(nocc) + 1)]  # To revisit
@@ -117,16 +124,18 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
             qp, b = split_incom(tot_mpi)
             edit_parameters['SE_CPU'] = "1 {qp} {b}".format(qp=qp, b=b)
             edit_parameters['SE_ROLEs'] = "q qp b"
+
         if 'X_all_q_CPU' not in list(edit_parameters.keys()):
             v, c = split_incom(tot_mpi)
             edit_parameters['X_all_q_CPU'] = "1 1 {c} {v}".format(c=c, v=v)
             edit_parameters['X_all_q_ROLEs'] = "q k c v"
+
     inputs.parameters = Dict(dict=edit_parameters)
     return inputs
 
 
 def get_pseudo(structure, pseudo_family):
-    """Get pseudopotential by family for atoms ina  structure """
+    """Get pseudopotential by family for atoms in a  structure """
     kind_pseudo_dict = get_pseudos_from_structure(structure, pseudo_family)
     pseudo_dict = {}
     pseudo_species = defaultdict(list)
@@ -179,19 +188,23 @@ def reduce_parallelism(typ, roles, values, calc_set):
             'OMP_NUM_THREADS', 1)
     num_mpiprocs_per_machine = int(num_mpiprocs_per_machine / 2)
     omp_threads = int(omp_threads) * 2
+
     increased_mpi_task = False
     if num_mpiprocs_per_machine < 1:
         num_mpiprocs_per_machine = 1
         num_machines = num_machines * 2
         increased_mpi_task = True
+
     calculation_set['environment_variables']['OMP_NUM_THREADS'] = str(
         omp_threads)
     calculation_set['environment_variables']['NUM_CORES_PER_MPIPROC'] = str(
         omp_threads)
+
     if isinstance(values, list):
         values = values[0]
     if isinstance(roles, list):
         roles = roles[0]
+        
     # adjust the X_all_q_CPU and SE_CPU
     mpi_task = num_mpiprocs_per_machine * num_machines
     if typ == 'X_all_q_CPU':
