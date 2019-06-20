@@ -6,9 +6,9 @@ load_profile()
 from aiida.orm import RemoteData
 from aiida.orm import Code
 from aiida.orm import StructureData
-from aiida.orm import Float, Str, NumericType
+from aiida.orm import Float, Str, NumericType, Dict
 
-from aiida.common.datastructures import CalcJobState
+from aiida.common import CalcJobState
 from collections import defaultdict
 from aiida.plugins import DataFactory, CalculationFactory
 
@@ -36,7 +36,7 @@ class YamboRestartWf(WorkChain):
     restarting the calculation in case of:
     1. Memory problems (will reduce MPI parallelism before resubmitting)
     2. Queue time exhaustions (will increase time by a fraction before resubmitting)
-    3. Parallelism errors (will reduce the MPI the parallelism before resbmitting)
+    3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)
     4. Errors originating from a few select unphysical input parameters like too low bands.
     """
 
@@ -59,16 +59,15 @@ class YamboRestartWf(WorkChain):
         super(YamboRestartWf, cls).define(spec)
         spec.input("precode", valid_type=Str)
         spec.input("yambocode", valid_type=Str)
-        spec.input("calculation_set", valid_type=ParameterData)
-        spec.input("settings", valid_type=ParameterData)
+        spec.input("calculation_set", valid_type=Dict)
+        spec.input("settings", valid_type=Dict)
         spec.input("parent_folder", valid_type=RemoteData)
-        spec.input("parameters", valid_type=ParameterData)
-        spec.input("restart_options", valid_type=ParameterData, required=False)
+        spec.input("parameters", valid_type=Dict)
+        spec.input("restart_options", valid_type=Dict, required=False)
         spec.outline(
             cls.yambobegin,
             while_(cls.yambo_should_restart)(
                 cls.yambo_restart,
-                cls.interstep,
             ), cls.report_wf)
         #spec.dynamic_output()
 
@@ -83,22 +82,15 @@ class YamboRestartWf(WorkChain):
         Yambo Calc will be done when the parent calculation is P2Y/other yambo calculation, and INITIALISE is not provided.
         """
         self.ctx.yambo_pks = []
-        self.ctx.yambo_nodes = []
         self.ctx.restart = 0
         # run YamboCalculation
         if not isinstance(self.inputs.parent_folder, RemoteData):
-            raise InputValidationError("parent_calc_folder must be of"
+            raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
-        self.ctx.last = ''
         self.ctx.parameters = self.inputs.parameters
         self.ctx.calculation_set = self.inputs.calculation_set
         new_settings = self.inputs.settings.get_dict()
-        parent_calc = self.inputs.parent_folder.get_inputs_dict(
-            link_type=LinkType.CREATE)['remote_folder']
-        yambo_parent = isinstance(parent_calc, YamboCalculation)
-        if 'INITIALISE' not in list(new_settings.keys()) and not yambo_parent:
-            new_settings['INITIALISE'] = True
-            self.ctx.last = 'INITIALISE'
+
         try:
             restart_options = self.inputs.restart_options
             try:
@@ -109,19 +101,15 @@ class YamboRestartWf(WorkChain):
             restart_options = None
             max_restarts = 5
         self.ctx.max_restarts = max_restarts
+
         inputs = generate_yambo_input_params(
             self.inputs.precode, self.inputs.yambocode,
             self.inputs.parent_folder, self.ctx.parameters,
             self.ctx.calculation_set, Dict(dict=new_settings))
-        future = self.run_yambo(inputs)
-        self.report("workflow start, submitted  {}".format(future.pk))
-        return ResultToContext(yambo=future)
 
-    def interstep(self):
-        # convenience function that stores output of resolved future  before the next loop if any,
-        # of no loop will run, it is still useful for the report_wf to find the resolved future's node
-        # in the context.
-        self.ctx.yambo_nodes.append(self.ctx.yambo)
+        future = self.run_yambo(inputs)
+        self.report("Workflow started, submitted process with pk = {}".format(future.pk))
+        return ResultToContext(yambo=future)
 
     def yambo_should_restart(self):
         """This function encodes the logic to restart calculations from failures
@@ -135,52 +123,46 @@ class YamboRestartWf(WorkChain):
         The calculation is restarted upto a maximum number of 4 retries
         """
         self.report("Checking if yambo restart is needed")
+
+        #enough restarts remaining?
         if self.ctx.restart >= self.ctx.max_restarts:
             self.report(
                 "I will not restart: maximum restarts reached: {}".format(
                     self.ctx.max_restarts))
             return False
+        else:
+            self.report(
+                "I can restart (# {}), max restarts ({}) not reached yet".format(
+                    self.ctx.restart, self.ctx.max_restarts))
+            calc = load_node(self.ctx.yambo_pks[-1]) #from run_yambo
 
-        self.report(
-            "I can restart (# {}), max restarts ({}) not reached yet".format(
-                self.ctx.restart, self.ctx.max_restarts))
-        calc = load_node(self.ctx.yambo_pks[-1])
-        if self.ctx.last == 'INITIALISE':
-            return True
+        #instantaneous stop? in less than 30 seconds
+        last_time = 30  # seconds default value:
+        try:
+            last_time = calc.outputs.output_parameters.get_dict()['last_time']
+        except Exception:
+            pass  # Likely no logs were produced
 
         max_input_seconds = self.ctx.calculation_set.get_dict(
         )['max_wallclock_seconds']
 
-        last_time = 30  # seconds default value:
-        try:
-            last_time = calc.get_outputs_dict()['output_parameters'].get_dict(
-            )['last_time']
-        except Exception:
-            pass  # Likely no logs were produced
-
-        if calc.get_state() == calc_states.FAILED and (
+        #not enough time? !check this formula
+        if calc.is_failed and (
                 float(max_input_seconds) -
                 float(last_time)) / float(max_input_seconds) * 100.0 < 1:
             max_input_seconds = int(max_input_seconds * 1.3)  # 30% increase
-            calculation_set = self.ctx.calculation_set.get_dict()
-            calculation_set['max_wallclock_seconds'] = max_input_seconds
-            self.ctx.calculation_set = DataFactory('parameter')(
-                dict=calculation_set)
+            self.ctx.calculation_set.get_dict()['max_wallclock_seconds'] = max_input_seconds
             self.report(
                 "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
                 .format(max_input_seconds))
             return True
 
-        if calc.get_state(
-        ) != calc_states.PARSINGFAILED and calc.get_state != calc_states.FINISHED:  # special case for parallelization needed
-            output_p = {}
-            if 'output_parameters' in calc.get_outputs_dict(
-            ):  # calc.get_outputs_dict()['output_parameters'].get_dict().keys()
-                output_p = calc.get_outputs_dict(
-                )['output_parameters'].get_dict()
+        #other errors
+        if calc.is_excepted:
+            if 'output_parameters' in calc.outputs.output_parameters.get_dict():
+                output_p = calc.outputs.output_parameters.get_dict()
             if 'para_error' in list(output_p.keys()):
-                if output_p[
-                        'para_error'] == True:  # Change parallelism or add missing parallelism inputs
+                if output_p['para_error'] == True:  # Change parallelism or add missing parallelism inputs
                     self.report(" parallelism error detected")
                     params = self.ctx.parameters.get_dict()
                     X_all_q_CPU = params.pop('X_all_q_CPU', '')
@@ -198,7 +180,7 @@ class YamboRestartWf(WorkChain):
                     params["SE_ROLEs"] = SE_ROLEs
                     self.ctx.calculation_set = DataFactory('parameter')(
                         dict=calculation_set)
-                    self.ctx.parameters = DataFactory('parameter')(dict=params)
+                    self.ctx.parameters = Dict(dict=params)
                     self.report(
                         "Calculation {} failed from a parallelism problem: {}".
                         format(calc.pk, output_p['errors']))
@@ -208,39 +190,15 @@ class YamboRestartWf(WorkChain):
                         X_all_q_ROLEs, params['X_all_q_CPU'], SE_ROLEs,
                         params['SE_CPU']))
                     return True
-            if 'unphysical_input' in list(output_p.keys()):
-                if output_p['unphysical_input'] == True:
-                    # this handles this type of error: "[ERROR][NetCDF] NetCDF: NC_UNLIMITED in the wrong index"
-                    # we should reset the bands to a larger value, it may be too small.
-                    # this is a probable cause, and it may not be the real problem, but often is the cause.
-                    self.report(
-                        "the calculation failed due to a problematic input, defaulting to increasing bands"
-                    )
-                    params = self.ctx.parameters.get_dict()
-                    bandX = params.pop('BndsRnXp', None)
-                    bandG = params.pop('GbndRnge', None)
-                    if bandX:
-                        bandX = (bandX[0], int(bandX[0] * 1.5))  #
-                        params['BndsRnXp'] = bandX
-                    if bandG:
-                        bandG = (bandG[0], int(bandG[0] * 1.5))  #
-                        params['GbndRnge'] = bandG
-                    self.ctx.parameters = DataFactory('parameter')(dict=params)
-                    return True
 
-            if 'errors' in list(output_p.keys()) and calc.get_state(
-            ) == calc_states.FAILED:
-                if len(calc.get_outputs_dict()['output_parameters'].get_dict()
-                       ['errors']) < 1:
+            if 'errors' in list(output_p.keys()) and calc.is_failed:
+                if len(calc.outputs.output_parameters.get_dict()['errors']) < 1:
                     # No errors, We  check for memory issues, indirectly
                     if 'last_memory_time' in list(
-                            calc.get_outputs_dict()['output_parameters'].
-                            get_dict().keys()):
+                            calc.outputs.output_parameters.get_dict().keys()):
                         # check if the last alloc happened close to the end:
-                        last_mem_time = calc.get_outputs_dict(
-                        )['output_parameters'].get_dict()['last_memory_time']
-                        if abs(last_time - last_mem_time
-                               ) < 3:  # 3 seconds  selected arbitrarily,
+                        last_mem_time = calc.outputs.output_parameters.get_dict()['last_memory_time']
+                        if abs(last_time - last_mem_time) < 3:  # 3 seconds  selected arbitrarily,
                             # this is (based on a simple heuristic guess, a memory related problem)
                             # change the parallelization to account for this before continuing, warn user too.
                             params = self.ctx.parameters.get_dict()
@@ -279,9 +237,7 @@ class YamboRestartWf(WorkChain):
                         else:
                             pass
 
-        if calc.get_state() == calc_states.SUBMISSIONFAILED\
-                   or calc.get_state() == calc_states.FAILED\
-                   or 'output_parameters' not in calc.get_outputs_dict():
+        if not calc.is_stored:
             self.report(
                 "Calculation {} failed or did not genrerate outputs for unknow reason, restarting with no changes"
                 .format(calc.pk))
@@ -296,43 +252,22 @@ class YamboRestartWf(WorkChain):
         """
 
         calc = load_node(self.ctx.yambo_pks[-1])
-        if calc.get_state() == calc_states.SUBMISSIONFAILED:
-            calc = self.get_last_submitted(calc.pk)
-            if not calc:
-                raise ValidationError("restart calculations can not start from"
-                                      "calculations in SUBMISSIONFAILED state")
-                return
-        #parameters = calc.get_inputs_dict()['parameters'].get_dict()
+        if not calc:
+            raise ValidationError("restart calculations can not start: calculation no found")
+            return
 
-        parent_folder = calc.out.remote_folder
+        parent_folder = calc.outputs.remote_folder
         new_settings = self.inputs.settings.get_dict()
 
-        parent_calc = parent_folder.get_inputs_dict(
-            link_type=LinkType.CREATE)['remote_folder']
-        yambo_parent = isinstance(parent_calc, YamboCalculation)
-        p2y_restart = calc.get_state(
-        ) != calc_states.FINISHED and calc.inp.settings.get_dict().pop(
-            'INITIALISE', None) == True
-
-        if not yambo_parent or p2y_restart == True:
-            new_settings['INITIALISE'] = True
-            self.ctx.last = 'INITIALISE'
-            self.report(" restarting from: {}, a P2Y calculation ".format(
-                self.ctx.yambo_pks[-1]))
-        else:
-            new_settings['INITIALISE'] = False
-            self.ctx.last = 'NOTINITIALISE'
-            self.report(" restarting from: {},  a GW calculation ".format(
-                self.ctx.yambo_pks[-1]))
         inputs = generate_yambo_input_params(
             self.inputs.precode, self.inputs.yambocode, parent_folder,
             self.ctx.parameters, self.ctx.calculation_set,
             Dict(dict=new_settings))
         future = self.run_yambo(inputs)
-        self.ctx.yambo_pks.append(future.pk)
+        #self.ctx.yambo_pks.append(future.pk) lo fa gia' in run_yambo...?
         self.ctx.restart += 1
         self.report(" restarting from:{}  ".format(future.pk))
-        return ResultToContext(yambo_restart=future)
+        return ResultToContext(yambo_restart=future)   
 
     def run_yambo(self, inputs):
         """Call submit with the inputs
@@ -341,39 +276,26 @@ class YamboRestartWf(WorkChain):
         YamboProcess = YamboCalculation.process()
         future = self.submit(YamboProcess, **inputs)
         self.ctx.yambo_pks.append(future.pk)
-        self.report(" submitted a calculation with pk: {} ".format(future.pk))
+        self.report(" submitted a calculation with pk = {} ".format(future.pk))
         return future  # we can not  ReturnToContext since this fuction is not called from the outline
 
-    def get_last_submitted(self, pk):
-        submited = False
-        depth = 0
-        while not submited and depth < 4:
-            calc = load_node(pk)
-            if calc.get_state() == calc_states.SUBMISSIONFAILED:
-                pk = load_node(
-                    calc.inp.parent_calc_folder.inp.remote_folder.pk).pk
-            else:
-                submited = calc
-            depth += 1
-        return submited
-
     def report_wf(self):
-        """Report the outputs fof the workchain
+        """Report the outputs of the workchain
 
         Output final quantities
         return information that may be used to figure out
         the status of the calculation.
         """
         from aiida.plugins import DataFactory
-        success = load_node(self.ctx.yambo_pks[-1]).get_state() == 'FINISHED'
+        success = load_node(self.ctx.yambo_pks[-1]).is_finished
         self.out(
             "gw",
-            DataFactory('parameter')(dict={
+            DataFactory('Dict')(dict={
                 "yambo_pk": self.ctx.yambo_pks[-1],
                 "success": success
             }))
         self.out("yambo_remote_folder",
-                 load_node(self.ctx.yambo_pks[-1]).out.remote_folder)
+                 load_node(self.ctx.yambo_pks[-1]).outputs.remote_folder)
         self.report("workflow completed ")
 
 

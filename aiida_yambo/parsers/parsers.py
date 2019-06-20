@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 from aiida.orm import FolderData
 from aiida.parsers.parser import Parser
-from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import OutputParsingError
 from aiida.common.exceptions import UniquenessError
 from aiida.common.exceptions import ValidationError, ParsingError

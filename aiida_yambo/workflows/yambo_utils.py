@@ -1,53 +1,58 @@
 from __future__ import absolute_import
 import sys
 import copy
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 import math
 import six
 from six.moves import range
 
-if not is_dbenv_loaded():
-    load_dbenv()
+from aiida import load_profile
+load_profile()
 
-from aiida.common.exceptions import InputValidationError, ValidationError, WorkflowInputValidationError
-from aiida.orm import load_node
-from aiida.orm.nodes.upf import get_pseudos_from_structure
-from collections import defaultdict
-from aiida.plugins.utils import DataFactory, CalculationFactory
-from aiida.orm.code import Code
-from aiida.orm.nodes.structure import StructureData
+from aiida.common.exceptions import InputValidationError, ValidationError #, WorkflowInputValidationError
 from aiida.common.links import LinkType
+
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structure
+
+from collections import defaultdict
+from aiida.plugins import DataFactory, CalculationFactory
+
+from aiida.orm import RemoteData
+from aiida.orm import Code
+from aiida.orm import StructureData
+from aiida.orm import Float, Str, NumericType, Dict
+
 from aiida_yambo.calculations.gw import YamboCalculation
 
-ParameterData = DataFactory("parameter")
 
 
 def generate_yambo_input_params(precodename, yambocodename, parent_folder,
                                 parameters, calculation_set, settings):
     """Generate yambo plugin  inputs._*  from  given params"""
-    inputs = YamboCalculation.process().get_builder()
+
+    inputs = YamboCalculation.get_builder()
     inputs.preprocessing_code = Code.get_from_string(precodename.value)
     inputs.code = Code.get_from_string(yambocodename.value)
+
     calculation_set = calculation_set.get_dict()
     resource = calculation_set.pop('resources', {})
     if resource:
-        inputs.options.resources = resource
-    inputs.options.max_wallclock_seconds = calculation_set.pop(
+        inputs.metadata.options.resources = resource
+    inputs.metadata.options.max_wallclock_seconds = calculation_set.pop(
         'max_wallclock_seconds', 86400)
     max_memory_kb = calculation_set.pop('max_memory_kb', None)
     if max_memory_kb:
-        inputs.options.max_memory_kb = max_memory_kb
+        inputs.metadata.options.max_memory_kb = max_memory_kb
     queue_name = calculation_set.pop('queue_name', None)
     if queue_name:
-        inputs.options.queue_name = queue_name
+        inputs.metadata.options.queue_name = queue_name
     custom_scheduler_commands = calculation_set.pop(
         'custom_scheduler_commands', None)
     if custom_scheduler_commands:
-        inputs.options.custom_scheduler_commands = custom_scheduler_commands
+        inputs.metadata.options.custom_scheduler_commands = custom_scheduler_commands
     environment_variables = calculation_set.pop("environment_variables", None)
     if environment_variables:
-        inputs.options.environment_variables = environment_variables
+        inputs.metadata.options.environment_variables = environment_variables
     label = calculation_set.pop('label', None)
     if label:
         inputs._label = label
@@ -61,6 +66,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
     except AttributeError:
         calc = None
     is_pw = False
+
     if isinstance(calc, PwCalculation):
         is_pw = True
         nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
@@ -158,7 +164,7 @@ def reduce_parallelism(typ, roles, values, calc_set):
     """
        calculation_set_yambo ={'resources':  {"num_machines": 8,"num_mpiprocs_per_machine": 32}, 'max_wallclock_seconds': 200,
             'max_memory_kb': 1*92*1000000 ,  'custom_scheduler_commands': u"#PBS -A  XXXX" ,
-            '  environment_variables': {"OMP_NUM_THREADS": "2" }  
+            '  environment_variables': {"OMP_NUM_THREADS": "2" }
             }
     """
     calculation_set = copy.deepcopy(calc_set)
@@ -286,7 +292,7 @@ default_step_size = {
     'BSENGexx': .2,
     'BndsRnXp': .1,
     'GbndRnge': .1,
-    'BSEBands': 2,  # 
+    'BSEBands': 2,  #
     'FFTGvecs': .2,
 }
 
@@ -450,7 +456,7 @@ def default_bands(calc_pk, parameters):
 
 
 def split_incom(num):
-    """Does not work yet, needs some bugfix. 
+    """Does not work yet, needs some bugfix.
 
     so when the power p is odd, take (p-1)/2 and (p-1)/2+1
     when the power p is even, take (p/2)+1 and (p/2)-1
@@ -474,7 +480,7 @@ def split_incom(num):
 
 def is_converged(values, conv_tol=1e-5, conv_window=3):
     """Check convergence for a list of values
-    
+
     If the change between successive iterations is less than conv_tol for conv_window iterations
     the list is said to be converged.
 
