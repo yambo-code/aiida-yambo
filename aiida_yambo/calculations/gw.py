@@ -74,11 +74,16 @@ class YamboCalculation(CalcJob):
         spec.input('preprocessing_code',valid_type=Code,
                 help='Use a preprocessing code for starting yambo',required=False)
         spec.input('precode_parameters',valid_type=Dict,
-                help='Use a node that specifies the input parameters for the yambo precode')
+                help='Use a node that specifies the input parameters for the yambo precode',required=False)
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
+
         spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
+        spec.exit_code(101, 'NOT_GAME_OVER',
+                message='The report file does not show game over.')
+        spec.exit_code(102, 'NO_SUCCESS',
+                message='failed calculation')
 
         #outputs definition:
 
@@ -144,8 +149,10 @@ class YamboCalculation(CalcJob):
             yambo_parent=False
 
         # flags for yambo interfaces
-        precode_param_dict = self.inputs.precode_parameters
-
+        try:
+            precode_param_dict = self.inputs.precode_parameters
+        except:
+            precode_param_dict = Dict(dict={})
         # check the precode parameters given in input
         input_cmdline = settings.pop('CMDLINE', None)
         import re
@@ -335,13 +342,13 @@ class YamboCalculation(CalcJob):
                 cancopy = False
                 if parent_calc.is_finished:
                     cancopy = True
-                if 'yambo_wrote' in list(
-                        parent_calc.outputs.output_parameters.
-                        get_dict().keys()):
-                    if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == True:
-                        cancopy = True
-                    if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == False:
-                        cancopy = False
+                try:
+                    if 'yambo_wrote' in list(
+                            parent_calc.outputs.output_parameters.get_dict().keys()):
+                        if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == True:
+                            cancopy = True
+                except:
+                    cancopy = False  #could not be output_parameters... so I have just to try
                 if cancopy:
                     remote_copy_list.append(
                         (parent_calc_folder.computer.uuid,

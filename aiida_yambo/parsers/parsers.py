@@ -48,7 +48,7 @@ class YamboParser(Parser):
       .wall_time     duration of the run (as parsed from the log file)
       .last_time     last time reported (as parsed from the log file)
       .kpoints: When non empty is a Dict of kpoint_index: kpoint_triplet values i.e.                  { '1':[0,0,0], '5':[0.5,0.0,5] .. }
-      .type:   type of file according to YamboFile types include:
+      .type:   type of file accordParseing to YamboFile types include:
       1. 'report'    : 'r-..' report files
       2. 'output_gw'  : 'o-...qp': quasiparticle output file   ...           .. etc
       N. 'unknown' : when YamboFile was unable to deduce what type of file
@@ -102,8 +102,8 @@ class YamboParser(Parser):
         from aiida.common import exceptions
         from aiida.common import AIIDA_LOGGER
 
-        # suppose at the start that the job is unsuccessful, unless proven otherwise
-        successful = False
+        # suppose at the start that the job is unsuccess, unless proven otherwise
+        success = False
 
         # check whether the yambo calc was an initialisation (p2y)
         try:
@@ -151,6 +151,7 @@ class YamboParser(Parser):
         ndbhf = {}
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
+            self.report('try ok ')
         except Exception as e:
             success = False
             raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
@@ -187,7 +188,7 @@ class YamboParser(Parser):
             if result.errors:
                 for err in result.errors:
                     if 'STOP' in err:
-                        successful = False
+                        success = False
                         break
                     else:
                         output_params['errors'].extend(result.errors)
@@ -198,12 +199,14 @@ class YamboParser(Parser):
                     output_params['para_error'] = False
             if hasattr(result, 'game_over'):
                 if result.game_over == True:
-                    successful = True
+                    success = True
+                else:
+                    return self.exit_codes.NOT_GAME_OVER
             if initialise:
                 # we do not have game_over, but we do have P2Y completed.
                 if hasattr(result, 'p2y_completed'):
                     result.p2y_completed = True
-                    successful = True
+                    success = True
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
@@ -258,6 +261,8 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
+        if success:
+            return self.exit_codes.NO_SUCCESS
 
 
 

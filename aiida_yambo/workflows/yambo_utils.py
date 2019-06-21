@@ -33,6 +33,7 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
     inputs = YamboCalculation.get_builder()
     inputs.preprocessing_code = Code.get_from_string(precodename.value)
     inputs.code = Code.get_from_string(yambocodename.value)
+    parent_calc = parent_folder.get_incoming().get_node_by_label('remote_folder')
 
     calculation_set = calculation_set.get_dict()
     resource = calculation_set.pop('resources', {})
@@ -62,11 +63,13 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
     # Get defaults:
     edit_parameters = parameters.get_dict()
     try:
-        calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder'].inp.parent_calc_folder.get_inputs_dict()\
-               ['remote_folder'].inp.parent_calc_folder.get_inputs_dict()['remote_folder']
+        calc = parent_folder.get_inputs_dict(link_type=LinkType.CREATE)['remote_folder'].inputs.parent_calc_folder.get_inputs_dict()\
+               ['remote_folder'].inputs.parent_calc_folder.get_inputs_dict()['remote_folder']
     except AttributeError:
         calc = None
+
     is_pw = False
+
 
     if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
         is_pw = True
@@ -204,7 +207,7 @@ def reduce_parallelism(typ, roles, values, calc_set):
         values = values[0]
     if isinstance(roles, list):
         roles = roles[0]
-        
+
     # adjust the X_all_q_CPU and SE_CPU
     mpi_task = num_mpiprocs_per_machine * num_machines
     if typ == 'X_all_q_CPU':
