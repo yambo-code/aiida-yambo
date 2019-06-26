@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import sys
+
 from aiida import load_profile
 load_profile()
 
@@ -9,16 +10,16 @@ from aiida.orm import StructureData
 from aiida.orm import Float, Str, NumericType, Dict, Int
 from aiida.orm import load_node
 
+from aiida.common import InputValidationError, ValidationError
+from aiida.common.links import LinkType
 from aiida.common import CalcJobState
 from collections import defaultdict
+
 from aiida.plugins import DataFactory, CalculationFactory
 
 from aiida.engine import WorkChain, while_
-from aiida.engine import ToContext as ToContext
+from aiida.engine import ToContext
 from aiida.engine import run, submit
-
-from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.common.links import LinkType
 
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structure
@@ -63,9 +64,6 @@ class YamboRestartWf(WorkChain):
         spec.input("parent_folder", valid_type=RemoteData)
         spec.input("parameters", valid_type=Dict)
         spec.input("restart_options", valid_type=Dict, required=False)
-
-        spec.exit_code(200, 'WORKFLOW_NOT_COMPLETED',
-                message='workflow not completed')
 
         spec.outline(
             cls.yambobegin,
@@ -134,7 +132,7 @@ class YamboRestartWf(WorkChain):
             self.report(
                 "I will not restart: maximum restarts reached: {}".format(
                     self.ctx.max_restarts))
-            return sefl.exit_code.WORKFLOW_NOT_COMPLETED
+            return False
 
         else:
             self.report(
@@ -160,7 +158,8 @@ class YamboRestartWf(WorkChain):
 
             if calc.exit_status == 102:
                 self.report('Something goes wrong, but we don\'t know what, so we cannot restart')
-                return sefl.exit_code.WORKFLOW_NOT_COMPLETED
+                #return self.exit_code.WORKFLOW_NOT_COMPLETED
+                return False
 
 
             #timing errors
@@ -234,7 +233,7 @@ class YamboRestartWf(WorkChain):
         calc = load_node(self.ctx.yambo_pks[-1])
         if not calc:
             raise ValidationError("restart calculations can not start: calculation no found")
-            return self.exit_code.WFL_NOT_COMPLETED
+            #return self.exit_code.WFL_NOT_COMPLETED
 
         parent_folder = calc.outputs.remote_folder
         new_settings = self.inputs.settings.get_dict()
@@ -267,7 +266,7 @@ class YamboRestartWf(WorkChain):
         the status of the calculation.
         """
         calc = load_node(self.ctx.yambo_pks[-1])
-
+#try exception
         if calc.is_finished_ok:
             self.report("workflow completed")
         else:

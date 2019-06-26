@@ -1,32 +1,35 @@
 from __future__ import absolute_import
 import sys
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-
-if not is_dbenv_loaded():
-    load_dbenv()
-
-from aiida.orm import load_node
-from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.nodes.upf import get_pseudos_from_structure
-from aiida.common.datastructures import calc_states
-from collections import defaultdict
-from aiida.plugins.utils import DataFactory, CalculationFactory
 import itertools
-from aiida.orm.nodes.base import Float, Str, NumericType, Bool
-from aiida.engine.workchain import WorkChain, while_
-from aiida.engine.workchain import ToContext as ResultToContext
-from aiida.engine.run import run, submit
-from aiida.common.links import LinkType
+
+from aiida import load_profile
+load_profile()
+
+from aiida.orm import RemoteData, StructureData, KpointsData
+from aiida.orm import Code
+from aiida.orm import Float, Str, NumericType, Dict, Int, Bool
+from aiida.orm import load_node
+
+from aiida.common import InputValidationError, ValidationError
+from aiida.common import CalcJobState
+from aiida.common import LinkType
+from collections import defaultdict
+
+from aiida.plugins import DataFactory, CalculationFactory
+
+from aiida.engine import WorkChain, while_
+from aiida.engine import ToContext as ResultToContext
+from aiida.engine import run, submit
+
 from aiida_yambo.workflows.yambo_utils import default_step_size, default_pw_settings, set_default_pw_param,\
                default_qpkrange, default_bands
-from aiida.orm.nodes.remote import RemoteData
-from aiida.orm.nodes.array.kpoints import KpointsData
-from aiida.orm.code import Code
-from aiida.orm.nodes.structure import StructureData
+
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 from aiida_yambo.workflows.pwplaceholder import PwRestartWf
 from aiida_yambo.calculations.gw import YamboCalculation
+
 from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structure
 
 ParameterData = DataFactory("parameter")
 
@@ -117,7 +120,7 @@ class YamboWorkflow(WorkChain):
 
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
-        
+
         This function sets the parent, and its type, including support for starting from a previos workchain,
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
@@ -130,9 +133,8 @@ class YamboWorkflow(WorkChain):
         self.ctx.pw_pks = []
         self.ctx.done = False
         if 'parent_folder' in list(self.inputs.keys()):
-            parent_calc = self.inputs.parent_folder.get_inputs_dict(
-                link_type=LinkType.CREATE)['remote_folder']
-            if isinstance(parent_calc, YamboCalculation):
+            parent_calc = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
                 self.ctx.last_step_kind = 'yambo'
                 self.ctx.yambo_res = DataFactory('parameter')(dict={
                     "out": {
@@ -248,7 +250,7 @@ class YamboWorkflow(WorkChain):
 
     def perform_next(self):
         """This function  will submit the next step, depending on the information provided in the context
-        
+
         The next step will be a yambo calculation if the provided inputs are a previous yambo/p2y run
         Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
 

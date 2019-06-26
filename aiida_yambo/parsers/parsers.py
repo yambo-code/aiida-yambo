@@ -178,7 +178,8 @@ class YamboParser(Parser):
                 output_params['last_time'] = result.last_time  # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
             else:
-                output_params['last_time'] = False
+                output_params['last_time'] = 30  # seconds
+                output_params['last_time_units'] = 'seconds'  # seconds
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
             if result.timing:
@@ -269,9 +270,8 @@ class YamboParser(Parser):
 
 
         if success == False:
-            if output_params['last_time']:
-                if (float(max_wall)-float(output_params['last_time']))/float(max_wall) < 0.8:
-                    return self.exit_codes.WALLTIME_ERROR
+            if (float(max_wall)-float(output_params['last_time']))/float(max_wall) < 0.8:
+                return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error'] == True:
                 return self.exit_codes.PARA_ERROR
             else:
