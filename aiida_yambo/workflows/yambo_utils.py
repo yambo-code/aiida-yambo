@@ -73,17 +73,17 @@ def generate_yambo_input_params(precodename, yambocodename, parent_folder,
 
     if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
         is_pw = True
-        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
-        nbands = calc.out.output_parameters.get_dict()['number_of_bands']
+        nelec = parent_calc.outputs.output_parameters.get_dict()['number_of_electrons']
+        nbands = parent_calc.outputs.output_parameters.get_dict()['number_of_bands']
         nocc = None
-        if calc.out.output_parameters.get_dict()['lsda']== True or\
-           calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
+        if parent_calc.outputs.output_parameters.get_dict()['lsda']== True or\
+           parent_calc.outputs.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
             nocc = nelec / 2
         else:
             nocc = nelec / 2
-        #ngsblxpp = int(calc.out.output_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4
+        #ngsblxpp = int(parent_calc.outputsoutput_parameters.get_dict()['wfc_cutoff']* 0.073498645/4 * 0.25)   # ev to ry then 1/4
         ngsblxpp = 2
-        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
+        nkpts = parent_calc.outputs.output_parameters.get_dict()['number_of_k_points']
 
         if not resource:
             resource = {
@@ -437,16 +437,16 @@ def default_qpkrange(calc_pk, parameters):
     calc = load_node(calc_pk)
     edit_parameters = parameters.get_dict()
     if isinstance(calc, PwCalculation):
-        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
-        nbands = calc.out.output_parameters.get_dict()['number_of_bands']
+        nelec = calc.outputsoutput_parameters.get_dict()['number_of_electrons']
+        nbands = calc.outputsoutput_parameters.get_dict()['number_of_bands']
         nocc = None
-        if calc.out.output_parameters.get_dict()['lsda']== True or\
-                calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
+        if calc.outputsoutput_parameters.get_dict()['lsda']== True or\
+                calc.outputsoutput_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
             nocc = nelec / 2
         else:
             nocc = nelec / 2
         is_pw = True
-        nkpts = calc.out.output_parameters.get_dict()['number_of_k_points']
+        nkpts = calc.outputsoutput_parameters.get_dict()['number_of_k_points']
         if 'QPkrange' not in list(edit_parameters.keys()):
             edit_parameters['QPkrange'] = [(1, nkpts, int(nocc) - 1,
                                             int(nocc) + 1)]
@@ -458,11 +458,11 @@ def default_bands(calc_pk, parameters):
     calc = load_node(calc_pk)
     edit_parameters = parameters.get_dict()
     if isinstance(calc, PwCalculation):
-        nelec = calc.out.output_parameters.get_dict()['number_of_electrons']
-        nbands = calc.out.output_parameters.get_dict()['number_of_bands']
+        nelec = calc.outputsoutput_parameters.get_dict()['number_of_electrons']
+        nbands = calc.outputsoutput_parameters.get_dict()['number_of_bands']
         nocc = None
-        if calc.out.output_parameters.get_dict()['lsda']== True or\
-                calc.out.output_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
+        if calc.outputsoutput_parameters.get_dict()['lsda']== True or\
+                calc.outputsoutput_parameters.get_dict()['non_colinear_calculation'] == True or nbands < nelec:
             nocc = nelec / 2
         else:
             nocc = nelec / 2

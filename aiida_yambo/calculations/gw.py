@@ -80,10 +80,15 @@ class YamboCalculation(CalcJob):
 
         spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
-        spec.exit_code(101, 'NOT_GAME_OVER',
-                message='The report file does not show game over.')
+        spec.exit_code(101, 'WALLTIME_ERROR',
+                message='time exceeded the max walltime')
         spec.exit_code(102, 'NO_SUCCESS',
-                message='failed calculation')
+                message='failed calculation for some reason: could be a low number of conduction bands')
+        spec.exit_code(103, 'PARSER_ANOMALY',
+                message='Unexpected behavior of YamboFolder')
+        spec.exit_code(104, 'PARA_ERROR',
+                message='parallelization error/memory issues')
+
 
         #outputs definition:
 

@@ -146,16 +146,17 @@ class YamboParser(Parser):
         elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
             cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
 
-        output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False}
+        output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
+        'p2y_completed': False}
         ndbqp = {}
         ndbhf = {}
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
-            self.report('try ok ')
         except Exception as e:
             success = False
-            raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-
+            return self.exit_codes.PARSER_ANOMALY
+            #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
+        max_wall = self._calc.get_options()['max_wallclock_seconds']
         for result in results.yambofiles:
             if results is None:
                 continue
@@ -171,10 +172,13 @@ class YamboParser(Parser):
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
             if result.wall_time:
                 output_params['wall_time'] = result.last_time  # seconds
-                output_params['wall_time_units'] = 'seconds'  # seconds
+                output_params['wall_time_units'] = 'seconds'  # seconds_calc
+
             if result.last_time:
                 output_params['last_time'] = result.last_time  # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
+            else:
+                output_params['last_time'] = False
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
             if result.timing:
@@ -199,14 +203,16 @@ class YamboParser(Parser):
                     output_params['para_error'] = False
             if hasattr(result, 'game_over'):
                 if result.game_over == True:
+                    output_params['game_over'] = True
                     success = True
                 else:
-                    return self.exit_codes.NOT_GAME_OVER
+                    success = False
             if initialise:
                 # we do not have game_over, but we do have P2Y completed.
                 if hasattr(result, 'p2y_completed'):
-                    result.p2y_completed = True
-                    success = True
+                    if result.p2y_completed == True:
+                       output_params['p2y_completed'] = True
+                       success = True
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
@@ -261,9 +267,15 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
-        if success:
-            return self.exit_codes.NO_SUCCESS
 
+        if success == False:
+            if output_params['last_time']:
+                if (float(max_wall)-float(output_params['last_time']))/float(max_wall) < 0.8:
+                    return self.exit_codes.WALLTIME_ERROR
+            elif output_params['para_error'] == True:
+                return self.exit_codes.PARA_ERROR
+            else:
+                return self.exit_codes.NO_SUCCESS
 
 
 
