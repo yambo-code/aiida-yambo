@@ -1,13 +1,12 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import sys
 
-from aiida import load_profile
-load_profile()
 
 from aiida.orm import RemoteData
 from aiida.orm import Code
 from aiida.orm import StructureData
-from aiida.orm import Float, Str, NumericType, Dict, Int
+from aiida.orm import Float, Str, NumericType, Dict, Int, Bool
 from aiida.orm import load_node
 
 from aiida.common import InputValidationError, ValidationError
@@ -18,7 +17,7 @@ from collections import defaultdict
 from aiida.plugins import DataFactory, CalculationFactory
 
 from aiida.engine import WorkChain, while_
-from aiida.engine import ToContext
+from aiida.engine import ToContext, calcfunction
 from aiida.engine import run, submit
 
 from aiida_quantumespresso.calculations.pw import PwCalculation
@@ -28,6 +27,7 @@ from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.workflows.yambo_utils import generate_yambo_input_params, reduce_parallelism
 
 YamboCalculation = CalculationFactory('yambo.yambo')
+
 
 class YamboRestartWf(WorkChain):
     """This module interacts directly with the yambo plugin to submit calculations
@@ -65,12 +65,19 @@ class YamboRestartWf(WorkChain):
         spec.input("parameters", valid_type=Dict)
         spec.input("restart_options", valid_type=Dict, required=False)
 
+        spec.output('gw', valid_type=Dict)
+        #spec.output('yambo_remote_folder', valid_type=RemoteData, required = True, help='')
+
+##################################### OUTLINE ####################################
+
         spec.outline(
             cls.yambobegin,
             while_(cls.yambo_should_restart)(
                 cls.yambo_restart),
-            cls.report_wf
+            cls.report_wf,
         )
+
+###################################################################################
 
 
 
@@ -104,6 +111,16 @@ class YamboRestartWf(WorkChain):
             restart_options = None
             max_restarts = 5
         self.ctx.max_restarts = max_restarts
+
+        try:
+            if self.calculation_set.get_dict()['max_wallclock_seconds'] < 30:
+                calculation_set = self.ctx.calculation_set.get_dict()
+                self.report('Adjusting time at 30 s, before it was too low: {}'
+                .format(calculation_set))
+                calculation_set['max_wallclock_seconds'] = int(30)
+                self.ctx.calculation_set = Dict(dict=calculation_set)
+        except:
+            pass
 
         inputs = generate_yambo_input_params(
             self.inputs.precode, self.inputs.yambocode,
@@ -248,6 +265,7 @@ class YamboRestartWf(WorkChain):
         self.report(" restarting from:{}  ".format(future.pk))
         return ToContext(yambo_restart=future)
 
+
     def run_yambo(self, inputs):
         """Call submit with the inputs
 
@@ -266,14 +284,16 @@ class YamboRestartWf(WorkChain):
         the status of the calculation.
         """
         calc = load_node(self.ctx.yambo_pks[-1])
-#try exception
-        if calc.is_finished_ok:
-            self.report("workflow completed")
-        else:
-            self.report("workflow not completed")
+        gw = Collect_results_yambo(Int(calc.pk), Bool(calc.is_finished_ok))
 
+        self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
+        self.out("gw",gw)
+        #self.out("yambo_remote_folder", calc.outputs.remote_folder )
 
-
+@calcfunction
+def Collect_results_yambo(a,b):
+        gw = Dict(dict={ "yambo_pk":   a,  "success": b })
+        return gw
 
 
 if __name__ == "__main__":

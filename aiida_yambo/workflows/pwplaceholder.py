@@ -1,37 +1,34 @@
 from __future__ import absolute_import
 import sys
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
 
-if not is_dbenv_loaded():
-    load_dbenv()
+from aiida import load_profile
+load_profile()
 
+
+from aiida.plugins import DataFactory, CalculationFactory
+
+from aiida.orm import RemoteData
 from aiida.orm import load_node
-from aiida.common.exceptions import InputValidationError, ValidationError
-from aiida.orm.nodes.upf import get_pseudos_from_structure
-from aiida.common.datastructures import calc_states
-from collections import defaultdict
-from aiida.plugins.utils import DataFactory, CalculationFactory
+from aiida.orm import Code
+from aiida.orm import StructureData
+from aiida.orm import Float, Str, NumericType, Dict, Int, Bool
 
-try:
-    from aiida.orm.nodes.base import Float, Str, NumericType, Bool, Int
-    from aiida.engine.workchain import WorkChain, while_
-    from aiida.engine.workchain import ToContext as ResultToContext
-    from aiida.engine.run import legacy_workflow
-    from aiida.engine.run import run, submit
-except ImportError:
-    pass
-from aiida.common.links import LinkType
-from aiida.orm.nodes.remote import RemoteData
-from aiida.orm.code import Code
-from aiida.orm.nodes.structure import StructureData
+from aiida.engine import WorkChain, while_
+from aiida.engine import ToContext as ResultToContext ,calcfunction
+from aiida.engine import run, submit
+
+from aiida.common import InputValidationError, ValidationError
+from aiida.common import CalcJobState
+from aiida.common import LinkType
+from collections import defaultdict
+
 from aiida_yambo.workflows.yambo_utils import generate_pw_input_params
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_yambo.calculations.gw import YamboCalculation
 
-ParameterData = DataFactory("parameter")
 KpointsData = DataFactory("array.kpoints")
-PwProcess = PwCalculation.process()
+
 
 
 class PwRestartWf(WorkChain):
@@ -39,8 +36,8 @@ class PwRestartWf(WorkChain):
 
     This class calls the aiida-quantumespresso PW workflow as a subworkflow with the correct
     parameters, and encodes the logic neccessary to decide whether to do an SCF or an NSCF.
-    The subworkflow is assumed to include support for restarting failures from recoverable 
-    errors such as queue time exhaustion and other similar errors. 
+    The subworkflow is assumed to include support for restarting failures from recoverable
+    errors such as queue time exhaustion and other similar errors.
     """
 
     @classmethod
@@ -52,27 +49,34 @@ class PwRestartWf(WorkChain):
         """
         super(PwRestartWf, cls).define(spec)
         spec.input("codename", valid_type=Str)
-        spec.input("restart_options", valid_type=ParameterData, required=False)
+        spec.input("restart_options", valid_type=Dict, required=False)
         spec.input("pseudo_family", valid_type=Str)
         spec.input(
-            "calculation_set", valid_type=ParameterData
+            "calculation_set", valid_type=Dict
         )  # custom_scheduler_commands,  resources,...
         spec.input(
-            "calculation_set_nscf", valid_type=ParameterData,
+            "calculation_set_nscf", valid_type=Dict,
             required=False)  # custom_scheduler_commands,  resources,...
-        spec.input("settings", valid_type=ParameterData)
-        spec.input("settings_nscf", valid_type=ParameterData, required=False)
+        spec.input("settings", valid_type=Dict)
+        spec.input("settings_nscf", valid_type=Dict, required=False)
         spec.input("structure", valid_type=StructureData)
         spec.input("kpoints", valid_type=KpointsData)
         spec.input("kpoints_nscf", valid_type=KpointsData, required=False)
         spec.input("gamma", valid_type=Bool, default=Bool(0), required=False)
-        spec.input("parameters", valid_type=ParameterData)
-        spec.input("parameters_nscf", valid_type=ParameterData, required=False)
+        spec.input("parameters", valid_type=Dict)
+        spec.input("parameters_nscf", valid_type=Dict, required=False)
         spec.input("parent_folder", valid_type=RemoteData, required=False)
+
+
+############################OUTLINE##########################
+
         spec.outline(cls.pwbegin,
                      while_(cls.pw_should_continue)(cls.pw_continue, ),
                      cls.report_wf)
-        #spec.dynamic_output()
+
+
+#############################################################
+        spec.output("pw", valid_type=Dict, required=True)
 
     def pwbegin(self):
         """This function constructs the correct parameters to be passed to the subworkflow, and will also determine the type (SCF vs NSCF)
@@ -99,14 +103,10 @@ class PwRestartWf(WorkChain):
         parent_folder = None
         inputs = {}
         if 'parent_folder' in list(self.inputs.keys()):
-            parameters = self.inputs.parameters.get_dict(
-            )  # Will be replaced by parameters_nscf if present and NSCF calc follows.
+            parameters = self.inputs.parameters.get_dict()  # Will be replaced by parameters_nscf if present and NSCF calc follows.
             parent_folder = self.inputs.parent_folder
-            calc = parent_folder.get_inputs_dict(
-                link_type=LinkType.CREATE)['remote_folder']
-            if calc.get_inputs_dict()['parameters'].get_dict(
-            )['CONTROL']['calculation'] == 'scf' and calc.get_state(
-            ) == 'FINISHED':  # next nscf
+            calc = parent_folder.get_incoming().get_node_by_label('remote_folder')
+            if calc.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf' and calc.is_finished_ok:  # next: nscf
                 if 'calculation_set_nscf' not in list(self.inputs.keys()):
                     self.inputs.calculation_set_nscf = self.inputs.calculation_set
                 if 'settings_nscf' not in list(self.inputs.keys()):
@@ -119,12 +119,11 @@ class PwRestartWf(WorkChain):
                     parameters['SYSTEM']['force_symmorphic'] = True
                 if 'nbnd' not in parameters['SYSTEM']:
                     try:
-                        parameters['SYSTEM']['nbnd'] = calc.get_outputs_dict(
-                        )['output_parameters'].get_dict(
+                        parameters['SYSTEM']['nbnd'] = calc.outputs.output_parameters.get_dict(
                         )['number_of_electrons'] * 10
                     except KeyError:
                         parameters['SYSTEM']['nbnd'] = int(
-                            calc.get_outputs_dict()['output_parameters'].
+                            calc.outputs.output_parameters.
                             get_dict()['number_of_bands'] * 10)  #
                 if 'ELECTRONS' not in parameters:
                     parameters['ELECTRONS'] = {}
@@ -146,9 +145,8 @@ class PwRestartWf(WorkChain):
                 self.ctx.scf_pk = calc.pk
                 self.report(" submitted NSCF {} ".format(calc.pk))
 
-            if calc.get_inputs_dict()['parameters'].get_dict(
-            )['CONTROL']['calculation'] == 'scf' and calc.get_state(
-            ) != 'FINISHED':  #  starting from failed SCF
+            if calc.inputs.parameters.get_dict(
+            )['CONTROL']['calculation'] == 'scf' and not calc.is_finished_ok:  #  starting from failed SCF
                 self.report("restarting failed   SCF  {} ".format(calc.pk))
                 inputs = generate_pw_input_params(
                     self.inputs.structure, self.inputs.codename,
@@ -156,10 +154,9 @@ class PwRestartWf(WorkChain):
                     self.inputs.calculation_set, self.inputs.kpoints,
                     self.inputs.gamma, self.inputs.settings, parent_folder)
 
-            if calc.get_inputs_dict()['parameters'].get_dict(
-            )['CONTROL']['calculation'] == 'nscf' and calc.get_state(
-            ) != 'FINISHED':  #  starting from failed NSCF
-                self.report("restarting failed   NSCF  {} ".format(calc.pk))
+            if calc.inputs.parameters.get_dict(
+            )['CONTROL']['calculation'] == 'nscf' and not calc.is_finished_ok:  #  starting from failed NSCF
+                self.report("restarting failed NSCF {} ".format(calc.pk))
                 inputs = generate_pw_input_params(
                     self.inputs.structure, self.inputs.codename,
                     self.inputs.pseudo_family, self.inputs.parameters_nscf,
@@ -167,10 +164,13 @@ class PwRestartWf(WorkChain):
                     self.inputs.gamma, self.inputs.settings_nscf,
                     parent_folder)
 
-            if calc.get_inputs_dict()['parameters'].get_dict(
-            )['CONTROL']['calculation'] == 'nscf' and calc.get_state(
-            ) == 'FINISHED':  #
+            if calc.inputs.parameters.get_dict(
+            )['CONTROL']['calculation'] == 'nscf' and calc.is_finished_ok:  #
                 self.report(" workflow completed nscf successfully, exiting")
+                self.ctx.pw_pks = []
+                self.ctx.restart = 0
+                self.ctx.success = True
+                self.ctx.scf_pk = None
                 self.ctx.nscf_pk = calc.pk  # NSCF is done, we should exit
                 return
         else:
@@ -192,9 +192,9 @@ class PwRestartWf(WorkChain):
         return ResultToContext(first_calc=future)
 
     def pw_should_continue(self):
-        """This function runs after each calculation is finished, and decides whether the calcuations performed was successfull and which one to do next or restart.
+        """This function runs after each calculation is finished, and decides whether the calculation performed was successfull and which one to do next or restart.
 
-        This function encodes the logic for restarting failed  calculations, including deciding if the calculation has failed enough times to warrant exiting the
+        This function encodes the logic for restarting failed calculations, including deciding if the calculation has failed enough times to warrant exiting the
         workflow. It also decides if the last calculations were successful what calculation to do next, or quit successfully returning computed SCF+NSCF subworkflows.
         """
         if len(self.ctx.pw_pks) == 0:  # we never run a single calculation
@@ -208,27 +208,27 @@ class PwRestartWf(WorkChain):
             return True
         calc = None
         if len(self.ctx.pw_pks) == 1:
-            calc = load_node(self.ctx.first_calc.out.CALL.pk)
+            calc = load_node(self.ctx.first_calc.pk) #outputs.CALL.pk)
         else:
-            calc = load_node(self.ctx.last_calc.out.CALL.pk)
+            calc = load_node(self.ctx.last_calc.pk) #outputs.CALL.pk)
         self.report("calc {} ".format(calc))
-        if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL'][
-                'calculation'] == 'scf' and calc.get_state() == 'FINISHED':
+        if calc.inputs.parameters.get_dict()['CONTROL'][
+                'calculation'] == 'scf' and calc.is_finished_ok:
             self.ctx.scf_pk = calc.pk
             self.report(" completed SCF successfully")
             return True
-        if calc.get_state() == calc_states.SUBMISSIONFAILED or calc.get_state() == calc_states.FAILED\
-            or 'output_parameters' not in calc.get_outputs_dict()  and  self.ctx.restart < 4:
+        if calc.is_failed\
+            or 'output_parameters' not in calc.outputs  and  self.ctx.restart < 4:
             self.report(" calculation failed  {}, will try restarting".format(
                 calc.pk))
             return True
-        if calc.get_inputs_dict()['parameters'].get_dict()['CONTROL'][
-                'calculation'] == 'nscf' and calc.get_state() == 'FINISHED':
+        if calc.inputs.parameters.get_dict()['CONTROL'][
+                'calculation'] == 'nscf' and calc.is_finished_ok:
             self.ctx.nscf_pk = calc.pk
             self.ctx.success = True
             self.report("completed NSCF successfully, exiting")
             return False
-        if calc.get_state() == calc_states.SUBMISSIONFAILED or calc.get_state() == calc_states.FAILED\
+        if calc.is_failed\
             or 'output_parameters' not in calc.get_outputs_dict()  and  self.ctx.restart >= 4:
             self.ctx.success = False
             self.report(
@@ -246,33 +246,29 @@ class PwRestartWf(WorkChain):
         # restart if neccessary
         calc = None
         if len(self.ctx.pw_pks) == 1:
-            calc = load_node(self.ctx.first_calc.out.CALL.pk)
+            calc = load_node(self.ctx.first_calc.get_outgoing().get_node_by_label('CALL').pk)
         else:
-            calc = load_node(self.ctx.last_calc.out.CALL.pk)
+            calc = load_node(self.ctx.last_calc.get_outgoing().get_node_by_label('CALL').pk)
         self.report(" continuing from calculation {}".format(calc.pk))
-        parameters = calc.get_inputs_dict()['parameters'].get_dict()
+        parameters = calc.inputs.parameters.get_dict()
         scf = ''
         parent_folder = None
-        if parameters['CONTROL']['calculation'] == 'scf' and calc.get_state(
-        ) == 'FINISHED':
+        if parameters['CONTROL']['calculation'] == 'scf' and calc.is_finished_ok:
             scf = 'nscf'
-            parent_folder = calc.out.remote_folder
+            parent_folder = calc.outputs.remote_folder
             self.ctx.scf_pk = calc.pk
-        elif parameters['CONTROL']['calculation'] == 'scf' and calc.get_state(
-        ) != 'FINISHED':
+        elif parameters['CONTROL']['calculation'] == 'scf' and not calc.is_finished_ok:
             scf = 'scf'  # RESTART
-            parent_folder = calc.out.remote_folder
+            parent_folder = calc.outputs.remote_folder
             self.ctx.restart += 1  # so we do not end up in an infinite loop
-        elif parameters['CONTROL']['calculation'] == 'nscf' and calc.get_state(
-        ) == 'FINISHED':
+        elif parameters['CONTROL']['calculation'] == 'nscf' and calc.is_finished_ok:
             self.ctx.nscf_pk = calc.pk
             self.ctx.success = True
             self.ctx.restart += 1  # so we do not end up in an infinite loop
             return  # we are finished, ideally we should not need to arrive here, this is also done at self.pw_should_continue
-        elif parameters['CONTROL']['calculation'] == 'nscf' and calc.get_state(
-        ) != 'FINISHED':
+        elif parameters['CONTROL']['calculation'] == 'nscf' and not calc.is_finished_ok:
             scf = 'nscf'  # RESTART
-            parent_folder = calc.out.remote_folder
+            parent_folder = calc.outputs.remote_folder
             self.ctx.restart += 1  # so we do not end up in an infinite loop
         else:
             self.ctx.success = False
@@ -297,8 +293,7 @@ class PwRestartWf(WorkChain):
                     )['number_of_electrons'] * 10
                 except KeyError:
                     parameters['SYSTEM']['nbnd'] = int(
-                        calc.get_outputs_dict()['output_parameters'].
-                        get_dict()['number_of_bands'] * 10)  #
+                        calc.outputs.output_parameters.get_dict()['number_of_bands'] * 10)  #
             parameters['SYSTEM']['nbnd'] = int(parameters['SYSTEM']['nbnd'])
         parameters['CONTROL']['calculation'] = scf
 
@@ -336,18 +331,31 @@ class PwRestartWf(WorkChain):
         """
         self.report("Workflow Complete : scf {}  nscf {} success {}".format(
             self.ctx.scf_pk, self.ctx.nscf_pk, self.ctx.success))
-        from aiida.plugins import DataFactory
-        res = {}
+
+        '''
         if self.ctx.scf_pk:
-            res['scf_pk'] = self.ctx.scf_pk
+            scf = self.ctx.scf_pk
+            res = Collect_results_scf(Bool(self.ctx.success),Int(scf))
+            #self.out("scf_remote_folder",Int(self.ctx.scf_pk))
+        '''
+
         if self.ctx.nscf_pk:
-            res['nscf_pk'] = self.ctx.nscf_pk
-        res['success'] = self.ctx.success
-        self.out("pw", DataFactory('parameter')(dict=res))
-        self.out("scf_remote_folder",
-                 load_node(self.ctx.scf_pk).out.remote_folder)
-        self.out("nscf_remote_folder",
-                 load_node(self.ctx.nscf_pk).out.remote_folder)
+            nscf = self.ctx.nscf_pk
+            res = Collect_results_nscf(Bool(self.ctx.success),Int(nscf))
+            #self.out("nscf_remote_folder", Int(self.ctx.nscf_pk))
+
+        self.out("pw", res)
+
+
+@calcfunction
+def Collect_results_scf(a,b):
+        d = Dict(dict={'success': a, 'scf_pk': b})
+        return d
+
+@calcfunction
+def Collect_results_nscf(a,b):
+        d = Dict(dict={'success': a, 'nscf_pk': b})
+        return d
 
 
 if __name__ == "__main__":

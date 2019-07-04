@@ -145,7 +145,10 @@ class YamboCalculation(CalcJob):
 
         preproc_code = self.inputs.preprocessing_code
 
-        parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+        try:
+            parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
+        except:
+            parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
        # yambo_parent = isinstance(parent_calc, YamboCalculation)    old row
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
@@ -328,7 +331,11 @@ class YamboCalculation(CalcJob):
                 format(parent_calc_folder))
         parent_calc = parent_calcs[0]
         '''
-        parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+        try:
+            parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
+        except:
+            parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+
         if yambo_parent:
             try:
                 parent_settings = _uppercase_dict(

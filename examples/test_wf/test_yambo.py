@@ -1,22 +1,25 @@
+#!/usr/bin/env runaiida
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import print_function
-from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-if not is_dbenv_loaded():
-    load_dbenv()
+
+from aiida import load_profile
+load_profile()
 
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
-try:
-    from aiida.orm.nodes.base import Float, Str, NumericType, BaseType
-    from aiida.engine.run import run, submit
-except ImportError:
-    from aiida.workflows2.db_types import Float, Str, NumericType, SimpleData, Bool
-    from aiida.workflows2.db_types import SimpleData as BaseType
-    from aiida.orm.nodes.simple import SimpleData as SimpleData_
-    from aiida.workflows2.run import run, submit
 
-from aiida.plugins.utils import DataFactory
-ParameterData = DataFactory("parameter")
+from aiida.orm import Float, Str, Dict, NumericType, BaseType
+from aiida.orm import RemoteData
+from aiida.orm import Code
+from aiida.orm import StructureData
+
+from aiida.engine import run, submit
+
+
+from aiida.plugins import DataFactory
+
+
 StructureData = DataFactory('structure')
 
 cell = [
@@ -38,48 +41,35 @@ struc.append_atom(
 struc.append_atom(
     position=(2.1131011581, 2.1131011581, 1.3504969762), symbols='Ti')
 
-struc.store()
+#struc.store()
 
-yambo_parameters = {
-    'ppa': True,
-    'gw0': True,
-    'HF_and_locXC': True,
-    'NLogCPUs': 0,
-    'em1d': True,
-    #'X_all_q_CPU': "",
-    #'X_all_q_ROLEs': "",
-    'X_all_q_nCPU_invert': 0,
-    'X_Threads': 0,
-    'DIP_Threads': 0,
-    #'SE_CPU': "",
-    #'SE_ROLEs': "",
-    'SE_Threads': 32,
-    'EXXRLvcs': 789569,
-    'EXXRLvcs_units': 'RL',
-    'BndsRnXp': (1, 36),
-    'NGsBlkXp': 3,
-    'NGsBlkXp_units': 'Ry',
-    'PPAPntXp': 10,
-    'PPAPntXp_units': 'eV',
-    'GbndRnge': (1, 36),
-    'GDamping': 0.1,
-    'GDamping_units': 'eV',
-    'dScStep': 0.1,
-    'dScStep_units': 'eV',
-    'GTermKind': "none",
-    'DysSolver': "n",
-    'QPkrange': [(1, 8, 34, 38)],
-}
+yambo_parameters ={
+        'ppa': True,
+        'gw0': True,
+        'HF_and_locXC': True,
+        'em1d': True,
+        'Chimod': 'hartree',
+        'EXXRLvcs': 10,
+        'EXXRLvcs_units': 'Ry',
+        'BndsRnXp': (1, 30),
+        'NGsBlkXp': 1,
+        'NGsBlkXp_units': 'Ry',
+        'GbndRnge': (1, 30),
+        'DysSolver': "n",
+        'QPkrange': [(1, 1, 1, 16)],
+        'X_all_q_CPU': "1 1 6 2",
+        'X_all_q_ROLEs': "q k c v",
+        'SE_CPU': "1 1 12",
+        'SE_ROLEs': "q qp b",
+    }
 
 calculation_set_p2y = {
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine": 16
+        "num_mpiprocs_per_machine": 12
     },
-    'max_wallclock_seconds': 60 * 29,
-    'max_memory_kb': 1 * 88 * 1000000,
-    "queue_name":
-    "s3parvc3",  #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+    'max_wallclock_seconds': 60 * 30, #'max_memory_kb': 1 * 88 * 1000000,
+    "queue_name":"s3par8c",
     'environment_variables': {
         "OMP_NUM_THREADS": "1"
     }
@@ -88,16 +78,16 @@ calculation_set_p2y = {
 calculation_set_yambo = {
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine": 2
+        "num_mpiprocs_per_machine": 16
     },
-    'max_wallclock_seconds': 60 * 2,
-    'max_memory_kb': 1 * 10 * 1000000,
-    "queue_name":
-    "s3parvc3",  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+    'max_wallclock_seconds':30, #'max_memory_kb': 1 * 10 * 1000000,
+    "queue_name": "s3par8c",  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
     'environment_variables': {
-        "OMP_NUM_THREADS": "2"
+        "OMP_NUM_THREADS": "1"
     }
 }
+
+
 
 settings_pw = Dict(dict={})
 
@@ -143,14 +133,14 @@ if __name__ == "__main__":
         '--pwcode',
         type=str,
         dest='pwcode',
-        required=True,
+        required=False,
         help='The pw codename to use')
     parser.add_argument(
         '--pseudo',
         type=str,
         dest='pseudo',
-        required=True,
-        help='The pesudo  to use')
+        required=False,
+        help='The pseudo  to use')
     parser.add_argument(
         '--structure',
         type=int,
@@ -162,7 +152,7 @@ if __name__ == "__main__":
         type=int,
         dest='parent',
         required=True,
-        help='The parent  to use')
+        help='The parent to use')
 
     args = parser.parse_args()
     if not args.structure:
@@ -170,7 +160,7 @@ if __name__ == "__main__":
     else:
         structure = load_node(int(args.structure))  #1791
     parentcalc = load_node(int(args.parent))
-    parent_folder_ = parentcalc.out.remote_folder
+    parent_folder_ = parentcalc.outputs.remote_folder
     p2y_result = submit(
         YamboRestartWf,
         precode=Str(args.precode),

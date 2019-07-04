@@ -84,37 +84,33 @@ pw_nscf_parameters = {
     }
 }
 
-yambo_parameters = {
-    'ppa': True,
-    'gw0': True,
-    'HF_and_locXC': True,
-    'NLogCPUs': 0,
-    'em1d': True,
-    'X_all_q_nCPU_invert': 0,
-    'X_Threads': 0,
-    'DIP_Threads': 0,
-    'SE_Threads': 2,
-    'NGsBlkXp': 1,
-    'NGsBlkXp_units': 'RL',
-    'PPAPntXp': 10,
-    'PPAPntXp_units': 'eV',
-    'GDamping': 0.1,
-    'GDamping_units': 'eV',
-    'dScStep': 0.1,
-    'dScStep_units': 'eV',
-    'GTermKind': "none",
-    'DysSolver': "n",
-    'QPkrange': [(1, 1, 16, 17)],
-}
+yambo_parameters ={
+        'ppa': True,
+        'gw0': True,
+        'HF_and_locXC': True,
+        'em1d': True,
+        'Chimod': 'hartree',
+        'EXXRLvcs': 10,
+        'EXXRLvcs_units': 'Ry',
+        'BndsRnXp': (1, 30),
+        'NGsBlkXp': 1,
+        'NGsBlkXp_units': 'Ry',
+        'GbndRnge': (1, 30),
+        'DysSolver': "n",
+        'QPkrange': [(1, 1, 1, 16)],
+        'X_all_q_CPU': "1 1 6 2",
+        'X_all_q_ROLEs': "q k c v",
+        'SE_CPU': "1 1 12",
+        'SE_ROLEs': "q qp b",
+    }
 
 calculation_set_pw = {
     'resources': {
         "num_machines": 1,
         "num_mpiprocs_per_machine": 2
     },
-    'max_wallclock_seconds': 3 * 60 * 60,
-    'max_memory_kb':
-    1 * 86 * 1000000,  #'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+    'max_wallclock_seconds': 60 * 30, #'max_memory_kb': 1 * 88 * 1000000,
+    "queue_name":"s3par8c",
     'environment_variables': {
         "OMP_NUM_THREADS": "1"
     }
@@ -123,11 +119,10 @@ calculation_set_pw = {
 calculation_set_p2y = {
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine": 1
+        "num_mpiprocs_per_machine": 12
     },
-    'max_wallclock_seconds': 60 * 29,
-    'max_memory_kb':
-    1 * 86 * 1000000,  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+    'max_wallclock_seconds': 60 * 30, #'max_memory_kb': 1 * 88 * 1000000,
+    "queue_name":"s3par8c",
     'environment_variables': {
         "OMP_NUM_THREADS": "1"
     }
@@ -136,11 +131,10 @@ calculation_set_p2y = {
 calculation_set_yambo = {
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine": 12
+        "num_mpiprocs_per_machine": 16
     },
-    'max_wallclock_seconds': 3 * 60 * 60,
-    'max_memory_kb':
-    1 * 86 * 1000000,  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
+    'max_wallclock_seconds':30, #'max_memory_kb': 1 * 10 * 1000000,
+    "queue_name": "s3par8c",  # 'custom_scheduler_commands': u"#PBS -A  Pra14_3622" ,
     'environment_variables': {
         "OMP_NUM_THREADS": "1"
     }
