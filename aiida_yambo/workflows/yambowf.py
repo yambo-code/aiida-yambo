@@ -332,7 +332,7 @@ class YamboWorkflow(WorkChain):
             "submitted YamboRestartWf subworkflow, in Initialize mode  ")
         return yambo_result
 
-    def run_p2y(self):
+    def run_p2y(self): #si fa in un solo step p2y e yambo... 
         """ submit a  P2Y  calculation """
         extra = {}
         if 'restart_options_gw' in list(self.inputs.keys()):

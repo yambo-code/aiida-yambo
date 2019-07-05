@@ -11,7 +11,6 @@ load_profile()
 from aiida.common.exceptions import InputValidationError, ValidationError #, WorkflowInputValidationError
 from aiida.common.links import LinkType
 
-from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structure
 
 from collections import defaultdict
@@ -23,8 +22,9 @@ from aiida.orm import StructureData
 from aiida.orm import Float, Str, NumericType, Dict
 
 from aiida_yambo.calculations.gw import YamboCalculation
-
-
+from aiida_quantumespresso.calculations.pw import PwCalculation
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
 def generate_yambo_input_params(precodename, yambocodename, parent_folder,
                                 parameters, calculation_set, settings):
@@ -160,18 +160,56 @@ def get_pseudo(structure, pseudo_family):
 def generate_pw_input_params(structure, codename, pseudo_family, parameters,
                              calculation_set, kpoints, gamma, settings,
                              parent_folder):
-    """Generate PW input._*  from given params """
-    inputs = {}
-    inputs['structure'] = structure
-    inputs['code'] = Code.get_from_string(codename.value)
+
+
+    inputs ={'pw':{'metadata':{'options':{}}}}
+    inputs['pw']['structure'] = structure
+    inputs['pw']['code'] = Code.get_from_string(codename.value)
+
     calculation_set = calculation_set.get_dict()
-    inputs['options'] = Dict(dict=calculation_set)
+
+    inputs['pw']['structure'] = structure
+    inputs['pw']['parameters'] = parameters.get_dict()
+
+    # Do not clean workdirs of sub workchains, because then we won't be able to restart from them
+    inputs.pop('clean_workdir', None)
+
+
+
+    resource = calculation_set.pop('resources', {})
+    if resource:
+        inputs['pw']['metadata']['options']['resources'] = resource
+    inputs['pw']['metadata']['options']['max_wallclock_seconds'] = calculation_set.pop(
+        'max_wallclock_seconds', 86400)
+    max_memory_kb = calculation_set.pop('max_memory_kb', None)
+    if max_memory_kb:
+        inputs['pw']['metadata']['options']['max_memory_kb'] = max_memory_kb
+    queue_name = calculation_set.pop('queue_name', None)
+    if queue_name:
+        inputs['pw']['metadata']['options']['queue_name'] = queue_name
+    custom_scheduler_commands = calculation_set.pop(
+        'custom_scheduler_commands', None)
+    if custom_scheduler_commands:
+        inputs['pw']['metadata']['options']['custom_scheduler_commands'] = custom_scheduler_commands
+    environment_variables = calculation_set.pop("environment_variables", None)
+    if environment_variables:
+        inputs['pw']['metadata']['options']['environment_variables'] = environment_variables
+
+    '''
+    label = calculation_set.pop('label', None)
+    if label:
+        inputs._label = label
+    '''
+
     if parent_folder:
-        inputs['parent_folder'] = parent_folder
+        inputs['pw']['parent_folder'] = parent_folder
     inputs['kpoints'] = kpoints
-    inputs['parameters'] = parameters
-    inputs['pseudo_family'] = pseudo_family
-    inputs['settings'] = settings
+    inputs['pw']['parameters'] = parameters
+    inputs['pw']['pseudos'] = get_pseudos_from_structure(structure,pseudo_family.value)
+    inputs['pw']['settings'] = settings
+
+    inputs = prepare_process_inputs(PwBaseWorkChain, inputs) #fundamental!!avoids expose_inputs...
+
     return inputs
 
 

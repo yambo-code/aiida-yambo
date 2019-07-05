@@ -5,7 +5,7 @@ from aiida import load_profile
 load_profile()
 
 
-from aiida.plugins import DataFactory, CalculationFactory
+from aiida.plugins import DataFactory, CalculationFactory, WorkflowFactory
 
 from aiida.orm import RemoteData
 from aiida.orm import load_node
@@ -18,6 +18,7 @@ from aiida.engine import ToContext as ResultToContext ,calcfunction
 from aiida.engine import run, submit
 
 from aiida.common import InputValidationError, ValidationError
+from aiida.common import AttributeDict
 from aiida.common import CalcJobState
 from aiida.common import LinkType
 from collections import defaultdict
@@ -25,11 +26,12 @@ from collections import defaultdict
 from aiida_yambo.workflows.yambo_utils import generate_pw_input_params
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_yambo.calculations.gw import YamboCalculation
 
 KpointsData = DataFactory("array.kpoints")
-
-
+PwCalculation = CalculationFactory('quantumespresso.pw')
+PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 
 class PwRestartWf(WorkChain):
     """This class is a wrapper for the workflows provided by the aiida-quantumespresso plugin
@@ -48,6 +50,7 @@ class PwRestartWf(WorkChain):
         can be ignorant about the details of running a PW calculation.
         """
         super(PwRestartWf, cls).define(spec)
+        #spec.expose_inputs(PwBaseWorkChain, namespace='', exclude=('clean_workdir', 'pw.structure'))
         spec.input("codename", valid_type=Str)
         spec.input("restart_options", valid_type=Dict, required=False)
         spec.input("pseudo_family", valid_type=Str)
@@ -66,8 +69,6 @@ class PwRestartWf(WorkChain):
         spec.input("parameters", valid_type=Dict)
         spec.input("parameters_nscf", valid_type=Dict, required=False)
         spec.input("parent_folder", valid_type=RemoteData, required=False)
-
-
 ############################OUTLINE##########################
 
         spec.outline(cls.pwbegin,
@@ -208,9 +209,9 @@ class PwRestartWf(WorkChain):
             return True
         calc = None
         if len(self.ctx.pw_pks) == 1:
-            calc = load_node(self.ctx.first_calc.pk) #outputs.CALL.pk)
+            calc = self.ctx.first_calc.get_outgoing().get_node_by_label('CALL') #outputs.CALL.pk)
         else:
-            calc = load_node(self.ctx.last_calc.pk) #outputs.CALL.pk)
+            calc = self.ctx.last_calc.get_outgoing().get_node_by_label('CALL') #outputs.CALL.pk)
         self.report("calc {} ".format(calc))
         if calc.inputs.parameters.get_dict()['CONTROL'][
                 'calculation'] == 'scf' and calc.is_finished_ok:
