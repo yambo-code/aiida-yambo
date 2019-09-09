@@ -22,7 +22,7 @@ from aiida.engine import ToContext, calcfunction
 from aiida.engine import run, submit
 
 from aiida_yambo.calculations.gw import YamboCalculation
-from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
+from utils.inp_gen import generate_yambo_inputs
 
 YamboCalculation = CalculationFactory('yambo.yambo') #needed???don't think so
 
@@ -37,7 +37,7 @@ class YamboRestartWf(WorkChain):
     3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)
     4. Errors originating from a few select unphysical input parameters like too low bands.
     """
-    _calculation_class = YamboCalculation
+
     @classmethod
     def define(cls, spec):
 
@@ -73,7 +73,7 @@ class YamboRestartWf(WorkChain):
             raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
 
-        super(YamboRestartWf, self).setup()
+
         self.ctx.inputs = AttributeDict(self.expose_inputs(YamboCalculation, 'gw'))
 
         inputs = generate_yambo_inputs(**self.ctx.inputs)
