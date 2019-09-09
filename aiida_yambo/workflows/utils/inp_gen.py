@@ -73,7 +73,7 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
             inputs['pw']['parent_folder'] = parent_folder.outputs.remote_folder
         except:
             pass
-            
+
         from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
         inputs = prepare_process_inputs(PwBaseWorkChain, inputs) #fundamental: builds the expose_inputs...
 
@@ -127,7 +127,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         inputs['gw']['metadata'] =  metadata
         inputs['gw']['parent_folder'] = parent_folder
 
-        from yamborestart_new import YamboRestartWf
+        from aiida_yambo.workflows.yamborestart_new import YamboRestartWf
         inputs = prepare_process_inputs(YamboRestartWf, inputs)
 
         return inputs

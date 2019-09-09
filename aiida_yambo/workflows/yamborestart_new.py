@@ -22,7 +22,7 @@ from aiida.engine import ToContext, calcfunction
 from aiida.engine import run, submit
 
 from aiida_yambo.calculations.gw import YamboCalculation
-from utils.inp_gen import generate_yambo_inputs
+from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
 
 YamboCalculation = CalculationFactory('yambo.yambo') #needed???don't think so
 
