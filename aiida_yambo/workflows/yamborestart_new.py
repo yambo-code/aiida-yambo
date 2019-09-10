@@ -25,7 +25,7 @@ from aiida_yambo.calculations.gw import YamboCalculation
 from utils.inp_gen import generate_yambo_inputs
 
 YamboCalculation = CalculationFactory('yambo.yambo') #needed???don't think so
-YamboRestartWf = WorkflowFactory('yambo.workflow. ')
+#YamboRestartWf = WorkflowFactory('yambo.workflow. ')
 
 class YamboRestartWf(WorkChain):
     """This module interacts directly with the yambo plugin to submit calculations
@@ -88,11 +88,13 @@ class YamboRestartWf(WorkChain):
 
         return ToContext(calc = future)
 
+
+
     def yambo_should_restart(self):
 
         """This function encodes the logic to restart calculations from failures
         """
-
+        calc = self.ctx.calc
         self.report("Checking if yambo restart is needed")
 
         ### check of the number of restarts ###
@@ -149,6 +151,8 @@ class YamboRestartWf(WorkChain):
                 self.report("Calculation {} failed likely from memory issues".format(calc))
                 return False
 
+
+
     def yambo_restart(self):
         """Submits a yambo calculation using the yambo plugin
 
@@ -170,6 +174,8 @@ class YamboRestartWf(WorkChain):
         self.ctx.restart += 1
 
         return ToContext(calc = future)
+
+
 
     def report_wf(self):
         """Report the outputs of the workchain
