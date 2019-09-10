@@ -78,7 +78,7 @@ class YamboRestartWf(WorkChain):
         if not isinstance(self.ctx.inputs.parent_folder, RemoteData):
             raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
-
+                                       
         #timing corrections -> minimum 5 minutes? must be here
 
         from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
