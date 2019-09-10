@@ -44,7 +44,6 @@ class YamboRestartWf(WorkChain):
         super(YamboRestartWf, cls).define(spec)
         #spec.expose_inputs(YamboCalculation, namespace='gw')
 
-        spec.input("metadata", valid_type=AttributeDict, required=False)
         spec.input("parameters", valid_type=Dict, required=False)
         spec.input("settings", valid_type=Dict, required=False)
         spec.input("preprocessing_code", valid_type=Code, required=False)
