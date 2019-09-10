@@ -15,7 +15,7 @@ from aiida.common.links import LinkType
 from aiida.common import CalcJobState, AttributeDict
 
 
-from aiida.plugins import DataFactory, CalculationFactory
+from aiida.plugins import DataFactory, CalculationFactory, WorkflowFactory
 
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext, calcfunction
@@ -25,7 +25,7 @@ from aiida_yambo.calculations.gw import YamboCalculation
 from utils.inp_gen import generate_yambo_inputs
 
 YamboCalculation = CalculationFactory('yambo.yambo') #needed???don't think so
-
+YamboRestartWf = WorkflowFactory('yambo.workflow. ')
 
 class YamboRestartWf(WorkChain):
     """This module interacts directly with the yambo plugin to submit calculations
@@ -45,10 +45,7 @@ class YamboRestartWf(WorkChain):
         spec.expose_inputs(YamboCalculation, namespace='gw')
         spec.input("max_restarts", valid_type=Int, required=False) #key: 'max_restarts'
 
-        spec.expose_outputs(YamboCalculation)
 
-        spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',
-                message='Workflow failed')
 ##################################### OUTLINE ####################################
 
         spec.outline(
@@ -60,6 +57,12 @@ class YamboRestartWf(WorkChain):
 
 
 ###################################################################################
+
+        spec.expose_outputs(YamboCalculation)
+
+        spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',
+                message='Workflow failed')
+
 
 
     def yambobegin(self):
@@ -79,7 +82,7 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_inputs(**self.ctx.inputs)
 
         # submission of the first try #
-        future = submit(YamboCalculation, **inputs)
+        future = self.submit(YamboCalculation, **inputs)
         self.report("Workflow started, submitted process with pk = {}".format(future.pk))
         self.ctx.restart += 1
 
@@ -162,7 +165,7 @@ class YamboRestartWf(WorkChain):
         inputs = generate_yambo_inputs(**self.ctx.inputs)
 
         # submission of the next try #
-        future = submit(YamboCalculation, **inputs)
+        future = self.submit(YamboCalculation, **inputs)
         self.report("Workflow started, submitted process with pk = {}".format(future.pk))
         self.ctx.restart += 1
 
