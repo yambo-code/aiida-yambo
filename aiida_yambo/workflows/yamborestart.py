@@ -79,6 +79,7 @@ class YamboRestartWf(WorkChain):
             raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
 
+        #timing corrections -> minimum 5 minutes? must be here
 
         from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
         inputs = generate_yambo_inputs(**self.ctx.inputs)
@@ -161,7 +162,7 @@ class YamboRestartWf(WorkChain):
         This function submits a calculation, usually this represents a
         resubmission of a failed calculation, or a continuation from P2Y/Init run.
         """
-        
+
         calc = self.ctx.calc
         self.report("Now we restart with new inputs")
         if not calc:
