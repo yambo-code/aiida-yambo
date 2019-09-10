@@ -42,7 +42,16 @@ class YamboRestartWf(WorkChain):
     def define(cls, spec):
 
         super(YamboRestartWf, cls).define(spec)
-        spec.expose_inputs(YamboCalculation, namespace='gw')
+        #spec.expose_inputs(YamboCalculation, namespace='gw')
+
+        spec.input("metadata", valid_type=AttributeDict, required=False)
+        spec.input("parameters", valid_type=Dict, required=False)
+        spec.input("settings", valid_type=Dict, required=False)
+        spec.input("preprocessing_code", valid_type=Code, required=False)
+        spec.input("precode_parameters", valid_type=Dict, required=False)
+        spec.input("code", valid_type=Code, required=False)
+        spec.input("parent_folder", valid_type=RemoteData, required=False)
+
         spec.input("max_restarts", valid_type=Int, required=False) #key: 'max_restarts'
 
 
@@ -58,7 +67,7 @@ class YamboRestartWf(WorkChain):
 
 ###################################################################################
 
-        spec.expose_outputs(YamboCalculation)
+        #spec.expose_outputs(YamboCalculation)
 
         spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',
                 message='Workflow failed')
