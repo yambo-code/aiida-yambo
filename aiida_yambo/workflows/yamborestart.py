@@ -58,7 +58,7 @@ class YamboRestartWf(WorkChain):
 
 ###################################################################################
 
-        spec.output('last_calc_pk',
+        spec.output('last_calc_folder', valid_type = RemoteData,
             help='The last calculation.')
 
         #spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',message='Workflow failed')
@@ -191,7 +191,7 @@ class YamboRestartWf(WorkChain):
         """
         calc = self.ctx.calc
         self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
-        self.out('last_calc_pk', calc.pk)
+        self.out('last_calc_folder', calc.outputs.remote_folder)
 
 
 if __name__ == "__main__":
