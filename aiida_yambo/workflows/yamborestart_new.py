@@ -42,14 +42,7 @@ class YamboRestartWf(WorkChain):
     def define(cls, spec):
 
         super(YamboRestartWf, cls).define(spec)
-        #spec.expose_inputs(YamboCalculation, namespace='gw')
-
-        spec.input("parameters", valid_type=Dict, required=False)
-        spec.input("settings", valid_type=Dict, required=False)
-        spec.input("preprocessing_code", valid_type=Code, required=False)
-        spec.input("precode_parameters", valid_type=Dict, required=False)
-        spec.input("code", valid_type=Code, required=False)
-        spec.input("parent_folder", valid_type=RemoteData, required=False)
+        spec.expose_inputs(YamboCalculation, namespace='gw')
 
         spec.input("max_restarts", valid_type=Int, required=False) #key: 'max_restarts'
 
@@ -80,12 +73,14 @@ class YamboRestartWf(WorkChain):
         self.ctx.restart = 0
 
         # setup #
-        if not isinstance(self.inputs.gw.parent_folder, RemoteData):
+        super(YamboRestartWf, self).setup()
+        self.ctx.inputs = AttributeDict(self.exposed_inputs(YamboCalculation, 'gw'))
+
+        if not isinstance(self.ctx.inputs.gw.parent_folder, RemoteData):
             raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
 
 
-        self.ctx.inputs = AttributeDict(self.expose_inputs(YamboCalculation, 'gw'))
 
         inputs = generate_yambo_inputs(**self.ctx.inputs)
 
