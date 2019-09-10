@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from collections import defaultdict
 
-
+from aiida.orm import CalcJobNode
 from aiida.orm import RemoteData
 from aiida.orm import Code
 from aiida.orm import StructureData
@@ -58,10 +58,10 @@ class YamboRestartWf(WorkChain):
 
 ###################################################################################
 
-        #spec.expose_outputs(YamboCalculation)
+        spec.output('last_calc', valid_type=CalcJobNode,
+            help='The last calculation.')
 
-        spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',
-                message='Workflow failed')
+        #spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',message='Workflow failed')
 
 
 
@@ -78,7 +78,7 @@ class YamboRestartWf(WorkChain):
         if not isinstance(self.ctx.inputs.parent_folder, RemoteData):
             raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
-                                       
+
         #timing corrections -> minimum 5 minutes? must be here
 
         from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
@@ -133,7 +133,7 @@ class YamboRestartWf(WorkChain):
 
             if calc.exit_status == 102:
                 self.report('Something goes wrong, but we don\'t know what, so we cannot restart')
-                return self.exit_code.WORKFLOW_NOT_COMPLETED
+                return False
 
 
 
