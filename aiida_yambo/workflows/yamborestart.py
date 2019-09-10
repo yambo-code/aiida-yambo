@@ -58,7 +58,7 @@ class YamboRestartWf(WorkChain):
 
 ###################################################################################
 
-        spec.output('last_calc', valid_type=CalcJobNode,
+        spec.output('last_calc_pk', valid_type=Int,
             help='The last calculation.')
 
         #spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',message='Workflow failed')
@@ -191,6 +191,7 @@ class YamboRestartWf(WorkChain):
         """
         calc = self.ctx.calc
         self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
+        self.out('last_calc_pk', calc.pk)
 
 
 if __name__ == "__main__":
