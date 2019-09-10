@@ -81,7 +81,7 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
 
 def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
-                        parameters, parent_folder, settings, max_restarts, exposed = False):
+                        parameters, parent_folder, settings, max_restarts = 2, exposed = False):
 
     #YamboCalculation = CalculationFactory('quantumespresso.pw')
 
@@ -127,7 +127,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         inputs['gw']['metadata'] =  metadata
         inputs['gw']['parent_folder'] = parent_folder
 
-        #from aiida_yambo.workflows.yamborestart import YamboRestartWf
-        inputs = prepare_process_inputs(YamboCalculation, inputs)
+        from aiida_yambo.workflows.yamborestart import YamboRestartWf
+        inputs = prepare_process_inputs(YamboRestartWf, inputs)
 
         return inputs

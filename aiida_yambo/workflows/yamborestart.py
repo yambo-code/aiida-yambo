@@ -22,7 +22,6 @@ from aiida.engine import ToContext, calcfunction
 from aiida.engine import run, submit
 
 from aiida_yambo.calculations.gw import YamboCalculation
-from utils.inp_gen import generate_yambo_inputs
 
 YamboCalculation = CalculationFactory('yambo.yambo') #needed???don't think so
 #YamboRestartWf = WorkflowFactory('yambo.workflow. ')
@@ -73,15 +72,15 @@ class YamboRestartWf(WorkChain):
         self.ctx.restart = 0
 
         # setup #
-        super(YamboRestartWf, self).setup()
-        self.ctx.inputs = AttributeDict(self.exposed_inputs(YamboCalculation, 'gw'))
 
-        if not isinstance(self.ctx.inputs.gw.parent_folder, RemoteData):
+        self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
+
+        if not isinstance(self.ctx.inputs.parent_folder, RemoteData):
             raise InputValidationError("parent_folder must be of"
                                        " type RemoteData")
 
 
-
+        from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
         inputs = generate_yambo_inputs(**self.ctx.inputs)
 
         # submission of the first try #
@@ -162,6 +161,7 @@ class YamboRestartWf(WorkChain):
         This function submits a calculation, usually this represents a
         resubmission of a failed calculation, or a continuation from P2Y/Init run.
         """
+        calc = self.ctx.calc
         self.report("Now we restart with new inputs")
         if not calc:
             raise ValidationError("restart calculations can not start: calculation no found")
@@ -187,6 +187,7 @@ class YamboRestartWf(WorkChain):
         return information that may be used to figure out
         the status of the calculation.
         """
+        calc = self.ctx.calc
         self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
 
 
