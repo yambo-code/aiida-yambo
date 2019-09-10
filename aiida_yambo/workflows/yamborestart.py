@@ -58,7 +58,7 @@ class YamboRestartWf(WorkChain):
 
 ###################################################################################
 
-        spec.output('last_calc_pk', valid_type=Int,
+        spec.output('last_calc_pk',
             help='The last calculation.')
 
         #spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',message='Workflow failed')
