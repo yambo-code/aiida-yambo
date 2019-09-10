@@ -161,6 +161,7 @@ class YamboRestartWf(WorkChain):
         This function submits a calculation, usually this represents a
         resubmission of a failed calculation, or a continuation from P2Y/Init run.
         """
+        
         calc = self.ctx.calc
         self.report("Now we restart with new inputs")
         if not calc:
