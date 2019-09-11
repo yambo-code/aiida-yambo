@@ -2,37 +2,8 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida import load_profile
-load_profile()
-
-from aiida.orm import RemoteData, StructureData, KpointsData
-from aiida.orm import Code
-from aiida.orm import Float, Str, NumericType, Dict, Int, Bool
-from aiida.orm import load_node
-
-from aiida.common import InputValidationError, ValidationError
-from aiida.common import CalcJobState
-from aiida.common import LinkType
-from collections import defaultdict
-
-from aiida.plugins import DataFactory, CalculationFactory
-
-from aiida.engine import WorkChain, while_
-from aiida.engine import ToContext
-from aiida.engine import run, submit
-
-from aiida_yambo.workflows.yambo_utils import default_step_size, default_pw_settings, set_default_pw_param,\
-               default_qpkrange, default_bands
-
-from aiida_yambo.workflows.yamborestart import YamboRestartWf
-from aiida_yambo.workflows.pwplaceholder import PwRestartWf
-from aiida_yambo.calculations.gw import YamboCalculation
-
-from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structure
-
-
 class YamboWorkflow(WorkChain):
+
     """This workflow will perform yambo calculation on the top of scf+nscf or from scratch,
     invoking qe workchains.
     """
@@ -43,37 +14,14 @@ class YamboWorkflow(WorkChain):
 
         """
         super(YamboWorkflow, cls).define(spec)
-        spec.input("restart_options_pw", valid_type=Dict, required=False)
-        spec.input("restart_options_gw", valid_type=Dict, required=False)
-        spec.input("codename_pw", valid_type=Str)
-        spec.input("codename_p2y", valid_type=Str)
-        spec.input("codename_yambo", valid_type=Str)
-        spec.input("pseudo_family", valid_type=Str)
-        spec.input("calculation_set_pw", valid_type=Dict)  # custom_scheduler_commands,  resources,...
-        spec.input("calculation_set_pw_nscf",valid_type=Dict,required=False)  # custom_scheduler_commands,  resources,...
-        spec.input("calculation_set_p2y", valid_type=Dict)
-        spec.input("calculation_set_yambo", valid_type=Dict)
-        spec.input("settings_pw", valid_type=Dict)
-        spec.input("settings_pw_nscf", valid_type=Dict, required=False)
-        spec.input("settings_p2y", valid_type=Dict)
-        spec.input("settings_yambo", valid_type=Dict)
-        spec.input("structure", valid_type=StructureData)
-        spec.input("kpoint_pw", valid_type=KpointsData)
-        spec.input("kpoint_pw_nscf", valid_type=KpointsData, required=False)
-        spec.input("gamma_pw", valid_type=Bool, default=Bool(0), required=False)
-        spec.input("parameters_pw", valid_type=Dict)
-        spec.input("parameters_pw_nscf", valid_type=Dict, required=False)
-        spec.input("parameters_p2y", valid_type=Dict)
-        spec.input("parameters_yambo", valid_type=Dict)
+
+        spec.expose_inputs(PwBaseWorkChain, namespace='pw', \
+                            namespace_options={'required': False}, exclude = 'parent_folder')
+
+        spec.expose_inputs(YamboRestartWf, namespace='res_wf', \
+                            namespace_options={'required': False}, exclude = 'parent_folder')
+
         spec.input("parent_folder", valid_type=RemoteData, required=False)
-        spec.input("previous_yambo_workchain", valid_type=Str, required=False)
-        spec.input(
-            "to_set_qpkrange",
-            valid_type=Bool,
-            required=False,
-            default=Bool(0))
-        spec.input("to_set_bands", valid_type=Bool, required=False, default=Bool(0))
-        spec.input("bands_groupname", valid_type=Str, required=False)
 
 ##################################### OUTLINE ####################################
 
@@ -94,92 +42,9 @@ class YamboWorkflow(WorkChain):
         This function sets the parent, and its type, including support for starting from a previos workchain,
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
-        self.ctx.pw_wf_res = Dict(dict={})
-        self.ctx.yambo_res = Dict(dict={})
-        self.ctx.last_step_pw_wf = None
-        self.ctx.last_step_kind = None
-        self.ctx.can_cont = 0
-        self.ctx.yambo_pks = []
-        self.ctx.pw_pks = []
-        self.ctx.done = False
-        if 'parent_folder' in list(self.inputs.keys()):
-            parent_calc = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
-                self.ctx.last_step_kind = 'yambo'
-                self.ctx.yambo_res = Dict(dict={
-                    "outputs": {
-                        "gw": {
-                            "yambo_pk": parent_calc.pk,
-                            "success": parent_calc.is_finished_ok #True     #I'm not sure that it was successful... is_finished_ok ?
-                        }
-                    }
-                })
-                self.report(
-                    "Yambo calculation (pk {}) found in input, I will start from there."
-                    .format(parent_calc.pk))
 
-            elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
 
-                self.ctx.last_step_kind = 'pw'
-                self.ctx.pw_wf_res = None
-                self.report(
-                    "PW calculation (pk {}) found in input, I will start from there."
-                    .format(parent_calc.pk))
-            else:
 
-                self.ctx.pw_wf_res = None
-                self.report(
-                    "No PW or Yambo calculation found in input, I will start from scratch."
-                )
-
-        if 'previous_yambo_workchain' in list(self.inputs.keys()):
-
-            self.report(
-                'WARNING: previous_yambo_workchain option should be used in DEBUG mode only!'
-            )
-            wf_outs = load_node(int(str(self.inputs.previous_yambo_workchain)))
-            self.ctx.pw_wf_res = wf_outs  # has both gw and pw outputs in one
-            self.ctx.yambo_res = wf_outs
-
-            if 'scf_pk' in list(wf_outs.get_outputs_dict().keys()):
-                scf_calc = load_node(wf_outs.outputs.pw.get_dict()['scf_pk'])
-                if scf_calc.is_finished:
-                    self.ctx.last_step_kind = 'pw'
-                    del self.ctx['pw_wf_res']
-
-            if 'nscf_pk' in list(wf_outs.get_outputs_dict().keys()):
-                nscf_calc = load_node(wf_outs.outputs.pw.get_dict()['nscf_pk'])
-                if nscf_calc.is_finished:
-                    self.ctx.last_step_kind = 'pw'
-                    del self.ctx['pw_wf_res']
-
-            if 'yambo_pk' in list(
-                    wf_outs.outputs.get_dict().keys()):
-
-                parent_calc =  load_node(wf_outs.outputs.gw.get_dict()['yambo_pk'])
-                init_calc = parent_calc.inputs.settings.get_dict().pop(
-                    'INITIALISE', False)
-
-                if init_calc and parent_calc.is_finished:  # Finished P2Y
-                    self.ctx.last_step_kind = 'yambo_p2y'
-                elif init_calc == False and parent_calc.is_finished:  #  Unfinished QP
-                    self.ctx.last_step_kind = 'yambo'
-                elif init_calc == False and parent_calc.is_finished:  #  Finished QP?
-                    self.ctx.last_step_kind = 'yambo'
-                else:  # unfinished P2Y?
-                    self.ctx.last_step_kind = 'pw'
-
-            self.report("DEBUG: workchain {} loaded".format(
-                self.ctx.yambo_res))
-            self.report("workflow not completed")
-
-        try:
-            self.ctx.bands_groupname = self.inputs.bands_groupname
-            self.report("GW bands will be added to the group {}".format(
-                self.inputs.bands_groupname))
-        except AttributeError:
-            self.ctx.bands_groupname = None
-        self.ctx.parameters_yambo = self.inputs.parameters_yambo
 
         self.report(" workflow initilization step completed.")
 
