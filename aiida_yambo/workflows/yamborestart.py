@@ -71,14 +71,9 @@ class YamboRestartWf(WorkChain):
         self.ctx.restart = 0
 
         # setup #
-
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
 
-        if not isinstance(self.ctx.inputs.parent_folder, RemoteData):
-            raise InputValidationError("parent_folder must be of"
-                                       " type RemoteData")
-
-        #timing corrections -> minimum 5 minutes? must be here
+        #timing corrections -> minimum 5 minutes? must be here, check if done in parser
 
         from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
         inputs = generate_yambo_inputs(**self.ctx.inputs)
@@ -166,7 +161,7 @@ class YamboRestartWf(WorkChain):
         self.report("Now we restart with new inputs")
         if not calc:
             raise ValidationError("restart calculations can not start: calculation no found")
-            return self.exit_code.WFL_NOT_COMPLETED
+            #return self.exit_code.WFL_NOT_COMPLETED
 
         self.ctx.inputs.parent_folder = calc.outputs.remote_folder
 
