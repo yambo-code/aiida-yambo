@@ -33,40 +33,14 @@ from aiida_quantumespresso.utils.pseudopotential import get_pseudos_from_structu
 
 
 class YamboWorkflow(WorkChain):
-    """
+    """This workflow will perform yambo calculation on the top of scf+nscf or from scratch,
+    invoking qe workchains.
     """
 
     @classmethod
     def define(cls, spec):
         """Workfunction definition
 
-        Keyword arguments:
-        restart_options_pw -- PW specific restart options (required)
-        restart_options_gw -- GW spefific restart options (required)
-        codename_pw -- PW code name (required)
-        codename_p2y -- P2Y code name (required)
-        codename_yambo -- Yambo code name (required)
-        pseudo_family -- pseudo name (required)
-        calculation_set_pw -- scheduler settings {'resources':{...}}  for PW calculation (required)
-        calculation_set_pw_nscf -- PW NSCF specific scheduler settings {'resources':{...}}  for PW calculation (required)
-        calculation_set_p2y -- scheduler settings {'resources':{...}} for P2Y conversion (required)
-        calculation_set_yambo -- scheduler settings {'resources':{...}} for Yambo calculation (required)
-        settings_pw -- plugin settings for PW  (required)
-        settings_pw_nscf -- PW NSCF specific  plugin settings  (required)
-        settings_p2y -- settings for P2Y { "ADDITIONAL_RETRIEVE_LIST":[], 'INITIALISE':True}  (optional)
-        settings_yambo -- settings for yambo { "ADDITIONAL_RETRIEVE_LIST":[] } (optional)
-        structure -- Structure (required)
-        kpoint_pw -- kpoints  (option)
-        gamma_pw -- Whether its a gammap point calculation(optional)
-        parameters_pw -- PW SCF parameters (required)
-        parameters_pw_nscf -- PW NSCF parameters (optional)
-        parameters_p2y --  (required)
-        parameters_yambo -- Parameters for Yambo (required)
-        parent_folder -- Parent calculation (optional)
-        previous_yambo_workchain -- Parent workchain (Yambo) (optional)
-        to_set_qpkrange --  whether to set the QPkrange, override with defaults  (optional)
-        to_set_bands -- Whether to set the bands, overide with default (optional)
-        bands_groupname --  (optional)
         """
         super(YamboWorkflow, cls).define(spec)
         spec.input("restart_options_pw", valid_type=Dict, required=False)
@@ -332,7 +306,7 @@ class YamboWorkflow(WorkChain):
             "submitted YamboRestartWf subworkflow, in Initialize mode  ")
         return yambo_result
 
-    def run_p2y(self): #si fa in un solo step p2y e yambo... 
+    def run_p2y(self): #si fa in un solo step p2y e yambo...
         """ submit a  P2Y  calculation """
         extra = {}
         if 'restart_options_gw' in list(self.inputs.keys()):
