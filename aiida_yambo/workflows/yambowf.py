@@ -22,6 +22,7 @@ class YamboWorkflow(WorkChain):
 
         spec.input("parent_folder", valid_type=RemoteData, required=False, default = None)
         #spec.input("nscf_params", valid_type=RemoteData, required=False, default = None)
+
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
@@ -54,57 +55,38 @@ class YamboWorkflow(WorkChain):
 
                     if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
                         self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
-                        self.ctx.first_calc_to_do = 'nscf'
+                        self.ctx.calc_to_do = 'nscf'
 
                     elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
                         self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
-                        self.ctx.first_calc_to_do = 'yambo'
+                        self.ctx.calc_to_do = 'yambo'
 
                     elif parent.process_type=='aiida.calculations:yambo.yambo':
-                        self.ctx.first_calc_to_do = 'yambo'
+                        self.ctx.calc_to_do = 'yambo'
 
                     else:
                         self.ctx.previous_pw = False
+                        self.ctx.calc_to_do = 'scf'
                         self.report('no valid input calculations, so will start from scratch')
         except:
 
             self.report('no previous pw calculation found, \
                                 we will start from scratch')
+            self.ctx.calc_to_do = 'scf'
             self.ctx.previous_pw = False
-
-
 
         self.report(" workflow initilization step completed.")
 
     def can_continue(self):
+
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
 
-        if self.ctx.last_step_kind == 'yambo' and self.ctx.yambo_res:
-
-            try:
-                self.ctx.yambo_pks.append(
-                    self.ctx.yambo_res.outputs.gw.get_dict()["yambo_pk"])
-            except AttributeError:
-                raise InputValidationError("Yambo input must be a workchain!")
-            if self.ctx.yambo_res.outputs.gw.get_dict()["success"] == True:
-                self.ctx.done = True
-                self.report("Last Yambo calculation was successful, so I will stop here.")
-
-        if self.ctx.last_step_kind == 'yambo_p2y' and self.ctx.yambo_res:
-            self.ctx.yambo_pks.append(
-                self.ctx.yambo_res.outputs.gw.get_dict()["yambo_pk"])
-
-        if self.ctx.last_step_kind == 'pw' and self.ctx.pw_wf_res != None:
-            self.ctx.pw_pks.append(
-                self.ctx.pw_wf_res.outputs.pw.get_dict()["nscf_pk"])
-
-        if self.ctx.done == True:
-            self.report("Workflow has finished. will report outputs")
+        if self.ctx.calc_to_do != 'the workflow is_finished':
+            return True
+        else:
+            self.report('the workflow is finished')
             return False
-        self.ctx.can_cont += 1
-        if self.ctx.can_cont > 10:
-            return False
-        return True
+
 
     def perform_next(self):
         """This function  will submit the next step, depending on the information provided in the context
