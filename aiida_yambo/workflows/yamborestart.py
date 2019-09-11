@@ -1,25 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import sys
-from collections import defaultdict
 
-from aiida.orm import CalcJobNode
 from aiida.orm import RemoteData
-from aiida.orm import Code
-from aiida.orm import StructureData
-from aiida.orm import Float, Str, NumericType, Dict, Int, Bool
-from aiida.orm import load_node
+from aiida.orm import Str, Dict, Int
 
-from aiida.common import InputValidationError, ValidationError
-from aiida.common.links import LinkType
-from aiida.common import CalcJobState, AttributeDict
-
-
-from aiida.plugins import DataFactory, CalculationFactory, WorkflowFactory
+from aiida.common import ValidationError
 
 from aiida.engine import WorkChain, while_
-from aiida.engine import ToContext, calcfunction
-from aiida.engine import run, submit
+from aiida.engine import ToContext
+from aiida.engine import submit
 
 from aiida_yambo.calculations.gw import YamboCalculation
 
