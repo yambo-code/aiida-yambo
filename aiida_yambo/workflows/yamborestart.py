@@ -63,7 +63,6 @@ class YamboRestartWf(WorkChain):
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
 
-
         #timing corrections -> minimum 5 minutes? must be here, check if done in parser
 
         from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
