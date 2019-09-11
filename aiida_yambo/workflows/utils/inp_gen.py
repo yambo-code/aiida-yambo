@@ -81,7 +81,7 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
 
 def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
-                        parameters, parent_folder, settings, max_restarts = 2, exposed = False):
+                        parameters, parent_folder, settings, max_restarts = 5, exposed = False):
 
     #YamboCalculation = CalculationFactory('quantumespresso.pw')
 
