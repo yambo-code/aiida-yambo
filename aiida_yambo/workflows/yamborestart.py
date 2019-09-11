@@ -23,8 +23,7 @@ from aiida.engine import run, submit
 
 from aiida_yambo.calculations.gw import YamboCalculation
 
-YamboCalculation = CalculationFactory('yambo.yambo') #needed???don't think so
-#YamboRestartWf = WorkflowFactory('yambo.workflow. ')
+
 
 class YamboRestartWf(WorkChain):
     """This module interacts directly with the yambo plugin to submit calculations
@@ -34,7 +33,7 @@ class YamboRestartWf(WorkChain):
     1. Memory problems (will reduce MPI parallelism before resubmitting) -- to be fixed
     2. Queue time exhaustions (will increase time by a fraction before resubmitting)
     3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)  -- to be fixed
-    4. Errors originating from a few select unphysical input parameters like too low bands.  -- to be fixed 
+    4. Errors originating from a few select unphysical input parameters like too low bands.  -- to be fixed
     """
 
     @classmethod
@@ -59,7 +58,7 @@ class YamboRestartWf(WorkChain):
 ###################################################################################
 
         spec.output('last_calc_folder', valid_type = RemoteData,
-            help='The last calculation.')
+            help='The last calculation remote folder.')
 
         #spec.exit_code(201, 'WORKFLOW_NOT_COMPLETED',message='Workflow failed')
 
