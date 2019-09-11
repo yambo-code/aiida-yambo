@@ -18,11 +18,10 @@ class YamboWorkflow(WorkChain):
         spec.expose_inputs(PwBaseWorkChain, namespace='pw', \
                             namespace_options={'required': False}, exclude = 'parent_folder')
 
-        spec.expose_inputs(YamboRestartWf, namespace='res_wf', \
-                            namespace_options={'required': False}, exclude = 'parent_folder')
+        spec.expose_inputs(YamboRestartWf, namespace='res_wf', exclude = 'parent_folder')
 
-        spec.input("parent_folder", valid_type=RemoteData, required=False)
-
+        spec.input("parent_folder", valid_type=RemoteData, required=False, default = None)
+        #spec.input("nscf_params", valid_type=RemoteData, required=False, default = None)
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
@@ -33,8 +32,8 @@ class YamboWorkflow(WorkChain):
 
 ##################################################################################
 
-        spec.output('gw', valid_type=Dict)
-        spec.output('pw', valid_type=Dict)
+        spec.output('yambo_calc_folder', valid_type = RemoteData,
+            help='The yambo calculation remote folder.')
 
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
@@ -43,6 +42,35 @@ class YamboWorkflow(WorkChain):
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
+        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf')
+
+        try:
+
+            with self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder') as parent:
+
+                if parent.process_type=='aiida.calculations:quantumespresso.pw':
+
+                    self.ctx.previous_pw = True
+
+                    if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
+                        self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
+                        self.ctx.first_calc_to_do = 'nscf'
+
+                    elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
+                        self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
+                        self.ctx.first_calc_to_do = 'yambo'
+
+                    elif parent.process_type=='aiida.calculations:yambo.yambo':
+                        self.ctx.first_calc_to_do = 'yambo'
+
+                    else:
+                        self.ctx.previous_pw = False
+                        self.report('no valid input calculations, so will start from scratch')
+        except:
+
+            self.report('no previous pw calculation found, \
+                                we will start from scratch')
+            self.ctx.previous_pw = False
 
 
 
