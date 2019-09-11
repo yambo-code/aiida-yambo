@@ -42,7 +42,7 @@ class YamboRestartWf(WorkChain):
         super(YamboRestartWf, cls).define(spec)
         spec.expose_inputs(YamboCalculation, namespace='gw', \
                             namespace_options={'required': False}, exclude = 'parent_folder')
-        spec.input("parent_folder", valid_type=RemoteData, required=False)
+
         spec.input("max_restarts", valid_type=Int, required=False) #key: 'max_restarts'
 
 
@@ -73,7 +73,7 @@ class YamboRestartWf(WorkChain):
 
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
-        self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+
 
         #timing corrections -> minimum 5 minutes? must be here, check if done in parser
 
