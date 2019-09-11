@@ -31,10 +31,10 @@ class YamboRestartWf(WorkChain):
 
     This module submits calculations using the yambo plugin, and manages them, including
     restarting the calculation in case of:
-    1. Memory problems (will reduce MPI parallelism before resubmitting)
+    1. Memory problems (will reduce MPI parallelism before resubmitting) -- to be fixed
     2. Queue time exhaustions (will increase time by a fraction before resubmitting)
-    3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)
-    4. Errors originating from a few select unphysical input parameters like too low bands.
+    3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)  -- to be fixed
+    4. Errors originating from a few select unphysical input parameters like too low bands.  -- to be fixed 
     """
 
     @classmethod
