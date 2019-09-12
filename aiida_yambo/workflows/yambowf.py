@@ -16,13 +16,13 @@ class YamboWorkflow(WorkChain):
         super(YamboWorkflow, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='pw', \
-                            namespace_options={'required': False}, exclude = 'parent_folder' \
+                            namespace_options={'required': False}, exclude = 'parent_folder', \
                             help = 'needed if we start from scratch or scf')
 
         spec.expose_inputs(YamboRestartWf, namespace='res_wf', exclude = 'parent_folder')
 
         spec.input("parent_folder", valid_type=RemoteData, required=False, default = None)
-        spec.input("nscf_extra_parameters", valid_type=Dict, required=False, default = None \
+        spec.input("nscf_extra_parameters", valid_type=Dict, required=False, default = None, \
                     help = 'extra parameters if we start from scratch, so the exposed inputs are for a scf calculation')
 
 ##################################### OUTLINE ####################################
