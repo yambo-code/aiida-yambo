@@ -110,6 +110,8 @@ class YamboWorkflow(WorkChain):
             #self.ctx.pw_inputs.parameters['CONTROL']['calculation'] = 'nscf'
             self.ctx.pw_inputs = self.ctx.pw_inputs.update(self.inputs.nscf_extra_parameters)
 
+            #small support if no nscf parameters are given... bands from yambo inputs... and something like that
+
             #calculation
 
             self.ctx.calc_to_do = 'yambo'
