@@ -45,7 +45,7 @@ class YamboWorkflow(WorkChain):
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
-        #self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf') #dopo ,ora nn servono!!
+
 
         try:
 
@@ -54,7 +54,6 @@ class YamboWorkflow(WorkChain):
                 if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
                     self.ctx.previous_pw = True
-                    #self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')     # '' '' ''
 
                     if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
                         self.ctx.calc_to_do = 'nscf'
@@ -97,13 +96,15 @@ class YamboWorkflow(WorkChain):
         Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
 
         if self.ctx.calc_to_do == 'scf':
-            ddd
+            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
 
         elif self.ctx.calc_to_do == 'nscf':
-            ddd
+            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
+            #self.ctx.pw_inputs.parameters['CONTROL']['calculation'] = 'nscf'
+            self.ctx.pw_inputs = self.ctx.pw_inputs.update(self.inputs.nscf_extra_parameters)
 
         elif self.ctx.calc_to_do == 'yambo':
-            cscovk
+            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf')
 
     def report_wf(self):
         """
