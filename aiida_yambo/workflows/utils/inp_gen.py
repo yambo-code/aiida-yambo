@@ -12,7 +12,6 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
 from aiida_yambo.calculations.gw import YamboCalculation
 
-
 '''
 1- with these functions, we do not need to define Dict or AiiDA Data...
 that are immutable...
@@ -114,20 +113,20 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 	"""
 
 
-        inputs = {'gw':{'metadata':{'options':{}}}}
+        inputs = {'gw':{'gw':{'metadata':{'options':{}}}}}
 
-        inputs['max_restarts'] = Int(max_restarts)
+        inputs['gw']['max_restarts'] = Int(max_restarts)
 
-        inputs['gw']['settings'] = settings  #True if just p2y calculation
-        inputs['gw']['precode_parameters'] = precode_parameters #options for p2y...
-        inputs['gw']['preprocessing_code'] = preprocessing_code #p2y
-        inputs['gw']['code'] = code  #yambo executable
+        inputs['gw']['gw']['settings'] = settings  #True if just p2y calculation
+        inputs['gw']['gw']['precode_parameters'] = precode_parameters #options for p2y...
+        inputs['gw']['gw']['preprocessing_code'] = preprocessing_code #p2y
+        inputs['gw']['gw']['code'] = code  #yambo executable
 
-        inputs['gw']['parameters'] = parameters
-        inputs['gw']['metadata'] =  metadata
-        inputs['gw']['parent_folder'] = parent_folder
+        inputs['gw']['gw']['parameters'] = parameters
+        inputs['gw']['gw']['metadata'] =  metadata
+        inputs['parent_folder'] = parent_folder
 
-        from aiida_yambo.workflows.yamborestart import YamboRestartWf
-        inputs = prepare_process_inputs(YamboRestartWf, inputs)
+        from aiida_yambo.workflows.yambowf import YamboWorkflow
+        inputs = prepare_process_inputs(YamboWorkflow, inputs)
 
         return inputs

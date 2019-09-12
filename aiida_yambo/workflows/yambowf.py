@@ -27,15 +27,14 @@ class YamboWorkflow(WorkChain):
         """
         super(YamboWorkflow, cls).define(spec)
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='pw', \
-                            namespace_options={'required': False}, exclude = 'parent_folder', \
-                            help = 'needed if we start from scratch or scf')
+        #spec.expose_inputs(PwBaseWorkChain, namespace='pw', namespace_options={'required': False, \
+        #                    'help': 'needed if we start from scratch or scf'}, exclude = 'parent_folder')
 
         spec.expose_inputs(YamboRestartWf, namespace='gw', exclude = 'parent_folder')
 
-        spec.input("parent_folder", valid_type=RemoteData, required=False, default = None)
+        spec.input("parent_folder", valid_type=RemoteData, required=False)
 
-        spec.input("nscf_extra_parameters", valid_type=Dict, required=False, default = None, \
+        spec.input("nscf_extra_parameters", valid_type=Dict, required=False, \
                     help = 'extra parameters if we start from scratch, so the exposed inputs are for a scf calculation')
 
 ##################################### OUTLINE ####################################
@@ -60,23 +59,23 @@ class YamboWorkflow(WorkChain):
 
         try:
 
-            with self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder') as parent:
+            parent = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
 
-                if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
+            if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
-                    if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
-                        self.ctx.calc_to_do = 'nscf'
+                if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
+                    self.ctx.calc_to_do = 'nscf'
 
-                    elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
-                        self.ctx.calc_to_do = 'yambo'
-
-                elif parent.process_type=='aiida.calculations:yambo.yambo':
+                elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
                     self.ctx.calc_to_do = 'yambo'
 
-                else:
-                    self.ctx.previous_pw = False
-                    self.ctx.calc_to_do = 'scf'
-                    self.report('no valid input calculations, so we will start from scratch')
+            elif parent.process_type=='aiida.calculations:yambo.yambo':
+                self.ctx.calc_to_do = 'yambo'
+
+            else:
+                self.ctx.previous_pw = False
+                self.ctx.calc_to_do = 'scf'
+                self.report('no valid input calculations, so we will start from scratch')
         except:
 
             self.report('no previous pw calculation found, \
@@ -139,7 +138,7 @@ class YamboWorkflow(WorkChain):
             self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'gw')
 
             from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
-            inputs = generate_yambo_inputs(**self.ctx.pw_inputs, exposed = True)
+            inputs = generate_yambo_inputs(**self.ctx.yambo_inputs, exposed = False)
 
             future = self.submit(YamboRestartWf, **inputs)
 

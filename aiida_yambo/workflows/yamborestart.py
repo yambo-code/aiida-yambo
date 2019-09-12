@@ -30,8 +30,8 @@ class YamboRestartWf(WorkChain):
     def define(cls, spec):
 
         super(YamboRestartWf, cls).define(spec)
-        spec.expose_inputs(YamboCalculation, namespace='gw')
-
+        spec.expose_inputs(YamboCalculation, namespace='gw', exclude = 'parent_folder')
+        spec.input("parent_folder", valid_type=RemoteData, required=True)
         spec.input("max_restarts", valid_type=Int, required=False) #key: 'max_restarts'
 
 
