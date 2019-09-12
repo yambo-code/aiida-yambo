@@ -46,8 +46,6 @@ class YamboWorkflow(WorkChain):
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
-
-
         try:
 
             with self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder') as parent:
