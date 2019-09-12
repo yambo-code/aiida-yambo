@@ -45,7 +45,7 @@ class YamboWorkflow(WorkChain):
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
-        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf')
+        #self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf') #dopo ,ora nn servono!!
 
         try:
 
@@ -54,13 +54,12 @@ class YamboWorkflow(WorkChain):
                 if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
                     self.ctx.previous_pw = True
+                    #self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')     # '' '' ''
 
                     if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
-                        self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
                         self.ctx.calc_to_do = 'nscf'
 
                     elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
-                        self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
                         self.ctx.calc_to_do = 'yambo'
 
                 elif parent.process_type=='aiida.calculations:yambo.yambo':
