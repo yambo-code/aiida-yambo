@@ -96,16 +96,30 @@ class YamboWorkflow(WorkChain):
         The next step will be a yambo calculation if the provided inputs are a previous yambo/p2y run
         Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
 
+        self.report('performing a {} calculation'.format(self.ctx.calc_to_do))
+
         if self.ctx.calc_to_do == 'scf':
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
+
+            #calculation
+
+            self.ctx.calc_to_do = 'nscf'
 
         elif self.ctx.calc_to_do == 'nscf':
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
             #self.ctx.pw_inputs.parameters['CONTROL']['calculation'] = 'nscf'
             self.ctx.pw_inputs = self.ctx.pw_inputs.update(self.inputs.nscf_extra_parameters)
 
+            #calculation
+
+            self.ctx.calc_to_do = 'yambo'
+
         elif self.ctx.calc_to_do == 'yambo':
             self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf')
+
+            #calculation
+
+            self.ctx.calc_to_do = 'the workflow is finished'
 
     def report_wf(self):
         """
