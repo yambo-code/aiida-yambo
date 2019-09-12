@@ -36,7 +36,7 @@ class YamboWorkflow(WorkChain):
 ##################################################################################
 
         spec.output('yambo_calc_folder', valid_type = RemoteData,
-            help='The yambo calculation remote folder.')
+            help='The final yambo calculation remote folder.')
 
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
