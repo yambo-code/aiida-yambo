@@ -16,12 +16,14 @@ class YamboWorkflow(WorkChain):
         super(YamboWorkflow, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='pw', \
-                            namespace_options={'required': False}, exclude = 'parent_folder')
+                            namespace_options={'required': False}, exclude = 'parent_folder' \
+                            help = 'needed if we start from scratch or scf')
 
         spec.expose_inputs(YamboRestartWf, namespace='res_wf', exclude = 'parent_folder')
 
         spec.input("parent_folder", valid_type=RemoteData, required=False, default = None)
-        #spec.input("nscf_params", valid_type=RemoteData, required=False, default = None)
+        spec.input("nscf_extra_parameters", valid_type=Dict, required=False, default = None \
+                    help = 'extra parameters if we start from scratch, so the exposed inputs are for a scf calculation')
 
 ##################################### OUTLINE ####################################
 
@@ -49,7 +51,7 @@ class YamboWorkflow(WorkChain):
 
             with self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder') as parent:
 
-                if parent.process_type=='aiida.calculations:quantumespresso.pw':
+                if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
                     self.ctx.previous_pw = True
 
@@ -61,13 +63,13 @@ class YamboWorkflow(WorkChain):
                         self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
                         self.ctx.calc_to_do = 'yambo'
 
-                    elif parent.process_type=='aiida.calculations:yambo.yambo':
-                        self.ctx.calc_to_do = 'yambo'
+                elif parent.process_type=='aiida.calculations:yambo.yambo':
+                    self.ctx.calc_to_do = 'yambo'
 
-                    else:
-                        self.ctx.previous_pw = False
-                        self.ctx.calc_to_do = 'scf'
-                        self.report('no valid input calculations, so will start from scratch')
+                else:
+                    self.ctx.previous_pw = False
+                    self.ctx.calc_to_do = 'scf'
+                    self.report('no valid input calculations, so we will start from scratch')
         except:
 
             self.report('no previous pw calculation found, \
