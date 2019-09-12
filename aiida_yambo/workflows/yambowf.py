@@ -81,7 +81,8 @@ class YamboWorkflow(WorkChain):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
 
-        if self.ctx.calc_to_do != 'the workflow is finished, either ok or not':
+        if self.ctx.calc_to_do != 'the workflow is finished':
+            self.report('the workflow continues with a {} calculation'.format(self.ctx.calc_to_do))
             return True
         else:
             self.report('the workflow is finished')
@@ -94,149 +95,14 @@ class YamboWorkflow(WorkChain):
         The next step will be a yambo calculation if the provided inputs are a previous yambo/p2y run
         Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
 
-        if self.ctx.last_step_kind == 'yambo' or self.ctx.last_step_kind == 'yambo_p2y':
-            if load_node(self.ctx.yambo_res.outputs.gw.get_dict()["yambo_pk"]).is_finished:
+        if self.ctx.calc_to_do == 'scf':
+            ddd
 
-                if self.inputs.to_set_qpkrange   and 'QPkrange'\
-                        not in list(self.ctx.parameters_yambo.get_dict().keys()):
-                    self.ctx.parameters_yambo = default_qpkrange( self.ctx.pw_wf_res.outputs.pw.get_dict()["nscf_pk"],\
-                             self.ctx.parameters_yambo)
+        elif self.ctx.calc_to_do == 'nscf':
+            ddd
 
-                if self.inputs.to_set_bands   and ('BndsRnXp' not in list(self.ctx.parameters_yambo.get_dict().keys())\
-                        or 'GbndRnge' not in list(self.ctx.parameters_yambo.get_dict().keys())):
-                    self.ctx.parameters_yambo = default_bands( self.ctx.pw_wf_res.outputs.pw.get_dict()["nscf_pk"],\
-                            self.ctx.parameters_yambo)
-
-                start_from_initialize = load_node(self.ctx.yambo_res.outputs.gw.get_dict()\
-                                        ["yambo_pk"]).inputs.settings.get_dict().pop('INITIALISE', None)
-
-                if start_from_initialize:  # YamboRestartWf will initialize before starting QP calc  for us,  INIT != P2Y
-                    self.report(
-                        "YamboRestartWf will start from initialise mode (yambo init) "
-                    )
-                    yambo_result = self.run_yambo()
-                    return ToContext(yambo_res=yambo_result)
-
-                else:  # Possibly a restart,  after some type of failure, why was not handled by YamboRestartWf? maybe restarting whole workchain
-                    self.report(" Restarting {}, this is some form of restart for the workchain".format(\
-                            self.ctx.last_step_kind)  )
-                    yambo_result = self.run_yambo()
-                    return ToContext(yambo_res=yambo_result)
-
-            if len(self.ctx.yambo_pks) > 0:
-                if not load_node(self.ctx.yambo_pks[-1]).is_finished_ok:  # Needs a resubmit depending on the error.
-                    self.report("Last {} calculation (pk: {}) failed, will attempt a restart".format(\
-                            self.ctx.last_step_kind, self.ctx.yambo_pks[-1] ))
-
-        if self.ctx.last_step_kind == 'pw' and self.ctx.pw_wf_res:
-            if self.ctx.pw_wf_res.outputs.pw.get_dict()["success"] == True:
-                self.report(
-                    "PwRestartWf was successful,  running P2Y next with: YamboRestartWf "
-                )
-                p2y_result = self.run_p2y()
-                return ToContext(yambo_res=p2y_result)
-            if self.ctx.pw_wf_res.outputs.pw.get_dict()["success"]== False:
-                self.report("PwRestartWf subworkflow  NOT  successful")
-                return
-
-        if self.ctx.last_step_kind == None or self.ctx.last_step_kind == 'pw' and not self.ctx.pw_wf_res:
-            # this is likely  the very beginning, we can start with the scf/nscf here
-            extra = {}
-            self.report("Launching PwRestartWf ")
-            if 'parameters_pw_nscf' in list(self.inputs.keys()):
-                extra['parameters_nscf'] = self.inputs.parameters_pw_nscf
-            if 'calculation_set_pw_nscf' in list(self.inputs.keys()):
-                extra[
-                    'calculation_set_pw_nscf'] = self.inputs.calculation_set_pw_nscf
-            if 'settings_pw_nscf' in list(self.inputs.keys()):
-                extra['settings_pw_nscf'] = self.inputs.settings_pw_nscf
-            if 'kpoint_pw_nscf' in list(self.inputs.keys()):
-                extra['kpoint_pw_nscf'] = self.inputs.kpoint_pw_nscf
-            if 'restart_options_pw' in list(self.inputs.keys()):
-                extra['restart_options'] = self.inputs.restart_options_pw
-            if 'parent_folder' in list(self.inputs.keys()):
-                extra['parent_folder'] = self.inputs.parent_folder
-            pw_wf_result = self.run_pw(extra)
-            return ToContext(pw_wf_res=pw_wf_result)
-
-    def run_yambo(self):
-        """ submit a yambo calculation """
-        extra = {}
-        if 'restart_options_pw' in list(self.inputs.keys()):
-            extra['restart_options'] = self.inputs.restart_options_pw
-        parentcalc = load_node(
-            self.ctx.yambo_res.outputs.gw.get_dict()["yambo_pk"])
-        parent_folder = parentcalc.outputs.remote_folder
-        yambo_result = self.submit(
-            YamboRestartWf,
-            precode=self.inputs.codename_p2y,
-            yambocode=self.inputs.codename_yambo,
-            parameters=self.ctx.parameters_yambo,
-            calculation_set=self.inputs.calculation_set_yambo,
-            parent_folder=parent_folder,
-            settings=self.inputs.settings_yambo,
-            **extra)
-        self.ctx.last_step_kind = 'yambo'
-        self.report(
-            "submitted YamboRestartWf subworkflow, in Initialize mode  ")
-        return yambo_result
-
-    def run_p2y(self): #si fa in un solo step p2y e yambo...
-        """ submit a  P2Y  calculation """
-        extra = {}
-        if 'restart_options_gw' in list(self.inputs.keys()):
-            extra['restart_options'] = self.inputs.restart_options_pw
-        parentcalc = load_node(self.ctx.pw_wf_res.outputs.pw.get_dict()["nscf_pk"])
-        parent_folder = parentcalc.outputs.remote_folder
-        p2y_result = self.submit(
-            YamboRestartWf,
-            precode=self.inputs.codename_p2y,
-            yambocode=self.inputs.codename_yambo,
-            parameters=self.inputs.parameters_p2y,
-            calculation_set=self.inputs.calculation_set_p2y,
-            parent_folder=parent_folder,
-            settings=self.inputs.settings_p2y,
-            **extra)
-        self.ctx.last_step_kind = 'yambo_p2y'
-        return p2y_result
-
-    def run_pw(self, extra):
-        """ submit a PW calculation """
-        pw_wf_result = self.submit(
-            PwRestartWf,
-            codename=self.inputs.codename_pw,
-            pseudo_family=self.inputs.pseudo_family,
-            calculation_set=self.inputs.calculation_set_pw,
-            settings=self.inputs.settings_pw,
-            kpoints=self.inputs.kpoint_pw,
-            gamma=self.inputs.gamma_pw,
-            structure=self.inputs.structure,
-            parameters=self.inputs.parameters_pw,
-            **extra)
-        self.ctx.last_step_kind = 'pw'
-        return pw_wf_result
-
-    def run_restart(self):
-        """ submit a followup yambo calculation """
-        extra = {}
-        if 'restart_options_gw' in list(self.inputs.keys()):
-            extra['restart_options'] = self.inputs.restart_options_pw
-            parentcalc = load_node(   #maybe...
-                self.ctx.yambo_res.outputs.gw.get_dict()["yambo_pk"])
-            parent_folder = parentcalc.outputs.remote_folder
-        yambo_result = self.submit(
-            YamboRestartWf,
-            precode=self.inputs.codename_p2y,
-            yambocode=self.inputs.codename_yambo,
-            parameters=self.ctx.parameters_yambo,
-            calculation_set=self.inputs.calculation_set_yambo,
-            parent_folder=parent_folder,
-            settings=self.inputs.settings_yambo,
-            **extra)
-        self.ctx.last_step_kind = 'yambo'
-        self.report(
-            "submitted YamboRestartWf subworkflow, in Initialize mode  ")
-        return yambo_result
+        elif self.ctx.calc_to_do == 'yambo':
+            cscovk
 
     def report_wf(self):
         """
