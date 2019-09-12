@@ -122,26 +122,6 @@ class YamboWorkflow(WorkChain):
         """
         """
         self.report('Final step.')
-        from aiida.plugins import DataFactory
-        #try:
-        #    pw = self.ctx.pw_wf_res.outputs.pw.get_dict()
-        #except Exception:
-        #    pw = {}
-        #gw = self.ctx.yambo_res.outputs.gw.get_dict()
-        #gw.update(pw)
-        #self.out("yambo_remote_folder",self.ctx.yambo_res.outputs.yambo_remote_folder)
-        #self.out("scf_remote_folder", self.ctx.pw_wf_res.outputs.scf_remote_folder)
-        #self.out("nscf_remote_folder",self.ctx.pw_wf_res.outputs.nscf_remote_folder)
-        if self.ctx.bands_groupname is not None:
-            g_bands, _ = Group.get_or_create(name=self.ctx.bands_groupname)
-            g_bands.add_nodes(self.ctx.yambo_res)
-            self.report("Yambo calc (pk: {}) added to the group {}".format(
-                self.ctx.yambo_res.pk, self.ctx.bands_groupname))
-        else:
-            self.report("Yambo calc done (pk: {} ) ".format(self.ctx.yambo_res.pk)) #pero' e' la workchain!!
-        self.out("gw", self.ctx.pw_wf_res.outputs.pw)
-        self.out("pw", self.ctx.yambo_res.outputs.gw)
-        self.report("workflow completed")
 
 
 if __name__ == "__main__":
