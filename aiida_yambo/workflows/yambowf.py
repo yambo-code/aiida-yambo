@@ -52,8 +52,6 @@ class YamboWorkflow(WorkChain):
 
                 if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
-                    self.ctx.previous_pw = True
-
                     if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
                         self.ctx.calc_to_do = 'nscf'
 
@@ -72,7 +70,6 @@ class YamboWorkflow(WorkChain):
             self.report('no previous pw calculation found, \
                                 we will start from scratch')
             self.ctx.calc_to_do = 'scf'
-            self.ctx.previous_pw = False
 
         self.report(" workflow initilization step completed.")
 
