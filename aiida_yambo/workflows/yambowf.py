@@ -81,7 +81,7 @@ class YamboWorkflow(WorkChain):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
 
-        if self.ctx.calc_to_do != 'the workflow is_finished':
+        if self.ctx.calc_to_do != 'the workflow is finished, either ok or not':
             return True
         else:
             self.report('the workflow is finished')
