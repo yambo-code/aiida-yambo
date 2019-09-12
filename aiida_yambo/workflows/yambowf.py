@@ -1,6 +1,18 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import sys
 import itertools
+
+from aiida.orm import RemoteData
+from aiida.orm import Dict
+
+from aiida.engine import WorkChain, while_
+from aiida.engine import ToContext
+from aiida.engine import submit
+
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+
+from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
 class YamboWorkflow(WorkChain):
 
@@ -19,7 +31,7 @@ class YamboWorkflow(WorkChain):
                             namespace_options={'required': False}, exclude = 'parent_folder', \
                             help = 'needed if we start from scratch or scf')
 
-        spec.expose_inputs(YamboRestartWf, namespace='res_wf', exclude = 'parent_folder')
+        spec.expose_inputs(YamboRestartWf, namespace='gw', exclude = 'parent_folder')
 
         spec.input("parent_folder", valid_type=RemoteData, required=False, default = None)
 
@@ -99,10 +111,9 @@ class YamboWorkflow(WorkChain):
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
 
             from aiida_yambo.workflows.utils.inp_gen import generate_pw_inputs
-            inputs = generate_pw_inputs(structure, code, pseudo_family, \
-                        parameters, kpoints, metadata, exposed = True)
+            inputs = generate_pw_inputs(**self.ctx.pw_inputs, exposed = True)
 
-            run = submit(PwBaseWorkChain, **inputs)
+            future = self.submit(PwBaseWorkChain, **inputs)
 
             self.ctx.calc_to_do = 'nscf'
 
@@ -117,28 +128,34 @@ class YamboWorkflow(WorkChain):
                 pass # for now...small support if no nscf parameters are given... bands from yambo inputs... and something like that
 
             from aiida_yambo.workflows.utils.inp_gen import generate_pw_inputs
-            inputs = generate_pw_inputs(structure, code, pseudo_family, \
-                        parameters, kpoints, metadata, exposed = True)
+            inputs = generate_pw_inputs(**self.ctx.pw_inputs, exposed = True)
 
-            run = submit(PwBaseWorkChain, **inputs)
+            future = self.submit(PwBaseWorkChain, **inputs)
 
             self.ctx.calc_to_do = 'yambo'
 
         elif self.ctx.calc_to_do == 'yambo':
 
-            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf')
+            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'gw')
 
             from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
-            inputs = generate_yambo_inputs(exposed = True, **inputs)
+            inputs = generate_yambo_inputs(**self.ctx.pw_inputs, exposed = True)
 
-            running = submit(YamboRestartWf, **inputs)
+            future = self.submit(YamboRestartWf, **inputs)
 
             self.ctx.calc_to_do = 'the workflow is finished'
 
+
+        return ToContext(calc = future)
+
+
     def report_wf(self):
-        """
-        """
+
         self.report('Final step.')
+
+        calc = self.ctx.calc
+        self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
+        self.out('last_calc_folder', calc.outputs.last_calc_folder)
 
 
 if __name__ == "__main__":
