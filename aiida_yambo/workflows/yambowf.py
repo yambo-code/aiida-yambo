@@ -108,11 +108,9 @@ class YamboWorkflow(WorkChain):
         if self.ctx.calc_to_do == 'scf':
 
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
+            self.ctx.pw_inputs['parent_folder'] = self.inputs.parent_folder
 
-            from aiida_yambo.workflows.utils.inp_gen import generate_pw_inputs
-            inputs = generate_pw_inputs(**self.ctx.pw_inputs, exposed = True)
-
-            future = self.submit(PwBaseWorkChain, **inputs)
+            future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
 
             self.ctx.calc_to_do = 'nscf'
 
@@ -126,8 +124,7 @@ class YamboWorkflow(WorkChain):
             except:
                 pass # for now...small support if no nscf parameters are given... bands from yambo inputs... and something like that
 
-            from aiida_yambo.workflows.utils.inp_gen import generate_pw_inputs
-            inputs = generate_pw_inputs(**self.ctx.pw_inputs, exposed = True)
+            self.ctx.pw_inputs['parent_folder'] = self.inputs.parent_folder
 
             future = self.submit(PwBaseWorkChain, **inputs)
 
@@ -136,11 +133,9 @@ class YamboWorkflow(WorkChain):
         elif self.ctx.calc_to_do == 'yambo':
 
             self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'gw')
+            self.ctx.yambo_inputs['parent_folder'] = self.inputs.parent_folder
 
-            from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
-            inputs = generate_yambo_inputs(**self.ctx.yambo_inputs, exposed = False)
-
-            future = self.submit(YamboRestartWf, **inputs)
+            future = self.submit(YamboRestartWf, **self.ctx.yambo_inputs)
 
             self.ctx.calc_to_do = 'the workflow is finished'
 
@@ -154,7 +149,7 @@ class YamboWorkflow(WorkChain):
 
         calc = self.ctx.calc
         self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
-        self.out('last_calc_folder', calc.outputs.last_calc_folder)
+        self.out('yambo_calc_folder', calc.outputs.last_calc_folder)
 
 
 if __name__ == "__main__":

@@ -62,14 +62,11 @@ class YamboRestartWf(WorkChain):
 
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
-
+        self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
         #timing corrections -> minimum 5 minutes? must be here, check if done in parser
 
-        from aiida_yambo.workflows.utils.inp_gen import generate_yambo_inputs
-        inputs = generate_yambo_inputs(**self.ctx.inputs)
-
         # submission of the first try #
-        future = self.submit(YamboCalculation, **inputs)
+        future = self.submit(YamboCalculation, **self.ctx.inputs)
         self.report("Workflow started, submitted process with pk = {}".format(future.pk))
         self.ctx.restart += 1
 
