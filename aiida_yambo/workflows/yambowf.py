@@ -96,28 +96,28 @@ class YamboWorkflow(WorkChain):
         if self.ctx.calc_to_do == 'scf':
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
 
-            #calculation
+            #inputs generation + calculation
 
             self.ctx.calc_to_do = 'nscf'
 
         elif self.ctx.calc_to_do == 'nscf':
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
             #self.ctx.pw_inputs.parameters['CONTROL']['calculation'] = 'nscf'
-            
+
             try:
                 self.ctx.pw_inputs = self.ctx.pw_inputs.update(self.inputs.nscf_extra_parameters)
 
             except:
                 pass # for now...small support if no nscf parameters are given... bands from yambo inputs... and something like that
 
-            #calculation
+            #inputs generation + calculation
 
             self.ctx.calc_to_do = 'yambo'
 
         elif self.ctx.calc_to_do == 'yambo':
             self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'res_wf')
 
-            #calculation
+            #inputs generation + calculation
 
             self.ctx.calc_to_do = 'the workflow is finished'
 
