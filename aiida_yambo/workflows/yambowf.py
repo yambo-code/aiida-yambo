@@ -27,12 +27,16 @@ class YamboWorkflow(WorkChain):
         """
         super(YamboWorkflow, cls).define(spec)
 
-        #spec.expose_inputs(PwBaseWorkChain, namespace='pw', namespace_options={'required': False, \
-        #                    'help': 'needed if we start from scratch or scf'}, exclude = 'parent_folder')
+        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': False}, \
+                            exclude = 'parent_folder')
 
-        spec.expose_inputs(YamboRestartWf, namespace='gw', exclude = 'parent_folder')
+        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': False}, \
+                            exclude = 'parent_folder')
 
-        spec.input("parent_folder", valid_type=RemoteData, required=False)
+        spec.expose_inputs(YamboRestartWf, namespace='yres', exclude = 'parent_folder')
+
+        spec.input("parent_folder", valid_type=RemoteData, required=False,\
+                    help = 'nscf or yambo remote folder')
 
         spec.input("nscf_extra_parameters", valid_type=Dict, required=False, \
                     help = 'extra parameters if we start from scratch, so the exposed inputs are for a scf calculation')
@@ -53,7 +57,7 @@ class YamboWorkflow(WorkChain):
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
 
-        This function sets the parent, and its type, including support for starting from a previos workchain,
+        This function sets the parent, and its type
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
@@ -76,10 +80,11 @@ class YamboWorkflow(WorkChain):
                 self.ctx.previous_pw = False
                 self.ctx.calc_to_do = 'scf'
                 self.report('no valid input calculations, so we will start from scratch')
+
+            self.ctx.calc = parent
         except:
 
-            self.report('no previous pw calculation found, \
-                                we will start from scratch')
+            self.report('no previous pw calculation found, we will start from scratch')
             self.ctx.calc_to_do = 'scf'
 
         self.report(" workflow initilization step completed.")
@@ -107,8 +112,7 @@ class YamboWorkflow(WorkChain):
 
         if self.ctx.calc_to_do == 'scf':
 
-            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
-            self.ctx.pw_inputs['parent_folder'] = self.inputs.parent_folder
+            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
 
             future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
 
@@ -116,24 +120,18 @@ class YamboWorkflow(WorkChain):
 
         elif self.ctx.calc_to_do == 'nscf':
 
-            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'pw')
+            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
-            try:
-                self.ctx.pw_inputs = self.ctx.pw_inputs.update(self.inputs.nscf_extra_parameters)
+            self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
 
-            except:
-                pass # for now...small support if no nscf parameters are given... bands from yambo inputs... and something like that
-
-            self.ctx.pw_inputs['parent_folder'] = self.inputs.parent_folder
-            #sufficiente o vanno ricreati con prepare_process_inputs??? check
-            future = self.submit(PwBaseWorkChain, **inputs)
+            future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
 
             self.ctx.calc_to_do = 'yambo'
 
         elif self.ctx.calc_to_do == 'yambo':
 
-            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'gw')
-            self.ctx.yambo_inputs['parent_folder'] = self.inputs.parent_folder
+            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'yres')
+            self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
             future = self.submit(YamboRestartWf, **self.ctx.yambo_inputs)
 
@@ -148,7 +146,8 @@ class YamboWorkflow(WorkChain):
         self.report('Final step.')
 
         calc = self.ctx.calc
-        self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
+        self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, \
+                        calc.outputs.last_calc_folder.pk))
         self.out('yambo_calc_folder', calc.outputs.last_calc_folder)
 
 

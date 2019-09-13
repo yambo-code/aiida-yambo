@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import numpy as np
 from collections.abc import Mapping
 
-from aiida.orm import Dict, Str, Int
+from aiida.orm import Dict, Str, Int, RemoteData
 from aiida.plugins import CalculationFactory, DataFactory
 
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
@@ -19,7 +19,7 @@ that are immutable...
 '''
 
 def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, metadata, \
-                        parent_folder = None,exposed = 'PwCalculation'):
+                        parent_folder = None , exposed = 'PwCalculation'):
 
 
 
@@ -69,7 +69,7 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
             structure, pseudo_family = Str(pseudo_family))
         inputs['pw']['metadata'] =  metadata
         try:
-            inputs['pw']['parent_folder'] = parent_folder.outputs.remote_folder
+            inputs['parent_folder'] = parent_folder.outputs.remote_folder
         except:
             pass
 
@@ -78,9 +78,56 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
         return inputs
 
+    elif exposed == 'scf in YamboWorkflow':
+
+        ''' generation of inputs for exposed inputs such in the PwBaseWorkChain'''
+
+        inputs = {'scf':{'pw':{'metadata':{'options':{}}}}}
+
+
+        inputs['scf']['kpoints'] = kpoints
+
+        #exposed  inputs:
+
+        inputs['scf']['pw']['code'] = code
+        inputs['scf']['pw']['structure'] = structure
+        inputs['scf']['pw']['parameters'] = parameters
+        inputs['scf']['pw']['pseudos'] = validate_and_prepare_pseudos_inputs(
+            structure, pseudo_family = Str(pseudo_family))
+        inputs['scf']['pw']['metadata'] =  metadata
+
+        from aiida_yambo.workflows.yambowf import YamboWorkflow
+        inputs = prepare_process_inputs(YamboWorkflow, inputs)
+
+        return inputs
+
+    elif exposed == 'nscf in YamboWorkflow':
+
+        ''' generation of inputs for exposed inputs such in the PwBaseWorkChain'''
+
+        inputs = {'nscf':{'pw':{'metadata':{'options':{}}}}}
+
+
+        inputs['nscf']['kpoints'] = kpoints
+
+        #exposed  inputs:
+
+        inputs['nscf']['pw']['code'] = code
+        inputs['nscf']['pw']['structure'] = structure
+        inputs['nscf']['pw']['parameters'] = parameters
+        inputs['nscf']['pw']['pseudos'] = validate_and_prepare_pseudos_inputs(
+            structure, pseudo_family = Str(pseudo_family))
+        inputs['nscf']['pw']['metadata'] =  metadata
+
+
+        from aiida_yambo.workflows.yambowf import YamboWorkflow
+        inputs = prepare_process_inputs(YamboWorkflow, inputs)
+
+        return inputs
+
 
 def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
-                        parameters, settings, parent_folder, max_restarts = 5, exposed = 'YamboCalculation'):
+                        parameters, settings, parent_folder = None, max_restarts = 5, exposed = 'YamboCalculation'):
 
     '''This is a very long if else... there should be a way to
        automatically decide and store these values
@@ -140,19 +187,22 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
 	"""
 
+        inputs = {'yres':{'gw':{'metadata':{'options':{}}}}}
 
-        inputs = {'gw':{'gw':{'metadata':{'options':{}}}}}
+        inputs['yres']['max_restarts'] = Int(max_restarts)
 
-        inputs['gw']['max_restarts'] = Int(max_restarts)
+        inputs['yres']['gw']['settings'] = settings  #True if just p2y calculation
+        inputs['yres']['gw']['precode_parameters'] = precode_parameters #options for p2y...
+        inputs['yres']['gw']['preprocessing_code'] = preprocessing_code #p2y
+        inputs['yres']['gw']['code'] = code  #yambo executable
 
-        inputs['gw']['gw']['settings'] = settings  #True if just p2y calculation
-        inputs['gw']['gw']['precode_parameters'] = precode_parameters #options for p2y...
-        inputs['gw']['gw']['preprocessing_code'] = preprocessing_code #p2y
-        inputs['gw']['gw']['code'] = code  #yambo executable
+        inputs['yres']['gw']['parameters'] = parameters
+        inputs['yres']['gw']['metadata'] =  metadata
 
-        inputs['gw']['gw']['parameters'] = parameters
-        inputs['gw']['gw']['metadata'] =  metadata
-        inputs['parent_folder'] = parent_folder
+        try:
+            inputs['parent_folder'] = parent_folder.outputs.remote_folder
+        except:
+            pass
 
         from aiida_yambo.workflows.yambowf import YamboWorkflow
         inputs = prepare_process_inputs(YamboWorkflow, inputs)
