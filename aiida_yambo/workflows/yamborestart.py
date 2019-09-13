@@ -121,7 +121,7 @@ class YamboRestartWf(WorkChain):
             # timing errors #
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
-                                        self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart
+                                        int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
 
                 self.report(
                     "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
