@@ -127,7 +127,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         inputs['gw']['parameters'] = parameters
         inputs['gw']['metadata'] =  metadata
-        inputs['gw']['parent_folder'] = parent_folder
+        inputs['parent_folder'] = parent_folder
 
         from aiida_yambo.workflows.yamborestart import YamboRestartWf
         inputs = prepare_process_inputs(YamboRestartWf, inputs)
@@ -152,7 +152,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         inputs['gw']['gw']['parameters'] = parameters
         inputs['gw']['gw']['metadata'] =  metadata
-        inputs['gw']['gw']['parent_folder'] = parent_folder
+        inputs['parent_folder'] = parent_folder
 
         from aiida_yambo.workflows.yambowf import YamboWorkflow
         inputs = prepare_process_inputs(YamboWorkflow, inputs)

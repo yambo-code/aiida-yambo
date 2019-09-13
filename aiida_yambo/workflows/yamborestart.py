@@ -62,6 +62,7 @@ class YamboRestartWf(WorkChain):
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+
         #timing corrections -> minimum 5 minutes? must be here, check if done in parser
 
         # submission of the first try #
