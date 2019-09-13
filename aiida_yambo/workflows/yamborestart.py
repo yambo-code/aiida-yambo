@@ -57,7 +57,6 @@ class YamboRestartWf(WorkChain):
     def yambobegin(self):
         """setup of the calculation and run
         """
-
         self.ctx.restart = 0
 
         # setup #
@@ -77,6 +76,7 @@ class YamboRestartWf(WorkChain):
     def yambo_should_restart(self):
 
         """This function encodes the logic to restart calculations from failures
+        ---> I want to do the error detection at the parser level..
         """
         calc = self.ctx.calc
         self.report("Checking if yambo restart is needed")
@@ -151,7 +151,7 @@ class YamboRestartWf(WorkChain):
             #return self.exit_code.WFL_NOT_COMPLETED
 
         self.ctx.inputs.parent_folder = calc.outputs.remote_folder
-
+        self.ctx.inputs['exposed'] = str(YamboCalculation)
         inputs = generate_yambo_inputs(**self.ctx.inputs)
 
         # submission of the next try #

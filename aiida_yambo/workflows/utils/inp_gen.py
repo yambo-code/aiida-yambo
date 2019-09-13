@@ -10,8 +10,6 @@ from aiida.plugins import CalculationFactory, DataFactory
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
-from aiida_yambo.calculations.gw import YamboCalculation
-
 
 '''
 1- with these functions, we do not need to define Dict or AiiDA Data...
@@ -21,11 +19,11 @@ that are immutable...
 '''
 
 def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, metadata, \
-                       exposed = False, parent_folder = None):
+                        parent_folder = None,exposed = 'PwCalculation'):
 
-    PwCalculation = CalculationFactory('quantumespresso.pw')
 
-    if not exposed:
+
+    if exposed == 'PwCalculation':
 
         """Construct a builder for the `PwCalculation` class and populate its inputs.
 
@@ -47,12 +45,13 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
         except:
             pass
 
+        PwCalculation = CalculationFactory('quantumespresso.pw')
         inputs = prepare_process_inputs(PwCalculation, inputs)
 
         return inputs
 
 
-    else:
+    elif exposed == 'PwBaseWorkChain':
 
         ''' generation of inputs for exposed inputs such in the PwBaseWorkChain'''
 
@@ -81,11 +80,13 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
 
 def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
-                        parameters, settings, parent_folder, max_restarts = 5, exposed = False):
+                        parameters, settings, parent_folder, max_restarts = 5, exposed = 'YamboCalculation'):
 
-    #YamboCalculation = CalculationFactory('quantumespresso.pw')
+    '''This is a very long if else... there should be a way to
+       automatically decide and store these values
+    '''
 
-    if not exposed:
+    if exposed == 'YamboCalculation':
 
         """Construct a builder for the `YamboCalculation` class and populate its inputs.
 
@@ -103,11 +104,12 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         inputs['metadata'] =  metadata
         inputs['parent_folder'] = parent_folder
 
+        from aiida_yambo.calculations.gw import YamboCalculation
         inputs = prepare_process_inputs(YamboCalculation, inputs)
 
         return inputs
 
-    else:
+    elif exposed == 'YamboRestartWf':
 
         """Construct a builder for the `YamboRestart` class and populate its inputs.
 
@@ -129,5 +131,30 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         from aiida_yambo.workflows.yamborestart import YamboRestartWf
         inputs = prepare_process_inputs(YamboRestartWf, inputs)
+
+        return inputs
+
+    elif exposed == 'YamboWorkflow':
+
+        """Construct a builder for the `YamboRestart` class and populate its inputs.
+
+	"""
+
+
+        inputs = {'gw':{'gw':{'metadata':{'options':{}}}}}
+
+        inputs['gw']['max_restarts'] = Int(max_restarts)
+
+        inputs['gw']['gw']['settings'] = settings  #True if just p2y calculation
+        inputs['gw']['gw']['precode_parameters'] = precode_parameters #options for p2y...
+        inputs['gw']['gw']['preprocessing_code'] = preprocessing_code #p2y
+        inputs['gw']['gw']['code'] = code  #yambo executable
+
+        inputs['gw']['gw']['parameters'] = parameters
+        inputs['gw']['gw']['metadata'] =  metadata
+        inputs['gw']['gw']['parent_folder'] = parent_folder
+
+        from aiida_yambo.workflows.yambowf import YamboWorkflow
+        inputs = prepare_process_inputs(YamboWorkflow, inputs)
 
         return inputs

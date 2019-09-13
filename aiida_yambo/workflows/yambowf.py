@@ -125,7 +125,7 @@ class YamboWorkflow(WorkChain):
                 pass # for now...small support if no nscf parameters are given... bands from yambo inputs... and something like that
 
             self.ctx.pw_inputs['parent_folder'] = self.inputs.parent_folder
-
+            #sufficiente o vanno ricreati con prepare_process_inputs??? check
             future = self.submit(PwBaseWorkChain, **inputs)
 
             self.ctx.calc_to_do = 'yambo'
