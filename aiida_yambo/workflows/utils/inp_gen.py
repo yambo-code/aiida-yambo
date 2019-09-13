@@ -109,32 +109,6 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
     else:
 
-        """Construct a builder for the `YamboWorkflow` class and populate its inputs.
-
-	"""
-
-
-        inputs = {'gw':{'metadata':{'options':{}}}}
-
-        inputs['max_restarts'] = Int(max_restarts)
-
-        inputs['gw']['settings'] = settings  #True if just p2y calculation
-        inputs['gw']['precode_parameters'] = precode_parameters #options for p2y...
-        inputs['gw']['preprocessing_code'] = preprocessing_code #p2y
-        inputs['gw']['code'] = code  #yambo executable
-
-        inputs['gw']['parameters'] = parameters
-        inputs['gw']['metadata'] =  metadata
-        inputs['parent_folder'] = parent_folder
-
-        from aiida_yambo.workflows.yamborestart import YamboRestartWf
-        inputs = prepare_process_inputs(YamboRestartWf, inputs)
-
-        return inputs
-
-    '''
-    else:
-
         """Construct a builder for the `YamboRestart` class and populate its inputs.
 
 	"""
@@ -157,4 +131,3 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         inputs = prepare_process_inputs(YamboRestartWf, inputs)
 
         return inputs
-    '''
