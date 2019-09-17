@@ -31,7 +31,7 @@ class YamboConvergence(WorkChain):
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
-                     while_(cls.not_converged)(
+                     while_(cls.continue)(
                      cls.next_step,
                      cls.conv_eval),
                      cls.report_wf,
@@ -50,10 +50,10 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.converged = False
         self.ctx.fully_converged = False
-
+        self.ctx.act_var = self.ctx.variables.popitem()
         self.report("workflow initilization step completed.")
 
-    def not_converged(self):
+    def continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
 
@@ -64,12 +64,13 @@ class YamboConvergence(WorkChain):
         elif not self.ctx.converged:
             self.report('still trying same variable convergence')
             #update params
-
+                #automatically done? try it
             return True
 
-        elif self.ctx.converged and not  self.ctx.fully_converged:
+        elif self.ctx.converged and not self.ctx.fully_converged:
             self.report('next variable to converge')
             #update variable
+            self.ctx.act_var = self.ctx.variables.popitem()
             return True
 
 
@@ -78,12 +79,12 @@ class YamboConvergence(WorkChain):
 
         #loop on the given steps of a given variable to make convergence
 
-        self.ctx.delta = self.ctx.variables[str(self.ctx.act_var)]['delta']
-        self.ctx.steps = self.ctx.variables[str(self.ctx.act_var)]['steps']
+        self.ctx.delta = self.ctx.act_var[1]['delta']
+        self.ctx.steps = self.ctx.act_var[1]['steps']
 
-        for i in range(self.ctx.steps):
+        for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
 
-            self.ctx.inputs[self.ctx.act_var] = self.ctx.inputs[self.ctx.act_var] + i*self.ctx.delta
+            self.ctx.inputs[str(self.ctx.act_var[0])] = self.ctx.inputs[str(self.ctx.act_var[0])] + i*self.ctx.delta
             future = self.submit(YamboWorkflow, **self.ctx.inputs)
             calc[i] = future
 
@@ -93,7 +94,7 @@ class YamboConvergence(WorkChain):
     def conv_eval(self):
 
         self.report('convergence evaluation')
-       
+
         #self.ctx.converged = True or # NOTE:
 
         #if all var are ok: self.ctx.fully_converged = True
