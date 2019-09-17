@@ -51,6 +51,7 @@ class YamboConvergence(WorkChain):
         self.ctx.converged = False
         self.ctx.fully_converged = False
         self.ctx.act_var = self.ctx.variables.popitem()
+        
         self.report("workflow initilization step completed.")
 
     def continue(self):
