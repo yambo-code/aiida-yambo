@@ -86,7 +86,7 @@ class YamboConvergence(WorkChain):
 
 
     def next_step(self):
-        """This function  will submit the next step"""
+        """This function will submit the next step"""
 
         #loop on the given steps of a given variable to make convergence
 
@@ -116,8 +116,10 @@ class YamboConvergence(WorkChain):
 
         self.report('convergence evaluation')
 
-        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window)
-        conv_fit = fit_eval(self.ctx.conv_thr)
+        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, **self.ctx.calc)
+
+        if converged:
+            conv_fit = fit_eval(self.ctx.conv_thr)
 
         if converged and conv_fit:
             self.ctx.converged = True

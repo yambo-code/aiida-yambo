@@ -11,8 +11,6 @@ from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pse
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
-from aiida_yambo.calculations.gw import YamboCalculation
-
 '''
-error handler for YamboCalculation 
+convergence functions for gw convergences.
 '''
