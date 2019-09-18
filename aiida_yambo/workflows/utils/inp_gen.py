@@ -208,3 +208,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         inputs = prepare_process_inputs(YamboWorkflow, inputs)
 
         return inputs
+
+
+#for YamboConvergence:
+def get_updated_mesh(mesh,i,delta):

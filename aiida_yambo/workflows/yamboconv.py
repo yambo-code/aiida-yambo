@@ -51,7 +51,7 @@ class YamboConvergence(WorkChain):
         self.ctx.converged = False
         self.ctx.fully_converged = False
         self.ctx.act_var = self.ctx.variables.popitem()
-        
+
         self.report("workflow initilization step completed.")
 
     def continue(self):
@@ -85,7 +85,17 @@ class YamboConvergence(WorkChain):
 
         for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
 
-            self.ctx.inputs[str(self.ctx.act_var[0])] = self.ctx.inputs[str(self.ctx.act_var[0])] + i*self.ctx.delta
+            if type(self.ctx.act_var[0]) == list: #bands!!
+
+                self.ctx.inputs[str(self.ctx.act_var[0][-1])] = self.ctx.inputs[str(self.ctx.act_var[0][-1])] + i*self.ctx.delta
+
+            elif str(self.ctx.act_var[0] == 'kpoints': #meshes are different.
+
+                self.ctx.inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.inputs[str(self.ctx.act_var[0])],i,self.ctx.delta)
+
+            else: #scalar
+                self.ctx.inputs[str(self.ctx.act_var[0])] = self.ctx.inputs[str(self.ctx.act_var[0])] + i*self.ctx.delta
+
             future = self.submit(YamboWorkflow, **self.ctx.inputs)
             calc[i] = future
 
