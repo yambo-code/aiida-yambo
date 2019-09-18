@@ -211,4 +211,15 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
 
 #for YamboConvergence:
-def get_updated_mesh(mesh,i,delta):
+def get_updated_mesh(starting_mesh,i,delta):
+
+    mesh, shift = starting_mesh.get_kpoints_mesh()
+
+    for j in range(0,3):
+        if mesh[j] != 1:
+            mesh[j] = mesh[j]*(delta+i)
+
+
+    new_mesh  = DataFactory('array.kpoints').set_kpoints_mesh(mesh, shift)
+
+    return new_mesh
