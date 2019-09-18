@@ -26,7 +26,7 @@ class YamboConvergence(WorkChain):
         spec.expose_inputs(YamboWorkflow, namespace='ywfl')
 
         spec.input("variables", valid_type=Dict, required=False, \
-                    help = 'variables to converge, range and steps')
+                    help = 'variables to converge, range, steps, and max restarts')
 
 ##################################### OUTLINE ####################################
 
@@ -51,28 +51,38 @@ class YamboConvergence(WorkChain):
         self.ctx.converged = False
         self.ctx.fully_converged = False
         self.ctx.act_var = self.ctx.variables.popitem()
+        self.ctx.max_restarts = self.ctx.act_var[1]['max_restarts'] #for the actual variable!
+        self.ctx.conv_thr = self.ctx.act_var[1]['conv_thr'] #threeshold
+        self.ctx.conv_window = self.ctx.act_var[1]['conv_window'] #conv_window: previous n calcs
 
         self.report("workflow initilization step completed.")
 
     def continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-
-        if self.ctx.converged and self.ctx.fully_converged:
-            self.report('the workflow is finished')
+        if self.ctx.act_var == {} or max restart exceeded:
             return False
 
-        elif not self.ctx.converged:
-            self.report('still trying same variable convergence')
-            #update params
-                #automatically done? try it
-            return True
+        else:
 
-        elif self.ctx.converged and not self.ctx.fully_converged:
-            self.report('next variable to converge')
-            #update variable
-            self.ctx.act_var = self.ctx.variables.popitem()
-            return True
+            if self.ctx.converged and self.ctx.fully_converged:
+                self.report('the workflow is finished')
+                return False
+
+            elif not self.ctx.converged:
+                self.report('still trying same variable convergence')
+                #update params
+                    #automatically done? try it
+                return True
+
+            elif self.ctx.converged and not self.ctx.fully_converged:
+                self.report('next variable to converge')
+                #update variable
+                self.ctx.act_var = self.ctx.variables.popitem()
+                self.ctx.max_restarts = self.ctx.act_var[1]['max_restarts']
+                self.ctx.conv_thr = self.ctx.act_var[1]['conv_thr']
+                self.ctx.conv_window = self.ctx.act_var[1]['conv_window']
+                return True
 
 
     def next_step(self):
@@ -91,7 +101,7 @@ class YamboConvergence(WorkChain):
 
             elif str(self.ctx.act_var[0] == 'kpoints': #meshes are different.
 
-                self.ctx.inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.inputs[str(self.ctx.act_var[0])],i,self.ctx.delta)
+                self.ctx.inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.inputs[str(self.ctx.act_var[0])],i , self.ctx.delta)
 
             else: #scalar
                 self.ctx.inputs[str(self.ctx.act_var[0])] = self.ctx.inputs[str(self.ctx.act_var[0])] + i*self.ctx.delta
@@ -106,15 +116,20 @@ class YamboConvergence(WorkChain):
 
         self.report('convergence evaluation')
 
-        #self.ctx.converged = True or # NOTE:
+        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window)
+        conv_fit = fit_eval(self.ctx.conv_thr)
 
-        #if all var are ok: self.ctx.fully_converged = True
+        if converged and conv_fit:
+            self.ctx.converged = True
+        else:
+            self.ctx.converged = False
+
 
     def report_wf(self):
 
         self.report('Final step.')
-
-        calc = self.ctx.calc
+        self.report('Converged variables:')
+        #Dict with converged params
 
 if __name__ == "__main__":
     pass
