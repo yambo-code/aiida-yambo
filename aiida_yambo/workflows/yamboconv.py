@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import Dict
+from aiida.orm import Dict, Str
 
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
@@ -25,30 +25,29 @@ class YamboConvergence(WorkChain):
 
         spec.expose_inputs(YamboWorkflow, namespace='ywfl')
 
-        spec.input("variables", valid_type=Dict, required=False, \
+        spec.input("var_to_conv", valid_type=Dict, required=False, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("fit_type", valid_type=Str, required=False, default='1/x', \
-                    help = 'fit to converge: of 1/x or e^-x')
+        spec.input("fit_options", valid_type=Dict, required=True, \
+                    help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
                     while_(cls.has_to_continue)(
-                    cls.next_step,
-                    #cls.conv_eval),
-                    #cls.report_wf,
+                    cls.next_step), #cls.conv_eval
+                    cls.report_wf,
                     )
 
 ##################################################################################
 
         #spec.output('yambo_calc_folder', valid_type = RemoteData,
-            help='The final yambo calculation remote folder.')
+            #help='The final yambo calculation remote folder.')
 
     def start_workflow(self):
         """Initialize the workflow"""
 
 
-        self.ctx.variables = self.inputs.variables.get_dict()
+        self.ctx.variables = self.inputs.var_to_conv.get_dict()
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.converged = False
         self.ctx.fully_converged = False
@@ -100,23 +99,24 @@ class YamboConvergence(WorkChain):
 
             if type(self.ctx.act_var[0]) == list: #bands!!
 
-                self.ctx.inputs[str(self.ctx.act_var[0][-1])] = self.ctx.inputs[str(self.ctx.act_var[0][-1])] + i*self.ctx.delta
+                self.ctx.calc_inputs[str(self.ctx.act_var[0][-1])] = self.ctx.calc_inputs[str(self.ctx.act_var[0][-1])] + i*self.ctx.delta
 
             elif str(self.ctx.act_var[0]) == 'kpoints': #meshes are different.
 
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                self.ctx.inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.inputs[str(self.ctx.act_var[0])], i, self.ctx.delta)
+                self.ctx.calc_inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.calc_inputs[str(self.ctx.act_var[0])], i, self.ctx.delta)
 
-            else: #scalar
-                self.ctx.inputs[str(self.ctx.act_var[0])] = self.ctx.inputs[str(self.ctx.act_var[0])] + i*self.ctx.delta
+            else: #"scalar" quantity
+                self.ctx.calc_inputs.yres.gw.parameters[str(self.ctx.act_var[0])] = self.ctx.calc_inputs.yres.gw.parameters[str(self.ctx.act_var[0])] \
+                                                                                    + i*self.ctx.delta
 
-            future = self.submit(YamboWorkflow, **self.ctx.inputs)
+            future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[i] = future
 
 
         return ToContext(**calc)
 
-'''
+    '''
     def conv_eval(self):
 
         self.report('convergence evaluation')
@@ -124,19 +124,19 @@ class YamboConvergence(WorkChain):
         converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.calc)
 
         if converged:
-            conv_fit = fit_eval(self.ctx.conv_thr, self.input.fit_type, self.ctx.calc)
+            conv_fit = fit_eval(self.ctx.conv_thr, self.input.fit_options, self.ctx.calc)
 
         if converged and conv_fit:
             self.ctx.converged = True
         else:
             self.ctx.converged = False
 
-
+    '''
     def report_wf(self):
 
         self.report('Final step.')
         self.report('Converged variables:')
         #Dict with converged params
-'''
+
 if __name__ == "__main__":
     pass

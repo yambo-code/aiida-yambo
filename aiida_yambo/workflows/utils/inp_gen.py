@@ -126,53 +126,6 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
         return inputs
 
-    elif type_calc == 'scf in YamboConvergence':
-
-        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
-
-        inputs = {'ywfl':{'scf':{'pw':{'metadata':{'options':{}}}}}}
-
-
-        inputs['ywfl']['scf']['kpoints'] = kpoints
-
-        #type_calc  inputs:
-
-        inputs['ywfl']['scf']['pw']['code'] = code
-        inputs['ywfl']['scf']['pw']['structure'] = structure
-        inputs['ywfl']['scf']['pw']['parameters'] = parameters
-        inputs['ywfl']['scf']['pw']['pseudos'] = validate_and_prepare_pseudos_inputs(
-            structure, pseudo_family = Str(pseudo_family))
-        inputs['ywfl']['scf']['pw']['metadata'] =  metadata
-
-        from aiida_yambo.workflows.yambconv import YamboConvergence
-        inputs = prepare_process_inputs(YamboConvergence, inputs)
-
-        return inputs
-
-    elif type_calc == 'nscf in YamboConvergence':
-
-        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
-
-        inputs = {'nscf':{'pw':{'metadata':{'options':{}}}}}
-
-
-        inputs['nscf']['kpoints'] = kpoints
-
-        #type_calc  inputs:
-
-        inputs['nscf']['pw']['code'] = code
-        inputs['nscf']['pw']['structure'] = structure
-        inputs['nscf']['pw']['parameters'] = parameters
-        inputs['nscf']['pw']['pseudos'] = validate_and_prepare_pseudos_inputs(
-            structure, pseudo_family = Str(pseudo_family))
-        inputs['nscf']['pw']['metadata'] =  metadata
-
-
-        from aiida_yambo.workflows.yambconv import YamboConvergence
-        inputs = prepare_process_inputs(YamboConvergence, inputs)
-
-        return inputs
-
 
 def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
                         parameters, settings, parent_folder = None, max_restarts = 5, type_calc = 'YamboCalculation'):
@@ -257,34 +210,24 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         return inputs
 
-    elif type_calc == 'YamboConvergence':
+def generate_yambo_convergence_inputs(yambo,  var_to_conv, fit_options, scf, nscf):
 
-        """Construct a builder for the `YamboConvergence` class and populate its inputs.
+    wfl_dict = {**scf, **nscf, **yambo}
 
-	"""
+    inputs = {'ywfl': wfl_dict}
 
-        inputs = {'ywfl':{'yres':{'gw':{'metadata':{'options':{}}}}}}
+    inputs['var_to_conv']= Dict(dict=var_to_conv)
+    inputs['fit_options'] = Dict(dict=fit_options)
 
-        inputs['ywfl']['yres']['max_restarts'] = Int(max_restarts)
+    from aiida_yambo.workflows.yamboconv import YamboConvergence
+    inputs = prepare_process_inputs(YamboConvergence, inputs)
 
-        inputs['ywfl']['yres']['gw']['settings'] = settings  #True if just p2y calculation
-        inputs['ywfl']['yres']['gw']['precode_parameters'] = precode_parameters #options for p2y...
-        inputs['ywfl']['yres']['gw']['preprocessing_code'] = preprocessing_code #p2y
-        inputs['ywfl']['yres']['gw']['code'] = code  #yambo executable
+    return inputs
 
-        inputs['ywfl']['yres']['gw']['parameters'] = parameters
-        inputs['ywfl']['yres']['gw']['metadata'] =  metadata
 
-        try:
-            inputs['ywfl']['parent_folder'] = parent_folder.outputs.remote_folder
-        except:
-            pass
 
-        from aiida_yambo.workflows.yambconv import YamboConvergence
-        inputs = prepare_process_inputs(YamboConvergence, inputs)
-
-        return inputs
-
+################################################################################
+################################################################################
 
 
 #for YamboConvergence:
@@ -300,6 +243,19 @@ def get_updated_mesh(starting_mesh,i,delta):
     new_mesh  = DataFactory('array.kpoints').set_kpoints_mesh(mesh, shift)
 
     return new_mesh
+
+
+
+################################################################################
+################################################################################
+
+
+
+
+
+
+
+
 
 def recursive_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
                         parameters, settings, parent_folder = None, max_restarts = 5, type_calc = 'YamboCalculation'):
