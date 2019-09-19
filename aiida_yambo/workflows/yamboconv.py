@@ -101,7 +101,8 @@ class YamboConvergence(WorkChain):
 
             elif str(self.ctx.act_var[0] == 'kpoints': #meshes are different.
 
-                self.ctx.inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.inputs[str(self.ctx.act_var[0])],i , self.ctx.delta)
+                from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
+                self.ctx.inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.inputs[str(self.ctx.act_var[0])], i, self.ctx.delta)
 
             else: #scalar
                 self.ctx.inputs[str(self.ctx.act_var[0])] = self.ctx.inputs[str(self.ctx.act_var[0])] + i*self.ctx.delta
