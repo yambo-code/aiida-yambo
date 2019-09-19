@@ -9,6 +9,8 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
+from aiida_quantumespresso.utils.mapping import update_mapping
+
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 
 class YamboConvergence(WorkChain):
@@ -91,13 +93,15 @@ class YamboConvergence(WorkChain):
         """This function will submit the next step"""
 
         #loop on the given steps of a given variable to make convergence
-
         self.ctx.delta = self.ctx.act_var[1]['delta']
         self.ctx.steps = self.ctx.act_var[1]['steps']
 
+        calc = {}
+
         for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
 
-            if type(self.ctx.act_var[0]) == list: #bands!!
+            if type(self.ctx.act_var[0]) == list: #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
+                                                 #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
                 self.ctx.calc_inputs[str(self.ctx.act_var[0][-1])] = self.ctx.calc_inputs[str(self.ctx.act_var[0][-1])] + i*self.ctx.delta
 
@@ -107,12 +111,16 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs[str(self.ctx.act_var[0])] = get_updated_mesh(self.ctx.calc_inputs[str(self.ctx.act_var[0])], i, self.ctx.delta)
 
             else: #"scalar" quantity
-                self.ctx.calc_inputs.yres.gw.parameters[str(self.ctx.act_var[0])] = self.ctx.calc_inputs.yres.gw.parameters[str(self.ctx.act_var[0])] \
-                                                                                    + i*self.ctx.delta
+
+                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
+                self.ctx.new_params[str(self.ctx.act_var[0])] = self.ctx.new_params[str(self.ctx.act_var[0])] + i*self.ctx.delta
+
+                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+
+
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[i] = future
-
+            calc[str(i)] = future         #va cambiata eh!!!
 
         return ToContext(**calc)
 
