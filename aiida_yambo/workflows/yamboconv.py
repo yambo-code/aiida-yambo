@@ -35,13 +35,13 @@ class YamboConvergence(WorkChain):
         spec.outline(cls.start_workflow,
                     while_(cls.has_to_continue)(
                     cls.next_step,
-                    cls.conv_eval),
-                    cls.report_wf,
+                    #cls.conv_eval),
+                    #cls.report_wf,
                     )
 
 ##################################################################################
 
-        spec.output('yambo_calc_folder', valid_type = RemoteData,
+        #spec.output('yambo_calc_folder', valid_type = RemoteData,
             help='The final yambo calculation remote folder.')
 
     def start_workflow(self):
@@ -57,7 +57,7 @@ class YamboConvergence(WorkChain):
         self.ctx.conv_thr = self.ctx.act_var[1]['conv_thr'] #threeshold
         self.ctx.conv_window = self.ctx.act_var[1]['conv_window'] #conv_window: previous n calcs
         self.ctx.iter = 0
-        
+
         self.report("workflow initilization step completed.")
 
     def has_to_continue(self):

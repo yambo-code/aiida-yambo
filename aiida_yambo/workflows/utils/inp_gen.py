@@ -5,7 +5,7 @@ import numpy as np
 from collections.abc import Mapping
 
 from aiida.orm import Dict, Str, Int, RemoteData
-from aiida.plugins import CalculationFactory, DataFactory
+from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
@@ -17,6 +17,7 @@ that are immutable...
 2 - the namespace maybe is possibly automatically detected when you specify the calculation/workchain... try to look in qe prepare_process_inputs...
 3 - moreover, the number of inputs has to be determnined automatically, so that I have not to include it by hand
 '''
+#YamboRestart = WorkflowFactory('yambo.yambo.yamborestart')
 
 def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, metadata, \
                         parent_folder = None , type_calc = 'PwCalculation'):
@@ -122,6 +123,53 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
         from aiida_yambo.workflows.yambowf import YamboWorkflow
         inputs = prepare_process_inputs(YamboWorkflow, inputs)
+
+        return inputs
+
+    elif type_calc == 'scf in YamboConvergence':
+
+        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
+
+        inputs = {'ywfl':{'scf':{'pw':{'metadata':{'options':{}}}}}}
+
+
+        inputs['ywfl']['scf']['kpoints'] = kpoints
+
+        #type_calc  inputs:
+
+        inputs['ywfl']['scf']['pw']['code'] = code
+        inputs['ywfl']['scf']['pw']['structure'] = structure
+        inputs['ywfl']['scf']['pw']['parameters'] = parameters
+        inputs['ywfl']['scf']['pw']['pseudos'] = validate_and_prepare_pseudos_inputs(
+            structure, pseudo_family = Str(pseudo_family))
+        inputs['ywfl']['scf']['pw']['metadata'] =  metadata
+
+        from aiida_yambo.workflows.yambconv import YamboConvergence
+        inputs = prepare_process_inputs(YamboConvergence, inputs)
+
+        return inputs
+
+    elif type_calc == 'nscf in YamboConvergence':
+
+        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
+
+        inputs = {'nscf':{'pw':{'metadata':{'options':{}}}}}
+
+
+        inputs['nscf']['kpoints'] = kpoints
+
+        #type_calc  inputs:
+
+        inputs['nscf']['pw']['code'] = code
+        inputs['nscf']['pw']['structure'] = structure
+        inputs['nscf']['pw']['parameters'] = parameters
+        inputs['nscf']['pw']['pseudos'] = validate_and_prepare_pseudos_inputs(
+            structure, pseudo_family = Str(pseudo_family))
+        inputs['nscf']['pw']['metadata'] =  metadata
+
+
+        from aiida_yambo.workflows.yambconv import YamboConvergence
+        inputs = prepare_process_inputs(YamboConvergence, inputs)
 
         return inputs
 
@@ -232,8 +280,8 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         except:
             pass
 
-        from aiida_yambo.workflows.yambowf import YamboWorkflow
-        inputs = prepare_process_inputs(YamboWorkflow, inputs)
+        from aiida_yambo.workflows.yambconv import YamboConvergence
+        inputs = prepare_process_inputs(YamboConvergence, inputs)
 
         return inputs
 
@@ -265,8 +313,6 @@ def recursive_yambo_inputs(metadata, preprocessing_code, precode_parameters, cod
         """Construct a builder for the `YamboCalculation` class and populate its inputs.
 
 	"""
-
-
         inputs = {}
 
         inputs['settings'] = settings  #True if just p2y calculation
@@ -289,6 +335,8 @@ def recursive_yambo_inputs(metadata, preprocessing_code, precode_parameters, cod
 
 	"""
         inputs = {'gw': recursive_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
-                                parameters, settings, parent_folder, max_restart, type_calc = 'YamboCalculation')
-
+                                parameters, settings, parent_folder, max_restarts, type_calc = 'YamboCalculation').get_dict()}
+        inputs['parent_folder'] = inputs['gw'].pop('parent_folder')
+        from aiida_yambo.workflows.yamborestart import YamboRestartWf
+        inputs = prepare_process_inputs(YamboRestartWf, inputs)
         return inputs

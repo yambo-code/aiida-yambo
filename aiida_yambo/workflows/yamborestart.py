@@ -152,7 +152,7 @@ class YamboRestartWf(WorkChain):
             #return self.exit_code.WFL_NOT_COMPLETED
 
         self.ctx.inputs.parent_folder = calc.outputs.remote_folder
-        self.ctx.inputs['exposed'] = str(YamboCalculation)
+        self.ctx.inputs['type_calc'] = str(YamboCalculation)
         inputs = generate_yambo_inputs(**self.ctx.inputs)
 
         # submission of the next try #
