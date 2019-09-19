@@ -33,7 +33,8 @@ class YamboConvergence(WorkChain):
         spec.outline(cls.start_workflow,
                      while_(cls.continue)(
                      cls.next_step,
-                     cls.conv_eval),
+                     cls.conv_eval,
+                     ),
                      cls.report_wf,
                      )
 
