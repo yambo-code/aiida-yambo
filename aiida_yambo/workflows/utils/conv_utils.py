@@ -14,3 +14,22 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 '''
 convergence functions for gw convergences.
 '''
+
+def conv_eval(thr, window, calculations):
+
+    for i in range(1, window):
+        gaps = calculations.output.something
+        delta[i] = gaps[i+1]-gaps[i]
+    if (delta[i] for i in range(1,len(calculations))) => thr:
+        conv = False
+    else:
+        conv = True
+
+    return conv
+
+def fit_eval(thr, fit_type, calculations):
+
+    if fit_type == '1/x':
+        #def f(a,b,c)
+    elif fit_type == 'e^-x':
+        #def f(a,b,c)

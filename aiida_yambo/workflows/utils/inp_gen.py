@@ -19,11 +19,11 @@ that are immutable...
 '''
 
 def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, metadata, \
-                        parent_folder = None , exposed = 'PwCalculation'):
+                        parent_folder = None , type_calc = 'PwCalculation'):
 
 
 
-    if exposed == 'PwCalculation':
+    if type_calc == 'PwCalculation':
 
         """Construct a builder for the `PwCalculation` class and populate its inputs.
 
@@ -51,16 +51,16 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
         return inputs
 
 
-    elif exposed == 'PwBaseWorkChain':
+    elif type_calc == 'PwBaseWorkChain':
 
-        ''' generation of inputs for exposed inputs such in the PwBaseWorkChain'''
+        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
 
         inputs ={'pw':{'metadata':{'options':{}}}}
 
 
         inputs['kpoints'] = kpoints
 
-        #exposed  inputs:
+        #type_calc  inputs:
 
         inputs['pw']['code'] = code
         inputs['pw']['structure'] = structure
@@ -78,16 +78,16 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
         return inputs
 
-    elif exposed == 'scf in YamboWorkflow':
+    elif type_calc == 'scf in YamboWorkflow':
 
-        ''' generation of inputs for exposed inputs such in the PwBaseWorkChain'''
+        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
 
         inputs = {'scf':{'pw':{'metadata':{'options':{}}}}}
 
 
         inputs['scf']['kpoints'] = kpoints
 
-        #exposed  inputs:
+        #type_calc  inputs:
 
         inputs['scf']['pw']['code'] = code
         inputs['scf']['pw']['structure'] = structure
@@ -101,16 +101,16 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
         return inputs
 
-    elif exposed == 'nscf in YamboWorkflow':
+    elif type_calc == 'nscf in YamboWorkflow':
 
-        ''' generation of inputs for exposed inputs such in the PwBaseWorkChain'''
+        ''' generation of inputs for type_calc inputs such in the PwBaseWorkChain'''
 
         inputs = {'nscf':{'pw':{'metadata':{'options':{}}}}}
 
 
         inputs['nscf']['kpoints'] = kpoints
 
-        #exposed  inputs:
+        #type_calc  inputs:
 
         inputs['nscf']['pw']['code'] = code
         inputs['nscf']['pw']['structure'] = structure
@@ -127,13 +127,13 @@ def generate_pw_inputs(structure, code, pseudo_family, parameters, kpoints, meta
 
 
 def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
-                        parameters, settings, parent_folder = None, max_restarts = 5, exposed = 'YamboCalculation'):
+                        parameters, settings, parent_folder = None, max_restarts = 5, type_calc = 'YamboCalculation'):
 
     '''This is a very long if else... there should be a way to
        automatically decide and store these values
     '''
 
-    if exposed == 'YamboCalculation':
+    if type_calc == 'YamboCalculation':
 
         """Construct a builder for the `YamboCalculation` class and populate its inputs.
 
@@ -156,7 +156,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         return inputs
 
-    elif exposed == 'YamboRestartWf':
+    elif type_calc == 'YamboRestartWf':
 
         """Construct a builder for the `YamboRestart` class and populate its inputs.
 
@@ -181,7 +181,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         return inputs
 
-    elif exposed == 'YamboWorkflow':
+    elif type_calc == 'YamboWorkflow':
 
         """Construct a builder for the `YamboRestart` class and populate its inputs.
 
@@ -209,6 +209,35 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         return inputs
 
+    elif type_calc == 'YamboConvergence':
+
+        """Construct a builder for the `YamboConvergence` class and populate its inputs.
+
+	"""
+
+        inputs = {'ywfl':{'yres':{'gw':{'metadata':{'options':{}}}}}}
+
+        inputs['ywfl']['yres']['max_restarts'] = Int(max_restarts)
+
+        inputs['ywfl']['yres']['gw']['settings'] = settings  #True if just p2y calculation
+        inputs['ywfl']['yres']['gw']['precode_parameters'] = precode_parameters #options for p2y...
+        inputs['ywfl']['yres']['gw']['preprocessing_code'] = preprocessing_code #p2y
+        inputs['ywfl']['yres']['gw']['code'] = code  #yambo executable
+
+        inputs['ywfl']['yres']['gw']['parameters'] = parameters
+        inputs['ywfl']['yres']['gw']['metadata'] =  metadata
+
+        try:
+            inputs['ywfl']['parent_folder'] = parent_folder.outputs.remote_folder
+        except:
+            pass
+
+        from aiida_yambo.workflows.yambowf import YamboWorkflow
+        inputs = prepare_process_inputs(YamboWorkflow, inputs)
+
+        return inputs
+
+
 
 #for YamboConvergence:
 def get_updated_mesh(starting_mesh,i,delta):
@@ -223,3 +252,43 @@ def get_updated_mesh(starting_mesh,i,delta):
     new_mesh  = DataFactory('array.kpoints').set_kpoints_mesh(mesh, shift)
 
     return new_mesh
+
+def recursive_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
+                        parameters, settings, parent_folder = None, max_restarts = 5, type_calc = 'YamboCalculation'):
+
+    '''This is a very long if else... there should be a way to
+       automatically decide and store these values
+    '''
+
+    if type_calc == 'YamboCalculation':
+
+        """Construct a builder for the `YamboCalculation` class and populate its inputs.
+
+	"""
+
+
+        inputs = {}
+
+        inputs['settings'] = settings  #True if just p2y calculation
+        inputs['precode_parameters']= precode_parameters #options for p2y...
+        inputs['preprocessing_code'] = preprocessing_code #p2y
+        inputs['code'] = code  #yambo executable
+
+        inputs['parameters'] = parameters
+        inputs['metadata'] =  metadata
+        inputs['parent_folder'] = parent_folder
+
+        from aiida_yambo.calculations.gw import YamboCalculation
+        inputs = prepare_process_inputs(YamboCalculation, inputs)
+
+        return inputs
+
+    elif type_calc == 'YamboRestartWf':
+
+        """Construct a builder for the `YamboRestart` class and populate its inputs.
+
+	"""
+        inputs = {'gw': recursive_yambo_inputs(metadata, preprocessing_code, precode_parameters, code, \
+                                parameters, settings, parent_folder, max_restart, type_calc = 'YamboCalculation')
+
+        return inputs
