@@ -58,7 +58,10 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
-        self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
+        try:
+            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
+        except:
+            pass
 
         self.ctx.variables = self.inputs.var_to_conv.get_dict()
         self.ctx.act_var = self.ctx.variables.popitem()
