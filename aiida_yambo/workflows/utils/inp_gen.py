@@ -240,8 +240,8 @@ def get_updated_mesh(starting_mesh,i,delta):
 
     for j in range(0,3):
         if mesh[j] != 1:
-            mesh[j] = mesh[j]*(delta+i)
-
+            mesh[j] = mesh[j]+(i-1)*delta
+            #mesh[j] = mesh[j]+(i-1)*delta
 
     new_mesh  = KpointsData()
     new_mesh.set_kpoints_mesh(mesh, shift)

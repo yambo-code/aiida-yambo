@@ -15,7 +15,7 @@ from aiida_yambo.workflows.yambowf import YamboWorkflow
 
 class YamboConvergence(WorkChain):
 
-    """This workflow will perform yambo convergences.
+    """This workflow will perform yambo convergences with the respect to the gap at gamma... In future for multiple k points.
     """
 
     @classmethod
@@ -44,8 +44,10 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        #spec.output('yambo_calc_folder', valid_type = RemoteData,
-            #help='The final yambo calculation remote folder.')
+        #spec.output('convergence_history', valid_type = Str,
+            #help='The convergence path.')
+        #plots of single and multiple convergences, with data.txt to plot whenever you want
+        #fitting just the last conv window, but plotting all
 
     def start_workflow(self):
         """Initialize the workflow"""
