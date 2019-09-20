@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import Dict, Str
+from aiida.orm import Dict, Str, KpointsData
 
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
@@ -27,7 +27,7 @@ class YamboConvergence(WorkChain):
 
         spec.expose_inputs(YamboWorkflow, namespace='ywfl', exclude = ('scf.kpoints', 'nscf.kpoints'))
 
-        spec.inputs('kpoints', valid_type=KpointData, required = True)
+        spec.input('kpoints', valid_type=KpointsData, required = True)
 
         spec.input("var_to_conv", valid_type=Dict, required=False, \
                     help = 'variables to converge, range, steps, and max restarts')
@@ -110,8 +110,7 @@ class YamboConvergence(WorkChain):
             elif str(self.ctx.act_var[0]) == 'kpoints': #meshes are different.
 
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                kpoints_mesh = self.inputs.kpoints.get_kpoints_mesh()
-                self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints.set_kpoints_mesh([kpoints_mesh] * 2)#get_updated_mesh(self.ctx.calc_inputs[str(self.ctx.act_var[0])], i, self.ctx.delta)
+                self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.inputs.kpoints, i, self.ctx.delta)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
 
             else: #"scalar" quantity

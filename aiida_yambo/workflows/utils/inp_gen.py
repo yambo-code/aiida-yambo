@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import numpy as np
 from collections.abc import Mapping
 
-from aiida.orm import Dict, Str, Int, RemoteData
+from aiida.orm import Dict, Str, Int, RemoteData, KpointsData
 from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
@@ -217,7 +217,7 @@ def generate_yambo_convergence_inputs(yambo,  var_to_conv, fit_options, scf, nsc
     inputs = {'ywfl': wfl_dict}
 
     inputs['kpoints'] = inputs['ywfl']['scf'].pop('kpoints')
-    inputs['kpoints'] = inputs['ywfl']['scf'].pop('kpoints')
+    inputs['kpoints'] = inputs['ywfl']['nscf'].pop('kpoints')
 
     inputs['var_to_conv'] = Dict(dict=var_to_conv)
     inputs['fit_options'] = Dict(dict=fit_options)
@@ -243,7 +243,8 @@ def get_updated_mesh(starting_mesh,i,delta):
             mesh[j] = mesh[j]*(delta+i)
 
 
-    new_mesh  = DataFactory('array.kpoints').set_kpoints_mesh(mesh, shift)
+    new_mesh  = KpointsData()
+    new_mesh.set_kpoints_mesh(mesh, shift)
 
     return new_mesh
 
