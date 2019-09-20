@@ -104,10 +104,14 @@ class YamboConvergence(WorkChain):
 
         for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
 
-            if type(self.ctx.act_var[0]) == list: #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
+            if type(self.ctx.act_var[0]) == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
                                                  #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
-                self.ctx.calc_inputs[str(self.ctx.act_var[0][-1])] = self.ctx.calc_inputs[str(self.ctx.act_var[0][-1])] + i*self.ctx.delta
+                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
+                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + i*self.ctx.delta
+                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + i*self.ctx.delta
+
+                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
             elif str(self.ctx.act_var[0]) == 'kpoints': #meshes are different.
 
