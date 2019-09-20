@@ -216,7 +216,10 @@ def generate_yambo_convergence_inputs(yambo,  var_to_conv, fit_options, scf, nsc
 
     inputs = {'ywfl': wfl_dict}
 
-    inputs['var_to_conv']= Dict(dict=var_to_conv)
+    inputs['kpoints'] = inputs['ywfl']['scf'].pop('kpoints')
+    inputs['kpoints'] = inputs['ywfl']['scf'].pop('kpoints')
+
+    inputs['var_to_conv'] = Dict(dict=var_to_conv)
     inputs['fit_options'] = Dict(dict=fit_options)
 
     from aiida_yambo.workflows.yamboconv import YamboConvergence
