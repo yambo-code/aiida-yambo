@@ -53,17 +53,26 @@ class YamboConvergence(WorkChain):
         """Initialize the workflow"""
 
 
-        self.ctx.variables = self.inputs.var_to_conv.get_dict()
+
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-        self.ctx.converged = False
-        self.ctx.fully_converged = False
+        self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
+        self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
+
+        self.ctx.variables = self.inputs.var_to_conv.get_dict()
         self.ctx.act_var = self.ctx.variables.popitem()
         self.ctx.max_restarts = self.ctx.act_var[1]['max_restarts'] #for the actual variable!
         self.ctx.conv_thr = self.ctx.act_var[1]['conv_thr'] #threeshold
         self.ctx.conv_window = self.ctx.act_var[1]['conv_window'] #conv_window: previous n calcs
+
+
+        self.ctx.converged = False
+        self.ctx.fully_converged = False
+
+
         self.ctx.iter = 0
 
-        self.report("workflow initilization step completed.")
+
+        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var[0]))
 
     def has_to_continue(self):
 
@@ -104,7 +113,7 @@ class YamboConvergence(WorkChain):
 
         for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
 
-            if type(self.ctx.act_var[0]) == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
+            if self.ctx.act_var[0] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
                                                  #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
