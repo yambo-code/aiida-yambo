@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import Dict, Str, KpointsData
+from aiida.orm import Dict, Str, KpointsData, RemoteData
 
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
@@ -25,9 +25,10 @@ class YamboConvergence(WorkChain):
         """
         super(YamboConvergence, cls).define(spec)
 
-        spec.expose_inputs(YamboWorkflow, namespace='ywfl', exclude = ('scf.kpoints', 'nscf.kpoints'))
+        spec.expose_inputs(YamboWorkflow, namespace='ywfl', exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
         spec.input('kpoints', valid_type=KpointsData, required = True)
+        spec.input('parent_folder', valid_type=RemoteData, required = False)
 
         spec.input("var_to_conv", valid_type=Dict, required=False, \
                     help = 'variables to converge, range, steps, and max restarts')
@@ -57,6 +58,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
+        self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
 
         self.ctx.variables = self.inputs.var_to_conv.get_dict()
         self.ctx.act_var = self.ctx.variables.popitem()
@@ -122,11 +124,12 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
-            elif str(self.ctx.act_var[0]) == 'kpoints': #meshes are different.
+            elif str(self.ctx.act_var[0]) == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
                 self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.inputs.kpoints, i, self.ctx.delta)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
+                self.ctx.calc_inputs.popitem('parent_folder')  #I need to start from scratch...non sono sicuro si faccia cosi'
 
             else: #"scalar" quantity
 

@@ -16,6 +16,7 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 that are immutable...
 2 - the namespace maybe is possibly automatically detected when you specify the calculation/workchain... try to look in qe prepare_process_inputs...
 3 - moreover, the number of inputs has to be determnined automatically, so that I have not to include it by hand
+4 - better parent_folder or parent_calc???
 '''
 #YamboRestart = WorkflowFactory('yambo.yambo.yamborestart')
 
@@ -201,7 +202,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
         inputs['yres']['gw']['metadata'] =  metadata
 
         try:
-            inputs['parent_folder'] = parent_folder.outputs.remote_folder
+            inputs['parent_folder'] = parent_folder
         except:
             pass
 
@@ -216,6 +217,7 @@ def generate_yambo_convergence_inputs(yambo,  var_to_conv, fit_options, scf, nsc
 
     inputs = {'ywfl': wfl_dict}
 
+    inputs['parent_folder'] = inputs['ywfl'].pop('parent_folder')
     inputs['kpoints'] = inputs['ywfl']['scf'].pop('kpoints')
     inputs['kpoints'] = inputs['ywfl']['nscf'].pop('kpoints')
 

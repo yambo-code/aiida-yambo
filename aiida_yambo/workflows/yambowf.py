@@ -35,8 +35,8 @@ class YamboWorkflow(WorkChain):
 
         spec.expose_inputs(YamboRestartWf, namespace='yres', exclude = 'parent_folder')
 
-        spec.input("parent_folder", valid_type=RemoteData, required=False,\
-                    help = 'nscf or yambo remote folder')
+        spec.input("parent_folder", valid_type=RemoteData, required= False,\
+                    help = 'scf, nscf or yambo remote folder')
 
         #spec.input("nscf_extra_parameters", valid_type=Dict, required=False, \
         #            help = 'extra parameters if we start from scratch, so the exposed inputs are for a scf calculation')
