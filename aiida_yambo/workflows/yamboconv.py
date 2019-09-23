@@ -94,12 +94,11 @@ class YamboConvergence(WorkChain):
 
             elif not self.ctx.converged:
                 self.report('Convergence on {}'.format(self.ctx.act_var['var']))
-                self.ctx.iter += 1
                 return True
 
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
-                self.ctx.calc_inputs.parent_folder = self.ctx.conv_workflow.called[-1].called[-1].outputs.yambo_calc_folder #start from the converged / last calculation
+                self.ctx.calc_inputs.parent_folder = self.ctx.conv_workflow.called[-1].called[-1].outputs.last_calc_folder #start from the converged / last calculation
                 self.ctx.iter = 0
                 self.ctx.act_var = self.ctx.variables.pop()
                 self.ctx.max_restarts = self.ctx.act_var['max_restarts'] #for the actual variable!
@@ -171,12 +170,13 @@ class YamboConvergence(WorkChain):
 
         if converged: #and conv_fit:
             self.ctx.converged = True
-
+            self.ctx.iter += 1
             self.report('Convergence on {} reached in {} iterations' \
                         .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
 
         else:
             self.ctx.converged = False
+            self.ctx.iter += 1
             self.report('Convergence on {} not reached yet in {} iterations' \
                         .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
             #qui ci va un tracking delle iterazioni per ogni variabile. e anche cronologicamente corretto.
