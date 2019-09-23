@@ -176,7 +176,7 @@ class YamboConvergence(WorkChain):
             self.ctx.converged = True
 
             self.report('Convergence on {} reached in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter+1))
+                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter+1)))
             self.ctx.conv_workflow['iterations'].append(self.ctx.steps*(self.ctx.iter+1))
         else:
             self.ctx.converged = False
