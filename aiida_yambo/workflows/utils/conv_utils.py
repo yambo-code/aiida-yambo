@@ -20,7 +20,7 @@ def conv_eval(thr, window, conv_workflow):
 
     gap = np.zeros(window)
     for i in range(window):
-        yambo_calc = conv_workflow.called[-1].called[-1].called[-1]
+        yambo_calc = conv_workflow.called[-(i+1)].called[-1].called[-1]
         gap[i] = yambo_calc.outputs.array_qp.get_array('Eo')[0]+ \
                  yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]
 
