@@ -24,11 +24,13 @@ def conv_eval(thr, window, conv_workflow):
         gap[i] = yambo_calc.outputs.array_qp.get_array('Eo')[0]+ \
                  yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]
 
-    if (abs(gap[-1]-gap[i]) > thr for i in range(window)):
-        return False
-    else:
-        return True
+    conv = True
 
+    for i in range(window):
+        if abs(gap[-1]-gap[-i]) > thr: #backcheck
+            conv = False
+
+    return conv
 
 '''
 def fit_eval(thr, window, fit_type, all_wfls):

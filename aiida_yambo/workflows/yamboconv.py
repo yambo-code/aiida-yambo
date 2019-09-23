@@ -55,9 +55,6 @@ class YamboConvergence(WorkChain):
     def start_workflow(self):
         """Initialize the workflow"""
 
-        self.ctx.conv_workflow = []
-        self.ctx.conv_workflow['iterations']=list()
-
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
@@ -102,7 +99,7 @@ class YamboConvergence(WorkChain):
 
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
-                self.ctx.calc_inputs.parent_folder = self.ctx.all_calcs[-1].outputs.yambo_calc_folder #start from the converged / last calculation
+                self.ctx.calc_inputs.parent_folder = self.ctx.conv_workflow.called[-1].called[-1].outputs.yambo_calc_folder #start from the converged / last calculation
                 self.ctx.iter = 0
                 self.ctx.act_var = self.ctx.variables.pop()
                 self.ctx.max_restarts = self.ctx.act_var['max_restarts'] #for the actual variable!
@@ -158,7 +155,7 @@ class YamboConvergence(WorkChain):
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
-            self.ctx.conv_workflow['node'] = future.caller
+            self.ctx.conv_workflow = future.caller
 
         return ToContext(calc) #questo aspetta tutti i calcoli
 
@@ -167,7 +164,7 @@ class YamboConvergence(WorkChain):
 
         self.report('Convergence evaluation')
 
-        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.conv_workflow['node'])
+        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.conv_workflow)
 
         #if converged:
         #    conv_fit = fit_eval(self.ctx.conv_thr, self.input.fit_options, self.ctx.calc)
@@ -176,12 +173,12 @@ class YamboConvergence(WorkChain):
             self.ctx.converged = True
 
             self.report('Convergence on {} reached in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter+1)))
-            self.ctx.conv_workflow['iterations'].append(self.ctx.steps*(self.ctx.iter+1))
+                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
+
         else:
             self.ctx.converged = False
             self.report('Convergence on {} not reached yet in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter+1)))
+                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
 
 
         if self.ctx.variables == [] : #variables to converge are finished
