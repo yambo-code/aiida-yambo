@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import numpy as np
 from collections.abc import Mapping
 
-from aiida.orm import Dict, Str, Int, RemoteData, KpointsData
+from aiida.orm import Dict, Str, Int, RemoteData, KpointsData, List
 from aiida.plugins import CalculationFactory, DataFactory, WorkflowFactory
 
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
@@ -211,7 +211,7 @@ def generate_yambo_inputs(metadata, preprocessing_code, precode_parameters, code
 
         return inputs
 
-def generate_yambo_convergence_inputs(yambo,  var_to_conv, fit_options, scf, nscf):
+def generate_yambo_convergence_inputs(yambo,  list_of_var, fit_options, scf, nscf):
 
     wfl_dict = {**scf, **nscf, **yambo}
 
@@ -221,11 +221,14 @@ def generate_yambo_convergence_inputs(yambo,  var_to_conv, fit_options, scf, nsc
     inputs['kpoints'] = inputs['ywfl']['scf'].pop('kpoints')
     inputs['kpoints'] = inputs['ywfl']['nscf'].pop('kpoints')
 
-    inputs['var_to_conv'] = Dict(dict=var_to_conv)
+    inputs['var_to_conv'] = List(list=list_of_var)
     inputs['fit_options'] = Dict(dict=fit_options)
 
     from aiida_yambo.workflows.yamboconv import YamboConvergence
     inputs = prepare_process_inputs(YamboConvergence, inputs)
+
+
+
 
     return inputs
 

@@ -17,23 +17,23 @@ convergence functions for gw convergences.
 
 def conv_eval(thr, window, workflows):
 
-    yambo_calc = workflows.outputs.yambo_calc_folder.get_incoming() \
-                .get_node_by_label['remote_folder']
-
     for i in range(1, window):
-        gap[i] = yambo_calc[str(i)].outputs.array_qp.get_array('Eo')[0]+ \
-                 yambo_calc[str(i)].outputs.array_qp.get_array('E_minus_Eo')[0]
+        yambo_calc = workflows[-i].called[-1].called[-1]
+        gap[i] = yambo_calc.outputs.array_qp.get_array('Eo')[0]+ \
+                 yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]
 
-    if (delta[i] for i in range(1,len(calculations))) > thr:
-        conv = False
+    if (abs(gap[-1]-gap[i]) for i in range(1,window)) > thr:
+        return False
     else:
-        conv = True
+        return True
 
     return conv
-
+'''
 def fit_eval(thr, fit_type, calculations):
 
     if fit_type == '1/x':
-        #def f(a,b,c)
+        def f(a,b,c)
     elif fit_type == 'e^-x':
-        #def f(a,b,c)
+        def f(a,b,c)
+        gggggg
+'''

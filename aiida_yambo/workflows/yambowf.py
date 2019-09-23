@@ -146,7 +146,7 @@ class YamboWorkflow(WorkChain):
         self.report('Final step.')
 
         calc = self.ctx.calc
-        self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, \
+        self.report("workflow completed successfully: {}, parent folder of the last calculation is <{}>".format(calc.is_finished_ok, \
                         calc.outputs.last_calc_folder.pk))
         self.out('yambo_calc_folder', calc.outputs.last_calc_folder)
 
