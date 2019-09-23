@@ -2,6 +2,7 @@
 """Helper functions."""
 from __future__ import absolute_import
 import numpy as np
+from scipy.optimize import curve_fit
 from collections.abc import Mapping
 
 from aiida.orm import Dict, Str
@@ -23,18 +24,19 @@ def conv_eval(thr, window, workflows):
         gap[i-1] = yambo_calc.outputs.array_qp.get_array('Eo')[0]+ \
                  yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]
 
-    if (abs(gap[-1]-gap[i]) for i in range(1,window)) > thr:
+    if (abs(gap[-1]-gap[i]) > thr for i in range(1,window)):
         return False
     else:
         return True
 
     return conv
 '''
-def fit_eval(thr, fit_type, calculations):
+def fit_eval(thr, window, fit_type, all_wfls):
 
-    if fit_type == '1/x':
-        def f(a,b,c)
-    elif fit_type == 'e^-x':
-        def f(a,b,c)
-        gggggg
+    def func(x, a, b,c):
+        return a + b/(x-c) #non +...
+
+
+    popt, pcov = curve_fit(func,gaps_600[:,0],gaps_600[:,1]) #guess
+    print('parameters are = ',popt)
 '''
