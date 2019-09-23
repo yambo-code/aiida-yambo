@@ -15,12 +15,16 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 convergence functions for gw convergences.
 '''
 
-def conv_eval(thr, window, calculations):
+def conv_eval(thr, window, workflows):
+
+    yambo_calc = workflows.outputs.yambo_calc_folder.get_incoming() \
+                .get_node_by_label['remote_folder']
 
     for i in range(1, window):
-        gaps = calculations.output.something
-        delta[i] = gaps[i+1]-gaps[i]
-    if (delta[i] for i in range(1,len(calculations))) => thr:
+        gap[i] = yambo_calc[str(i)].outputs.array_qp.get_array('Eo')[0]+ \
+                 yambo_calc[str(i)].outputs.array_qp.get_array('E_minus_Eo')[0]
+
+    if (delta[i] for i in range(1,len(calculations))) > thr:
         conv = False
     else:
         conv = True

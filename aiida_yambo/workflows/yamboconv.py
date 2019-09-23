@@ -105,6 +105,8 @@ class YamboConvergence(WorkChain):
                 self.ctx.max_restarts = self.ctx.act_var[1]['max_restarts']
                 self.ctx.conv_thr = self.ctx.act_var[1]['conv_thr']
                 self.ctx.conv_window = self.ctx.act_var[1]['conv_window']
+                self.ctx.delta = self.ctx.act_var[1]['delta']
+                self.ctx.steps = self.ctx.act_var[1]['steps']
                 return True
 
 
@@ -113,12 +115,8 @@ class YamboConvergence(WorkChain):
 
         #loop on the given steps of a given variable to make convergence
 
-
-        self.ctx.delta = self.ctx.act_var[1]['delta']
-        self.ctx.steps = self.ctx.act_var[1]['steps']
-
         calc = {}
-        for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
+        for i in range(1, self.ctx.steps+1):   
 
             if self.ctx.act_var[0] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
                                                  #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
@@ -168,7 +166,7 @@ class YamboConvergence(WorkChain):
         else:
             self.ctx.converged = False
 
-    
+
     def report_wf(self):
 
         self.report('Final step.')
