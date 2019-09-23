@@ -29,7 +29,7 @@ def conv_eval(thr, window, workflows):
     else:
         return True
 
-    return conv
+
 '''
 def fit_eval(thr, window, fit_type, all_wfls):
 
