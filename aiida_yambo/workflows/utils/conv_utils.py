@@ -40,3 +40,6 @@ def fit_eval(thr, window, fit_type, all_wfls):
     popt, pcov = curve_fit(func,gaps_600[:,0],gaps_600[:,1]) #guess
     print('parameters are = ',popt)
 '''
+'''
+def final_plot(conv_workflow):
+'''
