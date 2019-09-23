@@ -55,7 +55,8 @@ class YamboConvergence(WorkChain):
     def start_workflow(self):
         """Initialize the workflow"""
 
-        self.ctx.all_calcs = []
+        self.ctx.conv_workflow = []
+        self.ctx.conv_workflow['iterations']=list()
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
@@ -157,8 +158,7 @@ class YamboConvergence(WorkChain):
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
-            self.ctx.all_calcs.append(future) #cosi' posso accedere velocemente, ma forse posso capirlo piu' facilmente dall'interno del wfl...boh
-            self.ctx.var_story.append(self.ctx.act_var['var'])
+            self.ctx.conv_workflow['node'] = future.caller
 
         return ToContext(calc) #questo aspetta tutti i calcoli
 
@@ -167,7 +167,7 @@ class YamboConvergence(WorkChain):
 
         self.report('Convergence evaluation')
 
-        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.all_calcs)
+        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.conv_workflow['node'])
 
         #if converged:
         #    conv_fit = fit_eval(self.ctx.conv_thr, self.input.fit_options, self.ctx.calc)
@@ -176,11 +176,13 @@ class YamboConvergence(WorkChain):
             self.ctx.converged = True
 
             self.report('Convergence on {} reached in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.iter))
+                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter+1))
+            self.ctx.conv_workflow['iterations'].append(self.ctx.steps*(self.ctx.iter+1))
         else:
             self.ctx.converged = False
             self.report('Convergence on {} not reached yet in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.iter))
+                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter+1)))
+
 
         if self.ctx.variables == [] : #variables to converge are finished
             self.ctx.fully_converged = True

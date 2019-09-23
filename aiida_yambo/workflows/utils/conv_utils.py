@@ -19,12 +19,12 @@ convergence functions for gw convergences.
 def conv_eval(thr, window, conv_workflow):
 
     gap = np.zeros(window)
-    for i in range(1, window):
-        yambo_calc = workflows[-i].called[-1].called[-1]
-        gap[i-1] = yambo_calc.outputs.array_qp.get_array('Eo')[0]+ \
+    for i in range(window):
+        yambo_calc = conv_workflow.called[-1].called[-1].called[-1]
+        gap[i] = yambo_calc.outputs.array_qp.get_array('Eo')[0]+ \
                  yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]
 
-    if (abs(gap[-1]-gap[i]) > thr for i in range(1,window)):
+    if (abs(gap[-1]-gap[i]) > thr for i in range(window)):
         return False
     else:
         return True
