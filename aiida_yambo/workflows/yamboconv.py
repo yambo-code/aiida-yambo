@@ -99,6 +99,7 @@ class YamboConvergence(WorkChain):
             elif self.ctx.converged and not self.ctx.fully_converged:
                 self.report('next variable to converge')
                 #update variable
+                self.ctx.calc_inputs.parent_folder = self.ctx.calc[str(self.ctx.steps)].outputs.parent_folder #start from the converged / last calculation
                 self.ctx.iter = 0
                 self.ctx.act_var = self.ctx.variables.popitem()
                 self.ctx.max_restarts = self.ctx.act_var[1]['max_restarts']
@@ -111,11 +112,12 @@ class YamboConvergence(WorkChain):
         """This function will submit the next step"""
 
         #loop on the given steps of a given variable to make convergence
+
+
         self.ctx.delta = self.ctx.act_var[1]['delta']
         self.ctx.steps = self.ctx.act_var[1]['steps']
 
         calc = {}
-
         for i in range(self.ctx.steps):   #this is ok for simple scalar parameters... try to figure out for list..
 
             if self.ctx.act_var[0] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
@@ -132,7 +134,10 @@ class YamboConvergence(WorkChain):
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
                 self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.inputs.kpoints, i, self.ctx.delta)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                self.ctx.calc_inputs.popitem('parent_folder')  #I need to start from scratch...non sono sicuro si faccia cosi'
+                try:
+                    del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...non sono sicuro si faccia cosi'
+                except:
+                    pass #just for the first iteration we have a parent_folder
 
             else: #"scalar" quantity
 
@@ -144,7 +149,7 @@ class YamboConvergence(WorkChain):
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(i)] = future         #va cambiata eh!!!
+            calc[str(i)] = future         #va cambiata eh!!! o forse no...
 
         return ToContext(**calc)
 
