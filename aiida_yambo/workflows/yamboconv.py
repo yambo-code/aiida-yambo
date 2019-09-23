@@ -84,13 +84,14 @@ class YamboConvergence(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.variables == [] or self.ctx.iter > self.ctx.max_restarts:
+        if self.ctx.iter > self.ctx.max_restarts:
+            self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
         else:
 
-            if self.ctx.converged and self.ctx.fully_converged:
-                self.report('the workflow is finished')
+            if self.ctx.fully_converged:
+                self.report('the workflow is finished successfully')
                 return False
 
             elif not self.ctx.converged:
@@ -155,15 +156,15 @@ class YamboConvergence(WorkChain):
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
+            #calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
             self.ctx.all_calcs.append(future) #cosi' posso accedere velocemente, ma forse posso capirlo piu' facilmente dall'interno del wfl...boh
 
-        return ToContext(calc) #questo aspetta tutti i calcoli
+        return ToContext(all_calcs) #questo aspetta tutti i calcoli
 
 
     def conv_eval(self):
 
-        self.report('convergence evaluation')
+        self.report('Convergence evaluation')
 
         converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.all_calcs)
 
@@ -172,9 +173,16 @@ class YamboConvergence(WorkChain):
 
         if converged: #and conv_fit:
             self.ctx.converged = True
+
+            self.report('Convergence on {} reached in {} iterations' \
+                        .format(self.ctx.act_var['var'], self.ctx.iter))
         else:
             self.ctx.converged = False
+            self.report('Convergence on {} not reached yet in {} iterations' \
+                        .format(self.ctx.act_var['var'], self.ctx.iter))
 
+        if self.ctx.variables == [] : #variables to converge are finished
+            self.ctx.fully_converged = True
 
     def report_wf(self):
 
