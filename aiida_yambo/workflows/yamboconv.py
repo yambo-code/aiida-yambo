@@ -153,7 +153,7 @@ class YamboConvergence(WorkChain):
 
         return ToContext(**calc)
 
-    '''
+
     def conv_eval(self):
 
         self.report('convergence evaluation')
@@ -168,7 +168,7 @@ class YamboConvergence(WorkChain):
         else:
             self.ctx.converged = False
 
-    '''
+    
     def report_wf(self):
 
         self.report('Final step.')
