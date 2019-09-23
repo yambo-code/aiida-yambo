@@ -156,10 +156,10 @@ class YamboConvergence(WorkChain):
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            #calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
+            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
             self.ctx.all_calcs.append(future) #cosi' posso accedere velocemente, ma forse posso capirlo piu' facilmente dall'interno del wfl...boh
 
-        return ToContext(all_calcs) #questo aspetta tutti i calcoli
+        return ToContext(calc) #questo aspetta tutti i calcoli
 
 
     def conv_eval(self):
