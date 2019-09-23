@@ -16,7 +16,7 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 convergence functions for gw convergences.
 '''
 
-def conv_eval(thr, window, workflows):
+def conv_eval(thr, window, conv_workflow):
 
     gap = np.zeros(window)
     for i in range(1, window):
