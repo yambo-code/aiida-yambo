@@ -179,7 +179,7 @@ class YamboConvergence(WorkChain):
             self.ctx.converged = False
             self.report('Convergence on {} not reached yet in {} iterations' \
                         .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
-
+            #qui ci va un tracking delle iterazioni per ogni variabile. e anche cronologicamente corretto.
 
         if self.ctx.variables == [] : #variables to converge are finished
             self.ctx.fully_converged = True
