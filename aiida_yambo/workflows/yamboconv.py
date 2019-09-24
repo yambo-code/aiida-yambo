@@ -28,7 +28,7 @@ class YamboConvergence(WorkChain):
 
         spec.expose_inputs(YamboWorkflow, namespace='ywfl', exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
-        spec.input('kpoints', valid_type=KpointsData, required = True)
+        spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
         spec.input('parent_folder', valid_type=RemoteData, required = False)
 
         spec.input("var_to_conv", valid_type=List, required=True, \
@@ -66,8 +66,8 @@ class YamboConvergence(WorkChain):
         self.ctx.variables = self.inputs.var_to_conv.get_list()
         self.ctx.act_var = self.ctx.variables.pop()
         self.ctx.max_restarts = self.ctx.act_var['max_restarts'] #for the actual variable!
-        self.ctx.conv_thr = self.ctx.act_var['conv_thr'] #threeshold
-        self.ctx.conv_window = self.ctx.act_var['conv_window'] #conv_window: previous n calcs
+        #self.ctx.conv_thr = self.ctx.act_var['conv_thr'] #threeshold
+        #self.ctx.conv_window = self.ctx.act_var['conv_window'] #conv_window: previous n calcs
 
 
         self.ctx.converged = False
@@ -88,13 +88,13 @@ class YamboConvergence(WorkChain):
 
         else:
 
-            if self.ctx.fully_converged:
-                self.report('the workflow is finished successfully')
-                return False
-
-            elif not self.ctx.converged:
+            if not self.ctx.converged:
                 self.report('Convergence on {}'.format(self.ctx.act_var['var']))
                 return True
+
+            elif  self.ctx.fully_converged:
+                self.report('the workflow is finished successfully')
+                return False
 
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
@@ -102,8 +102,8 @@ class YamboConvergence(WorkChain):
                 self.ctx.iter = 0
                 self.ctx.act_var = self.ctx.variables.pop()
                 self.ctx.max_restarts = self.ctx.act_var['max_restarts'] #for the actual variable!
-                self.ctx.conv_thr = self.ctx.act_var['conv_thr'] #threeshold
-                self.ctx.conv_window = self.ctx.act_var['conv_window'] #conv_window: previous n calcs
+                #self.ctx.act_var['conv_thr'] = self.ctx.act_var['conv_thr'] #threeshold
+                #self.ctx.conv_window = self.ctx.act_var['conv_window'] #conv_window: previous n calcs
                 self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
                 return True
 
@@ -151,10 +151,9 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
 
-
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
-            self.ctx.conv_workflow = future.caller
+            self.ctx.conv_workflow = future.caller.pk
 
         return ToContext(calc) #questo aspetta tutti i calcoli
 
@@ -163,20 +162,17 @@ class YamboConvergence(WorkChain):
 
         self.report('Convergence evaluation')
 
-        converged = conv_eval(self.ctx.conv_thr, self.ctx.conv_window, self.ctx.conv_workflow)
+        self.ctx.iter += 1
 
-        #if converged:
-        #    conv_fit = fit_eval(self.ctx.conv_thr, self.input.fit_options, self.ctx.calc)
+        converged = conv_eval(self.ctx.act_var['conv_thr'], self.ctx.act_var['conv_window'], self.ctx.conv_workflow)
 
-        if converged: #and conv_fit:
+        if converged:
             self.ctx.converged = True
-            self.ctx.iter += 1
             self.report('Convergence on {} reached in {} iterations' \
                         .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
 
         else:
             self.ctx.converged = False
-            self.ctx.iter += 1
             self.report('Convergence on {} not reached yet in {} iterations' \
                         .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
             #qui ci va un tracking delle iterazioni per ogni variabile. e anche cronologicamente corretto.
