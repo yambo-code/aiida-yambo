@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import Dict, Str, KpointsData, RemoteData, List
+from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
@@ -47,13 +47,13 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        #spec.output('convergence_history', valid_type = Str,
-            #help='The convergence path.')
+        spec.output('calc_info', valid_type = List, help='just a check')
         #plots of single and multiple convergences, with data.txt to plot whenever you want
         #fitting just the last conv window, but plotting all
 
     def start_workflow(self):
         """Initialize the workflow"""
+
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
@@ -65,24 +65,21 @@ class YamboConvergence(WorkChain):
         \
         self.ctx.variables = self.inputs.var_to_conv.get_list()
         self.ctx.act_var = self.ctx.variables.pop()
-        self.ctx.max_restarts = self.ctx.act_var['max_restarts'] #for the actual variable!
-        #self.ctx.conv_thr = self.ctx.act_var['conv_thr'] #threeshold
-        #self.ctx.conv_window = self.ctx.act_var['conv_window'] #conv_window: previous n calcs
-
+        self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
 
         self.ctx.converged = False
         self.ctx.fully_converged = False
 
+        self.ctx.act_var['iter']  = 0
 
-        self.ctx.iter = 0
-
+        self.ctx.conv_var = []
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter > self.ctx.max_restarts:
+        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts']:
             self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
@@ -98,12 +95,10 @@ class YamboConvergence(WorkChain):
 
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
-                self.ctx.calc_inputs.parent_folder = self.ctx.conv_workflow.called[-1].called[-1].outputs.last_calc_folder #start from the converged / last calculation
-                self.ctx.iter = 0
+                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['super_wfl_pk']).called[-1].called[-1].outputs.last_calc_folder #start from the converged / last calculation
                 self.ctx.act_var = self.ctx.variables.pop()
-                self.ctx.max_restarts = self.ctx.act_var['max_restarts'] #for the actual variable!
-                #self.ctx.act_var['conv_thr'] = self.ctx.act_var['conv_thr'] #threeshold
-                #self.ctx.conv_window = self.ctx.act_var['conv_window'] #conv_window: previous n calcs
+                self.ctx.act_var['gaps'] = []
+                self.ctx.act_var['iter']  = 0
                 self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
                 return True
 
@@ -113,30 +108,27 @@ class YamboConvergence(WorkChain):
 
         #loop on the given steps of a given variable to make convergence
 
-        self.ctx.delta = self.ctx.act_var['delta']
-        self.ctx.steps = self.ctx.act_var['steps']
-
         calc = {}
 
         t = 0
-        if self.ctx.iter > 0:   #this is done in order to avoid to have the same calculation at the end and at the beginning of to consecutive next_step
+        if self.ctx.act_var['iter']  > 0:   #this is done in order to avoid to have the same calculation at the end and at the beginning of to consecutive next_step
             t = 1
 
-        for i in range(0, self.ctx.steps):
+        for i in range(0, self.ctx.act_var['steps']):
 
             if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
                                                  #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + (i+t)*self.ctx.delta
-                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + (i+t)*self.ctx.delta
+                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + (i+t)*self.ctx.act_var['delta']
+                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + (i+t)*self.ctx.act_var['delta']
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
             elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.inputs.kpoints, i+t, self.ctx.delta)
+                self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.inputs.kpoints, i+t, self.ctx.act_var['delta'])
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
                 try:
                     del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...non sono sicuro si faccia cosi'
@@ -146,14 +138,14 @@ class YamboConvergence(WorkChain):
             else: #"scalar" quantity
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + (i+t)*self.ctx.delta
+                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + (i+t)*self.ctx.act_var['delta']
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
-            self.ctx.conv_workflow = future.caller.pk
+            self.ctx.act_var['super_wfl_pk'] = future.caller.pk
 
         return ToContext(calc) #questo aspetta tutti i calcoli
 
@@ -162,29 +154,36 @@ class YamboConvergence(WorkChain):
 
         self.report('Convergence evaluation')
 
-        self.ctx.iter += 1
+        self.ctx.act_var['iter']  += 1
 
-        converged = conv_eval(self.ctx.act_var['conv_thr'], self.ctx.act_var['conv_window'], self.ctx.conv_workflow)
+        converged = conv_eval(self.ctx.act_var)
 
         if converged:
+
             self.ctx.converged = True
             self.report('Convergence on {} reached in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
+                        .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
+
+            self.ctx.conv_var.append(list(self.ctx.act_var.values()))
 
         else:
             self.ctx.converged = False
             self.report('Convergence on {} not reached yet in {} iterations' \
-                        .format(self.ctx.act_var['var'], self.ctx.steps*(self.ctx.iter)))
-            #qui ci va un tracking delle iterazioni per ogni variabile. e anche cronologicamente corretto.
+                        .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
         if self.ctx.variables == [] : #variables to converge are finished
+
             self.ctx.fully_converged = True
+
+
 
     def report_wf(self):
 
-        self.report('Final step.')
-        self.report('Converged variables:')
-        #Dict with converged params
+        self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
+        self.report('Converged variables and corresponding number of iterations: {}'.format(self.ctx.conv_var))
+
+        converged_var = List(list=self.ctx.conv_var).store()
+        self.out('calc_info', converged_var)
 
 if __name__ == "__main__":
     pass
