@@ -161,14 +161,14 @@ class YamboConvergence(WorkChain):
         if converged:
 
             self.ctx.converged = True
-            self.report('Convergence on {} reached in {} iterations' \
+            self.report('Convergence on {} reached in {} calculations' \
                         .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
             self.ctx.conv_var.append(list(self.ctx.act_var.values()))
 
         else:
             self.ctx.converged = False
-            self.report('Convergence on {} not reached yet in {} iterations' \
+            self.report('Convergence on {} not reached yet in {} calculations' \
                         .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
         if self.ctx.variables == [] : #variables to converge are finished
