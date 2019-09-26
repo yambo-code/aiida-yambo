@@ -159,7 +159,6 @@ class YamboConvergence(WorkChain):
         converged, gap = convergence_evaluation(self.ctx.act_var)
 
 
-
         if converged:
 
             self.ctx.converged = True
