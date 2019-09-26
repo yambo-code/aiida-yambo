@@ -95,7 +95,7 @@ class YamboConvergence(WorkChain):
 
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
-                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['super_wfl_pk']).called[-1].called[-1].outputs.last_calc_folder #start from the converged / last calculation
+                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[-1].outputs.last_calc_folder #start from the converged / last calculation
                 self.ctx.act_var = self.ctx.variables.pop()
                 self.ctx.act_var['gaps'] = []
                 self.ctx.act_var['iter']  = 0
@@ -144,8 +144,8 @@ class YamboConvergence(WorkChain):
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...
-            self.ctx.act_var['super_wfl_pk'] = future.caller.pk
+            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
+            self.ctx.act_var['wfl_pk'] = future.pk
 
         return ToContext(calc) #questo aspetta tutti i calcoli
 
@@ -156,15 +156,15 @@ class YamboConvergence(WorkChain):
 
         self.ctx.act_var['iter']  += 1
 
-        converged = conv_eval(self.ctx.act_var)
+        converged, gap = convergence_evaluation(self.ctx.act_var)
+
+
 
         if converged:
 
             self.ctx.converged = True
             self.report('Convergence on {} reached in {} calculations' \
                         .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
-
-            self.ctx.conv_var.append(list(self.ctx.act_var.values()))
 
         else:
             self.ctx.converged = False
@@ -175,11 +175,18 @@ class YamboConvergence(WorkChain):
 
             self.ctx.fully_converged = True
 
+        for i in range(1,self.ctx.act_var['steps']+1):
+
+            self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
+                            [len(self.ctx.act_var['wfl_pk']).caller-self.ctx.act_var['steps']+i, gap[i]]) #trcking the whole iterations and gaps
 
 
     def report_wf(self):
 
         self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
+
+        self.ctx.conv_var = (list(self.ctx.act_var.keys())+['total_iter','gap']).append(self.ctx.conv_var)
+
         self.report('Converged variables: {}'.format(self.ctx.conv_var))
 
         converged_var = List(list=self.ctx.conv_var).store()

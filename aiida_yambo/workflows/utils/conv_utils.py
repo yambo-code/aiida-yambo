@@ -17,22 +17,22 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 convergence functions for gw(for now) convergences.
 '''
 
-def conv_eval(calc_info):
+def convergence_evaluation(calcs_info):
 
-    gap = np.zeros((calc_info['conv_window'],2))
-    for i in range(calc_info['conv_window']):
-        yambo_calc = load_node(calc_info['super_wfl_pk']).called[-(i+1)].called[-1].called[-1]
+    gap = np.zeros((calcs_info['conv_window'],2))
+    for i in range(calcs_info['conv_window']):
+        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[-(i+1)].called[-1].called[-1]
         gap[i,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[0]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0])-
-                   (yambo_calc.outputs.array_qp.get_array('Eo')[1]+ 
+                   (yambo_calc.outputs.array_qp.get_array('Eo')[1]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1]))
 
-        gap[i,0] = i*calc_info['delta']
+        gap[i,0] = i*calcs_info['delta']
 
     conv = True
 
-    for i in range(calc_info['conv_window']):
-        if abs(gap[-1,1]-gap[-i,1]) > calc_info['conv_thr']: #backcheck
+    for i in range(calcs_info['conv_window']):
+        if abs(gap[-1,1]-gap[-i,1]) > calcs_info['conv_thr']: #backcheck
             conv = False
 
 
@@ -43,10 +43,10 @@ def conv_eval(calc_info):
     #print('parameters are = ',popt)
 
 
-    if abs(gap[-1,1]-popt[0]) > calc_info['conv_thr']: #backcheck
+    if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
             conv = False
 
-    return conv
+    return conv, gap
 
     ## plot con tutti i valori della variabile, anche quelli della finestra precedente
     #fig, ax = plt.subplots()
