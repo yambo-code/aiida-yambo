@@ -180,7 +180,7 @@ class YamboConvergence(WorkChain):
     def report_wf(self):
 
         self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
-        self.report('Converged variables and corresponding number of iterations: {}'.format(self.ctx.conv_var))
+        self.report('Converged variables: {}'.format(self.ctx.conv_var))
 
         converged_var = List(list=self.ctx.conv_var).store()
         self.out('calc_info', converged_var)
