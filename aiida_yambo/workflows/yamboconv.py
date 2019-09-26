@@ -12,7 +12,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.conv_utils import conv_eval
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation
 
 class YamboConvergence(WorkChain):
 
@@ -113,6 +113,7 @@ class YamboConvergence(WorkChain):
         t = 0
         if self.ctx.act_var['iter']  > 0:   #this is done in order to avoid to have the same calculation at the end and at the beginning of to consecutive next_step
             t = 1
+
         self.ctx.param_vals = []
 
         for i in range(0, self.ctx.act_var['steps']):
@@ -126,7 +127,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
-                self.ctx.param_vals = self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
+                self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
 
             elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
@@ -138,7 +139,7 @@ class YamboConvergence(WorkChain):
                 except:
                     pass #just for the first iteration we have a parent_folder
 
-                self.ctx.param_vals = self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+                self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
 
             else: #"scalar" quantity
 
@@ -147,7 +148,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
-                self.ctx.param_vals = self.ctx.param_vals = self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
+                self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
@@ -184,7 +185,7 @@ class YamboConvergence(WorkChain):
         for i in range(1,self.ctx.act_var['steps']+1):
 
             self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
-                            [len(self.ctx.act_var['wfl_pk']).caller-self.ctx.act_var['steps']+i, self.ctx.param_vals[i]], gap[i], self.ctx.param_vals[i]]) #trcking the whole iterations and gaps
+                            [len(self.ctx.act_var['wfl_pk']).caller-self.ctx.act_var['steps']+i, self.ctx.param_vals[i], gap[i], self.ctx.param_vals[i]]) #tracking the whole iterations and gaps
 
 
     def report_wf(self):
