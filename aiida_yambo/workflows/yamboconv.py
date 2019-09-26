@@ -144,8 +144,6 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
                 self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + (i+t)*self.ctx.act_var['delta']
-            self.report('Convergence on {} not reached yet in {} calculations' \
-                        .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
