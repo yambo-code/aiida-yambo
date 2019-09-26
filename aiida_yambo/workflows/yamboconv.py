@@ -113,6 +113,7 @@ class YamboConvergence(WorkChain):
         t = 0
         if self.ctx.act_var['iter']  > 0:   #this is done in order to avoid to have the same calculation at the end and at the beginning of to consecutive next_step
             t = 1
+        self.ctx.param_vals = []
 
         for i in range(0, self.ctx.act_var['steps']):
 
@@ -125,6 +126,8 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
+                self.ctx.param_vals = self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
+
             elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
@@ -135,12 +138,18 @@ class YamboConvergence(WorkChain):
                 except:
                     pass #just for the first iteration we have a parent_folder
 
+                self.ctx.param_vals = self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+
             else: #"scalar" quantity
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
                 self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + (i+t)*self.ctx.act_var['delta']
+            self.report('Convergence on {} not reached yet in {} calculations' \
+                        .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+
+                self.ctx.param_vals = self.ctx.param_vals = self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
@@ -177,14 +186,14 @@ class YamboConvergence(WorkChain):
         for i in range(1,self.ctx.act_var['steps']+1):
 
             self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
-                            [len(self.ctx.act_var['wfl_pk']).caller-self.ctx.act_var['steps']+i, gap[i]]) #trcking the whole iterations and gaps
+                            [len(self.ctx.act_var['wfl_pk']).caller-self.ctx.act_var['steps']+i, self.ctx.param_vals[i]], gap[i], self.ctx.param_vals[i]]) #trcking the whole iterations and gaps
 
 
     def report_wf(self):
 
         self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
 
-        self.ctx.conv_var = (list(self.ctx.act_var.keys())+['total_iter','gap']).append(self.ctx.conv_var)
+        self.ctx.conv_var = (list(self.ctx.act_var.keys())+['calc_number','params_vals','gap']).append(self.ctx.conv_var)
 
         self.report('Converged variables: {}'.format(self.ctx.conv_var))
 
