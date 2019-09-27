@@ -27,13 +27,14 @@ class YamboWorkflow(WorkChain):
         """
         super(YamboWorkflow, cls).define(spec)
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': False}, \
-                            exclude = 'parent_folder')
+        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, \
+                            exclude = ['parent_folder'])
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': False}, \
-                            exclude = 'parent_folder')
+        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, \
+                            exclude = ['parent_folder'])
 
-        spec.expose_inputs(YamboRestartWf, namespace='yres', exclude = 'parent_folder')
+        spec.expose_inputs(YamboRestartWf, namespace='yres', namespace_options={'required': True}, \
+                            exclude = ['parent_folder'])
 
         spec.input("parent_folder", valid_type=RemoteData, required= False,\
                     help = 'scf, nscf or yambo remote folder')

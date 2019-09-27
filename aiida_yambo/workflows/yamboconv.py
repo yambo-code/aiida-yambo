@@ -26,7 +26,8 @@ class YamboConvergence(WorkChain):
         """
         super(YamboConvergence, cls).define(spec)
 
-        spec.expose_inputs(YamboWorkflow, namespace='ywfl', exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
+        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
+                            exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
         spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
         spec.input('parent_folder', valid_type=RemoteData, required = False)
@@ -164,7 +165,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.act_var['iter']  += 1
 
-        converged, gap = convergence_evaluation(self.ctx.act_var)
+        converged, gaps = convergence_evaluation(self.ctx.act_var)
 
 
         if converged:
@@ -185,7 +186,7 @@ class YamboConvergence(WorkChain):
         for i in range(1,self.ctx.act_var['steps']+1):
 
             self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
-                            [len(self.ctx.act_var['wfl_pk']).caller-self.ctx.act_var['steps']+i, self.ctx.param_vals[i], gap[i], self.ctx.param_vals[i]]) #tracking the whole iterations and gaps
+                            [len(self.ctx.act_var['wfl_pk'].caller.called)-self.ctx.act_var['steps']+i, self.ctx.param_vals[i], gap[i], self.ctx.param_vals[i]]) #tracking the whole iterations and gaps
 
 
     def report_wf(self):

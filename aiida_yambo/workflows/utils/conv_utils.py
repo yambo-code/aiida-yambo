@@ -35,7 +35,7 @@ def convergence_evaluation(calcs_info):
         if abs(gap[-1,1]-gap[-i,1]) > calcs_info['conv_thr']: #backcheck
             conv = False
 
-
+    '''
     def func(x, a, b,c):
         return a + b/(x-c) #non +...
 
@@ -45,8 +45,8 @@ def convergence_evaluation(calcs_info):
 
     if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
             conv = False
-
-    return conv, gap
+    '''
+    return conv, gap #,popt
 
     ## plot con tutti i valori della variabile, anche quelli della finestra precedente
     #fig, ax = plt.subplots()
