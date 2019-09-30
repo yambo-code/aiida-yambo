@@ -19,20 +19,20 @@ convergence functions for gw(for now) convergences.
 
 def convergence_evaluation(calcs_info):
 
-    gap = np.zeros((calcs_info['conv_window'],2))
-    for i in range(calcs_info['conv_window']):
-        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[-(i+1)].called[-1].called[-1]
-        gap[i,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[0]+
+    gap = np.zeros((calcs_info['steps'],2))
+    for i in range(1,calcs_info['steps']+1):
+        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']-i].called[0].called[0]
+        gap[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[0]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0])-
                    (yambo_calc.outputs.array_qp.get_array('Eo')[1]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1]))
 
-        gap[i,0] = i*calcs_info['delta']
+        gap[i-1,0] = i*calcs_info['delta']
 
     conv = True
 
     for i in range(calcs_info['conv_window']):
-        if abs(gap[-1,1]-gap[-i,1]) > calcs_info['conv_thr']: #backcheck
+        if abs(gap[-1,1]-gap[-(i+1),1]) > calcs_info['conv_thr']: #backcheck
             conv = False
 
     '''
