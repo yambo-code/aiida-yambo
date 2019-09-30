@@ -180,7 +180,7 @@ class YamboConvergence(WorkChain):
             self.ctx.conv_var = self.ctx.conv_var[:-self.ctx.act_var['conv_window']+1] #just the first of the converged window...
 
             #taking as starting point just the first of the convergence window...
-            first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1]
+            first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, valutalo su tutta la storia!!!
             self.ctx.calc_inputs.yres.gw.parameters = first_w.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
             self.ctx.calc_inputs.scf.kpoints = first_w.get_builder_restart().scf.kpoints
             self.ctx.calc_inputs.parent_folder = first_w.outputs.yambo_calc_folder
