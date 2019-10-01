@@ -110,13 +110,11 @@ class YamboConvergence(WorkChain):
 
         calc = {}
 
-        t = 0
-        if self.ctx.act_var['iter']  > 0:   #this is done in order to avoid to have the same calculation at the end and at the beginning of to consecutive next_step
-            t = 1
-
         self.ctx.param_vals = []
 
         for i in range(self.ctx.act_var['steps']):
+
+            self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter'],self.ctx.act_var['var']))
 
             if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
                                                  #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
@@ -164,12 +162,13 @@ class YamboConvergence(WorkChain):
 
         self.ctx.act_var['iter']  += 1
 
-        converged, gaps = convergence_evaluation(self.ctx.act_var) #ci vuole qualcosa (try..) che se un calcolo non finisce mi parsa cmq le altre... almeno non ho perso troppe cose
+        converged, gaps = convergence_evaluation(self.ctx.act_var)   #ci vuole qualcosa (try..) che se un calcolo non finisce mi parsa cmq le altre... almeno non ho perso troppe cose
 
         for i in range(self.ctx.act_var['steps']):
 
             self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
-                            [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, self.ctx.param_vals[i], gaps[i,1]]) #tracking the whole iterations and gaps
+                            [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                self.ctx.param_vals[i], gaps[i,1], gaps[i,0], str(converged)]) #tracking the whole iterations and gaps
 
         if converged:
 
@@ -177,7 +176,8 @@ class YamboConvergence(WorkChain):
             self.report('Convergence on {} reached in {} calculations' \
                         .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
-            self.ctx.conv_var = self.ctx.conv_var[:-self.ctx.act_var['conv_window']+1] #just the first of the converged window...
+
+            #self.ctx.conv_var = self.ctx.conv_var[:-self.ctx.act_var['conv_window']+1] #just the first of the converged window...
 
             #taking as starting point just the first of the convergence window...
             first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, valutalo su tutta la storia!!!

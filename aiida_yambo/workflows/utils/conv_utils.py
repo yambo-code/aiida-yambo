@@ -19,15 +19,16 @@ convergence functions for gw(for now) convergences.
 
 def convergence_evaluation(calcs_info):
 
-    gap = np.zeros((calcs_info['steps'],2))
-    for i in range(1,calcs_info['steps']+1):
-        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']-i].called[0].called[0]
+    gap = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
+    for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
+        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[-i].called[0].called[0]   #reordering in cronological
         gap[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[0]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0])-
                    (yambo_calc.outputs.array_qp.get_array('Eo')[1]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1]))
 
-        gap[i-1,0] = i*calcs_info['delta']
+        gap[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
+        gap[i-1,2] = int(yambo_calc.caller.caller.pk) #workflow responsible of the calculation
 
     conv = True
 
@@ -36,17 +37,23 @@ def convergence_evaluation(calcs_info):
             conv = False
 
     '''
+    #if calcs_info['conv_options']['fit'] == 'yes'
     def func(x, a, b,c):
         return a + b/(x-c) #non +...
-
-    popt, pcov = curve_fit(func, gap[:,0], gap[:,1]) #guess
-    #print('parameters are = ',popt)
-
-
-    if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
-            conv = False
+    try:
+        try:
+           popt, pcov = curve_fit(func, gap[:,0], gap[:,1]) #guess
+           if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
+                   conv = False
+        except:
+           popt, pcov = curve_fit(func, gap[-calcs_info['steps']:,0], gap[-calcs_info['steps']:,1])
+           if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
+                   conv = False
+    except:
+        popt=[]
+        popt.append('fit not succesful')
     '''
-    return conv, gap #,popt
+    return conv, gap[-calcs_info['steps']:,:] #, popt[0]
 
     ## plot con tutti i valori della variabile, anche quelli della finestra precedente
     #fig, ax = plt.subplots()
