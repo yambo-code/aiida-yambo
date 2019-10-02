@@ -168,7 +168,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
                                 [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], gaps[i,1], gaps[i,2], str(converged)]) #tracking the whole iterations and gaps
+                                    self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
 
             if converged:
 
