@@ -112,6 +112,10 @@ class YamboConvergence(WorkChain):
 
         self.ctx.param_vals = []
 
+        if self.ctx.act_var['iter']  == 1:
+            init = 0
+        else:
+            init = 1
         for i in range(self.ctx.act_var['steps']):
 
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
@@ -120,8 +124,8 @@ class YamboConvergence(WorkChain):
                                                  #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta'] #aggiustare il punto zero che così nn cé
-                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']
+                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']*init #aggiustare il punto zero che così nn cé
+                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']*init
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
@@ -130,7 +134,7 @@ class YamboConvergence(WorkChain):
             elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                 from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.ctx.calc_inputs.scf.kpoints, self.ctx.act_var['delta'])
+                self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.ctx.calc_inputs.scf.kpoints, self.ctx.act_var['delta']*init)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
                 try:
                     del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...non sono sicuro si faccia cosi'
@@ -142,7 +146,7 @@ class YamboConvergence(WorkChain):
             else: #"scalar" quantity
 
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
+                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*init
 
                 self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
