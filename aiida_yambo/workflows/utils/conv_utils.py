@@ -21,14 +21,14 @@ def convergence_evaluation(calcs_info):
 
     gap = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
     for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
-        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[-i].called[0].called[0]   #reordering in cronological
-        gap[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[0]+
-                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0])-
-                   (yambo_calc.outputs.array_qp.get_array('Eo')[1]+
-                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1]))
+        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0].called[0]   #reordering in cronological
+        gap[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[1]+
+                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1])-
+                   (yambo_calc.outputs.array_qp.get_array('Eo')[0]+
+                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]))
 
         gap[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
-        gap[i-1,2] = int(yambo_calc.caller.caller.pk) #workflow responsible of the calculation
+        gap[i-1,2] = int(yambo_calc.pk) #calc responsible of the calculation
 
     conv = True
 

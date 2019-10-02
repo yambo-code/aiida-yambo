@@ -53,7 +53,7 @@ class YamboConvergence(WorkChain):
         #fitting just the last conv window, but plotting all
 
     def start_workflow(self):
-        """Initialize the workflow"""
+        """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
 
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
@@ -159,7 +159,6 @@ class YamboConvergence(WorkChain):
     def conv_eval(self):
 
         self.report('Convergence evaluation')
-
         self.ctx.act_var['iter']  += 1
 
         try:
@@ -169,7 +168,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
                                 [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], gaps[i,1], gaps[i,0], str(converged)]) #tracking the whole iterations and gaps
+                                    self.ctx.param_vals[i], gaps[i,1], gaps[i,2], str(converged)]) #tracking the whole iterations and gaps
 
             if converged:
 
