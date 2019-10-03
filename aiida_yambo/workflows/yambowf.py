@@ -64,7 +64,7 @@ class YamboWorkflow(WorkChain):
 
         try:
 
-            parent = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+            parent = self.inputs.parent_folder.creator
 
             if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
