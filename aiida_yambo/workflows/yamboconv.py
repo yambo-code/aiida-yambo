@@ -48,7 +48,8 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        spec.output('calc_info', valid_type = List, help='just a check')
+        spec.output('conv_info', valid_type = List, help='list with convergence path')
+        spec.output('all_calcs_info', valid_type = List, help='all calculations')
         #plots of single and multiple convergences, with data.txt to plot whenever you want
         #fitting just the last conv window, but plotting all
 
@@ -73,7 +74,10 @@ class YamboConvergence(WorkChain):
 
         self.ctx.act_var['iter']  = 0
 
+        self.ctx.all_calcs = []
         self.ctx.conv_var = []
+
+        self.ctx.first_calc = True
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -112,46 +116,46 @@ class YamboConvergence(WorkChain):
 
         self.ctx.param_vals = []
 
-        if self.ctx.act_var['iter']  == 1:
-            init = 0
-        else:
-            init = 1
         for i in range(self.ctx.act_var['steps']):
 
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
-            if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
-                                                 #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
+            if self.ctx.act_var['steps'] == 0 and self.ctx.first_calc:
+                pass  #it is the first calc, I use it's original values
 
-                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']*init #aggiustare il punto zero che così nn cé
-                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']*init
+            else: #the true flow
 
-                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+                if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
+                                                     #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
-                self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
+                    self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
+                    self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']
+                    self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']
 
-            elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
+                    self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
-                from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.ctx.calc_inputs.scf.kpoints, self.ctx.act_var['delta']*init)
-                self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                try:
-                    del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...non sono sicuro si faccia cosi'
-                except:
-                    pass #just for the first iteration we have a parent_folder
+                    self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
 
-                self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+                elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
-            else: #"scalar" quantity
+                    from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
+                    self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.ctx.calc_inputs.scf.kpoints, self.ctx.act_var['delta'])
+                    self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
+                    try:
+                        del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
+                    except:
+                        pass
 
-                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*init
+                    self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
 
-                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+                else: #"scalar" quantity
 
-                self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
+                    self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
+                    self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
 
+                    self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+
+                    self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
@@ -162,6 +166,7 @@ class YamboConvergence(WorkChain):
 
     def conv_eval(self):
 
+        self.ctx.first_calc = False
         self.report('Convergence evaluation')
         self.ctx.act_var['iter']  += 1
 
@@ -170,24 +175,26 @@ class YamboConvergence(WorkChain):
 
             for i in range(self.ctx.act_var['steps']):
 
-                self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
+                self.ctx.all_calcs.append(list(self.ctx.act_var.values())+ \
                                 [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
                                     self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
 
+                self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
+                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                    self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
             if converged:
 
                 self.ctx.converged = True
                 self.report('Convergence on {} reached in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
-
-                #self.ctx.conv_var = self.ctx.conv_var[:-self.ctx.act_var['conv_window']+1] #just the first of the converged window...
-
-                #taking as starting point just the first of the convergence window...
+                #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
                 first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
                 self.ctx.calc_inputs.yres.gw.parameters = first_w.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = first_w.get_builder_restart().scf.kpoints
                 self.ctx.calc_inputs.parent_folder = first_w.outputs.yambo_calc_folder
+
+                self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
 
             else:
@@ -214,7 +221,9 @@ class YamboConvergence(WorkChain):
         self.report('Converged variables: {}'.format(self.ctx.conv_var))
 
         converged_var = List(list=self.ctx.conv_var).store()
-        self.out('calc_info', converged_var)
+        all_var = List(list=self.ctx.all_calcs).store()
+        self.out('conv_info', converged_var)
+        self.out('all_calcs_info', all_var)
 
 if __name__ == "__main__":
     pass

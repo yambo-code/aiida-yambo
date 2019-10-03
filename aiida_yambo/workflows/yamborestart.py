@@ -123,7 +123,7 @@ class YamboRestartWf(WorkChain):
             # timing errors #
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
-                                        int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
+                                        Int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
 
                 self.report(
                     "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
@@ -131,7 +131,7 @@ class YamboRestartWf(WorkChain):
                 return True
 
 
-            # parallelization errors # but there should be something already in yambo...but not mpi-openmpi balance #
+            # parallelization errors # but there should be something already in yambo...but mpi-openmpi balance #
             if calc.exit_status == 104:
                 #self.something = parallelism_optimization(self.ctx.metadata.options)
                 self.report("Calculation {} failed likely from memory issues".format(calc))
@@ -153,11 +153,10 @@ class YamboRestartWf(WorkChain):
             #return self.exit_code.WFL_NOT_COMPLETED
 
         self.ctx.inputs.parent_folder = calc.outputs.remote_folder
-        self.ctx.inputs['type_calc'] = str(YamboCalculation)
-        inputs = generate_yambo_inputs(**self.ctx.inputs)
+        self.ctx.inputs['type_calc'] = Str('YamboCalculation')
 
         # submission of the next try #
-        future = self.submit(YamboCalculation, **inputs)
+        future = self.submit(YamboCalculation, **self.ctx.inputs)
         self.report("Workflow started, submitted process with pk = {}".format(future.pk))
         self.ctx.restart += 1
 
