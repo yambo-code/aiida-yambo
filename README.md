@@ -7,11 +7,11 @@ The documentation for this package can be found on Read the Docs at https://aiid
 
 ## Installation instructions:
 
-Requirements: AiiDA (version >= 0.9.0), netCDF4
+Requirements: AiiDA (version >= 1.0.0b1), netCDF4
 
 Installation via pip
 
-``` 
+```
 pip install -e yambo-aiida
 reentry scan
 ```
@@ -24,7 +24,7 @@ The terms of the yambo-aiida license can be found in the LICENSE.txt file.
 # Acknowledgements
 
 This work is supported by the [MARVEL National Centre for Competency in Research](<http://nccr-marvel.ch>)
-funded by the [Swiss National Science Foundation](<http://www.snf.ch/en>), as well as by the [MaX 
+funded by the [Swiss National Science Foundation](<http://www.snf.ch/en>), as well as by the [MaX
 European Centre of Excellence](<http://www.max-centre.eu/>) funded by the Horizon 2020 EINFRA-5 program,
 Grant No. 676598.
 
