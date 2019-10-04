@@ -185,8 +185,6 @@ class YamboConvergence(WorkChain):
             if converged:
 
                 self.ctx.converged = True
-                self.report('Convergence on {} reached in {} calculations' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
 
                 #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
                 first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
@@ -195,6 +193,9 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.parent_folder = first_w.outputs.yambo_calc_folder
 
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
+
+                self.report('Convergence on {} reached in {} calculations, the gap is {}' \
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'], gap[self.ctx.act_var['conv_window']-1, 1] )))
 
 
             else:
