@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import sys
 import itertools
+import traceback
 
 from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
@@ -195,7 +196,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'], gap[self.ctx.act_var['conv_window']-1, 1] )))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'], gaps[self.ctx.act_var['conv_window']-1, 1] )))
 
 
             else:
@@ -210,6 +211,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.fully_converged = True
         except:
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
+            self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
             self.ctx.fully_converged = True
 
 
