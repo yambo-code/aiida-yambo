@@ -68,7 +68,8 @@ class YamboWorkflow(WorkChain):
 
             if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
 
-                if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf':
+                if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf' or parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'relax' or \
+                parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'vc-relax':
                     self.ctx.calc_to_do = 'nscf'
 
                 elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':

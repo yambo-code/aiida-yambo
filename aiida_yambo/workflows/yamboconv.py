@@ -68,7 +68,7 @@ class YamboConvergence(WorkChain):
         \
         self.ctx.variables = self.inputs.var_to_conv.get_list()
         self.ctx.act_var = self.ctx.variables.pop()
-        self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
+        #self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
 
         self.ctx.converged = False
         self.ctx.fully_converged = False
@@ -172,7 +172,7 @@ class YamboConvergence(WorkChain):
         self.ctx.act_var['iter']  += 1
 
         try:
-            converged, gaps = convergence_evaluation(self.ctx.act_var)   #ci vuole qualcosa (try..) che se un calcolo non finisce mi parsa cmq le altre... almeno non ho perso troppe cose
+            converged, gaps = convergence_evaluation(self.ctx.act_var)
 
             for i in range(self.ctx.act_var['steps']):
 
@@ -196,7 +196,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'], gaps[self.ctx.act_var['conv_window']-1, 1] )))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], gaps[self.ctx.act_var['conv_window']-1, 1] ))
 
 
             else:
