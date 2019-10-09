@@ -196,7 +196,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], gaps[self.ctx.act_var['conv_window']-1, 1] ))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], gaps[-self.ctx.act_var['conv_window'], 1] ))
 
 
             else:
