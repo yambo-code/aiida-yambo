@@ -11,11 +11,12 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_quantumespresso.utils.mapping import update_mapping
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation2, take_qe_total_energy
 
 
 #from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation puo' essere generalizzato
 
-class YamboConvergence(WorkChain):
+class QEConv(WorkChain):
 
     """This workflow will perform yambo convergences with the respect to the gap at gamma... In future for multiple k points.
     """
@@ -25,10 +26,10 @@ class YamboConvergence(WorkChain):
         """Workfunction definition
 
         """
-        super(YamboConvergence, cls).define(spec)
+        super(QEConv, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='base', namespace_options={'required': True}, \
-                            exclude = ['parent_folder'])
+                            exclude = ['base.kpoints','parent_folder'])
 
         spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
         spec.input('parent_folder', valid_type=RemoteData, required = False)
@@ -58,9 +59,8 @@ class YamboConvergence(WorkChain):
         """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
 
 
-        self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-        self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
-        self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
+        self.ctx.calc_inputs = self.exposed_inputs(PwBaseWorkChain, 'base')
+        self.ctx.calc_inputs.base.kpoints = self.inputs.kpoints
         try:
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
         except:
@@ -126,39 +126,28 @@ class YamboConvergence(WorkChain):
 
             else: #the true flow
 
-                if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
-                                                     #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
-
-                    self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                    self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']
-                    self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']
-
-                    self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
-
-                    self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
-
-                elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
+                if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                     from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                    self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.ctx.calc_inputs.scf.kpoints, self.ctx.act_var['delta'])
-                    self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
+                    self.ctx.calc_inputs.base.kpoints = get_updated_mesh(self.ctx.calc_inputs.base.kpoints, self.ctx.act_var['delta'])
+
                     try:
                         del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
                     except:
                         pass
 
-                    self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+                    self.ctx.param_vals.append(self.ctx.calc_inputs.base.kpoints.get_kpoints_mesh()[0])
 
                 else: #"scalar" quantity
 
-                    self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                    self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
+                    self.ctx.new_params = self.ctx.calc_inputs.base.parameters.get_dict()
+                    self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
 
-                    self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+                    self.ctx.calc_inputs.base.parameters = update_mapping(self.ctx.calc_inputs.base.parameters, self.ctx.new_params)
 
                     self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
-            future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
+            future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
             self.ctx.act_var['wfl_pk'] = future.pk
 
@@ -172,38 +161,38 @@ class YamboConvergence(WorkChain):
         self.ctx.act_var['iter']  += 1
 
         try:
-            converged, gaps = convergence_evaluation(self.ctx.act_var)
+            converged, etot = convergence_evaluation(self.ctx.act_var)
 
             for i in range(self.ctx.act_var['steps']):
 
                 self.ctx.all_calcs.append(list(self.ctx.act_var.values())+ \
                                 [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
 
                 self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
                                 [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
             if converged:
 
                 self.ctx.converged = True
 
                 #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
                 first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
-                self.ctx.calc_inputs.yres.gw.parameters = first_w.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
-                self.ctx.calc_inputs.scf.kpoints = first_w.get_builder_restart().scf.kpoints
-                self.ctx.calc_inputs.parent_folder = first_w.outputs.yambo_calc_folder
+                self.ctx.calc_inputs.base.parameters = first_w.get_builder_restart().base['parameters'] #valutare utilizzo builder restart nel loop!!
+                self.ctx.calc_inputs.base.kpoints = first_w.get_builder_restart().base.kpoints
+                self.ctx.calc_inputs.parent_folder = first_w.outputs.remote_folder
 
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], gaps[-self.ctx.act_var['conv_window'], 1] ))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], etot[-self.ctx.act_var['conv_window'], 1] ))
 
 
             else:
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
-                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
+                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.remote_folder
 
 
             if self.ctx.variables == [] : #variables to be converged are finished

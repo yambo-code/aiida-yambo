@@ -21,7 +21,7 @@ def convergence_evaluation(calcs_info):
 
     gap = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
     for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
-        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0].called[0]  
+        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0].called[0]
         gap[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[1]+
                     yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1])-
                    (yambo_calc.outputs.array_qp.get_array('Eo')[0]+
@@ -64,6 +64,52 @@ def convergence_evaluation(calcs_info):
     #ax.plot(np.linspace(1,20,100),func(np.linspace(1,20,100),*popt),'-',label='Fit')
     #ax.plot(gaps_1[:,0],gaps_1[:,1],'*-',label='calculated')
     #legend = ax.legend(loc='best', shadow=True)
+
+def take_gw_gap(calcs_info):
+
+    gap = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
+    for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
+        yambo_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0].called[0]
+        gap[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[1]+
+                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1])-
+                   (yambo_calc.outputs.array_qp.get_array('Eo')[0]+
+                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]))
+
+        gap[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
+        gap[i-1,2] = int(yambo_calc.pk) #calc responsible of the calculation
+
+    return gap
+
+def take_qe_total_energy(calcs_info):
+
+    etot = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
+    for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
+        pw_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i]#!!!
+        etot[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[1]+
+                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1])-
+                   (yambo_calc.outputs.array_qp.get_array('Eo')[0]+
+                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]))
+
+        etot[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
+        etot[i-1,2] = int(pw_calc.pk) #calc responsible of the calculation
+
+    return etot
+
+
+def convergence_evaluation2(calcs_info,to_conv_quantity):
+
+    conv = True
+
+    for i in range(calcs_info['conv_window']):
+        if abs(to_conv_quantity[-1,1]-to_conv_quantity[-(i+1),1]) > calcs_info['conv_thr']: #backcheck
+            conv = False
+
+    return conv, to_conv_quantity[-calcs_info['steps']:,:] #, popt[0]
+
+
+
+
+
 
 '''
 def final_plot(conv_workflow):
