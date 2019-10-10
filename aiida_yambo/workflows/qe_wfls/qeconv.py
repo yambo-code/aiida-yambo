@@ -124,6 +124,10 @@ class QEConv(WorkChain):
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
             if self.ctx.act_var['steps'] == 0 and self.ctx.first_calc:
+                try:
+                    del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                except:
+                    pass
                 pass  #it is the first calc, I use it's original values
 
             else: #the true flow
@@ -134,13 +138,17 @@ class QEConv(WorkChain):
                     self.ctx.calc_inputs.kpoints = get_updated_mesh(self.ctx.calc_inputs.kpoints, self.ctx.act_var['delta'])
 
                     try:
-                        del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
+                        del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
                     except:
                         pass
 
                     self.ctx.param_vals.append(self.ctx.calc_inputs.kpoints.get_kpoints_mesh()[0])
 
                 else: #"scalar" quantity
+                    try:
+                        del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                    except:
+                        pass
 
                     self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
                     self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
