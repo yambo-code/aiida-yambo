@@ -15,7 +15,7 @@ from aiida_quantumespresso.utils.mapping import update_mapping
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation
 
-class YamboConvergence(WorkChain):
+class QEConv(WorkChain):
 
     """This workflow will perform yambo convergences with the respect to the gap at gamma... In future for multiple k points.
     """
@@ -25,7 +25,7 @@ class YamboConvergence(WorkChain):
         """Workfunction definition
 
         """
-        super(YamboConvergence, cls).define(spec)
+        super(QEConv, cls).define(spec)
 
         spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
                             exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
@@ -35,7 +35,7 @@ class YamboConvergence(WorkChain):
 
         spec.input("var_to_conv", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("fit_options", valid_type=Dict, required=True, \
+        spec.input("fit_options", valid_type=Dict, required=False, default = 'no', \
                     help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
