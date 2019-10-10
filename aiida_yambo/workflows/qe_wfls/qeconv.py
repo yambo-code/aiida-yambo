@@ -12,8 +12,8 @@ from aiida.engine import submit
 
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation
+
+#from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation puo' essere generalizzato
 
 class YamboConvergence(WorkChain):
 
