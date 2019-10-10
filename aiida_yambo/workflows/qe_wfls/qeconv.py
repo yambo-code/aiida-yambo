@@ -182,7 +182,7 @@ class QEConv(WorkChain):
                 first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
                 self.ctx.calc_inputs.pw.parameters = first_w.get_builder_restart()['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = first_w.get_builder_restart().kpoints
-                self.ctx.calc_inputs.parent_folder = first_w.outputs.remote_folder
+                self.ctx.calc_inputs.parent_folder = first_w.called[0].outputs.remote_folder
 
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
@@ -194,7 +194,7 @@ class QEConv(WorkChain):
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
-                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.remote_folder
+                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
 
 
             if self.ctx.variables == [] : #variables to be converged are finished
