@@ -31,7 +31,7 @@ class QEConv(WorkChain):
         super(QEConv, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='base', namespace_options={'required': True}, \
-                            exclude = ['base.kpoints','parent_folder'])
+                            exclude = ['kpoints','pw.parent_folder'])
 
         spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
         spec.input('parent_folder', valid_type=RemoteData, required = False)
@@ -142,10 +142,10 @@ class QEConv(WorkChain):
 
                 else: #"scalar" quantity
 
-                    self.ctx.new_params = self.ctx.calc_inputs.parameters.get_dict()
+                    self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
                     self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
 
-                    self.ctx.calc_inputs.parameters = update_mapping(self.ctx.calc_inputs.parameters, self.ctx.new_params)
+                    self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
 
                     self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
@@ -180,7 +180,7 @@ class QEConv(WorkChain):
 
                 #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
                 first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
-                self.ctx.calc_inputs.parameters = first_w.get_builder_restart()['parameters'] #valutare utilizzo builder restart nel loop!!
+                self.ctx.calc_inputs.pw.parameters = first_w.get_builder_restart()['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = first_w.get_builder_restart().kpoints
                 self.ctx.calc_inputs.parent_folder = first_w.outputs.remote_folder
 
