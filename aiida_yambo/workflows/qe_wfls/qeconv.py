@@ -27,15 +27,15 @@ class YamboConvergence(WorkChain):
         """
         super(YamboConvergence, cls).define(spec)
 
-        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
-                            exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
+        spec.expose_inputs(PwBaseWorkChain, namespace='base', namespace_options={'required': True}, \
+                            exclude = ['parent_folder'])
 
         spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
         spec.input('parent_folder', valid_type=RemoteData, required = False)
 
         spec.input("var_to_conv", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("fit_options", valid_type=Dict, required=True, \
+        spec.input("fit_options", valid_type=Dict, required=False, default = 'no', \
                     help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
