@@ -36,7 +36,7 @@ class QEConv(WorkChain):
 
         spec.input("var_to_conv", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("fit_options", valid_type=Dict, required=False, default = 'no', \
+        spec.input("fit_options", valid_type=Dict, required=True, \
                     help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################

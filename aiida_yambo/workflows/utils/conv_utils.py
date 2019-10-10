@@ -84,16 +84,12 @@ def take_qe_total_energy(calcs_info):
 
     etot = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
     for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
-        pw_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i]#!!!
-        etot[i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[1]+
-                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[1])-
-                   (yambo_calc.outputs.array_qp.get_array('Eo')[0]+
-                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[0]))
-
+        pw_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0]
+        etot[i-1,1] = pw_calc.outputs.output_parameters.get_dict()['energy']
         etot[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
         etot[i-1,2] = int(pw_calc.pk) #calc responsible of the calculation
 
-    return etot
+    return etot #delta etot better?
 
 
 def convergence_evaluation2(calcs_info,to_conv_quantity):
