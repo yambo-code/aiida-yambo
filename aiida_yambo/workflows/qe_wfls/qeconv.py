@@ -147,7 +147,7 @@ class QEConv(WorkChain):
 
                     self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
 
-                    self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
+                    self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
 
             future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
