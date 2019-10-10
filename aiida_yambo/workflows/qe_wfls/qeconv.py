@@ -62,7 +62,7 @@ class QEConv(WorkChain):
 
 
         self.ctx.calc_inputs = self.exposed_inputs(PwBaseWorkChain, 'base')
-        self.ctx.calc_inputs.base.kpoints = self.inputs.kpoints
+        self.ctx.calc_inputs.kpoints = self.inputs.kpoints
         try:
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
         except:
@@ -131,21 +131,21 @@ class QEConv(WorkChain):
                 if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                     from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                    self.ctx.calc_inputs.base.kpoints = get_updated_mesh(self.ctx.calc_inputs.base.kpoints, self.ctx.act_var['delta'])
+                    self.ctx.calc_inputs.kpoints = get_updated_mesh(self.ctx.calc_inputs.kpoints, self.ctx.act_var['delta'])
 
                     try:
                         del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
                     except:
                         pass
 
-                    self.ctx.param_vals.append(self.ctx.calc_inputs.base.kpoints.get_kpoints_mesh()[0])
+                    self.ctx.param_vals.append(self.ctx.calc_inputs.kpoints.get_kpoints_mesh()[0])
 
                 else: #"scalar" quantity
 
-                    self.ctx.new_params = self.ctx.calc_inputs.base.parameters.get_dict()
+                    self.ctx.new_params = self.ctx.calc_inputs.parameters.get_dict()
                     self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
 
-                    self.ctx.calc_inputs.base.parameters = update_mapping(self.ctx.calc_inputs.base.parameters, self.ctx.new_params)
+                    self.ctx.calc_inputs.parameters = update_mapping(self.ctx.calc_inputs.parameters, self.ctx.new_params)
 
                     self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
@@ -180,8 +180,8 @@ class QEConv(WorkChain):
 
                 #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
                 first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
-                self.ctx.calc_inputs.base.parameters = first_w.get_builder_restart().base['parameters'] #valutare utilizzo builder restart nel loop!!
-                self.ctx.calc_inputs.base.kpoints = first_w.get_builder_restart().base.kpoints
+                self.ctx.calc_inputs.parameters = first_w.get_builder_restart()['parameters'] #valutare utilizzo builder restart nel loop!!
+                self.ctx.calc_inputs.kpoints = first_w.get_builder_restart().kpoints
                 self.ctx.calc_inputs.parent_folder = first_w.outputs.remote_folder
 
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
