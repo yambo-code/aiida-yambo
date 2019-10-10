@@ -163,7 +163,7 @@ class QEConv(WorkChain):
         self.ctx.act_var['iter']  += 1
 
         try:
-            converged, etot = convergence_evaluation(self.ctx.act_var)
+            converged, etot = convergence_evaluation2(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
