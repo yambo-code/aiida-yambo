@@ -137,8 +137,9 @@ class QEConv(WorkChain):
                 if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
                     self.ctx.calc_inputs.kpoints = KpointsData()
-                    self.ctx.calc_inputs.kpoints.set_cell_from_structure(self.ctx.calc_inputs.pw.structure)
-                    self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0']), force_parity=True)
+                    self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
+                    self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0']-1), force_parity=True)
+                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0'])))
 
                     try:
                         del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
