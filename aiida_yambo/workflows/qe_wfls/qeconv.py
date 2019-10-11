@@ -15,9 +15,6 @@ from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy
 
-
-#from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation puo' essere generalizzato
-
 class QEConv(WorkChain):
 
     """This workflow will perform yambo convergences with the respect to the gap at gamma... In future for multiple k points.
