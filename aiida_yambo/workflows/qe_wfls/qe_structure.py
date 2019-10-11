@@ -1,0 +1,235 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
+import sys
+import itertools
+import traceback
+
+from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
+
+from aiida.engine import WorkChain, while_
+from aiida.engine import ToContext
+from aiida.engine import submit
+
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.utils.mapping import update_mapping
+
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy
+
+class QE_relax(WorkChain):
+
+    """This workflow will perform structure relaxation
+    """
+
+    @classmethod
+    def define(cls, spec):
+        """Workfunction definition
+
+        """
+        super(QEConv, cls).define(spec)
+
+        spec.expose_inputs(PwBaseWorkChain, namespace='base', namespace_options={'required': True}, \
+                            exclude = ['kpoints','pw.parent_folder'])
+
+        spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
+        spec.input('parent_folder', valid_type=RemoteData, required = False)
+
+        spec.input("var_to_conv", valid_type=List, required=True, \
+                    help = 'variables to converge, range, steps, and max restarts')
+        spec.input("fit_options", valid_type=Dict, required=True, \
+                    help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
+
+##################################### OUTLINE ####################################
+
+        spec.outline(cls.start_workflow,
+                    while_(cls.has_to_continue)(
+                    cls.next_step,
+                    cls.conv_eval),
+                    cls.report_wf,
+                    )
+
+##################################################################################
+
+        spec.output('conv_info', valid_type = List, help='list with convergence path')
+        spec.output('all_calcs_info', valid_type = List, help='all calculations')
+        #plots of single and multiple convergences, with data.txt to plot whenever you want
+        #fitting just the last conv window, but plotting all
+
+    def start_workflow(self):
+        """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
+
+
+        self.ctx.calc_inputs = self.exposed_inputs(PwBaseWorkChain, 'base')
+        self.ctx.calc_inputs.kpoints = self.inputs.kpoints
+        try:
+            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
+        except:
+            pass
+        \
+        self.ctx.variables = self.inputs.var_to_conv.get_list()
+        self.ctx.act_var = self.ctx.variables.pop()
+        #self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
+
+        self.ctx.converged = False
+        self.ctx.fully_converged = False
+
+        self.ctx.act_var['iter']  = 0
+
+        self.ctx.all_calcs = []
+        self.ctx.conv_var = []
+
+        self.ctx.first_calc = True
+
+        self.ctx.k_last_dist = self.ctx.act_var['mesh_0']
+
+        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
+
+    def has_to_continue(self):
+
+        """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
+        if self.ctx.act_var['iter'] + 1  > self.ctx.act_var['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
+            self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
+            return False
+
+        else:
+
+            if not self.ctx.converged:
+                self.report('Convergence on {}'.format(self.ctx.act_var['var']))
+                return True
+
+            elif self.ctx.fully_converged:
+                self.report('the workflow is finished successfully')
+                return False
+
+            elif self.ctx.converged and not self.ctx.fully_converged:
+                #update variable
+                self.ctx.act_var = self.ctx.variables.pop()
+                self.ctx.act_var['iter']  = 0
+                self.ctx.converged = False
+                self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
+                return True
+
+
+    def next_step(self):
+        """This function will submit the next step"""
+
+        #loop on the given steps of a given variable to make convergence
+
+        calc = {}
+
+        self.ctx.param_vals = []
+
+        for i in range(self.ctx.act_var['steps']):
+
+            self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
+
+            if self.ctx.act_var['steps'] == 0 and self.ctx.first_calc:
+                try:
+                    del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                except:
+                    pass
+                pass  #it is the first calc, I use it's original values
+
+            else: #the true flow
+
+                if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
+
+                    self.ctx.calc_inputs.kpoints = KpointsData()
+                    self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
+                    self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
+                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0'])))
+
+                    try:
+                        del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                    except:
+                        pass
+
+                    self.ctx.param_vals.append(self.ctx.calc_inputs.kpoints.get_kpoints_mesh()[0])
+
+                else: #"scalar" quantity
+                    try:
+                        del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                    except:
+                        pass
+
+                    self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
+                    self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
+
+                    self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+
+                    self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
+
+            future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
+            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
+            self.ctx.act_var['wfl_pk'] = future.pk
+
+        return ToContext(calc) #questo aspetta tutti i calcoli
+
+
+    def conv_eval(self):
+
+        self.ctx.first_calc = False
+        self.report('Convergence evaluation')
+        self.ctx.act_var['iter']  += 1
+
+        if self.ctx.act_var['var'] == 'kpoints':
+            self.ctx.k_last_dist +=1
+
+        try:
+            converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+
+            for i in range(self.ctx.act_var['steps']):
+
+                self.ctx.all_calcs.append(list(self.ctx.act_var.values())+ \
+                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+
+                self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
+                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+            if converged:
+
+                self.ctx.converged = True
+
+                #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
+                first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
+                self.ctx.calc_inputs.pw.parameters = first_w.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
+                self.ctx.calc_inputs.kpoints = first_w.get_builder_restart().kpoints
+                self.ctx.calc_inputs.pw.parent_folder = first_w.called[0].outputs.remote_folder
+
+                self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
+
+                self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], etot[-self.ctx.act_var['conv_window'], 1] ))
+
+
+            else:
+                self.ctx.converged = False
+                self.report('Convergence on {} not reached yet in {} calculations' \
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
+                self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
+
+
+            if self.ctx.variables == [] : #variables to be converged are finished
+
+                self.ctx.fully_converged = True
+        except:
+            self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
+            self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
+            self.ctx.fully_converged = True
+
+
+    def report_wf(self):
+
+        self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
+
+        #self.ctx.conv_var = (list(self.ctx.act_var.keys())+['calc_number','params_vals','gap']).append(self.ctx.conv_var)
+
+        self.report('Converged variables: {}'.format(self.ctx.conv_var))
+
+        converged_var = List(list=self.ctx.conv_var).store()
+        all_var = List(list=self.ctx.all_calcs).store()
+        self.out('conv_info', converged_var)
+        self.out('all_calcs_info', all_var)
+
+if __name__ == "__main__":
+    pass
