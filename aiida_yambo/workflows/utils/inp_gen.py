@@ -235,24 +235,6 @@ def generate_yambo_convergence_inputs(yambo,  list_of_var, fit_options, scf, nsc
 
 
 ################################################################################
-################################################################################
-
-
-#for YamboConvergence:
-def get_updated_mesh(starting_mesh,delta):
-
-    mesh, shift = starting_mesh.get_kpoints_mesh()
-
-    for j in range(0,3):
-        if mesh[j] != 1:
-            mesh[j] = mesh[j]+delta
-            #mesh[j] = mesh[j]+(i-1)*delta
-
-    new_mesh  = KpointsData()
-    new_mesh.set_kpoints_mesh(mesh, shift)
-
-    return new_mesh
-
 
 
 ################################################################################

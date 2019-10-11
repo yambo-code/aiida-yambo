@@ -79,6 +79,7 @@ class YamboConvergence(WorkChain):
         self.ctx.conv_var = []
 
         self.ctx.first_calc = True
+        self.ctx.k_last_dist = 0
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -139,8 +140,9 @@ class YamboConvergence(WorkChain):
 
                 elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
-                    from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                    self.ctx.calc_inputs.scf.kpoints = get_updated_mesh(self.ctx.calc_inputs.scf.kpoints, self.ctx.act_var['delta'])
+                    self.ctx.calc_inputs.scf.kpoints = KpointsData()
+                    self.ctx.calc_inputs.scf.kpoints.set_cell_from_structure(self.ctx.calc_inputs.scf.pw.structure)
+                    self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0']), force_parity=True)
                     self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
                     try:
                         del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
@@ -148,6 +150,7 @@ class YamboConvergence(WorkChain):
                         pass
 
                     self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+
 
                 else: #"scalar" quantity
 
@@ -171,8 +174,12 @@ class YamboConvergence(WorkChain):
         self.report('Convergence evaluation')
         self.ctx.act_var['iter']  += 1
 
+        if self.ctx.act_var['var'] == 'kpoints':
+            self.ctx.k_last_dist +=1
+
+
         try:
-            converged, gaps = convergence_evaluation2(self.ctx.act_var,take_gw_gap(self.ctx.act_var)) #redundancy..
+            converged, gaps = convergence_evaluation2(self.ctx.act_var,take_gw_gap(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 

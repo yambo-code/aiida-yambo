@@ -82,6 +82,8 @@ class QEConv(WorkChain):
 
         self.ctx.first_calc = True
 
+        self.ctx.k_last_dist = 0
+
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
     def has_to_continue(self):
@@ -134,8 +136,9 @@ class QEConv(WorkChain):
 
                 if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
-                    from aiida_yambo.workflows.utils.inp_gen import get_updated_mesh
-                    self.ctx.calc_inputs.kpoints = get_updated_mesh(self.ctx.calc_inputs.kpoints, self.ctx.act_var['delta'])
+                    self.ctx.calc_inputs.kpoints = KpointsData()
+                    self.ctx.calc_inputs.kpoints.set_cell_from_structure(self.ctx.calc_inputs.pw.structure)
+                    self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0']), force_parity=True)
 
                     try:
                         del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
@@ -170,8 +173,11 @@ class QEConv(WorkChain):
         self.report('Convergence evaluation')
         self.ctx.act_var['iter']  += 1
 
+        if self.ctx.act_var['var'] == 'kpoints':
+            self.ctx.k_last_dist +=1
+
         try:
-            converged, etot = convergence_evaluation2(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var)) #redundancy..
+            converged, etot = convergence_evaluation2(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
