@@ -200,7 +200,7 @@ class QEConv(WorkChain):
 
                 self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
 
-                self.report('Convergence on {} reached in {} calculations, the gap is {}' \
+                self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], etot[-self.ctx.act_var['conv_window'], 1] ))
 
 
