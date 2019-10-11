@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation2, take_qe_total_energy
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy
 
 
 #from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation puo' essere generalizzato
@@ -178,7 +178,7 @@ class QEConv(WorkChain):
             self.ctx.k_last_dist +=1
 
         try:
-            converged, etot = convergence_evaluation2(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+            converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 

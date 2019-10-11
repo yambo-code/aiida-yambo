@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation2, take_gw_gap
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap
 
 class YamboConvergence(WorkChain):
 
@@ -181,7 +181,7 @@ class YamboConvergence(WorkChain):
 
 
         try:
-            converged, gaps = convergence_evaluation2(self.ctx.act_var,take_gw_gap(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
