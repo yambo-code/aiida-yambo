@@ -122,7 +122,9 @@ class YamboConvergence(WorkChain):
 
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
-            if self.ctx.act_var['steps'] == 0 and self.ctx.first_calc:
+            if i == 0 and self.ctx.first_calc:
+                self.report('first calc will be done with the starting params')
+
                 pass  #it is the first calc, I use it's original values
 
             else: #the true flow
@@ -144,7 +146,7 @@ class YamboConvergence(WorkChain):
                     self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
                     self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(1/(2*i+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
                     self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0'])))
+                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),2*i+1+6*(self.ctx.k_last_dist-1)))
 
                     try:
                         del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...

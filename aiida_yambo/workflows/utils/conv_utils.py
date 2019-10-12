@@ -77,6 +77,27 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
 
     return conv, to_conv_quantity[-calcs_info['steps']:,:] #, popt[0]
 
+def last_conv_calc_recovering(calcs_info,last_val,what):
+
+    i = calcs_info['conv_window']
+    Found_last_gap = False
+    try:
+        while not Found_last_gap:
+                pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
+                etot = pw_calc.outputs.output_parameters.get_dict()[str(what)]
+                if abs(etot-last_gap) < calcs_info['conv_thr']:
+                    Found_last_gap = False
+                    i +=1
+                elif abs(etot-last_gap) > calcs_info['conv_thr']:
+                    Found_last_gap = True #this is the first out of conv
+
+        last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1] #last wfl ok
+    except:
+        last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['conv_window']-1] #last wfl ok
+
+    return  last_conv_calc, i
+
+
 
 
 

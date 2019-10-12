@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_gap_recovering
 
 class QEConv(WorkChain):
 
@@ -122,11 +122,8 @@ class QEConv(WorkChain):
 
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
-            if self.ctx.act_var['steps'] == 0 and self.ctx.first_calc:
-                try:
-                    del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
-                except:
-                    pass
+            if i == 0 and self.ctx.first_calc:
+                self.report('first calc will be done with the starting params')
                 pass  #it is the first calc, I use it's original values
 
             else: #the true flow
@@ -136,7 +133,7 @@ class QEConv(WorkChain):
                     self.ctx.calc_inputs.kpoints = KpointsData()
                     self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
                     self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
-                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+self.ctx.k_last_dist+self.ctx.act_var['mesh_0'])))
+                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+6*(self.ctx.k_last_dist-1))))
 
                     try:
                         del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
@@ -191,12 +188,14 @@ class QEConv(WorkChain):
                 self.ctx.converged = True
 
                 #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
-                first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
-                self.ctx.calc_inputs.pw.parameters = first_w.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
-                self.ctx.calc_inputs.kpoints = first_w.get_builder_restart().kpoints
-                self.ctx.calc_inputs.pw.parent_folder = first_w.called[0].outputs.remote_folder
+                #first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
+                last_ok, oversteps = last_conv_gap_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
+                self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
+                self.ctx.calc_inputs.pw.parent_folder = last_ok.called[0].outputs.remote_folder
 
-                self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
+                #self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
+                self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], etot[-self.ctx.act_var['conv_window'], 1] ))
