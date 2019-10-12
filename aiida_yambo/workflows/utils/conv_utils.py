@@ -88,7 +88,7 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
                 value = calc.outputs.output_parameters.get_dict()[str(what)]
             else:
                 value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
-                            calc.called[0]outputs.array_qp.get_array('E_minus_Eo')[1])-
+                            calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
                            (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
                             calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
 
