@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_gap_recovering
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_calc_recovering
 
 class QEConv(WorkChain):
 
