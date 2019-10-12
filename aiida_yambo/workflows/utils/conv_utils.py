@@ -80,22 +80,23 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
 def last_conv_calc_recovering(calcs_info,last_val,what):
 
     i = calcs_info['conv_window']
-    Found_last_gap = False
-    try:
-        while not Found_last_gap:
-                pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
-                etot = pw_calc.outputs.output_parameters.get_dict()[str(what)]
-                if abs(etot-last_gap) < calcs_info['conv_thr']:
-                    Found_last_gap = False
-                    i +=1
-                elif abs(etot-last_gap) > calcs_info['conv_thr']:
-                    Found_last_gap = True #this is the first out of conv
+    have_to_backsearch = True
+    while have_to_backsearch:
+        try:
+            calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
+            value = calc.outputs.output_parameters.get_dict()[str(what)]
+            if abs(value-last_val) < calcs_info['conv_thr']:
+                have_to_backsearch = True
+                i +=1
+            elif abs(value-last_val) >= calcs_info['conv_thr']:
+                have_to_backsearch = False #this is the first out of conv
+        except:
+            have_to_backsearch = False
+            i = calcs_info['conv_window']
 
-        last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1] #last wfl ok
-    except:
-        last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['conv_window']-1] #last wfl ok
+    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
 
-    return  last_conv_calc, i
+    return  int(last_conv_calc), i
 
 
 

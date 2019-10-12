@@ -187,14 +187,14 @@ class QEConv(WorkChain):
 
                 self.ctx.converged = True
 
-                #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
-                #first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
-                last_ok, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                #taking as starting point just the first of the convergence window...
+                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                self.report('oversteps:{}'.format(oversteps))
+                last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
                 self.ctx.calc_inputs.pw.parent_folder = last_ok.called[0].outputs.remote_folder
 
-                #self.ctx.conv_var = self.ctx.conv_var[:-(self.ctx.act_var['conv_window']-1)] #just the first of the converged window...
                 self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
