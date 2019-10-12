@@ -132,7 +132,7 @@ class QEConv(WorkChain):
 
                 self.ctx.calc_inputs.kpoints = KpointsData()
                 self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
-                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i*first+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
+                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i*first+1+2*self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)), force_parity=True)
                 self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+6*(self.ctx.k_last_dist-1))))
 
                 try:
