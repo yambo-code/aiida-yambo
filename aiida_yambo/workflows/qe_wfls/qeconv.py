@@ -122,38 +122,38 @@ class QEConv(WorkChain):
 
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
-            if i == 0 and self.ctx.first_calc:
+            if i == 0 and self.ctx.first_calc and i == 0:
                 self.report('first calc will be done with the starting params')
-                pass  #it is the first calc, I use it's original values
-
+                first = 0 #it is the first calc, I use it's original values
             else: #the true flow
+                first = 1
 
-                if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
+            if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
-                    self.ctx.calc_inputs.kpoints = KpointsData()
-                    self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
-                    self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
-                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+6*(self.ctx.k_last_dist-1))))
+                self.ctx.calc_inputs.kpoints = KpointsData()
+                self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
+                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i*first+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
+                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+6*(self.ctx.k_last_dist-1))))
 
-                    try:
-                        del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
-                    except:
-                        pass
+                try:
+                    del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                except:
+                    pass
 
-                    self.ctx.param_vals.append(self.ctx.calc_inputs.kpoints.get_kpoints_mesh()[0])
+                self.ctx.param_vals.append(self.ctx.calc_inputs.kpoints.get_kpoints_mesh()[0])
 
-                else: #"scalar" quantity
-                    try:
-                        del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
-                    except:
-                        pass
+            else: #"scalar" quantity
+                try:
+                    del self.ctx.calc_inputs.pw.parent_folder  #I need to start from scratch...
+                except:
+                    pass
 
-                    self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
-                    self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
+                self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
+                self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
 
-                    self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
 
-                    self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
+                self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
 
             future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
@@ -189,7 +189,7 @@ class QEConv(WorkChain):
 
                 #taking as starting point just the first of the convergence window...serve una utility per capirlo con pandas
                 #first_w = load_node(self.ctx.act_var['wfl_pk']).caller.called[self.ctx.act_var['conv_window']-1] #cheaper, andrebbe valutat su tutta la storia: pandas!!!
-                last_ok, oversteps = last_conv_gap_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                last_ok, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
                 self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
                 self.ctx.calc_inputs.pw.parent_folder = last_ok.called[0].outputs.remote_folder

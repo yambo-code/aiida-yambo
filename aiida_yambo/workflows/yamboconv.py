@@ -122,48 +122,48 @@ class YamboConvergence(WorkChain):
 
             self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
-            if i == 0 and self.ctx.first_calc:
+            if i == 0 and self.ctx.first_calc and i == 0:
                 self.report('first calc will be done with the starting params')
-
-                pass  #it is the first calc, I use it's original values
-
+                first = 0 #it is the first calc, I use it's original values
             else: #the true flow
-
-                if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
-                                                     #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
-
-                    self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                    self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']
-                    self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']
-
-                    self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
-
-                    self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
-
-                elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
-
-                    self.ctx.calc_inputs.scf.kpoints = KpointsData()
-                    self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
-                    self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(1/(2*i+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
-                    self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                    self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),2*i+1+6*(self.ctx.k_last_dist-1)))
-
-                    try:
-                        del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
-                    except:
-                        pass
-
-                    self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+                first = 1
 
 
-                else: #"scalar" quantity
+            if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
+                                                 #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
 
-                    self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                    self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']
+                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
+                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']*first
+                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']*first
 
-                    self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
 
-                    self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
+                self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
+
+            elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
+
+                self.ctx.calc_inputs.scf.kpoints = KpointsData()
+                self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
+                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(1/(2*i*first+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
+                self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
+                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),2*i+1+6*(self.ctx.k_last_dist-1)))
+
+                try:
+                    del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
+                except:
+                    pass
+
+                self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
+
+
+            else: #"scalar" quantity
+
+                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
+                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
+
+                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+
+                self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
