@@ -112,7 +112,7 @@ class QE_relax(WorkChain):
                 else:
                     scaled_structure = self.inputs.initial_structure.get_ase()
                     scaled_structure.set_cell(scaled_structure.cell*(1.0+variation), scale_atoms=True)
-                    self.ctx.calc_inputs.structure = StructureData(ase=scaled_structure)
+                    self.ctx.calc_inputs.pw.structure = StructureData(ase=scaled_structure)
                     self.report('lattice-variation used: {}%'.format())
 
                 self.ctx.param_vals.append(variation)
