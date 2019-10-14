@@ -43,7 +43,8 @@ class QE_relax(WorkChain):
                     cls.next_step,
                     cls.conv_eval,
                     ),
-                    cls.do_final_scf,
+                    if_(cls.can_do_scf)(
+                    cls.do_final_scf),
                     cls.report_wf,
                     )
 
@@ -69,6 +70,8 @@ class QE_relax(WorkChain):
         self.ctx.first_calc = True
 
         self.ctx.optimal_value = 0
+
+        self.ctx.fully_relaxed_to_scf = False
 
         self.report("workflow initilization step completed, the relaxation scheme will be {}.".format(self.ctx.conv_options['relaxation_scheme']))
 
@@ -166,11 +169,12 @@ class QE_relax(WorkChain):
             if converged:
 
                 self.ctx.fully_relaxed = True
+                self.ctx.fully_relaxed_to_scf = True
 
-                try: #vc-relax
+                if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
                     self.ctx.last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.conv_options,etot[-1,1],'energy')
                     self.ctx.optimal_value = load_node(self.ctx.last_ok_pk).inputs.pw.parameters.get_dict()['SYSTEM']['ecutwfc']
-                except:
+                else:
                     pass
 
 
@@ -181,15 +185,23 @@ class QE_relax(WorkChain):
 
                 self.ctx.fully_relaxed = False
                 self.report('Relaxation scheme {} not completed yet in {} calculations' \
-                            .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*(self.ctx.conv_options['iter'] )))
-                self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.conv_options['wfl_pk']).called[0].outputs.remote_folder
+                            .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*(self.ctx.iter )))
+                #self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.conv_options['wfl_pk']).called[0].outputs.remote_folder
 
         except:
             self.report('problem during the min/convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
             self.ctx.fully_relaxed = True
+            self.ctx.fully_relaxed_to_scf = False
 
         self.ctx.iter  += 1
+
+    def can_do_scf(self):
+
+        """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
+        if self.ctx.fully_relaxed_to_scf:
+            self.report('the workflow is finished successfully, now we do a scf')
+            return True
 
     def do_final_scf(self):
 
@@ -203,7 +215,7 @@ class QE_relax(WorkChain):
         elif self.ctx.conv_options['relaxation_scheme'] == 'relax':
 
             inputs_scf = load_node(self.ctx.conv_options['wfl_pk']).get_builder_restart()
-            inputs_scf['pw']['parameters']['CONTROL']['calculation'] = 'scf'
+            inputs_scf['pw']['parameters']['CONTROL']['calculation'] = 'relax'
             scaled_structure = self.inputs.initial_structure.get_ase()
             scaled_structure.set_cell(scaled_structure.cell*(1.0+self.ctx.optimal_value), scale_atoms=True)
             inputs_scf['pw']['structure']= StructureData(ase=scaled_structure)
@@ -215,7 +227,7 @@ class QE_relax(WorkChain):
 
         self.report('Final step. The workflow now will collect some info about the calculations in the "path" output node, and the relaxed scf calc')
 
-        self.report('Relaxation scheme performed: {}'.format(self.inputs.relax.relaxation_scheme))
+        self.report('Relaxation scheme performed: {}'.format(self.ctx.conv_options['relaxation_scheme']))
 
         path = List(list=self.ctx.path).store()
         rel_scf = Int(self.ctx.scf.pk).store()

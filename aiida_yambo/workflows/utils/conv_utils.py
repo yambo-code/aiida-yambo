@@ -87,11 +87,11 @@ def relaxation_evaluation(variations,calcs_info,to_conv_quantity):
 
     popt, pcov = curve_fit(func, variations, etot[:,1])
 
-    if pcov.max() > 0.02:
-        return error
-    else:
-        conv = True
-
+    #if pcov.max() > 0.02:
+    #    return error
+    #else:
+        #conv = True
+    conv = True
     return conv, etot, -popt[1]/(2*popt[0]) #the min of the curve fitting
 
 
