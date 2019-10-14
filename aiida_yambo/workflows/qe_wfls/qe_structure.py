@@ -6,11 +6,12 @@ import traceback
 
 from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
-from aiida.engine import WorkChain, while_
+from aiida.engine import WorkChain, while_, if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-from aiida_quantumespresso.workflows.pw.base import PwRelaxWorkChain
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.workflows.pw.relax import PwRelaxWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy
@@ -41,14 +42,16 @@ class QE_relax(WorkChain):
         spec.outline(cls.start_workflow,
                     while_(cls.has_to_continue)(
                     cls.next_step,
-                    cls.conv_eval),
+                    cls.conv_eval,
+                    ),
+                    cls.final_scf,
                     cls.report_wf,
                     )
 
 ##################################################################################
 
-        spec.output('conv_info', valid_type = List, help='list with convergence path')
-        spec.output('relaxed_structure', valid_type = Structure, help='the final structure')
+        spec.output('path', valid_type = List, help='list with convergence path')
+        #spec.output('relaxed_structure', valid_type = Structure, help='the final structure')
 
     def start_workflow(self):
         """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
@@ -62,8 +65,7 @@ class QE_relax(WorkChain):
 
         self.ctx.iter = 1
 
-        self.ctx.all_calcs = []
-        self.ctx.conv_var = []
+        self.ctx.path = []
 
         self.ctx.first_calc = True
 
@@ -72,8 +74,8 @@ class QE_relax(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter  > self.ctx.conv_options  ['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
-            self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
+        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
+            self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.conv_options['var']))
             return False
 
         elif self.ctx.fully_relaxed:
@@ -96,33 +98,37 @@ class QE_relax(WorkChain):
 
             self.report('Preparing iteration number {} on {}'.format(i+self.ctx.iter*self.ctx.conv_options['steps']))
 
-                if i == 0 and self.ctx.first_calc and i == 0:
-                    self.report('first calc will be done with the starting params')
-                    first = 0 #it is the first calc, I use it's original values
-                else: #the true flow
-                    first = 1
+            if i == 0 and self.ctx.first_calc:
+                self.report('first calc will be done with the starting params')
+                first = 0 #it is the first calc, I use it's original values
+            else: #the true flow
+                first = 1
 
-                if self.ctx.calc_inputs.relaxation_scheme == 'relax':
+            if self.ctx.calc_inputs.relaxation_scheme == 'relax':
 
+                variation = 0.01*(i-self.ctx.conv_options['steps']//2)*self.ctx.iter #-1 0 1, -2 2 ....
+                if variation == 0 and not self.ctx.first_calc:
+                    pass #next iter, so avoiding the "center" of the variations, 0
+                else:
                     scaled_structure = self.inputs.structure.get_ase()
-                    scaled_structure.set_cell(scaled_structure.cell*(1.0+0.01*(i+first)*self.ctx.iter), scale_atoms=True)
+                    scaled_structure.set_cell(scaled_structure.cell*(1.0+variation), scale_atoms=True)
                     self.ctx.calc_inputs.structure = StructureData(ase=scaled_structure)
                     self.report('lattice-variation used: {}%'.format())
 
-                    self.ctx.param_vals.append(0.01*i)
+                self.ctx.param_vals.append(variation)
 
-                else self.ctx.calc_inputs.relaxation_scheme == 'vc-relax':
+            elif self.ctx.calc_inputs.relaxation_scheme == 'vc-relax':
 
-                    self.ctx.new_params = self.ctx.calc_inputs.base.pw.parameters.get_dict()
-                    self.ctx.new_params['SYSTEM']['ecutwf'] = self.ctx.new_params['SYSTEM']['ecutwf'] + self.ctx.act_var['delta']*first
+                self.ctx.new_params = self.ctx.calc_inputs.base.pw.parameters.get_dict()
+                self.ctx.new_params['SYSTEM']['ecutwf'] = self.ctx.new_params['SYSTEM']['ecutwf'] + self.ctx.conv_options['delta']*first
 
-                    self.ctx.calc_inputs.base.pw.parameters = update_mapping(self.ctx.calc_inputs.base.pw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.base.pw.parameters = update_mapping(self.ctx.calc_inputs.base.pw.parameters, self.ctx.new_params)
 
-                    self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
+                self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.conv_options['var'])])
 
             future = self.submit(PwRelaxWorkChain, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
-            self.ctx.wfl_pk = future.pk
+            self.conv_options['wfl_pk'] = future.pk
 
         return ToContext(calc) #questo aspetta tutti i calcoli
 
@@ -136,33 +142,39 @@ class QE_relax(WorkChain):
 
             if self.ctx.calc_inputs.relaxation_scheme == 'vc-relax':
 
-                converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+                converged, etot = convergence_evaluation(self.ctx.conv_options,take_qe_total_energy(self.ctx.conv_options,self.ctx.k_last_dist)) #redundancy..
 
             elif self.ctx.calc_inputs.relaxation_scheme == 'relax':
 
-                converged, etot = relaxation_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+                try:
+                    converged, etot, self.ctx.optimal_value = relaxation_evaluation(self.ctx.param_vals,self.ctx.conv_options) #redundancy..
+                except:
+                    converged = False
 
             for i in range(self.ctx.conv_options['steps']):
 
-                self.ctx.all_calcs.append([len(load_node(self.ctx.wfl_pk).caller.called)-self.ctx.conv_options['steps']+i, \
-                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
-
-                self.ctx.conv_var.append([len(load_node(self.ctx.wfl_pk).caller.called)-self.ctx.conv_options['steps']+i, \
+                self.ctx.path.append([len(load_node(self.conv_options['wfl_pk']).caller.called)-self.ctx.conv_options['steps']+i, \
                                     self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
             if converged:
 
                 self.ctx.fully_relaxed = True
 
-                self.report('Relaxation scheme {} completed in {} calculations, the total energy is {}' \
-                            .format(self.inputs.relaxation_scheme, self.ctx.conv_options['steps']*self.ctx.iter, etot[-self.ctx.conv_options['conv_window'], 1] ))
+                try: #vc-relax
+                    self.ctx.last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.conv_options,etot[-1,1],'energy')
+                    self.ctx.optimal_value = load_node(self.ctx.last_ok_pk).inputs.pw.parameters.get_dict()['SYSTEM']['ecutwf']
+                except:
+                    pass
 
+
+                self.report('Relaxation scheme {} completed in {} calculations, the optimal value for your relaxed structure is {}' \
+                            .format(self.inputs.relaxation_scheme, self.ctx.conv_options['steps']*self.ctx.iter, self.ctx.optimal_value))
 
             else:
 
                 self.ctx.fully_relaxed = False
                 self.report('Relaxation scheme {} not completed yet in {} calculations' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
-                self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
+                            .format(self.ctx.conv_options['var'], self.ctx.conv_options['steps']*(self.ctx.conv_options['iter'] )))
+                self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.conv_options['wfl_pk']).called[0].outputs.remote_folder
 
         except:
             self.report('problem during the min/convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
@@ -171,19 +183,35 @@ class QE_relax(WorkChain):
 
         self.ctx.iter  += 1
 
+    def final_scf(self):
+
+        if self.ctx.calc_inputs.relaxation_scheme == 'vc-relax':
+
+            inputs_scf = load_node(self.ctx.last_ok_pk).called[0].get_builder_restart()
+            inputs_scf.pw.structure = load_node(self.ctx.last_ok_pk).called[0].outputs.output_structure
+            scf = self.submit(PwBaseWorkChain, **inputs_scf)
+
+        elif self.ctx.calc_inputs.relaxation_scheme == 'relax':
+
+            inputs_scf = load_node(self.conv_options['wfl_pk']).get_builder_restart()
+            scaled_structure = self.inputs.structure.get_ase()
+            scaled_structure.set_cell(scaled_structure.cell*(1.0+self.ctx.optimal_value), scale_atoms=True)
+            inputs_scf.pw.structure = StructureData(ase=scaled_structure)
+            scf = self.submit(PwRelaxWorkChain, **inputs_scf)
+
+        return ToContext(scf)
+
     def report_wf(self):
 
         self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
 
-        #self.ctx.conv_var = (list(self.ctx.act_var.keys())+['calc_number','params_vals','gap']).append(self.ctx.conv_var)
-
         self.report('Relaxation scheme performed: {}'.format(self.inputs.relaxation_scheme))
 
-        converged_var = List(list=self.ctx.conv_var).store()
-        all_var = List(list=self.ctx.all_calcs).store()
-        self.out('conv_info', converged_var)
-        self.out('all_calcs_info', all_var)
-        self.out('relaxed_structure',relaxed!)
+        path = List(list=self.ctx.path).store()
+        self.out('path', path)
+
+        self.out('relaxed_scf',self.ctx.scf.pk)
+
 
 if __name__ == "__main__":
     pass

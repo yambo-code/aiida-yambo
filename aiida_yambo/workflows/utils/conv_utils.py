@@ -14,7 +14,7 @@ from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
 '''
-convergence functions for gw(for now) convergences.
+convergence functions .
 '''
 
 def take_gw_gap(calcs_info,k_density):
@@ -57,7 +57,7 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
         if abs(to_conv_quantity[-1,1]-to_conv_quantity[-(i+1),1]) > calcs_info['conv_thr']: #backcheck
             conv = False
 
-    '''
+    ''' non e' necessario... piu' che altro non fa funzionare nulla
     #if calcs_info['conv_options']['fit'] == 'yes'
     def func(x, a, b,c):
         return a + b/(x-c) #non +...
@@ -76,6 +76,32 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
     '''
 
     return conv, to_conv_quantity[-calcs_info['steps']:,:] #, popt[0]
+
+def relaxation_evaluation(variations,calcs_info,to_conv_quantity):
+
+    def func(x, a, b,c):
+        return ax**2+b*x+c
+
+    conv = False
+    super_wfl = load_node(calcs_info['wfl_pk']).caller
+    etot = np.zeros((len(super_wfl.called),3))
+    for i in range(1,len(super_wfl.called)):
+        pw_calc = super_wfl.called[i].called[0]
+        etot[i-1,1] = pw_calc.outputs.output_parameters.get_dict()['energy']
+        etot[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
+        etot[i-1,2] = int(pw_calc.pk) #calc responsible of the calculation
+
+    popt, pcov = curve_fit(func, variations, etot[:,1])
+
+    if pcov.max() > 0.02:
+        return error
+    else:
+        conv = True
+
+    return conv, etot, -popt[1]/(2*popt[0]) #the min of the curve fitting
+
+
+
 
 def last_conv_calc_recovering(calcs_info,last_val,what):
 
