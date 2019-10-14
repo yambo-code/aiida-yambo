@@ -4,7 +4,7 @@ import sys
 import itertools
 import traceback
 
-from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
+from aiida.orm import Dict, Str, StructureData, KpointsData, RemoteData, List, load_node
 
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext

@@ -4,7 +4,7 @@ import sys
 import itertools
 import traceback
 
-from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
+from aiida.orm import Dict, Str, KpointsData, StructureData, RemoteData, List, load_node
 
 from aiida.engine import WorkChain, while_, if_
 from aiida.engine import ToContext
@@ -29,7 +29,7 @@ class QE_relax(WorkChain):
         super(QE_relax, cls).define(spec)
 
         spec.expose_inputs(PwRelaxWorkChain, namespace='relax', namespace_options={'required': True},\
-                            exclude={'structure'})
+                            exclude= ['pw.structure',])
 
         spec.input("initial_structure", valid_type=StructureData, required=True, \
                     help = 'initial structure') #many possibilities, also to define by hand the fitting functions.
