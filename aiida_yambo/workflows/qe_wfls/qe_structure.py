@@ -74,7 +74,7 @@ class QE_relax(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
+        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.converged: 
             self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.conv_options['var']))
             return False
 
