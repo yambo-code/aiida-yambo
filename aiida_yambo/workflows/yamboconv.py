@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap, last_conv_calc_recovering
 
 class YamboConvergence(WorkChain):
 
@@ -79,7 +79,10 @@ class YamboConvergence(WorkChain):
         self.ctx.conv_var = []
 
         self.ctx.first_calc = True
-        self.ctx.k_last_dist = self.ctx.act_var['mesh_0']
+        try:
+            self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
+        except:
+            pass
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -103,6 +106,10 @@ class YamboConvergence(WorkChain):
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
+                try:
+                    self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
+                except:
+                    pass
                 self.ctx.act_var['iter']  = 0
                 self.ctx.converged = False
                 self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
@@ -120,7 +127,7 @@ class YamboConvergence(WorkChain):
 
         for i in range(self.ctx.act_var['steps']):
 
-            self.report('Preparing iteration number {} on {}'.format(i+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
+            self.report('Preparing iteration number {} on {}'.format(i+(self.ctx.act_var['iter']-1)*self.ctx.act_var['steps']+1,self.ctx.act_var['var']))
 
             if i == 0 and self.ctx.first_calc:
                 self.report('first calc will be done with the starting params')
@@ -142,9 +149,11 @@ class YamboConvergence(WorkChain):
 
             elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
+
                 self.ctx.calc_inputs.scf.kpoints = KpointsData()
                 self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
-                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(2*i*first+1+2*self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)), force_parity=True)
+                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                                                                                self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1)), force_parity=True)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
                 self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),2*i+1+6*(self.ctx.k_last_dist-1)))
 
@@ -182,17 +191,19 @@ class YamboConvergence(WorkChain):
 
 
         try:
-            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.act_var)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
-                self.ctx.all_calcs.append(list(self.ctx.act_var.values())+ \
-                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+                self.ctx.all_calcs.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
+                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
+                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
 
-                self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
-                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+                self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
+                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
+                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
             if converged:
 
                 self.ctx.converged = True

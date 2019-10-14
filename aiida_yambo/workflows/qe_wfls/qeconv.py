@@ -79,7 +79,10 @@ class QEConv(WorkChain):
 
         self.ctx.first_calc = True
 
-        self.ctx.k_last_dist = self.ctx.act_var['mesh_0']
+        try:
+            self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
+        except:
+            pass
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -103,7 +106,11 @@ class QEConv(WorkChain):
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
-                self.ctx.act_var['iter']  = 1
+                try:
+                    self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
+                except:
+                    pass
+                self.ctx.act_var['iter'] = 1
                 self.ctx.converged = False
                 self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
                 return True
@@ -120,7 +127,7 @@ class QEConv(WorkChain):
 
         for i in range(self.ctx.act_var['steps']):
 
-            self.report('Preparing iteration number {} on {}'.format(i+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
+            self.report('Preparing iteration number {} on {}'.format(i+(self.ctx.act_var['iter']-1)*self.ctx.act_var['steps']+1,self.ctx.act_var['var']))
 
             if i == 0 and self.ctx.first_calc:
                 self.report('first calc will be done with the starting params')
@@ -132,7 +139,8 @@ class QEConv(WorkChain):
 
                 self.ctx.calc_inputs.kpoints = KpointsData()
                 self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
-                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i*first+1+2*self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)), force_parity=True)
+                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                                                                                self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1)), force_parity=True)
                 self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(2*i+1+6*(self.ctx.k_last_dist-1))))
 
                 try:
@@ -171,17 +179,19 @@ class QEConv(WorkChain):
             self.ctx.k_last_dist +=1
 
         try:
-            converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+            converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
-                self.ctx.all_calcs.append(list(self.ctx.act_var.values())+ \
-                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+                self.ctx.all_calcs.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
+                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
+                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
 
-                self.ctx.conv_var.append(list(self.ctx.act_var.values())+ \
-                                [len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                    self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+                self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
+                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
+                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
             if converged:
 
                 self.ctx.converged = True
@@ -203,7 +213,7 @@ class QEConv(WorkChain):
             else:
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'])))
                 self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
 
 
