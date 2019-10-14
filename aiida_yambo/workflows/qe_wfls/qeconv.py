@@ -72,7 +72,7 @@ class QEConv(WorkChain):
         self.ctx.converged = False
         self.ctx.fully_converged = False
 
-        self.ctx.act_var['iter']  = 0
+        self.ctx.act_var['iter']  = 1
 
         self.ctx.all_calcs = []
         self.ctx.conv_var = []
@@ -86,7 +86,7 @@ class QEConv(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.act_var['iter'] + 1  > self.ctx.act_var['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
+        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts'] and not self.ctx.converged and not self.ctx.fully_converged:   #+1 because it starts from zero
             self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
@@ -103,7 +103,7 @@ class QEConv(WorkChain):
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
-                self.ctx.act_var['iter']  = 0
+                self.ctx.act_var['iter']  = 1
                 self.ctx.converged = False
                 self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
                 return True
@@ -120,7 +120,7 @@ class QEConv(WorkChain):
 
         for i in range(self.ctx.act_var['steps']):
 
-            self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
+            self.report('Preparing iteration number {} on {}'.format(i+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
             if i == 0 and self.ctx.first_calc and i == 0:
                 self.report('first calc will be done with the starting params')
@@ -166,7 +166,6 @@ class QEConv(WorkChain):
 
         self.ctx.first_calc = False
         self.report('Convergence evaluation')
-        self.ctx.act_var['iter']  += 1
 
         if self.ctx.act_var['var'] == 'kpoints':
             self.ctx.k_last_dist +=1
@@ -216,6 +215,7 @@ class QEConv(WorkChain):
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
             self.ctx.fully_converged = True
 
+        self.ctx.act_var['iter']  += 1
 
     def report_wf(self): #mancano le unita'
 

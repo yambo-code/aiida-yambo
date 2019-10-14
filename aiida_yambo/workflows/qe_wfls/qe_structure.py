@@ -17,7 +17,7 @@ from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_
 
 class QE_relax(WorkChain):
 
-    """This workflow will perform structure relaxation
+    """This workflow will perform structure relaxation both relax and vc-relax
     """
 
     @classmethod
@@ -58,9 +58,9 @@ class QE_relax(WorkChain):
 
         self.ctx.conv_options = self.inputs.conv_options.get_dict()
 
-        self.ctx.fully_converged = False
+        self.ctx.fully_relaxed = False
 
-        self.ctx.iter  = 0
+        self.ctx.iter = 1
 
         self.ctx.all_calcs = []
         self.ctx.conv_var = []
@@ -72,16 +72,16 @@ class QE_relax(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter + 1  > self.ctx.conv_options  ['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
+        if self.ctx.iter  > self.ctx.conv_options  ['max_restarts'] and not self.ctx.converged:   #+1 because it starts from zero
             self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
-        elif self.ctx.fully_converged:
+        elif self.ctx.fully_relaxed:
             self.report('the workflow is finished successfully')
             return False
 
-        elif not self.ctx.fully_converged:
-            self.report('the workflow is finished successfully')
+        elif not self.ctx.fully_relaxed:
+            self.report('the workflow is not finished')
             return True
 
 
@@ -94,24 +94,27 @@ class QE_relax(WorkChain):
 
         for i in range(self.ctx.conv_options['steps']):
 
-            self.report('Preparing iteration number {} on {}'.format(i+1+self.ctx.iter*self.ctx.conv_options['steps']))
+            self.report('Preparing iteration number {} on {}'.format(i+self.ctx.iter*self.ctx.conv_options['steps']))
 
+                if i == 0 and self.ctx.first_calc and i == 0:
+                    self.report('first calc will be done with the starting params')
+                    first = 0 #it is the first calc, I use it's original values
+                else: #the true flow
+                    first = 1
 
                 if self.ctx.calc_inputs.relaxation_scheme == 'relax':
 
                     scaled_structure = self.inputs.structure.get_ase()
-                    scaled_structure.set_cell(scaled_structure.cell*(1.0),scale_atoms=True)
-                    self.ctx.calc_inputs.structure =
-                    self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(2*i+1+6*(self.ctx.k_last_dist-1)), force_parity=True)
-                    self.report('%lattice-variation used: {}'.format())
+                    scaled_structure.set_cell(scaled_structure.cell*(1.0+0.01*(i+first)*self.ctx.iter), scale_atoms=True)
+                    self.ctx.calc_inputs.structure = StructureData(ase=scaled_structure)
+                    self.report('lattice-variation used: {}%'.format())
 
-                    self.ctx.param_vals.append(self.ctx.calc_inputs.kpoints.get_kpoints_mesh()[0])
+                    self.ctx.param_vals.append(0.01*i)
 
                 else self.ctx.calc_inputs.relaxation_scheme == 'vc-relax':
 
-
                     self.ctx.new_params = self.ctx.calc_inputs.base.pw.parameters.get_dict()
-                    self.ctx.new_params['SYSTEM']['ecutwf'] = self.ctx.new_params['SYSTEM']['ecutwf'] + self.ctx.act_var['delta']
+                    self.ctx.new_params['SYSTEM']['ecutwf'] = self.ctx.new_params['SYSTEM']['ecutwf'] + self.ctx.act_var['delta']*first
 
                     self.ctx.calc_inputs.base.pw.parameters = update_mapping(self.ctx.calc_inputs.base.pw.parameters, self.ctx.new_params)
 
@@ -128,10 +131,16 @@ class QE_relax(WorkChain):
 
         self.ctx.first_calc = False
         self.report('Convergence evaluation')
-        self.ctx.iter  += 1
 
         try:
-            converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+
+            if self.ctx.calc_inputs.relaxation_scheme == 'vc-relax':
+
+                converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
+
+            elif self.ctx.calc_inputs.relaxation_scheme == 'relax':
+
+                converged, etot = relaxation_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var,self.ctx.k_last_dist)) #redundancy..
 
             for i in range(self.ctx.conv_options['steps']):
 
@@ -142,7 +151,7 @@ class QE_relax(WorkChain):
                                     self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
             if converged:
 
-                self.ctx.fully_converged = True
+                self.ctx.fully_relaxed = True
 
                 self.report('Relaxation scheme {} completed in {} calculations, the total energy is {}' \
                             .format(self.inputs.relaxation_scheme, self.ctx.conv_options['steps']*self.ctx.iter, etot[-self.ctx.conv_options['conv_window'], 1] ))
@@ -150,7 +159,7 @@ class QE_relax(WorkChain):
 
             else:
 
-                self.ctx.fully_converged = False
+                self.ctx.fully_relaxed = False
                 self.report('Relaxation scheme {} not completed yet in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
                 self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
@@ -158,8 +167,9 @@ class QE_relax(WorkChain):
         except:
             self.report('problem during the min/convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
-            self.ctx.fully_converged = True
+            self.ctx.fully_relaxed = True
 
+        self.ctx.iter  += 1
 
     def report_wf(self):
 
