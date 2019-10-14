@@ -122,7 +122,7 @@ class YamboConvergence(WorkChain):
 
             self.report('Preparing iteration number {} on {}'.format(i+self.ctx.act_var['iter']*self.ctx.act_var['steps'],self.ctx.act_var['var']))
 
-            if i == 0 and self.ctx.first_calc and i == 0:
+            if i == 0 and self.ctx.first_calc:
                 self.report('first calc will be done with the starting params')
                 first = 0 #it is the first calc, I use it's original values
             else: #the true flow
