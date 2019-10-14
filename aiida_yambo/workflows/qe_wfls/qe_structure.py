@@ -74,7 +74,7 @@ class QE_relax(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.converged: 
+        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.converged:
             self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.conv_options['var']))
             return False
 
@@ -110,7 +110,7 @@ class QE_relax(WorkChain):
                 if variation == 0 and not self.ctx.first_calc:
                     pass #next iter, so avoiding the "center" of the variations, 0
                 else:
-                    scaled_structure = self.inputs.structure.get_ase()
+                    scaled_structure = self.inputs.initial_structure.get_ase()
                     scaled_structure.set_cell(scaled_structure.cell*(1.0+variation), scale_atoms=True)
                     self.ctx.calc_inputs.structure = StructureData(ase=scaled_structure)
                     self.report('lattice-variation used: {}%'.format())
@@ -194,7 +194,7 @@ class QE_relax(WorkChain):
         elif self.ctx.calc_inputs.relaxation_scheme == 'relax':
 
             inputs_scf = load_node(self.conv_options['wfl_pk']).get_builder_restart()
-            scaled_structure = self.inputs.structure.get_ase()
+            scaled_structure = sself.inputs.initial_structure.get_ase()
             scaled_structure.set_cell(scaled_structure.cell*(1.0+self.ctx.optimal_value), scale_atoms=True)
             inputs_scf.pw.structure = StructureData(ase=scaled_structure)
             scf = self.submit(PwRelaxWorkChain, **inputs_scf)
