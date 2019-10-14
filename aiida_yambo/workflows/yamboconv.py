@@ -199,7 +199,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.converged = True
 
                 #taking as starting point just the first of the convergence window...
-                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap')
                 self.report('oversteps:{}'.format(oversteps))
                 last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
@@ -209,7 +209,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], gaps[-self.ctx.act_var['conv_window'], 1] ))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3] ))
 
 
             else:
