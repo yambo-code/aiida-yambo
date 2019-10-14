@@ -150,13 +150,15 @@ class QE_relax(WorkChain):
             elif self.ctx.conv_options['relaxation_scheme'] == 'relax':
 
                 try:
-                    converged, etot, self.ctx.optimal_value = relaxation_evaluation(self.ctx.param_vals,self.ctx.conv_options) #redundancy..
+                    converged, etot, min = relaxation_evaluation(self.ctx.param_vals,self.ctx.conv_options) #redundancy..
+                    self.ctx.optimal_value = min
                     for i in range(self.ctx.conv_options['steps']):
 
                         self.ctx.path.append([len(load_node(self.ctx.conv_options['wfl_pk']).caller.called)-self.ctx.conv_options['steps']+i, \
                                             self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
                 except:
                     converged = False
+                    self.report('the fit was not successful')
 
             if converged:
 
