@@ -86,7 +86,7 @@ class YamboConvergence(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.act_var['iter'] + 1  > self.ctx.act_var['max_restarts'] and not self.ctx.converged and not self.ctx.fully_converged:   #+1 because it starts from zero
+        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts'] and not self.ctx.converged and not self.ctx.fully_converged:   #+1 because it starts from zero
             self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
