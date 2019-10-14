@@ -203,7 +203,7 @@ class QE_relax(WorkChain):
 
     def report_wf(self):
 
-        self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
+        self.report('Final step. The workflow now will collect some info about the calculations in the "path" output node, and the relaxed scf calc')
 
         self.report('Relaxation scheme performed: {}'.format(self.inputs.relaxation_scheme))
 
