@@ -78,7 +78,7 @@ class QE_relax(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.converged:
+        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.fully_relaxed:
             self.report('the workflow is failed due to max restarts exceeded')
             return False
 
@@ -127,7 +127,7 @@ class QE_relax(WorkChain):
                 self.ctx.new_params['SYSTEM']['ecutwfc'] = self.ctx.new_params['SYSTEM']['ecutwfc'] + self.ctx.conv_options['delta']*first
 
                 self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
-
+                self.ctx.calc_inputs.pw.structure = self.inputs.initial_structure
                 self.ctx.param_vals.append(self.ctx.new_params['SYSTEM']['ecutwfc'])
 
             future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
@@ -146,7 +146,7 @@ class QE_relax(WorkChain):
 
             if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
 
-                converged, etot = convergence_evaluation(self.ctx.conv_options,take_qe_total_energy(self.ctx.conv_options,self.ctx.k_last_dist)) #redundancy..
+                converged, etot = convergence_evaluation(self.ctx.conv_options,take_qe_total_energy(self.ctx.conv_options)) #redundancy..
                 for i in range(self.ctx.conv_options['steps']):
 
                     self.ctx.path.append([len(load_node(self.ctx.conv_options['wfl_pk']).caller.called)-self.ctx.conv_options['steps']+i, \
