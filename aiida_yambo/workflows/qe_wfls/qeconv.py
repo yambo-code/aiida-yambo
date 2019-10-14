@@ -217,7 +217,7 @@ class QEConv(WorkChain):
             self.ctx.fully_converged = True
 
 
-    def report_wf(self):
+    def report_wf(self): #mancano le unita'
 
         self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
 
