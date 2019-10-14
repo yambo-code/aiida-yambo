@@ -68,6 +68,8 @@ class QE_relax(WorkChain):
 
         self.ctx.first_calc = True
 
+        self.ctx.optimal_value = 0
+
         self.report("workflow initilization step completed, the relaxation scheme will be {}.".format(self.ctx.conv_options['relaxation_scheme']))
 
     def has_to_continue(self):
@@ -152,13 +154,14 @@ class QE_relax(WorkChain):
                 try:
                     converged, etot, min = relaxation_evaluation(self.ctx.param_vals,self.ctx.conv_options) #redundancy..
                     self.ctx.optimal_value = min
+                    self.report('the fit was successful, the minimum will be {}'.format(self.ctx.optimal_value))
                     for i in range(self.ctx.conv_options['steps']):
 
                         self.ctx.path.append([len(load_node(self.ctx.conv_options['wfl_pk']).caller.called)-self.ctx.conv_options['steps']+i, \
                                             self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
                 except:
                     converged = False
-                    self.report('the fit was not successful')
+                    self.report('the fit was not successful, we will try to enlarge the region')
 
             if converged:
 
@@ -178,7 +181,7 @@ class QE_relax(WorkChain):
 
                 self.ctx.fully_relaxed = False
                 self.report('Relaxation scheme {} not completed yet in {} calculations' \
-                            .format(self.inputs.r, self.ctx.conv_options['steps']*(self.ctx.conv_options['iter'] )))
+                            .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*(self.ctx.conv_options['iter'] )))
                 self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.conv_options['wfl_pk']).called[0].outputs.remote_folder
 
         except:
