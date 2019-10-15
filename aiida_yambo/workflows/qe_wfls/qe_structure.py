@@ -174,12 +174,13 @@ class QE_relax(WorkChain):
                 if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
                     self.ctx.last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.conv_options,etot[-1,1],'energy')
                     self.ctx.optimal_value = load_node(self.ctx.last_ok_pk).called[0].inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
+                    self.report('the convergence was successful, the optimal value will be {}'.format(self.ctx.optimal_value))
                 else:
                     pass
 
 
                 self.report('Relaxation scheme {} completed in {} calculations, the optimal value for your relaxed structure is {}' \
-                            .format(self.inputs.relax.relaxation_scheme, self.ctx.conv_options['steps']*self.ctx.conv_options['iter'], self.ctx.optimal_value))
+                            .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*self.ctx.conv_options['iter'], self.ctx.optimal_value))
 
             else:
 
