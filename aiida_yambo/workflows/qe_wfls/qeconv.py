@@ -252,7 +252,7 @@ class QEConv(WorkChain):
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'])))
-                self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
+                #self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.act_var['wfl_pk']).called[0].outputs.remote_folder
 
 
             if self.ctx.variables == [] : #variables to be converged are finished

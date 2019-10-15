@@ -86,12 +86,10 @@ def conv_vc_evaluation(calcs_info,params):
             relaxed = False
 
 
-    return relaxed, etot
+    return relaxed, etot[-calcs_info['steps']:,:]
 
 
 def last_relax_calc_recovering(calcs_info,last_params):
-
-
 
     i = calcs_info['conv_window']
     have_to_backsearch = True
