@@ -127,6 +127,21 @@ class QEConv(WorkChain):
 
         calc = {}
 
+        if self.ctx.act_var['calculation']=='vc-relax':
+            self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
+            self.ctx.new_params['IONS'] = self.ctx.act_var['ions']
+            self.ctx.new_params['CELL'] = self.ctx.act_var['cell']
+            self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+
+        else:
+            try:
+                self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
+                self.ctx.new_params.pop('IONS')
+                self.ctx.new_params.pop('CELL')
+                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+            except:
+                pass
+
         self.ctx.param_vals = []
 
         for i in range(self.ctx.act_var['steps']):
