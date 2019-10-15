@@ -149,8 +149,8 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
             if abs(value-last_val) < calcs_info['conv_thr']:
                 have_to_backsearch = True
                 i +=1
-            elif abs(value-last_val) >= calcs_info['conv_thr']:
-                have_to_backsearch = False #this is the first out of conv
+            else:
+                have_to_backsearch = False  #this is the first out of conv
         except:
             have_to_backsearch = False
             i = calcs_info['conv_window']

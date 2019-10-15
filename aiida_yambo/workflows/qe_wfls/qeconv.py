@@ -201,12 +201,12 @@ class QEConv(WorkChain):
                 self.ctx.all_calcs.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
                                         self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
                                         len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
+                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
 
                 self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
                                         self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
                                         len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
+                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
             if converged:
 
                 self.ctx.converged = True
@@ -230,7 +230,7 @@ class QEConv(WorkChain):
                 self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-4] ))
+                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3]))
 
 
             else:
@@ -252,16 +252,24 @@ class QEConv(WorkChain):
 
     def do_final_relaxation(self):
 
+        self.report('You choose a final relax: {}'.format(self.ctx.act_var['final_relax']))
         return self.ctx.act_var['final_relax']
 
     def final_relaxation(self):
-
+        self.report('So we do a  final relax: {}')
         relax_calc = {}
 
-        inputs_vc = load_node(self.ctx.conv_var[-1][-3].caller).get_builder_restart()
+        inputs_vc = load_node(self.ctx.conv_var[-1][-3]).caller.get_builder_restart()
         inputs_vc['pw']['parameters']['CONTROL']['calculation'] = 'vc-relax'
-        inputs_vc['pw']['structure'] = load_node(self.ctx.conv_var[-1][-3]).called[0].outputs.output_structure
-        relax_calc = self.submit(PwBaseWorkChain, **inputs_vc)
+        try:
+            inputs_vc['pw']['structure'] = load_node(self.ctx.conv_var[-1][-3]).called[0].outputs.output_structure
+        except:
+            pass
+
+        relax_calc['calculation'] = self.submit(PwBaseWorkChain, **inputs_vc)
+
+        return ToContext(relax_calc)
+
 
     def report_wf(self): #mancano le unita'
 
