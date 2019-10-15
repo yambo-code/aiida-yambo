@@ -206,6 +206,7 @@ class QE_relax(WorkChain):
 
     def do_final_scf(self):
 
+        scf = {}
         if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
 
             inputs_scf = load_node(self.ctx.last_ok_pk).get_builder_restart()
@@ -220,7 +221,8 @@ class QE_relax(WorkChain):
             scaled_structure = self.inputs.initial_structure.get_ase()
             scaled_structure.set_cell(scaled_structure.cell*(1.0+self.ctx.optimal_value), scale_atoms=True)
             inputs_scf['pw']['structure']= StructureData(ase=scaled_structure)
-            scf = self.submit(PwBaseWorkChain, **inputs_scf)
+            future = self.submit(PwBaseWorkChain, **inputs_scf)
+            scf[self.ctx.conv_options['relaxation_scheme']] = future
 
         return ToContext(scf)
 
