@@ -72,19 +72,19 @@ def conv_vc_evaluation(calcs_info,params):
     for i in range(calcs_info['conv_window']):
 
         if abs(etot[-1,1]-etot[-(i+1),1]) < calcs_info['conv_thr_etot']: #backcheck
-            if np.max(abs(cells[-1]-cells[i])) < calcs_info['conv_thr_cell']: #backcheck
+            if np.max(abs(cells[-1]-cells[-(i+1)])) < calcs_info['conv_thr_cell']: #backcheck
                 for j in len(atoms[1]):
-                    if np.max(abs(atoms[-1][j]-atoms[i][j]))  < calcs_info['conv_thr_atoms']: #backcheck
+                    if np.max(abs(atoms[-1][j]-atoms[-(i+1)][j]))  < calcs_info['conv_thr_atoms']: #backcheck
                         relaxed = True
                     else:
                         relaxed = False
-                        break
+
             else:
                 relaxed = False
-                break
+
         else:
             relaxed = False
-            break
+
 
     return relaxed, etot
 
