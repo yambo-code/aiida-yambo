@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_calc_recovering
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, relaxation_evaluation
 
 class QE_relax(WorkChain):
 
@@ -144,15 +144,15 @@ class QE_relax(WorkChain):
 
         try:
 
-            if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
+            if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax': #actually it serves as a convergence tool for ecutwfc
 
-                converged, etot = convergence_evaluation(self.ctx.conv_options,take_qe_total_energy(self.ctx.conv_options)) #redundancy..
+                converged, etot = ecut_evaluation(self.ctx.conv_options,take_relaxation_params(self.ctx.conv_options)) #redundancy..
                 for i in range(self.ctx.conv_options['steps']):
 
                     self.ctx.path.append([len(load_node(self.ctx.conv_options['wfl_pk']).caller.called)-self.ctx.conv_options['steps']+i, \
                                         self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
 
-            elif self.ctx.conv_options['relaxation_scheme'] == 'relax':
+            elif self.ctx.conv_options['relaxation_scheme'] == 'relax': #da sistemare..
 
                 try:
                     converged, etot, min = relaxation_evaluation(self.ctx.param_vals,self.ctx.conv_options) #redundancy..

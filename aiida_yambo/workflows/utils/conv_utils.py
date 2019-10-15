@@ -42,6 +42,52 @@ def take_qe_total_energy(calcs_info):
 
     return etot #delta etot better?
 
+def take_relaxation_params(calcs_info):
+
+    etot = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
+    cells = np.zeros((calcs_info['steps']*calcs_info['iter'],3,3))
+
+    for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
+        pw_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0]
+        etot[i-1,1] = pw_calc.outputs.output_parameters.get_dict()['energy']
+        etot[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
+        etot[i-1,2] = int(pw_calc.pk) #calc responsible of the calculation
+        cells[i-1] = pw_calc.outputs.output_structure.cell
+
+    nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
+    atoms = np.zeros((calcs_info['steps']*calcs_info['iter'],6,3,3))
+
+    return [etot, cells, atoms] #delta etot better?
+
+def ecut_vc_evaluation(variations,calcs_info,params):
+
+    etot = params[0]
+    cells = params[1]
+    atoms = params[2]
+
+    relaxed = False
+    vc_etot = True
+    vc_cell = True
+    vc_atoms = True
+
+    for i in len(etot[0]):
+        if abs(etot[-1,1]-etot[-(i+1),1]) < calcs_info['conv_thr_etot']: #backcheck
+            vc_etot = True
+        if np.max(abs(np.matrix(a1.position)-np.matrix(b1.position))) < calcs_info['conv_thr_cell']: #backcheck
+            vc_cell = True
+        for j in len(atoms[1]):
+            if np.max(abs(np.array(atoms.position)-np.array(atoms.position)))  < calcs_info['conv_thr_atoms']: #backcheck
+                vc_atoms = True
+            else:
+                vc_atoms = True
+
+    if  vc_etot and vc_cell and vc_atoms:
+        relaxed = True
+
+
+
+
+
 
 def convergence_evaluation(calcs_info,to_conv_quantity):
 
@@ -51,50 +97,7 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
         if abs(to_conv_quantity[-1,1]-to_conv_quantity[-(i+1),1]) > calcs_info['conv_thr']: #backcheck
             conv = False
 
-    ''' non e' necessario... piu' che altro non fa funzionare nulla
-    #if calcs_info['conv_options']['fit'] == 'yes'
-    def func(x, a, b,c):
-        return a + b/(x-c) #non +...
-    try:
-        try:
-           popt, pcov = curve_fit(func, gap[:,0], gap[:,1]) #guess
-           if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
-                   conv = False
-        except:
-           popt, pcov = curve_fit(func, gap[-calcs_info['steps']:,0], gap[-calcs_info['steps']:,1])
-           if abs(gap[-1,1]-popt[0]) > calcs_info['conv_thr']: #backcheck
-                   conv = False
-    except:
-        popt=[]
-        popt.append('fit not succesful')
-    '''
-
     return conv, to_conv_quantity[-calcs_info['steps']:,:] #, popt[0]
-
-def relaxation_evaluation(variations,calcs_info,to_conv_quantity):
-
-    def func(x, a, b,c):
-        return a*x**2+b*x+c
-
-    conv = False
-    super_wfl = load_node(calcs_info['wfl_pk']).caller
-    etot = np.zeros((len(super_wfl.called),3))
-    for i in range(len(super_wfl.called)):
-        pw_calc = super_wfl.called[i].called[0]
-        etot[i-1,1] = pw_calc.outputs.output_parameters.get_dict()['energy']
-        etot[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
-        etot[i-1,2] = int(pw_calc.pk) #calc responsible of the calculation
-
-    
-    popt, pcov = curve_fit(func, variations, etot[:,1])
-
-    #if pcov.max() > 0.02:
-    #    return error
-    #else:
-        #conv = True
-    conv = True
-    return conv, etot, -popt[1]/(2*popt[0]) #the min of the curve fitting
-
 
 
 
