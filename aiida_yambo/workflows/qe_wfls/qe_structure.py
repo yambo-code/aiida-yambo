@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy
+from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_calc_recovering
 
 class QE_relax(WorkChain):
 
@@ -63,7 +63,7 @@ class QE_relax(WorkChain):
 
         self.ctx.fully_relaxed = False
 
-        self.ctx.iter = 1
+        self.ctx.conv_options['iter']= 1
 
         self.ctx.path = []
 
@@ -78,7 +78,7 @@ class QE_relax(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.iter  > self.ctx.conv_options['max_restarts'] and not self.ctx.fully_relaxed:
+        if self.ctx.conv_options['iter'] > self.ctx.conv_options['max_restarts'] and not self.ctx.fully_relaxed:
             self.report('the workflow is failed due to max restarts exceeded')
             return False
 
@@ -100,7 +100,7 @@ class QE_relax(WorkChain):
 
         for i in range(self.ctx.conv_options['steps']):
 
-            self.report('Preparing iteration number {}'.format(i+(self.ctx.iter-1)*self.ctx.conv_options['steps']+1))
+            self.report('Preparing iteration number {}'.format(i+(self.ctx.conv_options['iter']-1)*self.ctx.conv_options['steps']+1))
 
             if i == 0 and self.ctx.first_calc:
                 self.report('first calc will be done with the starting params')
@@ -110,7 +110,7 @@ class QE_relax(WorkChain):
 
             if self.ctx.conv_options['relaxation_scheme'] == 'relax':
 
-                variation = 0.01*(i-self.ctx.conv_options['steps']//2)*self.ctx.iter #-1 0 1, -2 2 ....
+                variation = 0.01*(i-self.ctx.conv_options['steps']//2)*self.ctx.conv_options['iter']#-1 0 1, -2 2 ....
                 if variation == 0 and not self.ctx.first_calc:
                     continue #next iter, so avoiding the "center" of the variations, 0
                 else:
@@ -179,13 +179,13 @@ class QE_relax(WorkChain):
 
 
                 self.report('Relaxation scheme {} completed in {} calculations, the optimal value for your relaxed structure is {}' \
-                            .format(self.inputs.relax.relaxation_scheme, self.ctx.conv_options['steps']*self.ctx.iter, self.ctx.optimal_value))
+                            .format(self.inputs.relax.relaxation_scheme, self.ctx.conv_options['steps']*self.ctx.conv_options['iter'], self.ctx.optimal_value))
 
             else:
 
                 self.ctx.fully_relaxed = False
                 self.report('Relaxation scheme {} not completed yet in {} calculations' \
-                            .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*(self.ctx.iter )))
+                            .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*(self.ctx.conv_options['iter'])))
                 #self.ctx.calc_inputs.pw.parent_folder = load_node(self.ctx.conv_options['wfl_pk']).called[0].outputs.remote_folder
 
         except:
@@ -194,7 +194,7 @@ class QE_relax(WorkChain):
             self.ctx.fully_relaxed = True
             self.ctx.fully_relaxed_to_scf = False
 
-        self.ctx.iter  += 1
+        self.ctx.conv_options['iter'] += 1
 
     def can_do_scf(self):
 
