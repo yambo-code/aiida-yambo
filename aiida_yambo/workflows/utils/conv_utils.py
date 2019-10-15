@@ -46,46 +46,76 @@ def take_relaxation_params(calcs_info):
 
     etot = np.zeros((calcs_info['steps']*calcs_info['iter'],3))
     cells = np.zeros((calcs_info['steps']*calcs_info['iter'],3,3))
+    nr_atoms = load_node(calcs_info['wfl_pk']).caller.called[0].called[0].outputs.output_parameters.get_dict()['number_of_atoms']
+    atoms = np.zeros((calcs_info['steps']*calcs_info['iter'],nr_atoms,3))
 
     for i in range(1,calcs_info['steps']*calcs_info['iter']+1):
         pw_calc = load_node(calcs_info['wfl_pk']).caller.called[calcs_info['steps']*calcs_info['iter']-i].called[0]
         etot[i-1,1] = pw_calc.outputs.output_parameters.get_dict()['energy']
         etot[i-1,0] = i*calcs_info['delta']  #number of the iteration times the delta... to be used in a fit
         etot[i-1,2] = int(pw_calc.pk) #calc responsible of the calculation
-        cells[i-1] = pw_calc.outputs.output_structure.cell
+        cells[i-1] = np.matrix(pw_calc.outputs.output_structure.cell)
 
-    nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
-    atoms = np.zeros((calcs_info['steps']*calcs_info['iter'],6,3,3))
+
+        for j in range(nr_atoms):
+                atoms[i-1][j] = np.array(pw_calc.outputs.output_structure.sites[j].position)
 
     return [etot, cells, atoms] #delta etot better?
 
-def ecut_vc_evaluation(variations,calcs_info,params):
+def conv_vc_evaluation(calcs_info,params):
 
     etot = params[0]
     cells = params[1]
     atoms = params[2]
-
     relaxed = False
-    vc_etot = True
-    vc_cell = True
-    vc_atoms = True
 
-    for i in len(etot[0]):
+    for i in range(calcs_info['conv_window']):
+
         if abs(etot[-1,1]-etot[-(i+1),1]) < calcs_info['conv_thr_etot']: #backcheck
-            vc_etot = True
-        if np.max(abs(np.matrix(a1.position)-np.matrix(b1.position))) < calcs_info['conv_thr_cell']: #backcheck
-            vc_cell = True
-        for j in len(atoms[1]):
-            if np.max(abs(np.array(atoms.position)-np.array(atoms.position)))  < calcs_info['conv_thr_atoms']: #backcheck
-                vc_atoms = True
+            if np.max(abs(cells[-1]-cells[i])) < calcs_info['conv_thr_cell']: #backcheck
+                for j in len(atoms[1]):
+                    if np.max(abs(atoms[-1][j]-atoms[i][j]))  < calcs_info['conv_thr_atoms']: #backcheck
+                        relaxed = True
+                    else:
+                        relaxed = False
+                        break
             else:
-                vc_atoms = True
+                relaxed = False
+                break
+        else:
+            relaxed = False
+            break
 
-    if  vc_etot and vc_cell and vc_atoms:
-        relaxed = True
+    return relaxed, etot
+
+
+def last_relax_calc_recovering(calcs_info,last_params):
 
 
 
+    i = calcs_info['conv_window']
+    have_to_backsearch = True
+    while have_to_backsearch:
+        try:
+            pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
+            etot = pw_calc.outputs.output_parameters.get_dict()['energy']
+            cells = pw_calc.outputs.output_structure.cell
+            nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
+            for j in range(len(atoms)):
+                if abs(etot[-1,1]-etot) < calcs_info['conv_thr_etot'] and \
+                    np.max(abs(cells-cells[-1])) < calcs_info['conv_thr_cell'] and \
+                    np.max(abs(atoms[j]-atoms[-1][j])) < calcs_info['conv_thr_atoms']:
+                        have_to_backsearch = True
+                        i +=1
+                else: #backcheck
+                    have_to_backsearch = False #this is the first out of conv
+        except:
+            have_to_backsearch = False
+            i = calcs_info['conv_window']
+
+    last_conv_calc_pk = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
+
+    return  int(last_conv_calc_pk), i
 
 
 

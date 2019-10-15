@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, relaxation_evaluation
+from aiida_yambo.workflows.utils.conv_utils import relaxation_evaluation
 
 class QE_relax(WorkChain):
 
@@ -73,6 +73,8 @@ class QE_relax(WorkChain):
 
         self.ctx.fully_relaxed_to_scf = False
 
+        self.ctx.params = []
+
         self.report("workflow initilization step completed, the relaxation scheme will be {}.".format(self.ctx.conv_options['relaxation_scheme']))
 
     def has_to_continue(self):
@@ -123,12 +125,11 @@ class QE_relax(WorkChain):
 
             elif self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
 
-                self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
-                self.ctx.new_params['SYSTEM']['ecutwfc'] = self.ctx.new_params['SYSTEM']['ecutwfc'] + self.ctx.conv_options['delta']*first
-
-                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
                 self.ctx.calc_inputs.pw.structure = self.inputs.initial_structure
-                self.ctx.param_vals.append(self.ctx.new_params['SYSTEM']['ecutwfc'])
+
+                future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
+                calc[str(i+1)] = future
+                break #just one calc
 
             future = self.submit(PwBaseWorkChain, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
@@ -144,13 +145,9 @@ class QE_relax(WorkChain):
 
         try:
 
-            if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax': #actually it serves as a convergence tool for ecutwfc
+            if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax': #actually it serves as a convergence tool for ecutwfc, the next step is the kpoint conv and a final scf
 
-                converged, etot = ecut_evaluation(self.ctx.conv_options,take_relaxation_params(self.ctx.conv_options)) #redundancy..
-                for i in range(self.ctx.conv_options['steps']):
-
-                    self.ctx.path.append([len(load_node(self.ctx.conv_options['wfl_pk']).caller.called)-self.ctx.conv_options['steps']+i, \
-                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+                return
 
             elif self.ctx.conv_options['relaxation_scheme'] == 'relax': #da sistemare..
 
@@ -172,12 +169,8 @@ class QE_relax(WorkChain):
                 self.ctx.fully_relaxed_to_scf = True
 
                 if self.ctx.conv_options['relaxation_scheme'] == 'vc-relax':
-                    self.ctx.last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.conv_options,etot[-1,1],'energy')
-                    self.ctx.optimal_value = load_node(self.ctx.last_ok_pk).called[0].inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
-                    self.report('the convergence was successful, the optimal value will be {}'.format(self.ctx.optimal_value))
-                else:
-                    pass
-
+                    self.report('Relaxation scheme {} completed'.format(self.ctx.conv_options['relaxation_scheme']))
+                    return
 
                 self.report('Relaxation scheme {} completed in {} calculations, the optimal value for your relaxed structure is {}' \
                             .format(self.ctx.conv_options['relaxation_scheme'], self.ctx.conv_options['steps']*self.ctx.conv_options['iter'], self.ctx.optimal_value))

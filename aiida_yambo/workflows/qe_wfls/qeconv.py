@@ -6,7 +6,7 @@ import traceback
 
 from aiida.orm import Dict, Str, StructureData, KpointsData, RemoteData, List, load_node
 
-from aiida.engine import WorkChain, while_
+from aiida.engine import WorkChain, while_, if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
@@ -14,6 +14,7 @@ from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_calc_recovering
+from aiida_yambo.workflows.utils.conv_utils import conv_vc_evaluation, take_relaxation_params, last_relax_calc_recovering
 
 class QEConv(WorkChain):
 
@@ -44,6 +45,9 @@ class QEConv(WorkChain):
                     while_(cls.has_to_continue)(
                     cls.next_step,
                     cls.conv_eval),
+                    if_(cls.do_final_relaxation)(
+                    cls.final_relaxation,
+                    ),
                     cls.report_wf,
                     )
 
@@ -137,6 +141,10 @@ class QEConv(WorkChain):
 
             if self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
 
+                self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
+                self.ctx.new_params['CONTROL']['calculation'] = self.ctx.act_var['calculation']
+                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+
                 self.ctx.calc_inputs.kpoints = KpointsData()
                 self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
                 self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
@@ -157,6 +165,7 @@ class QEConv(WorkChain):
                     pass
 
                 self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
+                self.ctx.new_params['CONTROL']['calculation'] = self.ctx.act_var['calculation']
                 self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
 
                 self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
@@ -178,31 +187,41 @@ class QEConv(WorkChain):
         if self.ctx.act_var['var'] == 'kpoints':
             self.ctx.k_last_dist +=1
 
+
         try:
-            converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var)) #redundancy..
+            if self.ctx.act_var['calculation']=='vc-relax':
+                self.ctx.act_var['conv_thr'] = [self.ctx.act_var['conv_thr_etot'],self.ctx.act_var['conv_thr_cell'],self.ctx.act_var['conv_thr_atoms']]
+                converged, etot = conv_vc_evaluation(self.ctx.act_var, take_relaxation_params(self.ctx.act_var))
+
+            else:
+                converged, etot = convergence_evaluation(self.ctx.act_var,take_qe_total_energy(self.ctx.act_var)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
                 self.ctx.all_calcs.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
                                         self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
                                         len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
 
                 self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
                                         self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
                                         len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged)]) #tracking the whole iterations and etot
+                                        self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), str(converged), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
             if converged:
 
                 self.ctx.converged = True
 
-                #taking as starting point just the first of the convergence window...
-                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                if self.ctx.act_var['calculation']=='vc-relax':
+                    last_ok_pk, oversteps = last_relax_calc_recovering(self.ctx.act_var, take_relaxation_params(self.ctx.act_var)[-1])
+                else:
+                    last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+
                 self.report('oversteps:{}'.format(oversteps))
                 last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
                 self.ctx.calc_inputs.pw.parent_folder = last_ok.called[0].outputs.remote_folder
+                self.ctx.calc_inputs.pw.structure = last_ok.outputs.output_structure
 
                 self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)] #just the first of the converged window...
 
@@ -226,6 +245,19 @@ class QEConv(WorkChain):
             self.ctx.fully_converged = True
 
         self.ctx.act_var['iter']  += 1
+
+    def do_final_relaxation(self):
+
+        return self.ctx.act_var['final_relax']
+
+    def final_relaxation(self):
+
+        relax_calc = {}
+
+        inputs_vc = load_node(self.ctx.conv_var[-1][-3]).get_builder_restart()
+        inputs_vc['pw']['parameters']['CONTROL']['calculation'] = 'vc-relax'
+        inputs_vc['pw']['structure'] = load_node(self.ctx.conv_var[-1][-3]).called[0].outputs.output_structure
+        relax_calc = self.submit(PwBaseWorkChain, **inputs_vc)
 
     def report_wf(self): #mancano le unita'
 
