@@ -138,7 +138,7 @@ class QEConv(WorkChain):
                 self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
                 self.ctx.new_params.pop('IONS')
                 self.ctx.new_params.pop('CELL')
-                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
             except:
                 pass
 
