@@ -11,7 +11,7 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
-from aiida_quantumespresso.utils.mapping import update_mapping
+
 
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_qe_total_energy, last_conv_calc_recovering
 from aiida_yambo.workflows.utils.conv_utils import conv_vc_evaluation, take_relaxation_params, last_relax_calc_recovering
@@ -131,7 +131,7 @@ class QEConv(WorkChain):
             self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
             self.ctx.new_params['IONS'] = self.ctx.act_var['ions']
             self.ctx.new_params['CELL'] = self.ctx.act_var['cell']
-            self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+            self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
 
         else:
             try:
@@ -158,7 +158,7 @@ class QEConv(WorkChain):
 
                 self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
                 self.ctx.new_params['CONTROL']['calculation'] = self.ctx.act_var['calculation']
-                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
 
                 self.ctx.calc_inputs.kpoints = KpointsData()
                 self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
@@ -183,7 +183,7 @@ class QEConv(WorkChain):
                 self.ctx.new_params['CONTROL']['calculation'] = self.ctx.act_var['calculation']
                 self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
 
-                self.ctx.calc_inputs.pw.parameters = update_mapping(self.ctx.calc_inputs.pw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
 
                 self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
 

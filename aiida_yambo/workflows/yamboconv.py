@@ -10,7 +10,6 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-from aiida_quantumespresso.utils.mapping import update_mapping
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap, last_conv_calc_recovering
@@ -143,7 +142,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']*first
                 self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']*first
 
-                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.yres.gw.parameters = Dict(dict=self.ctx.new_params)
 
                 self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
 
@@ -170,7 +169,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
                 self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
 
-                self.ctx.calc_inputs.yres.gw.parameters = update_mapping(self.ctx.calc_inputs.yres.gw.parameters, self.ctx.new_params)
+                self.ctx.calc_inputs.yres.gw.parameters = Dict(dict=self.ctx.new_params)
 
                 self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
