@@ -157,7 +157,7 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
 
     last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
 
-    return  int(last_conv_calc), i
+    return  int(last_conv_calc), i-1
 
 
 
