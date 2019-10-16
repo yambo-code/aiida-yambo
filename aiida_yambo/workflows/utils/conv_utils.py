@@ -14,7 +14,7 @@ from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
 '''
-convergence functions .
+ convergence functions .
 '''
 
 def take_gw_gap(calcs_info):
