@@ -205,7 +205,7 @@ class QEConv(WorkChain):
 
         try:
             if self.ctx.act_var['calculation']=='vc-relax':
-                self.ctx.act_var['conv_thr'] = [self.ctx.act_var['conv_thr_etot'],self.ctx.act_var['conv_thr_cell'],self.ctx.act_var['conv_thr_atoms']]
+                self.ctx.act_var['conv_thr'] = [self.ctx.act_var['conv_thr_cell'],self.ctx.act_var['conv_thr_atoms']]
                 converged, etot = conv_vc_evaluation(self.ctx.act_var, take_relaxation_params(self.ctx.act_var))
 
             else:

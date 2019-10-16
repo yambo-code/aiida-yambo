@@ -71,16 +71,13 @@ def conv_vc_evaluation(calcs_info,params):
 
     for i in range(calcs_info['conv_window']):
 
-        if abs(etot[-1,1]-etot[-(i+1),1]) < calcs_info['conv_thr_etot']: #backcheck
-            if np.max(abs(cells[-1]-cells[-(i+1)])) < calcs_info['conv_thr_cell']: #backcheck
-                for j in range(len(atoms[1])):
-                    if np.max(abs(atoms[-1][j]-atoms[-(i+1)][j]))  < calcs_info['conv_thr_atoms']: #backcheck
-                        relaxed = True
-                    else:
-                        relaxed = False
 
-            else:
-                relaxed = False
+        if np.max(abs(cells[-1]-cells[-(i+1)])) < calcs_info['conv_thr_cell']: #backcheck
+            for j in range(len(atoms[1])):
+                if np.max(abs(atoms[-1][j]-atoms[-(i+1)][j]))  < calcs_info['conv_thr_atoms']: #backcheck
+                    relaxed = True
+                else:
+                    relaxed = False
 
         else:
             relaxed = False
@@ -100,11 +97,10 @@ def last_relax_calc_recovering(calcs_info,last_params):
             cells = pw_calc.outputs.output_structure.cell
             nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
             for j in range(len(atoms)):
-                if abs(etot[-1,1]-etot) < calcs_info['conv_thr_etot'] and \
-                    np.max(abs(cells-cells[-1])) < calcs_info['conv_thr_cell'] and \
-                    np.max(abs(atoms[j]-atoms[-1][j])) < calcs_info['conv_thr_atoms']:
-                        have_to_backsearch = True
-                        i +=1
+                if np.max(abs(cells-cells[-1])) < calcs_info['conv_thr_cell'] and \
+                np.max(abs(atoms[j]-atoms[-1][j])) < calcs_info['conv_thr_atoms']:
+                    have_to_backsearch = True
+                    i +=1
                 else: #backcheck
                     have_to_backsearch = False #this is the first out of conv
         except:
