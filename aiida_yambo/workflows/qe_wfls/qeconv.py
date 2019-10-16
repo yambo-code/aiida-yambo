@@ -235,7 +235,7 @@ class QEConv(WorkChain):
                     last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
                     last_ok = load_node(last_ok_pk)
 
-                self.report('oversteps:{}'.format(overstep-1))
+                self.report('oversteps:{}'.format(oversteps-1))
 
                 self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
