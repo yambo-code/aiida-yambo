@@ -212,8 +212,9 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
                 where = 1 #da fixare, fa schifo
-                while not self.ctx.conv_var[-1][-2] == self.ctx.all_calcs[-where][-2]:
+                while not self.ctx.conv_var[-1][-2] == self.ctx.all_calcs[-where][-2] and not self.ctx.conv_var == []:
                     where +=1
+                    
                 self.report('oversteps:{}, WHERE:{}'.format(oversteps-1,where))
                 self.ctx.conv_var.append(self.ctx.all_calcs[-where+1:-oversteps])
 
