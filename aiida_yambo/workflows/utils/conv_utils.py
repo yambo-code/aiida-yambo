@@ -127,26 +127,31 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
 
 def last_conv_calc_recovering(calcs_info,last_val,what):
 
-    for i in range(calcs_info['steps']*calcs_info['iter']+1): #cosi' puo' sosituire conv_eval...o almeno fare un if se conv
-        order = i
-        calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
-        if what == 'energy':
-            value = calc.outputs.output_parameters.get_dict()[str(what)]
-        else:
-            value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
-                        calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
-                       (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
-                        calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
+    i = calcs_info['conv_window']
+    have_to_backsearch = True
+    while have_to_backsearch:
+        try:
+            calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
+            if what == 'energy':
+                value = calc.outputs.output_parameters.get_dict()[str(what)]
+            else:
+                value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
+                            calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
+                           (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
+                            calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
 
-        if abs(value-last_val) < calcs_info['conv_thr']:
-            continue
-        else:
-            break
+            if abs(value-last_val) < calcs_info['conv_thr']:
+                have_to_backsearch = True
+                i +=1
+            else:
+                have_to_backsearch = False  #this is the first out of conv
+        except:
+            have_to_backsearch = False
+            i = calcs_info['conv_window']
 
+    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
 
-    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[order-1].pk #last wfl ok
-
-    return  int(last_conv_calc), order
+    return  int(last_conv_calc), i
 
 
 
