@@ -127,7 +127,7 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
 
 def last_conv_calc_recovering(calcs_info,last_val,what):
 
-    for i in range(calcs_info['steps']*calcs_info['iter']): #cosi' puo' sosituire conv_eval...o almeno fare un if se conv
+    for i in range(calcs_info['steps']*calcs_info['iter']+1): #cosi' puo' sosituire conv_eval...o almeno fare un if se conv
         order = i
         calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
         if what == 'energy':
