@@ -229,6 +229,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.fully_converged = True
         except:
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
+            self.report('if no datas are parsed: are you sure of your convergence windows?')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
             self.ctx.fully_converged = True
 
