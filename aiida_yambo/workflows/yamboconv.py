@@ -105,10 +105,6 @@ class YamboConvergence(WorkChain):
             elif self.ctx.converged and not self.ctx.fully_converged:
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
-                try:
-                    self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
-                except:
-                    pass
                 self.ctx.act_var['iter']  = 1
                 self.ctx.converged = False
                 self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
