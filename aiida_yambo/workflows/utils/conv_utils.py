@@ -129,7 +129,13 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
 
     i = calcs_info['conv_window']
     have_to_backsearch = True
+
     while have_to_backsearch:
+
+        if i > calc_info['iter']*calc_info['steps']:
+            have_to_backsearch = False
+            break
+
         try:
             calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
             if what == 'energy':
@@ -148,6 +154,7 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
         except:
             have_to_backsearch = False
             i = calcs_info['conv_window']
+
 
     last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
 

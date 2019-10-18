@@ -195,10 +195,10 @@ class YamboConvergence(WorkChain):
                                         len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
                                         self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
 
-                #self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
-                #                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
-                #                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                #                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+                self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
+                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
+                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
+                                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
             if converged:
 
                 self.ctx.converged = True
@@ -211,12 +211,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
-                where = 1 #da fixare, fa schifo
-                while not self.ctx.conv_var[-1][-2] == self.ctx.all_calcs[-where][-2] and not self.ctx.conv_var == []:
-                    where +=1
-                    
-                self.report('oversteps:{}, WHERE:{}'.format(oversteps-1,where))
-                self.ctx.conv_var.append(self.ctx.all_calcs[-where+1:-oversteps])
+                self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)]
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3] ))
