@@ -88,28 +88,31 @@ def conv_vc_evaluation(calcs_info,params):
 
 def last_relax_calc_recovering(calcs_info,last_params):
 
-    i = calcs_info['conv_window']
-    have_to_backsearch = True
-    while have_to_backsearch:
+    last_conv = calcs_info['steps']
+    letot = last_params[0]
+    lcells = last_params[1]
+    latoms = last_params[2]
+
+
+    for i in range(calcs_info['steps'], calcs_info['iter']*calcs_info['steps']+1):
         try:
             pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
             etot = pw_calc.outputs.output_parameters.get_dict()['energy']
             cells = pw_calc.outputs.output_structure.cell
             nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
             for j in range(len(atoms)):
-                if np.max(abs(cells-cells[-1])) < calcs_info['conv_thr_cell'] and \
-                np.max(abs(atoms[j]-atoms[-1][j])) < calcs_info['conv_thr_atoms']:
-                    have_to_backsearch = True
-                    i +=1
+                if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
+                np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
+                    last_conv = i
                 else: #backcheck
-                    have_to_backsearch = False #this is the first out of conv
+                    break
         except:
-            have_to_backsearch = False
-            i = calcs_info['conv_window']
+            last_conv = calcs_info['steps']
+            break
 
-    last_conv_calc_pk = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
+    last_conv_calc_pk = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
 
-    return  int(last_conv_calc_pk), i
+    return  int(last_conv_calc_pk), last_conv-1
 
 
 
@@ -127,14 +130,9 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
 
 def last_conv_calc_recovering(calcs_info,last_val,what):
 
-    i = calcs_info['conv_window']
-    have_to_backsearch = True
+    last_conv = calcs_info['steps']
 
-    while have_to_backsearch:
-
-        if i > calc_info['iter']*calc_info['steps']:
-            have_to_backsearch = False
-            break
+    for i in range(calcs_info['steps'], calcs_info['iter']*calcs_info['steps']+1):
 
         try:
             calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
@@ -147,18 +145,16 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
                             calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
 
             if abs(value-last_val) < calcs_info['conv_thr']:
-                have_to_backsearch = True
-                i +=1
+                last_conv = i
             else:
-                have_to_backsearch = False  #this is the first out of conv
+                break
         except:
-            have_to_backsearch = False
-            i = calcs_info['conv_window']
+            last_conv = calcs_info['steps']
+            break
 
+    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
 
-    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].pk #last wfl ok
-
-    return  int(last_conv_calc), i
+    return  int(last_conv_calc), last_conv-1
 
 
 

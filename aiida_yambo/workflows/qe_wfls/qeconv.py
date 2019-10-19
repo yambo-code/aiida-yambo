@@ -235,13 +235,13 @@ class QEConv(WorkChain):
                     last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
                     last_ok = load_node(last_ok_pk)
 
-                self.report('oversteps:{}'.format(oversteps-1))
+                self.report('oversteps:{}'.format(oversteps))
 
                 self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
                 self.ctx.calc_inputs.pw.parent_folder = last_ok.called[0].outputs.remote_folder
 
-                self.ctx.conv_var = self.ctx.conv_var[:-(oversteps-1)] #just the first of the converged window...
+                self.ctx.conv_var = self.ctx.conv_var[:-oversteps] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3]))
