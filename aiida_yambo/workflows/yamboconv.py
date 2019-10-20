@@ -79,7 +79,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.first_calc = True
         self.ctx.k_last_dist = 1 #just this one  ... also starting mesh is possile to decide only at the beginnning
-
+        self.ctx.k_oversteps = 0
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -145,10 +145,10 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.calc_inputs.scf.kpoints = KpointsData()
                 self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
-                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*(i+self.ctx.k_oversteps)*first+1+self.ctx.act_var['delta']* \
                                                                                 self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1)), force_parity=True)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(self.ctx.act_var['delta']*(i+self.ctx.k_oversteps)*first+1+self.ctx.act_var['delta']* \
                                                                                 self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1))))
                 try:
                     del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
@@ -204,7 +204,8 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
-
+                if self.ctx.act_var['var'] == 'kpoints':
+                    self.ctx.k_oversteps  = self.ctx.act_var['steps']*self.ctx.act_var['iter'] - oversteps
                 self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
@@ -212,6 +213,7 @@ class YamboConvergence(WorkChain):
 
 
             else:
+                self.ctx.k_oversteps = 0
                 if self.ctx.act_var['var'] == 'kpoints':
                     self.ctx.k_last_dist +=1
                 self.ctx.converged = False

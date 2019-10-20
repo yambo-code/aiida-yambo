@@ -84,6 +84,7 @@ class QEConv(WorkChain):
         self.ctx.first_calc = True
 
         self.ctx.k_last_dist = 1
+        self.ctx.k_oversteps = 0
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -155,9 +156,9 @@ class QEConv(WorkChain):
 
                 self.ctx.calc_inputs.kpoints = KpointsData()
                 self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
-                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                self.ctx.calc_inputs.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*(i+self.ctx.k_oversteps)*first+1+self.ctx.act_var['delta']* \
                                                                                 self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1)), force_parity=True)
-                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(self.ctx.act_var['delta']*(i+self.ctx.k_oversteps)*first+1+self.ctx.act_var['delta']* \
                                                                                 self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1))))
 
                 try:
@@ -214,6 +215,7 @@ class QEConv(WorkChain):
                                         self.ctx.param_vals[i], etot[i,1], int(etot[i,2]), self.ctx.act_var['calculation']]) #tracking the whole iterations and etot
             if converged:
 
+
                 self.ctx.converged = True
 
                 if self.ctx.act_var['calculation']=='vc-relax':
@@ -224,8 +226,10 @@ class QEConv(WorkChain):
                 else:
                     last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
                     last_ok = load_node(last_ok_pk)
-
                 self.report('oversteps:{}'.format(oversteps))
+
+                if self.ctx.act_var['var'] == 'kpoints':
+                    self.ctx.k_oversteps  = self.ctx.act_var['steps']*self.ctx.act_var['iter'] - oversteps
 
                 self.ctx.calc_inputs.pw.parameters = last_ok.get_builder_restart()['pw']['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
@@ -238,7 +242,7 @@ class QEConv(WorkChain):
 
 
             else:
-
+                self.ctx.k_oversteps = 0
                 if self.ctx.act_var['var'] == 'kpoints':
                     self.ctx.k_last_dist +=1
                 self.ctx.converged = False
