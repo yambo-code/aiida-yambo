@@ -193,10 +193,6 @@ class QEConv(WorkChain):
         self.ctx.first_calc = False
         self.report('Convergence evaluation')
 
-        if self.ctx.act_var['var'] == 'kpoints':
-            self.ctx.k_last_dist +=1
-
-
         try:
             if self.ctx.act_var['calculation']=='vc-relax':
                 self.ctx.act_var['conv_thr'] = [self.ctx.act_var['conv_thr_cell'],self.ctx.act_var['conv_thr_atoms']]
@@ -242,6 +238,9 @@ class QEConv(WorkChain):
 
 
             else:
+
+                if self.ctx.act_var['var'] == 'kpoints':
+                    self.ctx.k_last_dist +=1
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'])))
