@@ -179,10 +179,6 @@ class YamboConvergence(WorkChain):
         self.ctx.first_calc = False
         self.report('Convergence evaluation')
 
-        if self.ctx.act_var['var'] == 'kpoints':
-            self.ctx.k_last_dist +=1
-
-
         try:
             converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.act_var)) #redundancy..
 
@@ -216,6 +212,8 @@ class YamboConvergence(WorkChain):
 
 
             else:
+                if self.ctx.act_var['var'] == 'kpoints':
+                    self.ctx.k_last_dist +=1
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
