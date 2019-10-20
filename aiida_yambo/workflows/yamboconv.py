@@ -148,8 +148,8 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
                                                                                 self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1)), force_parity=True)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),2*i+1+6*(self.ctx.k_last_dist-1)))
-
+                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/(self.ctx.act_var['delta']*i*first+1+self.ctx.act_var['delta']* \
+                                                                                self.ctx.act_var['steps']*(self.ctx.k_last_dist-1)+(self.ctx.act_var['starting_mesh_density']-1))))
                 try:
                     del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
                 except:
