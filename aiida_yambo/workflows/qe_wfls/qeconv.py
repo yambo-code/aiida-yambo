@@ -86,7 +86,7 @@ class QEConv(WorkChain):
         try:
             self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
         except:
-            pass
+            self.ctx.k_last_dist = 0
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -111,7 +111,10 @@ class QEConv(WorkChain):
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
                 try:
-                    self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
+                    if not self.ctx.k_last_dist == 0:
+                        pass
+                    else:
+                        self.ctx.k_last_dist = self.ctx.act_var['starting_mesh_density']
                 except:
                     pass
                 self.ctx.act_var['iter'] = 1
