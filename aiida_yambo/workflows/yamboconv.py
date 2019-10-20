@@ -206,7 +206,7 @@ class YamboConvergence(WorkChain):
                 self.report('oversteps:{}'.format(oversteps))
                 last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
-                self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints
+                self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
                 self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
