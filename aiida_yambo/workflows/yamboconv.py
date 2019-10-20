@@ -211,7 +211,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
                 if self.ctx.act_var['var'] == 'kpoints':
-                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*(oversteps + 1) 
+                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps 
 
 
                 self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
