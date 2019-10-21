@@ -228,7 +228,7 @@ class QEConv(WorkChain):
 
                     self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
-                    last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
+                    last_ok_pk = self.ctx.conv_var[-1][-2].caller.pk
 
                     last_ok = load_node(last_ok_pk)
                     self.ctx.calc_inputs.pw.structure = last_ok.outputs.output_structure
