@@ -104,7 +104,7 @@ def last_relax_calc_recovering(calcs_info,last_params):
                 for j in range(len(atoms)):
                     if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
                     np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
-                        last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
+                        last_conv_calc = load_node(last_conv_story[-2]).caller.pk
                 else:
                     break
             else:
@@ -151,7 +151,10 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
             if i == calcs_info['iter']*calcs_info['steps']+1:
                 value = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-3]
                 if abs(value-last_val) < calcs_info['conv_thr']:
-                    last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
+                    if what == 'energy':
+                        last_conv_calc = load_node(last_conv_story[-2]).caller.pk
+                    else:
+                        last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
                 else:
                     break
             else:
