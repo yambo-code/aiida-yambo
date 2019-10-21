@@ -208,8 +208,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
-                if oversteps == self.ctx.act_var['steps']*self.ctx.act_var['iter']:
-                    last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
+                last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
 
                 last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
