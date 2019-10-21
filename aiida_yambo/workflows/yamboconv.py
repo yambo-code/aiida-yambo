@@ -205,6 +205,12 @@ class YamboConvergence(WorkChain):
                 #taking as starting point just the first of the convergence window...
                 last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap')
                 self.report('oversteps:{}'.format(oversteps))
+
+                self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
+
+                if oversteps == self.ctx.act_var['steps']*self.ctx.act_var['iter']:
+                    last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
+
                 last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
@@ -212,9 +218,6 @@ class YamboConvergence(WorkChain):
 
                 if self.ctx.act_var['var'] == 'kpoints':
                     self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps
-
-
-                self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3] ))
@@ -246,7 +249,7 @@ class YamboConvergence(WorkChain):
         #self.ctx.conv_var = (list(self.ctx.act_var.keys())+['calc_number','params_vals','gap']).append(self.ctx.conv_var)
 
         self.report('Converged variables: {}'.format(self.ctx.conv_var))
-
+        #inserire una lista finale dei parametri di convergenza...xk la storia potrebbe non essere sufficiente, perdo delle partenze..
         converged_var = List(list=self.ctx.conv_var).store()
         all_var = List(list=self.ctx.all_calcs).store()
         self.out('conv_info', converged_var)

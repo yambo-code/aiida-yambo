@@ -88,15 +88,15 @@ def conv_vc_evaluation(calcs_info,params):
 
 def last_relax_calc_recovering(calcs_info,last_params):
 
-    last_conv = calcs_info['steps']
+    last_conv = calcs_info['steps'] # steps e window vanno uguali
     letot = last_params[0]
     lcells = last_params[1]
     latoms = last_params[2]
 
 
-    for i in range(calcs_info['steps'], calcs_info['iter']*calcs_info['steps']+1):
+    for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
         try:
-            pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
+            pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
             etot = pw_calc.outputs.output_parameters.get_dict()['energy']
             cells = pw_calc.outputs.output_structure.cell
             nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
@@ -132,10 +132,10 @@ def last_conv_calc_recovering(calcs_info,last_val,what):
 
     last_conv = calcs_info['steps']
 
-    for i in range(calcs_info['steps'], calcs_info['iter']*calcs_info['steps']+1):
+    for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
 
         try:
-            calc = load_node(calcs_info['wfl_pk']).caller.called[i].called[0]
+            calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
             if what == 'energy':
                 value = calc.outputs.output_parameters.get_dict()[str(what)]
             else:

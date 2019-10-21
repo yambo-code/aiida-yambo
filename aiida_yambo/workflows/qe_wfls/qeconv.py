@@ -224,11 +224,23 @@ class QEConv(WorkChain):
 
                 if self.ctx.act_var['calculation']=='vc-relax':
                     last_ok_pk, oversteps = last_relax_calc_recovering(self.ctx.act_var, take_relaxation_params(self.ctx.act_var)[-1])
+
+                    self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
+
+                    if oversteps == self.ctx.act_var['steps']*self.ctx.act_var['iter']:
+                        last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
+
                     last_ok = load_node(last_ok_pk)
                     self.ctx.calc_inputs.pw.structure = last_ok.outputs.output_structure
 
                 else:
                     last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+
+                    self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
+
+                    if oversteps == self.ctx.act_var['steps']*self.ctx.act_var['iter']:
+                        last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
+
                     last_ok = load_node(last_ok_pk)
                 self.report('oversteps:{}'.format(oversteps))
 
@@ -240,7 +252,6 @@ class QEConv(WorkChain):
                 self.ctx.calc_inputs.kpoints = last_ok.get_builder_restart().kpoints
                 self.ctx.calc_inputs.pw.parent_folder = last_ok.called[0].outputs.remote_folder
 
-                self.ctx.conv_var = self.ctx.conv_var[:-oversteps] #just the first of the converged window...
 
                 self.report('Convergence on {} reached in {} calculations, the total energy is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3]))
