@@ -122,7 +122,7 @@ class YamboRestartWf(WorkChain):
 
             # timing errors #
             if calc.exit_status == 101:
-                self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \  
+                self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
                                         Int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
 
                 self.report(
