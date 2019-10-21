@@ -154,7 +154,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
                 self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/self.ctx.k_distance, force_parity=True)
                 self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.kpoints.get_kpoints_mesh(),1/self.ctx.k_distance))
+                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.scf.kpoints.get_kpoints_mesh(),1/self.ctx.k_distance))
                 try:
                     del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
                 except:
@@ -203,12 +203,12 @@ class YamboConvergence(WorkChain):
                 self.ctx.converged = True
 
                 #taking as starting point just the first of the convergence window...
-                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap')
+                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap',self.ctx.conv_var)
                 self.report('oversteps:{}'.format(oversteps))
 
                 self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
-                last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
+                last_ok_pk = load_node(self.ctx.conv_var[-1][-2]).caller.caller.pk
 
                 last_ok = load_node(last_ok_pk)
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!

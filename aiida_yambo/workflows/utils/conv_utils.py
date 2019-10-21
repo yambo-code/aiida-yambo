@@ -96,16 +96,28 @@ def last_relax_calc_recovering(calcs_info,last_params):
 
     for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
         try:
-            pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
-            etot = pw_calc.outputs.output_parameters.get_dict()['energy']
-            cells = pw_calc.outputs.output_structure.cell
-            nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
-            for j in range(len(atoms)):
-                if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
-                np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
-                    last_conv = i
-                else: #backcheck
+            if i == calcs_info['iter']*calcs_info['steps']+1:
+                etot = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_parameters.get_dict()['energy']
+                cells = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_structure.cell
+                nr_atoms = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_parameters.get_dict()['number_of_atoms']
+
+                for j in range(len(atoms)):
+                    if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
+                    np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
+                        last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
+                else:
                     break
+            else:
+                pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
+                etot = pw_calc.outputs.output_parameters.get_dict()['energy']
+                cells = pw_calc.outputs.output_structure.cell
+                nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
+                for j in range(len(atoms)):
+                    if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
+                    np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
+                        last_conv = i
+                    else: #backcheck
+                        break
         except:
             last_conv = calcs_info['steps']
             break
@@ -128,31 +140,39 @@ def convergence_evaluation(calcs_info,to_conv_quantity):
 
 
 
-def last_conv_calc_recovering(calcs_info,last_val,what):
+def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
 
     last_conv = calcs_info['steps']
+    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
 
     for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
 
         try:
-            calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
-            if what == 'energy':
-                value = calc.outputs.output_parameters.get_dict()[str(what)]
+            if i == calcs_info['iter']*calcs_info['steps']+1:
+                value = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-3]
+                if abs(value-last_val) < calcs_info['conv_thr']:
+                    last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
+                else:
+                    break
             else:
-                value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
-                            calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
-                           (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
-                            calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
+                calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
+                if what == 'energy':
+                    value = calc.outputs.output_parameters.get_dict()[str(what)]
+                else:
+                    value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
+                                calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
+                               (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
+                                calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
 
-            if abs(value-last_val) < calcs_info['conv_thr']:
-                last_conv = i
-            else:
-                break
+                if abs(value-last_val) < calcs_info['conv_thr']:
+                    last_conv = i
+                    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
+                else:
+                    break
         except:
             last_conv = calcs_info['steps']
             break
 
-    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
 
     return  int(last_conv_calc), last_conv-1
 

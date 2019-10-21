@@ -223,7 +223,8 @@ class QEConv(WorkChain):
                 self.ctx.converged = True
 
                 if self.ctx.act_var['calculation']=='vc-relax':
-                    last_ok_pk, oversteps = last_relax_calc_recovering(self.ctx.act_var, take_relaxation_params(self.ctx.act_var)[-1])
+                    last_ok_pk, oversteps = last_relax_calc_recovering(self.ctx.act_var, take_relaxation_params(self.ctx.act_var)[-1],self.ctx.conv_var)
+                    self.report('oversteps:{}'.format(oversteps))
 
                     self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
@@ -233,14 +234,15 @@ class QEConv(WorkChain):
                     self.ctx.calc_inputs.pw.structure = last_ok.outputs.output_structure
 
                 else:
-                    last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy')
+                    last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,etot[-1,1],'energy',self.ctx.conv_var)
+                    self.report('oversteps:{}'.format(oversteps))
 
                     self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
                     last_ok_pk = self.ctx.conv_var[-1][-2].caller.caller.pk
 
                     last_ok = load_node(last_ok_pk)
-                self.report('oversteps:{}'.format(oversteps))
+
 
                 if self.ctx.act_var['var'] == 'kpoints':
                     self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps
@@ -272,7 +274,7 @@ class QEConv(WorkChain):
 
         self.ctx.act_var['iter']  += 1
 
-    def do_final_relaxation(self):
+    def do_final_relaxation(self): #non va
 
         self.report('You choose a final relax: {}'.format(self.ctx.act_var['final_relax']))
         return self.ctx.act_var['final_relax']
