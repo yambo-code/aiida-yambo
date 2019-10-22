@@ -68,7 +68,6 @@ def conv_vc_evaluation(calcs_info,params):
     cells = params[1]
     atoms = params[2]
     relaxed = False
-
     for i in range(calcs_info['conv_window']):
 
 
@@ -86,7 +85,7 @@ def conv_vc_evaluation(calcs_info,params):
     return relaxed, etot[-calcs_info['steps']:,:]
 
 
-def last_relax_calc_recovering(calcs_info,last_params):
+def last_relax_calc_recovering(calcs_info,last_params,last_conv_story):
 
     last_conv = calcs_info['steps'] # steps e window vanno uguali
     letot = last_params[0]
@@ -99,7 +98,11 @@ def last_relax_calc_recovering(calcs_info,last_params):
             if i == calcs_info['iter']*calcs_info['steps']+1:
                 etot = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_parameters.get_dict()['energy']
                 cells = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_structure.cell
+
                 nr_atoms = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_parameters.get_dict()['number_of_atoms']
+                atoms = np.zeros((nr_atoms,3))
+                for j in range(nr_atoms):
+                        atoms[j] = np.array(load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).outputs.output_structure.sites[j].position)
 
                 for j in range(len(atoms)):
                     if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
@@ -111,7 +114,12 @@ def last_relax_calc_recovering(calcs_info,last_params):
                 pw_calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
                 etot = pw_calc.outputs.output_parameters.get_dict()['energy']
                 cells = pw_calc.outputs.output_structure.cell
+
                 nr_atoms = pw_calc.outputs.output_parameters.get_dict()['number_of_atoms']
+                atoms = np.zeros((nr_atoms,3))
+                for j in range(nr_atoms):
+                        atoms[j] = np.array(pw_calc.outputs.output_structure.sites[j].position)
+
                 for j in range(len(atoms)):
                     if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
                     np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
