@@ -126,8 +126,8 @@ class YamboRestartWf(WorkChain):
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
                                         self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart
 
-                if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime:
-                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime
+                if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime.value:
+                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime.value
                     self.report(
                         "Failed calculation, likely queue time exhaustion, restarting with same max_input_seconds = {}"
                         .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
