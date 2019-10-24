@@ -66,7 +66,7 @@ class YamboConvergence(WorkChain):
         except:
             pass
 
-        
+
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
         self.ctx.workflow_manager.converged = False
         self.ctx.workflow_manager.fully_converged = False
@@ -100,16 +100,16 @@ class YamboConvergence(WorkChain):
             if self.ctx.workflow_manager.converged:
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
-                try:
-                    self.ctx.k_distance = self.ctx.act_var['starting_k_distance']
+                try: #qualcosa di meglio...
+                    self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
                 except:
                     pass
-                self.ctx.act_var['iter']  = 1
-                self.ctx.converged = False
-                self.report('Next variable to converge: {}'.format(self.ctx.act_var['var']))
+                self.ctx.calc_manager.iter  = 1
+                self.ctx.workflow_manager.converged = False
+                self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
                 return True
             else:
-                self.report('Convergence on {}'.format(self.ctx.act_var['var']))
+                self.report('Convergence on {}'.format(self.ctx.calc_manager.var))
                 return True
 
 
