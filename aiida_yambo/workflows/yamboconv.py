@@ -94,23 +94,23 @@ class YamboConvergence(WorkChain):
             self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
             return False
 
+        elif self.ctx.workflow_manager.converged:
+            #update variable
+            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+            try:
+                self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+            except:
+                pass
+            self.ctx.calc_manager.iter = 1
+            self.ctx.workflow_manager.converged = False
+            self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
+            return True
+        elif not self.ctx.workflow_manager.converged:
+            self.report('Convergence on {}'.format(self.ctx.calc_manager.var))
+            return True
         else:
-
-
-            if self.ctx.workflow_manager.converged:
-                #update variable
-                self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
-                try:
-                    self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
-                except:
-                    pass
-                self.ctx.calc_manager.iter = 1
-                self.ctx.workflow_manager.converged = False
-                self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
-                return True
-            else:
-                self.report('Convergence on {}'.format(self.ctx.calc_manager.var))
-                return True
+            self.report('Undefined state on {}'.format(self.ctx.calc_manager.var))
+            return False            
 
 
     def next_step(self):
