@@ -200,7 +200,7 @@ class YamboConvergence(WorkChain):
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
             self.ctx.fully_converged = True
 
-        self.ctx.act_var['iter']  += 1
+        self.ctx.calc_manager.iter  += 1
 
 
     def report_wf(self): #mancano le unita'
