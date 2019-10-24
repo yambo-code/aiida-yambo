@@ -138,7 +138,7 @@ class YamboConvergence(WorkChain):
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             self.calc_manager.wfl_pk = future.pk
 
-        return ToContext(future) #questo aspetta tutti i calcoli
+        return ToContext(future)
 
 
     def conv_eval(self):
