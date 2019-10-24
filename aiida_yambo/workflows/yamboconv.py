@@ -147,7 +147,7 @@ class YamboConvergence(WorkChain):
         self.report('Convergence evaluation, we will try to parse some result')
 
         try:
-            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.act_var)) #redundancy..
+            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.calc_manager.var)) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
