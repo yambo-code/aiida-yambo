@@ -10,6 +10,7 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
+from boh import managers #########################
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap, last_conv_calc_recovering
@@ -64,21 +65,17 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
         except:
             pass
-        \
-        self.ctx.variables = self.inputs.var_to_conv.get_list()
-        self.ctx.act_var = self.ctx.variables.pop()
-        #self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
 
-        self.ctx.converged = False
-        self.ctx.fully_converged = False
+        
+        self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
+        self.ctx.workflow_manager.converged = False
+        self.ctx.workflow_manager.fully_converged = False
 
-        self.ctx.act_var['iter']  = 1
+        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+        self.ctx.calc_manager.iter  = 1
 
-        self.ctx.all_calcs = []
-        self.ctx.conv_var = []
-
-        try:
-            self.ctx.k_distance = self.ctx.act_var['starting_k_distance']
+        try: #qualcosa di meglio...
+            self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
             pass
 
@@ -89,21 +86,18 @@ class YamboConvergence(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts'] and not self.ctx.converged and not self.ctx.fully_converged:   #+1 because it starts from zero
-            self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
+        if self.ctx.workflow_manager.fully_converged:
+            self.report('Convergence finished'.format(self.ctx.act_var['var']))
+            return False
+
+        if self.ctx.calc_manager.iter  > self.ctx.act_var['max_restarts']:
+            self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
         else:
 
-            if not self.ctx.converged:
-                self.report('Convergence on {}'.format(self.ctx.act_var['var']))
-                return True
 
-            elif self.ctx.fully_converged:
-                self.report('the workflow is finished successfully')
-                return False
-
-            elif self.ctx.converged and not self.ctx.fully_converged:
+            if self.ctx.workflow_manager.converged:
                 #update variable
                 self.ctx.act_var = self.ctx.variables.pop()
                 try:
@@ -112,7 +106,10 @@ class YamboConvergence(WorkChain):
                     pass
                 self.ctx.act_var['iter']  = 1
                 self.ctx.converged = False
-                self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
+                self.report('Next variable to converge: {}'.format(self.ctx.act_var['var']))
+                return True
+            else:
+                self.report('Convergence on {}'.format(self.ctx.act_var['var']))
                 return True
 
 
