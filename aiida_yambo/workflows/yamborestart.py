@@ -124,7 +124,7 @@ class YamboRestartWf(WorkChain):
             # timing errors: e se il walltime max é già usato? solo restart normale--> mi serve input"max walltime, default 24:00:00" #
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
-                                        Int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
+                                        self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart
 
                 if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime:
                     self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime
