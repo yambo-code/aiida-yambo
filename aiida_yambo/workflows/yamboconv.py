@@ -74,7 +74,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
         self.ctx.calc_manager.iter  = 1
 
-        try: #qualcosa di meglio...
+        try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
             self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
             pass
@@ -87,11 +87,11 @@ class YamboConvergence(WorkChain):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
         if self.ctx.workflow_manager.fully_converged:
-            self.report('Convergence finished'.format(self.ctx.act_var['var']))
+            self.report('Convergence finished')
             return False
 
-        if self.ctx.calc_manager.iter  > self.ctx.act_var['max_restarts']:
-            self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
+        if self.ctx.calc_manager.iter  > self.ctx.calc_manager.max_restarts:
+            self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
             return False
 
         else:
@@ -99,12 +99,12 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.workflow_manager.converged:
                 #update variable
-                self.ctx.act_var = self.ctx.variables.pop()
-                try: #qualcosa di meglio...
+                self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+                try:
                     self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
                 except:
                     pass
-                self.ctx.calc_manager.iter  = 1
+                self.ctx.calc_manager.iter = 1
                 self.ctx.workflow_manager.converged = False
                 self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
                 return True
@@ -120,11 +120,12 @@ class YamboConvergence(WorkChain):
 
         calc = {}
 
-        self.ctx.param_vals = []
+        self.ctx.calc_manager.values = []
 
-        for i in range(self.ctx.act_var['steps']):
+        for i in range(self.ctx.calc_manager.steps):
 
-            self.report('Preparing iteration number {} on {}'.format(i+(self.ctx.act_var['iter']-1)*self.ctx.act_var['steps']+1,self.ctx.act_var['var']))
+            self.report('Preparing iteration number {} on {}'.\
+                format(i+(self.ctx.calc_manager.iter-1)*self.ctx.calc_manager.steps+1,self.ctx.calc_manager.var))
 
             if i == 0 and self.ctx.first_calc:
                 self.report('first calc will be done with the starting params')
@@ -132,42 +133,7 @@ class YamboConvergence(WorkChain):
             else: #the true flow
                 first = 1
 
-
-            if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
-                                                 #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
-
-                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']*first
-                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']*first
-
-                self.ctx.calc_inputs.yres.gw.parameters = Dict(dict=self.ctx.new_params)
-
-                self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
-
-            elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
-
-                self.ctx.k_distance = self.ctx.k_distance + self.ctx.act_var['delta']*first
-                self.ctx.calc_inputs.scf.kpoints = KpointsData()
-                self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
-                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/self.ctx.k_distance, force_parity=True)
-                self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.scf.kpoints.get_kpoints_mesh(),1/self.ctx.k_distance))
-                try:
-                    del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
-                except:
-                    pass
-
-                self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
-
-
-            else: #"scalar" quantity
-
-                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
-
-                self.ctx.calc_inputs.yres.gw.parameters = Dict(dict=self.ctx.new_params)
-
-                self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
+            self.ctx.calc_inputs = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance)
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
