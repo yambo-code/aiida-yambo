@@ -110,7 +110,7 @@ class YamboConvergence(WorkChain):
             return True
         else:
             self.report('Undefined state on {}'.format(self.ctx.calc_manager.var))
-            return False            
+            return False
 
 
     def next_step(self):
@@ -136,10 +136,9 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_inputs = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance)
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
-            self.ctx.act_var['wfl_pk'] = future.pk
+            self.calc_manager.wfl_pk = future.pk
 
-        return ToContext(calc) #questo aspetta tutti i calcoli
+        return ToContext(future) #questo aspetta tutti i calcoli
 
 
     def conv_eval(self):
