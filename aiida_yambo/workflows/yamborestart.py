@@ -33,7 +33,7 @@ class YamboRestartWf(WorkChain):
         spec.expose_inputs(YamboCalculation, namespace='gw', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
-        spec.input("max_restarts", valid_type=Int, required=False) #key: 'max_restarts'
+        spec.input("max_restarts", valid_type=Int, default=Int(3)) #key: 'max_restarts'
         spec.input("max_walltime", valid_type=Int, default=Int(86400))
 
 
