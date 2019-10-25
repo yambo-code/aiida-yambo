@@ -242,16 +242,15 @@ class YamboCalculation(CalcJob):
                     value = this_dict['value']
                     units = this_dict['units']
 
-                    if isinstance(value, tuple):
-                        value_string = " \" " + " ".join(
-                            [str(_) for _ in value]) + " \" "
-                        the_string = "{} = {}".format(key, value_string)
-                        continue
 
-                    elif isinstance(value, list):
+                    if isinstance(value, list):
                         value_string = ''
-                        for v in value:
-                            value_string += " | ".join([str(_) for _ in v]) + " |\n"
+                        try:
+                            for v in value:
+                                value_string += " | ".join([str(_) for _ in v]) + " |\n"
+                        except:
+                            value_string += " | ".join([str(_) for _ in value]) + " |\n"
+                            
                         the_string = "% {}\n {}".format(key, value_string)
                         the_string += "%"
                         continue
@@ -276,11 +275,13 @@ class YamboCalculation(CalcJob):
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
         if yambo_parent:
-
             remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
-
+            try:
+                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
+            except:
+                pass
         else:
-            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.save/",'./aiida.save/')) ##.format(parent_calc_folder._PREFIX)
+            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.save/",'./')) ##.format(parent_calc_folder._PREFIX)
 
         ############################################
         # set Calcinfo
