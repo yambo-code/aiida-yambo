@@ -243,8 +243,6 @@ class YamboCalculation(CalcJob):
                     units = this_dict['units']
 
                     if isinstance(value, tuple):
-                        # write the input flags for the Drude term and for the parallelization options of vers. 4
-                        # (it can be implemented in a better way)
                         value_string = " \" " + " ".join(
                             [str(_) for _ in value]) + " \" "
                         the_string = "{} = {}".format(key, value_string)
@@ -253,8 +251,7 @@ class YamboCalculation(CalcJob):
                     elif isinstance(value, list):
                         value_string = ''
                         for v in value:
-                            value_string += " | ".join([str(_) for _ in v
-                                                        ]) + " |\n"
+                            value_string += " | ".join([str(_) for _ in v]) + " |\n"
                         the_string = "% {}\n {}".format(key, value_string)
                         the_string += "%"
                         continue
@@ -273,12 +270,17 @@ class YamboCalculation(CalcJob):
         # set copy of the parent calculation
         ############################################
 
+        try:
+            parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
+        except:
+            parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+
         if yambo_parent:
 
-            os.symlink(parent_calc_folder.get_remote_path(), '.')
+            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
 
         else:
-            os.symlink(parent_calc_folder.get_remote_path()+"aiida.save", "aiida.save") ##.format(parent_calc_folder._PREFIX)
+            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.save/",'./aiida.save/')) ##.format(parent_calc_folder._PREFIX)
 
         ############################################
         # set Calcinfo
@@ -319,6 +321,13 @@ class YamboCalculation(CalcJob):
 
         # if the parent calculation is a yambo calculation skip the interface (c1) and the initialization (c2)
         if yambo_parent:
+            try:
+                parent_settings = _uppercase_dict(
+                    parent_calc.inputs.settings.get_dict(),
+                    dict_name='parent settings')
+                parent_initialise = parent_settings['INITIALISE']
+            except KeyError:
+                parent_initialise = False
             c1 = None
             if not parent_initialise:
                 c2 = None
