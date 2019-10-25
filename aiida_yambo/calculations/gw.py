@@ -365,7 +365,6 @@ class YamboCalculation(CalcJob):
         else:
             calcinfo.codes_info = [c1, c2, c3]
 
-
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
         if settings:
