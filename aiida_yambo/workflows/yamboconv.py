@@ -145,9 +145,10 @@ class YamboConvergence(WorkChain):
 
         self.ctx.first_calc = False
         self.report('Convergence evaluation, we will try to parse some result')
-
+        convergence_evaluator = convergence_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
         try:
-            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.calc_manager.var)) #redundancy..
+            quantities = self.ctx.calc_manager.take_quantities()
+            converged, oversteps = convergence_and_backtracing(quantities[:,1]) #redundancy..
 
             for i in range(self.ctx.act_var['steps']):
 
