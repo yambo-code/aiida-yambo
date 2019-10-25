@@ -136,8 +136,7 @@ class YamboCalculation(CalcJob):
 
         if not initialise:
             if not isinstance(parameters, Dict):
-                raise InputValidationError(
-                    "parameters is not of type Dict")
+                raise InputValidationError("parameters is not of type Dict")
 
         parent_calc_folder = self.inputs.parent_folder
 
@@ -150,7 +149,6 @@ class YamboCalculation(CalcJob):
         except:
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
-       # yambo_parent = isinstance(parent_calc, YamboCalculation)    old row
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
@@ -318,19 +316,6 @@ class YamboCalculation(CalcJob):
         ############################################
         # set copy of the parent calculation
         ############################################
-        '''
-        parent_calcs = parent_calc_folder.get_inputs(link_type=LinkType.CREATE)
-        if len(parent_calcs) > 1:
-            raise UniquenessError(
-                "More than one parent totalenergy calculation"
-                "has been found for parent_calc_folder {}".format(
-                    parent_calc_folder))
-        if len(parent_calcs) == 0:
-            raise InputValidationError(
-                "No parent calculation associated with parent_folder {}".
-                format(parent_calc_folder))
-        parent_calc = parent_calcs[0]
-        '''
         try:
             parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
         except:
