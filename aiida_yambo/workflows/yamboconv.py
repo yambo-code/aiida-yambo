@@ -190,7 +190,7 @@ class YamboConvergence(WorkChain):
                             .format(self.calc_manager.va, self.calc_manager.steps*self.calc_manager.iter)
                 self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
 
-            if self.ctx.variables == [] : #variables to be converged are finished
+            if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                  self.ctx.workflow_manager.fully_converged = True
         except:
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
