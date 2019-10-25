@@ -162,7 +162,7 @@ class YamboCalculation(CalcJob):
         # check the precode parameters given in input
         input_cmdline = settings.pop('CMDLINE', None)
         import re
-        precode_params_list = []
+        precode_params_list = [] #['cd aiida.save'] ##.format(parent_calc_folder._PREFIX)
         pattern = re.compile(r"(^\-)([a-zA-Z])")
         for key, value in six.iteritems(precode_param_dict.get_dict()):
             if re.search(pattern, key) is not None:
@@ -251,6 +251,7 @@ class YamboCalculation(CalcJob):
                         continue
 
                     elif isinstance(value, list):
+                        value_string = ''
                         for v in value:
                             value_string += " | ".join([str(_) for _ in v
                                                         ]) + " |\n"
@@ -273,43 +274,12 @@ class YamboCalculation(CalcJob):
         ############################################
 
         if yambo_parent:
-            try:
-                parent_settings = _uppercase_dict(
-                    parent_calc.inputs.settings.get_dict(),
-                    dict_name='parent settings')
-                parent_initialise = parent_settings['INITIALISE']
-            except KeyError:
-                parent_initialise = False
 
-            remote_copy_list.append((parent_calc_folder.computer.uuid,
-                                     os.path.join(
-                                         parent_calc_folder.get_remote_path(),
-                                         "SAVE"), "SAVE/"))
-            if not parent_initialise:
-                cancopy = False
-                if parent_calc.is_finished:
-                    cancopy = True
-                try:
-                    if 'yambo_wrote' in list(
-                            parent_calc.outputs.output_parameters.get_dict().keys()):
-                        if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == True:
-                            cancopy = True
-                except:
-                    cancopy = False  #could not be output_parameters... so I have just to try
-                if cancopy:
-                    remote_copy_list.append(
-                        (parent_calc_folder.computer.uuid,
-                         os.path.join(parent_calc_folder.get_remote_path(),
-                                      ".aiida"), "aiida/"))
+            os.symlink(parent_calc_folder.get_remote_path(), '.')
+
         else:
-            remote_copy_list.append(
-                (parent_calc_folder.computer.uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              PwCalculation._OUTPUT_SUBFOLDER,
-                              "aiida.save","*" ),  ##.format(parent_calc_folder._PREFIX)
-                                     "."
-                                     )
-                                    )
+            os.symlink(parent_calc_folder.get_remote_path()+"aiida.save", "aiida.save") ##.format(parent_calc_folder._PREFIX)
+
         ############################################
         # set Calcinfo
         ############################################
@@ -320,7 +290,7 @@ class YamboCalculation(CalcJob):
 
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.remote_symlink_list = []  # remote_symlink_list
+        calcinfo.remote_symlink_list = remote_symlink_list
 
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []
@@ -338,7 +308,7 @@ class YamboCalculation(CalcJob):
 
         # c1 = interface dft codes and yambo (ex. p2y or a2y)
         c1 = CodeInfo()
-        c1.withmpi = False
+        c1.withmpi = True
         c1.cmdline_params = precode_params_list
 
         # c2 = yambo initialization
@@ -361,7 +331,8 @@ class YamboCalculation(CalcJob):
         c3.withmpi = True
         #c3.withmpi = self.get_withmpi()
         c3.cmdline_params = [
-            "-F", self.metadata.options.input_filename, '-J', self.metadata.options.output_filename
+            "-F", self.metadata.options.input_filename, \
+            '-J', self.metadata.options.output_filename, \
         ]
         c3.code_uuid = main_code.uuid
 
@@ -369,6 +340,7 @@ class YamboCalculation(CalcJob):
             c2 = None
             c3 = None
 
+        #logic of the execution
         #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]
         if yambo_parent:
             if not parent_initialise:
