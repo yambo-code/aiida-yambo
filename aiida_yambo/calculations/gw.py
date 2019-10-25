@@ -281,7 +281,6 @@ class YamboCalculation(CalcJob):
             except KeyError:
                 parent_initialise = False
 
-        if yambo_parent:
             remote_copy_list.append((parent_calc_folder.computer.uuid,
                                      os.path.join(
                                          parent_calc_folder.get_remote_path(),
