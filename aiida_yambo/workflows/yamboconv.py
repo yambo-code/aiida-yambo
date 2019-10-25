@@ -161,15 +161,15 @@ class YamboConvergence(WorkChain):
 
                     self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
                                 [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.conv_story.append(list(self.calc_manager.__dict__.values())+\
+                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
 
             if self.ctx.calc_manager.converged:
 
                 self.ctx.converged = True
                 self.report('Success, updating the history...')
 
-                self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
-                            [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-
+                self.conv_story.drop(self.conv_story.index[-oversteps])                
                 last_ok = load_node(self.ctx.workflow_manager.conv_story['calc_pk'][-1]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
@@ -179,13 +179,13 @@ class YamboConvergence(WorkChain):
                     self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.calc_manager.va, self.calc_manager.steps*self.calc_manager.iter,\
+                            .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter,\
                              self.ctx.workflow_manager.conv_story[self.what][-1] ))
 
             else:
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
-                            .format(self.calc_manager.va, self.calc_manager.steps*self.calc_manager.iter)
+                            .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter)
                 self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
 
             if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
