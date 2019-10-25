@@ -198,7 +198,7 @@ class YamboConvergence(WorkChain):
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
 
 
-        self.ctx.calc_manager.iter  += 1
+        self.ctx.calc_manager.iter +=1
         self.ctx.workflow_manager.first_calc = False
 
     def report_wf(self): #mancano le unita'
