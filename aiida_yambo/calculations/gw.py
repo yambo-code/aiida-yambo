@@ -253,7 +253,7 @@ class YamboCalculation(CalcJob):
 
                         the_string = "% {}\n {}".format(key, value_string)
                         the_string += "%"
-                        
+
 
                     else:
                         the_value = '"{}"'.format(value) if isinstance(
@@ -373,6 +373,7 @@ class YamboCalculation(CalcJob):
 
         return calcinfo
 
+################################################################################
     #the following functions are not used, so why are they here?
     def _check_valid_parent(self, calc):
         """
