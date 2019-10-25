@@ -281,7 +281,7 @@ class YamboCalculation(CalcJob):
             except:
                 pass
         else:
-            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.save/",'./')) ##.format(parent_calc_folder._PREFIX)
+            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
 
         ############################################
         # set Calcinfo
