@@ -57,7 +57,6 @@ class YamboConvergence(WorkChain):
     def start_workflow(self):
         """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
 
-
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
@@ -65,7 +64,6 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
         except:
             pass
-
 
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
         self.ctx.workflow_manager.fully_converged = False
