@@ -79,7 +79,7 @@ class YamboConvergence(WorkChain):
         except:
             pass
 
-        self.ctx.first_calc = True
+        self.ctx.workflow_manager.first_calc = True
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
 
@@ -127,7 +127,7 @@ class YamboConvergence(WorkChain):
             self.report('Preparing iteration number {} on {}'.\
                 format(i+(self.ctx.calc_manager.iter-1)*self.ctx.calc_manager.steps+1,self.ctx.calc_manager.var))
 
-            if i == 0 and self.ctx.first_calc:
+            if i == 0 and self.ctx.workflow_manager.first_calc:
                 self.report('first calc will be done with the starting params')
                 first = 0 #it is the first calc, I use it's original values
             else: #the true flow
@@ -155,7 +155,7 @@ class YamboConvergence(WorkChain):
             for i in range(self.ctx.calc_manager.steps):
 
                     self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
-                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1], quantities[0,i,0]])
+                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
 
             if converged:
 
@@ -198,8 +198,14 @@ class YamboConvergence(WorkChain):
             self.ctx.fully_converged = True
 
         self.ctx.calc_manager.iter  += 1
-        self.ctx.first_calc = False
 
+        if self.ctx.workflow_manager.first_calc:
+            self.ctx.workflow_manager.absolute_story.columns = list(self.calc_manager.__dict__.values())+\
+                        ['value', 'calc_pk', self.what]
+            self.ctx.workflow_manager.conv_story.columns = list(self.calc_manager.__dict__.values())+\
+                        ['value', 'calc_pk', self.what]
+
+        self.ctx.workflow_manager.first_calc = False
 
     def report_wf(self): #mancano le unita'
 
