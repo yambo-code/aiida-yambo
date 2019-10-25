@@ -133,7 +133,9 @@ class YamboConvergence(WorkChain):
             else: #the true flow
                 first = 1
 
-            self.ctx.calc_inputs = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance)
+            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance)
+            self.calc_manager.values.append(value)
+
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             self.calc_manager.wfl_pk = future.pk
@@ -143,19 +145,16 @@ class YamboConvergence(WorkChain):
 
     def conv_eval(self):
 
-        self.ctx.first_calc = False
+
         self.report('Convergence evaluation, we will try to parse some result')
         convergence_evaluator = convergence_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
         try:
             quantities = self.ctx.calc_manager.take_quantities()
-            converged, oversteps = convergence_and_backtracing(quantities[:,1]) #redundancy..
+            converged, oversteps = convergence_and_backtracing(quantities[:,1])
 
             for i in range(self.ctx.act_var['steps']):
 
-                self.ctx.all_calcs.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
-                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
-                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+                self.absolute_story.append(self.calc_manager)
 
             if converged:
 
@@ -198,6 +197,7 @@ class YamboConvergence(WorkChain):
             self.ctx.fully_converged = True
 
         self.ctx.calc_manager.iter  += 1
+        self.ctx.first_calc = False
 
 
     def report_wf(self): #mancano le unita'
