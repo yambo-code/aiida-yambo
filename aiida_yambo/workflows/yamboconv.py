@@ -154,6 +154,7 @@ class YamboConvergence(WorkChain):
         self.report('Convergence evaluation, we will try to parse some result')
 
         convergence_evaluator = convergence_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
+
         try:
             quantities = self.ctx.calc_manager.take_quantities()
             self.ctx.calc_manager.converged, oversteps = convergence_and_backtracing(quantities[:,1])
