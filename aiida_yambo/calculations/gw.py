@@ -250,10 +250,10 @@ class YamboCalculation(CalcJob):
                                 value_string += " | ".join([str(_) for _ in v]) + " |\n"
                         except:
                             value_string += " | ".join([str(_) for _ in value]) + " |\n"
-                            
+
                         the_string = "% {}\n {}".format(key, value_string)
                         the_string += "%"
-                        continue
+                        
 
                     else:
                         the_value = '"{}"'.format(value) if isinstance(
