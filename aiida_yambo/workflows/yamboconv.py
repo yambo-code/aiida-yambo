@@ -168,9 +168,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.converged = True
 
-                #taking as starting point just the first of the convergence window...
-                last_ok_pk, oversteps = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap',self.ctx.conv_var)
-                self.report('oversteps:{}'.format(oversteps))
+                self.report('Success, updating the history...')
 
                 self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
                             [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
@@ -184,7 +182,8 @@ class YamboConvergence(WorkChain):
                     self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3] ))
+                            .format(self.calc_manager.va, self.calc_manager.steps*self.calc_manager.iter,\
+                             self.ctx.workflow_manager.conv_story[self.what][-1] ))
 
 
             else:
