@@ -242,74 +242,30 @@ class YamboCalculation(CalcJob):
                     value = this_dict['value']
                     units = this_dict['units']
 
-                    if isinstance(value, (tuple, list)):
+                    if isinstance(value, tuple):
                         # write the input flags for the Drude term and for the parallelization options of vers. 4
                         # (it can be implemented in a better way)
-                        if key.startswith('DrudeW'):
-                            value_string = " ( " + ",".join(
-                                [str(_) for _ in value]) + " )"
-                            the_string = "{} = {}".format(key, value_string)
-                            the_string += " {}".format(units)
-                            infile.write(the_string + "\n")
-                            continue
+                        value_string = " \" " + " ".join(
+                            [str(_) for _ in value]) + " \" "
+                        the_string = "{} = {}".format(key, value_string)
+                        continue
 
-                        if key == 'SE_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("SE_ROLEs = \" q qp b  \" " + "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'X_all_q_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("X_all_q_ROLEs = \" q k c v  \" " +
-                                         "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'X_finite_q_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("X_finite_q_ROLEs = \" q k c v  \" " +
-                                         "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'X_q_0_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("X_q_0_ROLEs = \" k c v  \" " + "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'QPkrange' or key == 'QPerange':
-                            value_string = ''
-                            for v in value:
-                                value_string += " | ".join([str(_) for _ in v
-                                                            ]) + " |\n"
-                            the_string = "% {}\n {}".format(key, value_string)
-                            the_string += "%"
-                            infile.write(the_string + "\n")
-                            continue
-
-                        value_string = " | ".join([str(_)
-                                                   for _ in value]) + " |"
+                    elif isinstance(value, list):
+                        for v in value:
+                            value_string += " | ".join([str(_) for _ in v
+                                                        ]) + " |\n"
                         the_string = "% {}\n {}".format(key, value_string)
-                        if units is not None:
-                            the_string += " {}".format(units)
-                        the_string += "\n%"
+                        the_string += "%"
+                        continue
 
                     else:
                         the_value = '"{}"'.format(value) if isinstance(
                             value, six.string_types) else '{}'.format(value)
                         the_string = "{} = {}".format(key, the_value)
-                        if units is not None:
-                            the_string += " {}".format(units)
+
+
+                    if units is not None:
+                        the_string += " {}".format(units)
 
                     infile.write(the_string + "\n")
 
