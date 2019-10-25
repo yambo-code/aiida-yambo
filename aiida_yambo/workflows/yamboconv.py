@@ -73,7 +73,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_manager.iter  = 1
 
         try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
-            self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+            self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
             pass
 
@@ -96,7 +96,7 @@ class YamboConvergence(WorkChain):
             #update variable
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
             try:
-                self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+                self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
             except:
                 pass
             self.ctx.calc_manager.iter = 1
@@ -131,7 +131,7 @@ class YamboConvergence(WorkChain):
             else: #the true flow
                 first = 1
 
-            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance)
+            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.workflow_manager.k_distance)
             self.workflow_manager.values.append(value)
 
 
@@ -172,7 +172,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
                 if self.calc_manager.var == 'kpoints':
-                    self.ctx.k_distance = self.ctx.k_distance - self.calc_manager.delta*oversteps
+                    self.ctx.workflow_manager.k_distance = self.ctx.workflow_manager.k_distance - self.calc_manager.delta*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter,\
