@@ -157,15 +157,12 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager.converged, oversteps = convergence_and_backtracing(quantities[:,1])
 
             for i in range(self.ctx.calc_manager.steps):
-
                     self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
                                 [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
                     self.conv_story.append(list(self.calc_manager.__dict__.values())+\
                                 [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
 
             if self.ctx.calc_manager.converged:
-
-                self.ctx.converged = True
                 self.report('Success, updating the history...')
 
                 self.conv_story.drop(self.conv_story.index[-oversteps])
@@ -182,7 +179,6 @@ class YamboConvergence(WorkChain):
                              self.ctx.workflow_manager.conv_story[self.what][-1] ))
 
             else:
-                self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter)
                 self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
