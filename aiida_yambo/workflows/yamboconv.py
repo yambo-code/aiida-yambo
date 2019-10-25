@@ -169,7 +169,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.converged = True
                 self.report('Success, updating the history...')
 
-                self.conv_story.drop(self.conv_story.index[-oversteps])                
+                self.conv_story.drop(self.conv_story.index[-oversteps])
                 last_ok = load_node(self.ctx.workflow_manager.conv_story['calc_pk'][-1]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
@@ -194,7 +194,6 @@ class YamboConvergence(WorkChain):
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('if no datas are parsed: are you sure of your convergence window?')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
-
 
         self.ctx.calc_manager.iter +=1
         self.ctx.workflow_manager.first_calc = False
