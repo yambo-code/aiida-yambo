@@ -68,7 +68,7 @@ class YamboConvergence(WorkChain):
 
 
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
-        self.ctx.workflow_manager.converged = False
+        self.ctx.calc_manager.converged = False
         self.ctx.workflow_manager.fully_converged = False
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
@@ -94,7 +94,7 @@ class YamboConvergence(WorkChain):
             self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
             return False
 
-        elif self.ctx.workflow_manager.converged:
+        elif self.ctx.calc_manager.converged:
             #update variable
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
             try:
@@ -102,10 +102,10 @@ class YamboConvergence(WorkChain):
             except:
                 pass
             self.ctx.calc_manager.iter = 1
-            self.ctx.workflow_manager.converged = False
+            self.ctx.calc_manager.converged = False
             self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
             return True
-        elif not self.ctx.workflow_manager.converged:
+        elif not self.ctx.calc_manager.converged:
             self.report('Convergence on {}'.format(self.ctx.calc_manager.var))
             return True
         else:
@@ -150,12 +150,12 @@ class YamboConvergence(WorkChain):
         convergence_evaluator = convergence_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
         try:
             quantities = self.ctx.calc_manager.take_quantities()
-            converged, oversteps = convergence_and_backtracing(quantities[:,1])
+            self.ctx.calc_manager.converged, oversteps = convergence_and_backtracing(quantities[:,1])
 
             for i in range(self.ctx.calc_manager.steps):
 
                     self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
-                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[0,i,1], quantities[:,i,0]])
+                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1], quantities[0,i,0]])
 
             if converged:
 
