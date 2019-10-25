@@ -171,8 +171,8 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
-                if self.ctx.act_var['var'] == 'kpoints':
-                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps
+                if self.calc_manager.var == 'kpoints':
+                    self.ctx.k_distance = self.ctx.k_distance - self.calc_manager.delta*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter,\
@@ -196,8 +196,8 @@ class YamboConvergence(WorkChain):
     def report_wf(self): #mancano le unita'
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_converged)))
-        converged_var = List(list=self.ctx.conv_var).store()
-        all_var = List(list=self.ctx.all_calcs).store()
+        converged_var = List(list=self.absolute_story.to_list()).store()
+        all_var = List(list=self.conv_story.to_list()).store()
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
 
