@@ -68,10 +68,10 @@ class YamboConvergence(WorkChain):
 
 
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
-        self.ctx.calc_manager.converged = False
         self.ctx.workflow_manager.fully_converged = False
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+        self.ctx.calc_manager.converged = False
         self.ctx.calc_manager.iter  = 1
 
         try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
@@ -106,7 +106,7 @@ class YamboConvergence(WorkChain):
             self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
             return True
         elif not self.ctx.calc_manager.converged:
-            self.report('Convergence on {}'.format(self.ctx.calc_manager.var))
+            self.report('Still convergence on {}'.format(self.ctx.calc_manager.var))
             return True
         else:
             self.report('Undefined state on {}'.format(self.ctx.calc_manager.var))
@@ -167,13 +167,12 @@ class YamboConvergence(WorkChain):
             if self.ctx.calc_manager.converged:
 
                 self.ctx.converged = True
-
                 self.report('Success, updating the history...')
 
                 self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
                             [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
 
-                last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
+                last_ok = load_node(self.ctx.workflow_manager.conv_story['calc_pk'][-1]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
@@ -185,35 +184,26 @@ class YamboConvergence(WorkChain):
                             .format(self.calc_manager.va, self.calc_manager.steps*self.calc_manager.iter,\
                              self.ctx.workflow_manager.conv_story[self.what][-1] ))
 
-
             else:
                 self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
+                            .format(self.calc_manager.va, self.calc_manager.steps*self.calc_manager.iter)
                 self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
 
-
             if self.ctx.variables == [] : #variables to be converged are finished
-
-                self.ctx.fully_converged = True
+                 self.ctx.workflow_manager.fully_converged = True
         except:
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
-            self.report('if no datas are parsed: are you sure of your convergence windows?')
+            self.report('if no datas are parsed: are you sure of your convergence window?')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
-            self.ctx.fully_converged = True
+
 
         self.ctx.calc_manager.iter  += 1
-
         self.ctx.workflow_manager.first_calc = False
 
     def report_wf(self): #mancano le unita'
 
-        self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
-
-        #self.ctx.conv_var = (list(self.ctx.act_var.keys())+['calc_number','params_vals','gap']).append(self.ctx.conv_var)
-
-        self.report('Converged variables: {}'.format(self.ctx.conv_var))
-        #inserire una lista finale dei parametri di convergenza...xk la storia potrebbe non essere sufficiente, perdo delle partenze..
+        self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_converged)))
         converged_var = List(list=self.ctx.conv_var).store()
         all_var = List(list=self.ctx.all_calcs).store()
         self.out('conv_info', converged_var)
