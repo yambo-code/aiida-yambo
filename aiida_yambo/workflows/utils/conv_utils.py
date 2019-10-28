@@ -108,6 +108,7 @@ def last_relax_calc_recovering(calcs_info,last_params,last_conv_story):
                     if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
                     np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
                         last_conv_calc = load_node(last_conv_story[-2]).caller.pk
+                        last_conv = i
                 else:
                     break
             else:
