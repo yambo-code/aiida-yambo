@@ -5,83 +5,89 @@ from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import List
-from aiida.orm import Code
-from aiida.plugins import DataFactory
-import pymatgen
+from aiida.orm import List, Dict
 from aiida.engine import submit
 from aiida_yambo.calculations.gw import YamboCalculation
-from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida.orm import UpfData
-from aiida.orm.nodes.data.upf import get_pseudos_from_structure
 
-Dict = DataFactory('dict')
 
-parameters = dict={
+options = {
+    'max_wallclock_seconds': 24*60*60,
+    'resources': {
+        "num_machines": 2,
+        "num_mpiprocs_per_machine":4,
+        "num_cores_per_mpiproc":4,
+    },
+    'queue_name':'s3par',
+    'environment_variables': {},
+    'custom_scheduler_commands': u"#PBS -N example_gw \nexport OMP_NUM_THREADS=4",
+    }
+
+metadata = {
+    'options':options,
+    'label': 'example_gw',
+}
+
+params_gw = {
         'ppa': True,
         'gw0': True,
         'HF_and_locXC': True,
         'em1d': True,
         'Chimod': 'hartree',
-        'EXXRLvcs': 10,
-        'EXXRLvcs_units': 'Ry',
-        'BndsRnXp': (1, 30),
-        'NGsBlkXp': 1,
+        #'EXXRLvcs': 40,
+        #'EXXRLvcs_units': 'Ry',
+        'BndsRnXp': [1, 60],
+        'NGsBlkXp': 2,
         'NGsBlkXp_units': 'Ry',
-        'GbndRnge': (1, 30),
+        'GbndRnge': [1, 60],
         'DysSolver': "n",
-        'QPkrange': [(1, 1, 1, 15)],
-        'X_all_q_CPU': "1 1 6 2",
+        'QPkrange': [[1, 1, 24, 25]],
+        'X_all_q_CPU': "1 1 2 2",
         'X_all_q_ROLEs': "q k c v",
-        #'SE_CPU': "1 1 12",
-        #'SE_ROLEs': "q qp b",
+        'SE_CPU': "1 1 4",
+        'SE_ROLEs': "q qp b",
     }
+params_gw = Dict(dict=params_gw)
 
-inputs = {}
-inputs['settings'] = Dict(dict={'INITIALISE': False})
-options =  {
-    'max_wallclock_seconds': 30 * 60,
-    'resources': {
-        "num_machines": 1,
-        "num_mpiprocs_per_machine":12,
-        },
-    'custom_scheduler_commands': u"#PBS -q s3par6c",
-    }
 
-inputs['metadata']={
-    'options' : options,
-    'label':'yambo_gw example',
-}
-inputs['parameters']=Dict(dict=parameters)
-inputs['precode_parameters']=Dict(dict={})
+builder = YamboCalculation.get_builder()
+builder.metadata.options.max_wallclock_seconds = \
+        options['max_wallclock_seconds']
+builder.metadata.options.resources = \
+        dict = options['resources']
+builder.metadata.options.queue_name = options['queue_name']
+builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+builder.parameters = params_gw
+builder.precode_parameters = Dict(dict={})
+builder.settings = Dict(dict={'INITIALISE': False, 'RESTART': False})
+
+
+
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='YAMBO calculation.')
     parser.add_argument(
         '--code',
-        type=str,
-        dest='codename',
+        type=int,
+        dest='code_pk',
         required=True,
         help='The yambo(main code) codename to use')
     parser.add_argument(
         '--parent',
         type=int,
-        dest='parent',
+        dest='parent_pk',
         required=True,
         help='The parent to use')
     parser.add_argument(
         '--precode',
-        type=str,
-        dest='precodename',
+        type=int,
+        dest='precode_pk',
         required=False,
         help='The precode to use')
 
     args = parser.parse_args()
-    precode = Code.get_from_string(args.precodename)
-    code = Code.get_from_string(args.codename)
-    inputs['preprocessing_code'] = precode
-    inputs['code'] = code
-    inputs['parent_folder'] = load_node(args.parent).outputs.remote_folder
-    running = submit(YamboCalculation, **inputs)
+    builder.preprocessing_code = load_node(args.precode_pk)
+    builder.code = load_node(args.code_pk)
+    builder.parent_folder = load_node(args.parent_pk).outputs.remote_folder
+    running = submit(builder)
     print("Created calculation; with pk={}".format(running.pk))
