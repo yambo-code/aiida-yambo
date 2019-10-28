@@ -205,7 +205,7 @@ class YamboConvergence(WorkChain):
 
                 #taking as starting point just the first of the convergence window...
                 last_ok_pk, oversteps,trace = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap',self.ctx.conv_var)
-                self.report('oversteps:{}, traceback: {}'.format(oversteps,str(trace))
+                self.report('oversteps:{}, traceback: {}'.format(oversteps,str(trace)))
 
                 self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
 
