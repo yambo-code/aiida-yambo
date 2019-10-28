@@ -153,7 +153,7 @@ class YamboParser(Parser):
                     parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
                 #parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
 
-                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
+                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw': #calling its parent ensures a nscf parent...
                     try:
                         cell = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1].inputs.structure.cell #to load the node from a workchain...
                     except:
