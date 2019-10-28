@@ -157,33 +157,17 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
     for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
 
         try:
-            if i == calcs_info['iter']*calcs_info['steps']+1:
-                value = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-3]
-                trace = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)]
-                if abs(value-last_val) < calcs_info['conv_thr']:
-                    last_conv = i
-                    if what == 'energy':
-                        last_conv_calc = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).caller.pk
-                    else:
-                        trace = value-last_val
-                        last_conv_calc = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).caller.caller.pk
-                else:
-                    break
-            else:
-                calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
+            value = last_conv_story[-i][-3]
+            trace = last_conv_story[-i]
+            if abs(value-last_val) < calcs_info['conv_thr']:
+                last_conv = i
                 if what == 'energy':
-                    value = calc.outputs.output_parameters.get_dict()[str(what)]
+                    last_conv_calc = load_node(last_conv_story[-i][-2]).caller.pk
                 else:
-                    value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
-                                calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
-                               (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
-                                calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
-
-                if abs(value-last_val) < calcs_info['conv_thr']:
-                    last_conv = i
-                    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
-                else:
-                    break
+                    trace = value-last_val
+                    last_conv_calc = load_node(last_conv_story[-i][-2]).caller.caller.pk
+            else:
+                break
         except:
             trace = str(traceback.format_exc())
             break
