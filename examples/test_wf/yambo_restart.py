@@ -12,7 +12,7 @@ from aiida_yambo.workflows.yamborestart import YamboRestartWf
 options = {
     'max_wallclock_seconds': 24*60*60,
     'resources': {
-        "num_machines": 2,
+        "num_machines": 1,
         "num_mpiprocs_per_machine":9,
         "num_cores_per_mpiproc":1,
     },
