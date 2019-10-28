@@ -4,5 +4,6 @@
 # This file is part of yambopy
 #
 #
-from yambofile import *
-from yambofolder import *
+from __future__ import absolute_import
+from .yambofile import *
+from .yambofolder import *

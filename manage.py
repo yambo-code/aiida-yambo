@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import sys
 import unittest
-from aiida.utils.fixtures import TestRunner
+from aiida.manage.fixtures import TestRunner
 
 tests = unittest.defaultTestLoader.discover('./tests')
 result = TestRunner().run(tests, backend='django')

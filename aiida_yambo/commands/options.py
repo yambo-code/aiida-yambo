@@ -5,6 +5,7 @@ import click
 import click
 from aiida_yambo.commands import validators
 
+
 class option(object):
     """
     """
@@ -37,27 +38,42 @@ class option(object):
 
         return click.option(*args_copy, **kw_copy)
 
+
 node = option(
-    '-n', '--node', type=click.INT, required=True,
+    '-n',
+    '--node',
+    type=click.INT,
+    required=True,
     callback=validators.validate_node,
-    help='the full convergence node pk'
-)
+    help='the full convergence node pk')
 
 legend = option(
-    '-lg', '--legendpos', type=click.INT, required=False, default=0,
+    '-lg',
+    '--legendpos',
+    type=click.INT,
+    required=False,
+    default=0,
     callback=validators.validate_legendpos,
-    help='the postion of the legend: 1 = upper right , 2 = upper left , 3 = lower left, 4 = lower right '
+    help=
+    'the postion of the legend: 1 = upper right , 2 = upper left , 3 = lower left, 4 = lower right '
 )
 
 label = option(
-    '-lb', '--label', type=click.STRING, required=True, default='Full Convergence History',  show_default=True,
+    '-lb',
+    '--label',
+    type=click.STRING,
+    required=True,
+    default='Full Convergence History',
+    show_default=True,
     callback=validators.validate_label,
-    help='the figure label text'
-)
-
+    help='the figure label text')
 
 output = option(
-    '-o', '--output', type=click.STRING, required=True, default='output',  show_default=True,
+    '-o',
+    '--output',
+    type=click.STRING,
+    required=True,
+    default='output',
+    show_default=True,
     callback=validators.validate_output,
-    help='the output image name'
-)
+    help='the output image name')

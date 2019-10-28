@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
 import re
 from setuptools import setup, find_packages
 import json
@@ -8,10 +9,8 @@ if __name__ == '__main__':
         kwargs = json.load(info)
     setup(
         include_package_data=True,
-        setup_requires=[
-            'reentry'
-        ],
+        setup_requires=['reentry'],
         reentry_register=True,
-        packages=find_packages(where='.', exclude=( "gw.*", "parser.*","gw*","parser*")),
-        **kwargs
-    )
+        packages=find_packages(
+            where='.', exclude=("gw.*", "parser.*", "gw*", "parser*")),
+        **kwargs)
