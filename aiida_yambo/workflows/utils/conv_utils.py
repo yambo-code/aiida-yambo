@@ -5,7 +5,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
 from collections.abc import Mapping
-
+import traceback
 from aiida.orm import Dict, Str, load_node
 from aiida.plugins import CalculationFactory, DataFactory
 
@@ -152,12 +152,13 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
 
     last_conv = calcs_info['steps']
     last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
-
+    trace = ''
     for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
 
         try:
             if i == calcs_info['iter']*calcs_info['steps']+1:
                 value = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-3]
+                trace = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)]
                 if abs(value-last_val) < calcs_info['conv_thr']:
                     if what == 'energy':
                         last_conv_calc = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).caller.pk
@@ -181,10 +182,11 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
                 else:
                     break
         except:
+            trace = str(traceback.format_exc())
             break
 
 
-    return  int(last_conv_calc), last_conv-1, str(traceback.format_exc())
+    return  int(last_conv_calc), last_conv-1, trace
 
 
 
