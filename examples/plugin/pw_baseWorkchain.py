@@ -15,7 +15,7 @@ options = {
     'resources': {
         "num_machines": 1,
         "num_mpiprocs_per_machine":8,
-        "num_cores_per_mpiproc":16/2,
+        "num_cores_per_mpiproc":16//8,
     },
     'queue_name':'s3par',
     'environment_variables': {},
