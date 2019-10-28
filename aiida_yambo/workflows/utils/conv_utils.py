@@ -160,9 +160,9 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
                 value = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-3]
                 if abs(value-last_val) < calcs_info['conv_thr']:
                     if what == 'energy':
-                        last_conv_calc = load_node(last_conv_story[-2]).caller.pk
+                        last_conv_calc = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).caller.pk
                     else:
-                        last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
+                        last_conv_calc = load_node(last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-2]).caller.caller.pk
                 else:
                     break
             else:
@@ -181,11 +181,10 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
                 else:
                     break
         except:
-            last_conv = calcs_info['steps']
             break
 
 
-    return  int(last_conv_calc), last_conv-1
+    return  int(last_conv_calc), last_conv-1, str(traceback.format_exc())
 
 
 
