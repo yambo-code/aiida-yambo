@@ -132,6 +132,11 @@ class YamboCalculation(CalcJob):
             if not isinstance(initialise, bool):
                 raise InputValidationError("INITIALISE must be " " a boolean")
 
+        restart = settings.pop('RESTART', None)
+        if restart is not None:
+            if not isinstance(restart, bool):
+                raise InputValidationError("RESTART must be " " a boolean")
+
         parameters = self.inputs.parameters
 
         if not initialise:
@@ -277,14 +282,12 @@ class YamboCalculation(CalcJob):
         if yambo_parent:
             try:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
-            except:
+            except: # Necessary when I will implement the symlink of the qe.save
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
-            try:
+            if restart:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
-            except:
-                pass
-        else:
-            remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
+        else: #to fix, I want a symlink, not a hard copy... or at least, after the calc I want to delete it
+            remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
 
         ############################################
         # set Calcinfo

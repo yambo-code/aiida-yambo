@@ -172,6 +172,7 @@ class YamboConvergence(WorkChain):
 
                 self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
 
+            self.ctx.calc_inputs.yres.gw.settings = Dict(dict={'RESTART': False}) # to avoid the link to the db
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
             self.ctx.act_var['wfl_pk'] = future.pk
