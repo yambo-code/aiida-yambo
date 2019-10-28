@@ -287,8 +287,15 @@ class YamboCalculation(CalcJob):
             if restart:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
         else: #to fix, I want a symlink, not a hard copy... or at least, after the calc I want to delete it
-            remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
-
+            #remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
+            remote_copy_list.append(
+                (parent_calc_folder.computer.uuid,
+                 os.path.join(parent_calc_folder.get_remote_path(),
+                              PwCalculation._OUTPUT_SUBFOLDER,
+                              "aiida.save","*" ),  ##.format(parent_calc_folder._PREFIX)
+                                     "."
+                                     )
+                                    )
         ############################################
         # set Calcinfo
         ############################################
