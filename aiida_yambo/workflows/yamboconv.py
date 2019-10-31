@@ -222,6 +222,9 @@ class YamboConvergence(WorkChain):
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3] ))
 
+                if self.ctx.variables == [] : #variables to be converged are finished
+
+                    self.ctx.fully_converged = True
 
             else:
                 self.ctx.converged = False
@@ -230,9 +233,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
 
 
-            if self.ctx.variables == [] : #variables to be converged are finished
 
-                self.ctx.fully_converged = True
         except:
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('if no datas are parsed: are you sure of your convergence windows?')
