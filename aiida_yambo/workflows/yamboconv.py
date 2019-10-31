@@ -172,7 +172,7 @@ class YamboConvergence(WorkChain):
                     self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
                                 [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
                     self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.calc_manager.array_conv)
 
