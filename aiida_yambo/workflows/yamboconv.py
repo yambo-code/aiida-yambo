@@ -177,9 +177,9 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.calc_manager.array_conv)
 
             if self.ctx.calc_manager.converged:
-                self.report('Success, updating the history...')
+                self.report('Success, updating the history... oversteps: {}'.format(oversteps))
 
-                self.ctx.workflow_manager.conv_story = self.ctx.workflow_manager.conv_story[-oversteps]
+                self.ctx.workflow_manager.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
                 last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
@@ -191,7 +191,7 @@ class YamboConvergence(WorkChain):
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
-                             self.ctx.workflow_manager.conv_story[self.what][-1] ))
+                             self.ctx.workflow_manager.conv_story[-1][-1] ))
 
                 if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                      self.ctx.workflow_manager.fully_converged = True
