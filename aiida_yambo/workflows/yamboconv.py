@@ -70,17 +70,18 @@ class YamboConvergence(WorkChain):
         self.ctx.workflow_manager.fully_converged = False
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+        self.ctx.calc_manager.type = 'AiiDA'
         self.ctx.calc_manager.converged = False
         self.ctx.calc_manager.iter  = 1
 
         try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
             self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
-            pass
+            self.ctx.workflow_manager.k_distance = 1
 
         self.ctx.workflow_manager.first_calc = True
 
-        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
+        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.calc_manager.var))
 
     def has_to_continue(self):
 
@@ -96,6 +97,7 @@ class YamboConvergence(WorkChain):
         elif self.ctx.calc_manager.converged:
             #update variable
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+            self.ctx.calc_manager.type = 'AiiDA'
             try:
                 self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
             except:
@@ -133,21 +135,22 @@ class YamboConvergence(WorkChain):
                 first = 1
 
             self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.workflow_manager.k_distance,first)
-            self.workflow_manager.values.append(value)
+            self.ctx.workflow_manager.values.append(value)
 
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            self.calc_manager.wfl_pk = future.pk
+            calc[str(i)] = future
+            self.ctx.calc_manager.wfl_pk = future.pk
 
-        return ToContext(future)
+        return ToContext(calc)
 
 
     def conv_eval(self):
 
         if self.ctx.workflow_manager.first_calc:
-            self.ctx.workflow_manager.absolute_story.columns = list(self.calc_manager.__dict__.values())+\
+            self.ctx.workflow_manager.absolute_story.columns = list(self.ctx.calc_manager.__dict__.values())+\
                         ['value', 'calc_pk', self.what]
-            self.ctx.workflow_manager.conv_story.columns = list(self.calc_manager.__dict__.values())+\
+            self.ctx.workflow_manager.conv_story.columns = list(self.ctx.calc_manager.__dict__.values())+\
                         ['value', 'calc_pk', self.what]
 
         self.report('Convergence evaluation, we will try to parse some result')
@@ -158,10 +161,10 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager.converged, oversteps = convergence_and_backtracing(quantities[:,1])
 
             for i in range(self.ctx.calc_manager.steps):
-                    self.absolute_story.append(list(self.calc_manager.__dict__.values())+\
-                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-                    self.conv_story.append(list(self.calc_manager.__dict__.values())+\
-                                [self.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
 
             if self.ctx.calc_manager.converged:
                 self.report('Success, updating the history...')
@@ -172,17 +175,17 @@ class YamboConvergence(WorkChain):
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
                 self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
-                if self.calc_manager.var == 'kpoints':
-                    self.ctx.workflow_manager.k_distance = self.ctx.workflow_manager.k_distance - self.calc_manager.delta*oversteps
+                if self.ctx.calc_manager.var == 'kpoints':
+                    self.ctx.workflow_manager.k_distance = self.ctx.workflow_manager.k_distance - self.ctx.calc_manager.delta*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter,\
+                            .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
                              self.ctx.workflow_manager.conv_story[self.what][-1] ))
 
             else:
                 self.report('Convergence on {} not reached yet in {} calculations' \
-                            .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter))
-                self.ctx.calc_inputs.parent_folder = load_node(self.self.calc_manager.wfl_pk).outputs.yambo_calc_folder
+                            .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
+                self.ctx.calc_inputs.parent_folder = load_node(self.self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
 
             if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                  self.ctx.workflow_manager.fully_converged = True
