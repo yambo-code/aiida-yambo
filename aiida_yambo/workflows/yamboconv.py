@@ -196,7 +196,7 @@ class YamboConvergence(WorkChain):
             else:
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
-                self.ctx.calc_inputs.parent_folder = load_node(self.self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
+                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
 
             if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                  self.ctx.workflow_manager.fully_converged = True
