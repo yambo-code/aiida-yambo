@@ -10,7 +10,8 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-from boh import managers #########################
+sys.path.append('/home/mbonacci/Documents/aiida_1_tests/scripts/protocols')
+from classes import *
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap, last_conv_calc_recovering
@@ -131,7 +132,7 @@ class YamboConvergence(WorkChain):
             else: #the true flow
                 first = 1
 
-            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.workflow_manager.k_distance)
+            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.workflow_manager.k_distance,first)
             self.workflow_manager.values.append(value)
 
 
@@ -180,8 +181,8 @@ class YamboConvergence(WorkChain):
 
             else:
                 self.report('Convergence on {} not reached yet in {} calculations' \
-                            .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter)
-                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
+                            .format(self.calc_manager.var, self.calc_manager.steps*self.calc_manager.iter))
+                self.ctx.calc_inputs.parent_folder = load_node(self.self.calc_manager.wfl_pk).outputs.yambo_calc_folder
 
             if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                  self.ctx.workflow_manager.fully_converged = True
