@@ -159,15 +159,22 @@ class YamboConvergence(WorkChain):
         try:
             quantities = self.ctx.calc_manager.take_quantities()
 
+            if self.ctx.calc_manager.iter == 1:
+                try:
+                    self.ctx.calc_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
+                    self.ctx.calc_manager.array_conv = np.concatenate(self.ctx.calc_manager.array_conv,quantities)
+                except:
+                    self.ctx.calc_manager.array_conv=np.array(quantities)
+            else:
+                self.ctx.calc_manager.array_conv = np.concatenate(self.ctx.calc_manager.array_conv,quantities)
+
             for i in range(self.ctx.calc_manager.steps):
                     self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
                                 [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
                     self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
                                 [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-            try:
-                self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.conv_story[-self.ctx.calc_manager.steps*self.ctx.calc_manager.iter+1:][-1])
-            except: #first variable
-                self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.conv_story[-self.ctx.calc_manager.steps*self.ctx.calc_manager.iter:][-1])
+
+            self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.calc_manager.array_conv)
 
             if self.ctx.calc_manager.converged:
                 self.report('Success, updating the history...')
