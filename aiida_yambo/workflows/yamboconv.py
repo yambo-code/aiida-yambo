@@ -147,18 +147,18 @@ class YamboConvergence(WorkChain):
 
     def conv_eval(self):
 
-        if self.ctx.workflow_manager.first_calc:
-            self.ctx.workflow_manager.absolute_story.columns = list(self.ctx.calc_manager.__dict__.values())+\
-                        ['value', 'calc_pk', self.what]
-            self.ctx.workflow_manager.conv_story.columns = list(self.ctx.calc_manager.__dict__.values())+\
-                        ['value', 'calc_pk', self.what]
-
         self.report('Convergence evaluation, we will try to parse some result')
-        convergence_evaluator = convergence_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
+        convergence_evaluator = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
+
+        if self.ctx.workflow_manager.first_calc:
+            self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
+                        ['value', 'calc_pk','result'])
+            self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
+                        ['value', 'calc_pk','result'])
 
         try:
             quantities = self.ctx.calc_manager.take_quantities()
-            self.ctx.calc_manager.converged, oversteps = convergence_and_backtracing(quantities[:,1])
+            self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(quantities[:,:,1])
 
             for i in range(self.ctx.calc_manager.steps):
                     self.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
@@ -169,7 +169,7 @@ class YamboConvergence(WorkChain):
             if self.ctx.calc_manager.converged:
                 self.report('Success, updating the history...')
 
-                self.conv_story.drop(self.conv_story.index[-oversteps])
+                self.conv_story.drop(self.conv_story[-oversteps])
                 last_ok = load_node(self.ctx.workflow_manager.conv_story['calc_pk'][-1]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
                 self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
@@ -195,13 +195,14 @@ class YamboConvergence(WorkChain):
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
 
         self.ctx.calc_manager.iter +=1
+
         self.ctx.workflow_manager.first_calc = False
 
     def report_wf(self): #mancano le unita'
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_converged)))
-        converged_var = List(list=self.absolute_story.to_list()).store()
-        all_var = List(list=self.conv_story.to_list()).store()
+        converged_var = List(list=self.absolute_story).store()
+        all_var = List(list=self.conv_story).store()
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
 
