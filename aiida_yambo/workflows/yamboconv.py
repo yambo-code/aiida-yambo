@@ -162,11 +162,11 @@ class YamboConvergence(WorkChain):
             if self.ctx.calc_manager.iter == 1:
                 try:
                     self.ctx.calc_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
-                    self.ctx.calc_manager.array_conv = np.concatenate(self.ctx.calc_manager.array_conv,quantities)
+                    self.ctx.calc_manager.array_conv = np.concatenate((self.ctx.calc_manager.array_conv,quantities))
                 except:
                     self.ctx.calc_manager.array_conv=np.array(quantities)
             else:
-                self.ctx.calc_manager.array_conv = np.concatenate(self.ctx.calc_manager.array_conv,quantities)
+                self.ctx.calc_manager.array_conv = np.concatenate((self.ctx.calc_manager.array_conv,quantities))
 
             for i in range(self.ctx.calc_manager.steps):
                     self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
