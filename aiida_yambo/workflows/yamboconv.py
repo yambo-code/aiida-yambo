@@ -193,13 +193,13 @@ class YamboConvergence(WorkChain):
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
                              self.ctx.workflow_manager.conv_story[self.what][-1] ))
 
+                if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
+                     self.ctx.workflow_manager.fully_converged = True
+
             else:
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
                 self.ctx.calc_inputs.parent_folder = load_node(self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
-
-            if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
-                 self.ctx.workflow_manager.fully_converged = True
         except:
             self.report('problems during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('if no datas are parsed: are you sure of your convergence window?')
@@ -212,8 +212,8 @@ class YamboConvergence(WorkChain):
     def report_wf(self): #mancano le unita'
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_converged)))
-        converged_var = List(list=self.absolute_story).store()
-        all_var = List(list=self.conv_story).store()
+        converged_var = List(list=self.ctx.workflow_manager.absolute_story).store()
+        all_var = List(list=self.ctx.workflow_manager.conv_story).store()
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
 
