@@ -132,12 +132,16 @@ class YamboCalculation(CalcJob):
             if not isinstance(initialise, bool):
                 raise InputValidationError("INITIALISE must be " " a boolean")
 
+        restart = settings.pop('RESTART', None)
+        if restart is not None:
+            if not isinstance(restart, bool):
+                raise InputValidationError("RESTART must be " " a boolean")
+
         parameters = self.inputs.parameters
 
         if not initialise:
             if not isinstance(parameters, Dict):
-                raise InputValidationError(
-                    "parameters is not of type Dict")
+                raise InputValidationError("parameters is not of type Dict")
 
         parent_calc_folder = self.inputs.parent_folder
 
@@ -150,7 +154,6 @@ class YamboCalculation(CalcJob):
         except:
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
-       # yambo_parent = isinstance(parent_calc, YamboCalculation)    old row
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
@@ -164,7 +167,7 @@ class YamboCalculation(CalcJob):
         # check the precode parameters given in input
         input_cmdline = settings.pop('CMDLINE', None)
         import re
-        precode_params_list = []
+        precode_params_list = [] #['cd aiida.save'] ##.format(parent_calc_folder._PREFIX)
         pattern = re.compile(r"(^\-)([a-zA-Z])")
         for key, value in six.iteritems(precode_param_dict.get_dict()):
             if re.search(pattern, key) is not None:
@@ -244,93 +247,33 @@ class YamboCalculation(CalcJob):
                     value = this_dict['value']
                     units = this_dict['units']
 
-                    if isinstance(value, (tuple, list)):
-                        # write the input flags for the Drude term and for the parallelization options of vers. 4
-                        # (it can be implemented in a better way)
-                        if key.startswith('DrudeW'):
-                            value_string = " ( " + ",".join(
-                                [str(_) for _ in value]) + " )"
-                            the_string = "{} = {}".format(key, value_string)
-                            the_string += " {}".format(units)
-                            infile.write(the_string + "\n")
-                            continue
 
-                        if key == 'SE_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("SE_ROLEs = \" q qp b  \" " + "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'X_all_q_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("X_all_q_ROLEs = \" q k c v  \" " +
-                                         "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'X_finite_q_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("X_finite_q_ROLEs = \" q k c v  \" " +
-                                         "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'X_q_0_CPU':
-                            value_string = " \" " + " ".join(
-                                [str(_) for _ in value]) + " \" "
-                            the_string = "{} = {}".format(key, value_string)
-                            infile.write("X_q_0_ROLEs = \" k c v  \" " + "\n")
-                            infile.write(the_string + "\n")
-                            continue
-
-                        if key == 'QPkrange' or key == 'QPerange':
-                            value_string = ''
+                    if isinstance(value, list):
+                        value_string = ''
+                        try:
                             for v in value:
-                                value_string += " | ".join([str(_) for _ in v
-                                                            ]) + " |\n"
-                            the_string = "% {}\n {}".format(key, value_string)
-                            the_string += "%"
-                            infile.write(the_string + "\n")
-                            continue
+                                value_string += " | ".join([str(_) for _ in v]) + " |\n"
+                        except:
+                            value_string += " | ".join([str(_) for _ in value]) + " |\n"
 
-                        value_string = " | ".join([str(_)
-                                                   for _ in value]) + " |"
                         the_string = "% {}\n {}".format(key, value_string)
-                        if units is not None:
-                            the_string += " {}".format(units)
-                        the_string += "\n%"
+                        the_string += "%"
+
 
                     else:
                         the_value = '"{}"'.format(value) if isinstance(
                             value, six.string_types) else '{}'.format(value)
                         the_string = "{} = {}".format(key, the_value)
-                        if units is not None:
-                            the_string += " {}".format(units)
+
+                    if units is not None:
+                        the_string += " {}".format(units)
 
                     infile.write(the_string + "\n")
 
         ############################################
         # set copy of the parent calculation
         ############################################
-        '''
-        parent_calcs = parent_calc_folder.get_inputs(link_type=LinkType.CREATE)
-        if len(parent_calcs) > 1:
-            raise UniquenessError(
-                "More than one parent totalenergy calculation"
-                "has been found for parent_calc_folder {}".format(
-                    parent_calc_folder))
-        if len(parent_calcs) == 0:
-            raise InputValidationError(
-                "No parent calculation associated with parent_folder {}".
-                format(parent_calc_folder))
-        parent_calc = parent_calcs[0]
-        '''
+
         try:
             parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
         except:
@@ -338,35 +281,13 @@ class YamboCalculation(CalcJob):
 
         if yambo_parent:
             try:
-                parent_settings = _uppercase_dict(
-                    parent_calc.inputs.settings.get_dict(),
-                    dict_name='parent settings')
-                parent_initialise = parent_settings['INITIALISE']
-            except KeyError:
-                parent_initialise = False
-
-        if yambo_parent:
-            remote_copy_list.append((parent_calc_folder.computer.uuid,
-                                     os.path.join(
-                                         parent_calc_folder.get_remote_path(),
-                                         "SAVE"), "SAVE/"))
-            if not parent_initialise:
-                cancopy = False
-                if parent_calc.is_finished:
-                    cancopy = True
-                try:
-                    if 'yambo_wrote' in list(
-                            parent_calc.outputs.output_parameters.get_dict().keys()):
-                        if parent_calc.outputs.output_parameters.get_dict()['yambo_wrote'] == True:
-                            cancopy = True
-                except:
-                    cancopy = False  #could not be output_parameters... so I have just to try
-                if cancopy:
-                    remote_copy_list.append(
-                        (parent_calc_folder.computer.uuid,
-                         os.path.join(parent_calc_folder.get_remote_path(),
-                                      ".aiida"), "aiida/"))
-        else:
+                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
+            except: # Necessary when I will implement the symlink of the qe.save
+                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
+            if restart:
+                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
+        else: #to fix, I want a symlink, not a hard copy... or at least, after the calc I want to delete it
+            #remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
             remote_copy_list.append(
                 (parent_calc_folder.computer.uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
@@ -385,7 +306,7 @@ class YamboCalculation(CalcJob):
 
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.remote_symlink_list = []  # remote_symlink_list
+        calcinfo.remote_symlink_list = remote_symlink_list
 
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []
@@ -403,7 +324,7 @@ class YamboCalculation(CalcJob):
 
         # c1 = interface dft codes and yambo (ex. p2y or a2y)
         c1 = CodeInfo()
-        c1.withmpi = False
+        c1.withmpi = True
         c1.cmdline_params = precode_params_list
 
         # c2 = yambo initialization
@@ -414,6 +335,13 @@ class YamboCalculation(CalcJob):
 
         # if the parent calculation is a yambo calculation skip the interface (c1) and the initialization (c2)
         if yambo_parent:
+            try:
+                parent_settings = _uppercase_dict(
+                    parent_calc.inputs.settings.get_dict(),
+                    dict_name='parent settings')
+                parent_initialise = parent_settings['INITIALISE']
+            except KeyError:
+                parent_initialise = False
             c1 = None
             if not parent_initialise:
                 c2 = None
@@ -426,7 +354,8 @@ class YamboCalculation(CalcJob):
         c3.withmpi = True
         #c3.withmpi = self.get_withmpi()
         c3.cmdline_params = [
-            "-F", self.metadata.options.input_filename, '-J', self.metadata.options.output_filename
+            "-F", self.metadata.options.input_filename, \
+            '-J', self.metadata.options.output_filename, \
         ]
         c3.code_uuid = main_code.uuid
 
@@ -434,6 +363,7 @@ class YamboCalculation(CalcJob):
             c2 = None
             c3 = None
 
+        #logic of the execution
         #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]
         if yambo_parent:
             if not parent_initialise:
@@ -445,7 +375,6 @@ class YamboCalculation(CalcJob):
         else:
             calcinfo.codes_info = [c1, c2, c3]
 
-
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
         if settings:
@@ -456,6 +385,7 @@ class YamboCalculation(CalcJob):
 
         return calcinfo
 
+################################################################################
     #the following functions are not used, so why are they here?
     def _check_valid_parent(self, calc):
         """
