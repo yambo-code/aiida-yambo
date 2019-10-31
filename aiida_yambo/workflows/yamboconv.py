@@ -70,7 +70,7 @@ class YamboConvergence(WorkChain):
         self.ctx.workflow_manager.fully_converged = False
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
-        self.ctx.calc_manager.type = 'AiiDA'
+        self.ctx.calc_manager.type = 'yambo.yambo'
         self.ctx.calc_manager.converged = False
         self.ctx.calc_manager.iter  = 1
 
@@ -97,7 +97,7 @@ class YamboConvergence(WorkChain):
         elif self.ctx.calc_manager.converged:
             #update variable
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
-            self.ctx.calc_manager.type = 'AiiDA'
+            self.ctx.calc_manager.type = 'yambo.yambo'
             try:
                 self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
             except:
