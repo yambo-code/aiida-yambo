@@ -212,8 +212,8 @@ class YamboConvergence(WorkChain):
     def report_wf(self): #mancano le unita'
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_converged)))
-        converged_var = List(list=self.ctx.workflow_manager.absolute_story).store()
-        all_var = List(list=self.ctx.workflow_manager.conv_story).store()
+        all_var = List(list=self.ctx.workflow_manager.absolute_story).store()
+        converged_var = List(list=self.ctx.workflow_manager.conv_story).store()
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
 
