@@ -159,6 +159,12 @@ class YamboConvergence(WorkChain):
         try:
             quantities = self.ctx.calc_manager.take_quantities()
 
+            for i in range(self.ctx.calc_manager.steps):
+                    self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
+
             if self.ctx.calc_manager.iter == 1:
                 try:
                     self.ctx.calc_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
@@ -168,11 +174,6 @@ class YamboConvergence(WorkChain):
             else:
                 self.ctx.calc_manager.array_conv = np.column_stack((self.ctx.calc_manager.array_conv,quantities[:,:,1]))
 
-            for i in range(self.ctx.calc_manager.steps):
-                    self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-                    self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.calc_manager.array_conv)
 
