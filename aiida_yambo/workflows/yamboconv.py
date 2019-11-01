@@ -159,11 +159,7 @@ class YamboConvergence(WorkChain):
         try:
             quantities = self.ctx.calc_manager.take_quantities()
 
-            for i in range(self.ctx.calc_manager.steps):
-                    self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-                    self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
+
 
             if self.ctx.calc_manager.iter == 1:
                 try:
@@ -176,6 +172,12 @@ class YamboConvergence(WorkChain):
 
 
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.calc_manager.array_conv)
+
+            for i in range(self.ctx.calc_manager.steps):
+                    self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
             if self.ctx.calc_manager.converged:
                 self.report('Success, updating the history... oversteps: {}'.format(oversteps))
