@@ -150,28 +150,26 @@ class YamboConvergence(WorkChain):
         self.report('Convergence evaluation, we will try to parse some result')
         convergence_evaluator = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
-        if self.ctx.workflow_manager.first_calc:
-            self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
-                        ['value', 'calc_pk','result'])
-            self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
-                        ['value', 'calc_pk','result'])
-
         try:
             quantities = self.ctx.calc_manager.take_quantities()
 
-
-
             if self.ctx.calc_manager.iter == 1:
                 try:
-                    self.ctx.calc_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
-                    self.ctx.calc_manager.array_conv = np.column_stack((self.ctx.calc_manager.array_conv,quantities[:,:,1]))
+                    self.ctx.workflow_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
+                    self.ctx.workflow_manager.array_conv = np.column_stack((self.ctx.workflow_manager.array_conv,quantities[:,:,1]))
                 except:
-                    self.ctx.calc_manager.array_conv=np.array(quantities[:,:,1])
+                    self.ctx.workflow_manager.array_conv=np.array(quantities[:,:,1])
             else:
-                self.ctx.calc_manager.array_conv = np.column_stack((self.ctx.calc_manager.array_conv,quantities[:,:,1]))
+                self.ctx.workflow_manager.array_conv = np.column_stack((self.ctx.workflow_manager.array_conv,quantities[:,:,1]))
 
+            self.report(self.ctx.workflow_manager.array_conv)
+            self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
 
-            self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.calc_manager.array_conv)
+            if self.ctx.workflow_manager.first_calc:
+                self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
+                            ['value', 'calc_pk','result'])
+                self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
+                            ['value', 'calc_pk','result'])
 
             for i in range(self.ctx.calc_manager.steps):
                     self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
