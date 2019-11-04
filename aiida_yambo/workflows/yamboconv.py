@@ -67,6 +67,7 @@ class YamboConvergence(WorkChain):
             pass
 
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
+        self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_converged = False
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
@@ -140,6 +141,7 @@ class YamboConvergence(WorkChain):
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i)] = future
+            self.ctx.workflow_manager.global_step += 1
             self.ctx.calc_manager.wfl_pk = future.pk
 
         return ToContext(calc)
