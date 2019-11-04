@@ -141,7 +141,7 @@ class YamboConvergence(WorkChain):
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i)] = future
-            self.ctx.workflow_manager.global_step += 1
+
             self.ctx.calc_manager.wfl_pk = future.pk
 
         return ToContext(calc)
@@ -174,9 +174,10 @@ class YamboConvergence(WorkChain):
                             ['value', 'calc_pk','result'])
 
             for i in range(self.ctx.calc_manager.steps):
-                    self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                    self.ctx.workflow_manager.global_step += 1
+                    self.ctx.workflow_manager.absolute_story.append([self.ctx.workflow_manager.global_step]+list(self.ctx.calc_manager.__dict__.values())+\
                                 [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-                    self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.values())+\
+                    self.ctx.workflow_manager.conv_story.append([self.ctx.workflow_manager.global_step]+list(self.ctx.calc_manager.__dict__.values())+\
                                 [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
             if self.ctx.calc_manager.converged:
