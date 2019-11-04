@@ -72,8 +72,8 @@ class YamboConvergence(WorkChain):
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
         self.ctx.calc_manager.type = 'yambo.yambo'
-        self.ctx.calc_manager.converged = False
         self.ctx.calc_manager.iter  = 1
+        self.ctx.calc_manager.converged = False
 
         try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
             self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
@@ -168,9 +168,9 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
 
             if self.ctx.workflow_manager.first_calc:
-                self.ctx.workflow_manager.absolute_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
+                self.ctx.workflow_manager.absolute_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
                             ['value', 'calc_pk','result'])
-                self.ctx.workflow_manager.conv_story.append(list(self.ctx.calc_manager.__dict__.keys())+\
+                self.ctx.workflow_manager.conv_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
                             ['value', 'calc_pk','result'])
 
             for i in range(self.ctx.calc_manager.steps):
