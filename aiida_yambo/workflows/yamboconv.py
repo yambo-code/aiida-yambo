@@ -10,11 +10,8 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-sys.path.append('/home/mbonacci/Documents/aiida_1_tests/scripts/protocols')
-from classes import *
-
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap, last_conv_calc_recovering
+from aiida_yambo.workflows.utils.helpers import *
 
 class YamboConvergence(WorkChain):
 

@@ -7,10 +7,6 @@ from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
 
-#to import it:
-#sys.path.append('/home/mbonacci/Documents/aiida_1_tests/scripts/protocols')
-#from classes import *
-
 try:
     from aiida.orm import Dict, Str, load_node
     from aiida.plugins import CalculationFactory, DataFactory
