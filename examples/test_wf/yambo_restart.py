@@ -7,13 +7,12 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.calculations.gw import YamboCalculation
-
+from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
 options = {
     'max_wallclock_seconds': 24*60*60,
     'resources': {
-        "num_machines": 2,
+        "num_machines": 1,
         "num_mpiprocs_per_machine":9,
         "num_cores_per_mpiproc":1,
     },
@@ -49,16 +48,15 @@ params_gw = {
 params_gw = Dict(dict=params_gw)
 
 
-builder = YamboCalculation.get_builder()
-builder.metadata.options.max_wallclock_seconds = \
-        options['max_wallclock_seconds']
-builder.metadata.options.resources = \
-        dict = options['resources']
-builder.metadata.options.queue_name = options['queue_name']
-builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
-builder.parameters = params_gw
-builder.precode_parameters = Dict(dict={})
-builder.settings = Dict(dict={'INITIALISE': False, 'RESTART': False})
+builder = YamboRestartWf.get_builder()
+builder.gw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
+builder.gw.metadata.options.resources = options['resources']
+builder.gw.metadata.options.queue_name = options['queue_name']
+builder.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+builder.gw.parameters = params_gw
+builder.gw.precode_parameters = Dict(dict={})
+builder.gw.settings = Dict(dict={'INITIALISE': False, 'RESTART': False})
+builder.max_restarts = Int(5)
 
 
 
@@ -86,8 +84,8 @@ if __name__ == "__main__":
         help='The precode to use')
 
     args = parser.parse_args()
-    builder.preprocessing_code = load_node(args.precode_pk)
-    builder.code = load_node(args.code_pk)
+    builder.gw.preprocessing_code = load_node(args.precode_pk)
+    builder.gw.code = load_node(args.code_pk)
     builder.parent_folder = load_node(args.parent_pk).outputs.remote_folder
     running = submit(builder)
     print("Created calculation; with pk={}".format(running.pk))
