@@ -118,7 +118,7 @@ class YamboRestartWf(WorkChain):
             if calc.exit_status == 102:
                 self.report('Something goes wrong, but we don\'t know what, so we just try one restart with hard_link for the SAVE')
                 new_settings =  self.ctx.inputs.settings.get_dict()
-                new_settings['HARD_LINK'] = True    
+                new_settings['HARD_LINK'] = True
                 self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
                 self.ctx.restart = self.inputs.max_restarts
                 return True
@@ -160,7 +160,11 @@ class YamboRestartWf(WorkChain):
             raise ValidationError("restart calculations can not start: calculation no found")
             #return self.exit_code.WFL_NOT_COMPLETED
 
-        self.ctx.inputs.parent_folder = calc.outputs.remote_folder
+        if calc.exit_status == 102:
+            pass
+        else:
+            self.ctx.inputs.parent_folder = calc.outputs.remote_folder
+            
         new_settings =  self.ctx.inputs.settings.get_dict()
         new_settings['RESTART'] = True
         self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
