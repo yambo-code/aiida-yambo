@@ -133,6 +133,10 @@ class YamboConvergence(WorkChain):
                 first = 1
 
             self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.workflow_manager.k_distance,first)
+
+            if self.ctx.calc_manager.var == 'kpoints':
+                self.ctx.workflow_manager.k_distance = value
+
             self.ctx.workflow_manager.values.append(value)
 
 
@@ -184,8 +188,9 @@ class YamboConvergence(WorkChain):
 
                 last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
-                self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
-                self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
+                
+                if self.ctx.calc_manager.var == 'kpoints':
+                    self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
                 if self.ctx.calc_manager.var == 'kpoints':
                     self.ctx.workflow_manager.k_distance = self.ctx.workflow_manager.k_distance - self.ctx.calc_manager.delta*oversteps
@@ -200,7 +205,7 @@ class YamboConvergence(WorkChain):
             else:
                 self.report('Convergence on {} not reached yet in {} calculations' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
-                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
+                #self.ctx.calc_inputs.parent_folder = load_node(self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
         except:
             self.report('problems during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('if no datas are parsed: are you sure of your convergence window?')

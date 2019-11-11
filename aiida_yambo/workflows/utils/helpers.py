@@ -8,7 +8,7 @@ import pandas as pd
 import copy
 
 try:
-    from aiida.orm import Dict, Str, load_node
+    from aiida.orm import Dict, Str, load_node, KpointsData
     from aiida.plugins import CalculationFactory, DataFactory
 except:
     pass
@@ -53,9 +53,6 @@ class calc_manager: #the interface class to AiiDA
                 inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
                 inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
                 inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
-
-                self.report('Mesh used: {} \nfrom density: {}'\
-                    .format(inp_to_update.scf.kpoints.get_kpoints_mesh(),1/k_distance))
 
                 try:
                     del inp_to_update.parent_folder  #I need to start from scratch...

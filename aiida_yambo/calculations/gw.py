@@ -137,6 +137,11 @@ class YamboCalculation(CalcJob):
             if not isinstance(restart, bool):
                 raise InputValidationError("RESTART must be " " a boolean")
 
+        hard_link = settings.pop('HARD_LINK', None)
+        if hard_link is not None:
+            if not isinstance(hard_link, bool):
+                raise InputValidationError("HARD_LINK must be " " a boolean")
+
         parameters = self.inputs.parameters
 
         if not initialise:
@@ -280,13 +285,19 @@ class YamboCalculation(CalcJob):
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
         if yambo_parent:
-            try:
-                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
-            except: # Necessary when I will implement the symlink of the qe.save
-                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
+            if hard_link:
+                try:
+                    remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
+                except:
+                    remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
+            else:
+                try:
+                    remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
+                except:
+                    remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
             if restart:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
-        else: #to fix, I want a symlink, not a hard copy... or at least, after the calc I want to delete it
+        else:
             #remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
             remote_copy_list.append(
                 (parent_calc_folder.computer.uuid,
