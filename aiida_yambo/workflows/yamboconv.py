@@ -73,9 +73,9 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_manager.converged = False
 
         try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
-            self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
+            self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
-            self.ctx.workflow_manager.k_distance = 1
+            self.ctx.k_distance = 1
 
         self.ctx.workflow_manager.first_calc = True
 
@@ -97,7 +97,7 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
             self.ctx.calc_manager.type = 'yambo.yambo'
             try:
-                self.ctx.workflow_manager.k_distance = self.ctx.calc_manager.starting_k_distance
+                self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
             except:
                 pass
             self.ctx.calc_manager.iter = 1
@@ -132,10 +132,10 @@ class YamboConvergence(WorkChain):
             else: #the true flow
                 first = 1
 
-            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.workflow_manager.k_distance,first)
+            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance,first)
 
             if self.ctx.calc_manager.var == 'kpoints':
-                self.ctx.workflow_manager.k_distance = value
+                self.ctx.k_distance = value
 
             self.ctx.workflow_manager.values.append(value)
 
@@ -188,12 +188,12 @@ class YamboConvergence(WorkChain):
 
                 last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
                 self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
-                
+
                 if self.ctx.calc_manager.var == 'kpoints':
                     self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
                 if self.ctx.calc_manager.var == 'kpoints':
-                    self.ctx.workflow_manager.k_distance = self.ctx.workflow_manager.k_distance - self.ctx.calc_manager.delta*oversteps
+                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.calc_manager.delta*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
