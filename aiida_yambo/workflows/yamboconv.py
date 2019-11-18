@@ -173,6 +173,7 @@ class YamboConvergence(WorkChain):
                             ['value', 'calc_pk','result'])
                 self.ctx.workflow_manager.conv_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
                             ['value', 'calc_pk','result'])
+                self.ctx.workflow_manager.first_calc = False
 
             for i in range(self.ctx.calc_manager.steps):
                     self.ctx.workflow_manager.global_step += 1
@@ -187,7 +188,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.workflow_manager.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
                 last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
-                self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
+                self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
 
                 if self.ctx.calc_manager.var == 'kpoints':
                     self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
@@ -213,7 +214,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.calc_manager.iter +=1
 
-        self.ctx.workflow_manager.first_calc = False
+
 
     def report_wf(self): #mancano le unita'
 
