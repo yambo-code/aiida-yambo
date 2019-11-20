@@ -125,13 +125,17 @@ class YamboRestartWf(WorkChain):
 
 
 
-            # timing errors: e se il walltime max é già usato? solo restart normale--> mi serve input"max walltime, default 24:00:00" #
+            # timing errors#
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
                                         self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart
 
                 if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime:
                     self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime
+
+                new_settings =  self.ctx.inputs.settings.get_dict()
+                new_settings['PARENT_DB'] = True
+                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
 
                 self.report(
                     "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
@@ -164,10 +168,6 @@ class YamboRestartWf(WorkChain):
             pass
         else:
             self.ctx.inputs.parent_folder = calc.outputs.remote_folder
-            
-        new_settings =  self.ctx.inputs.settings.get_dict()
-        new_settings['RESTART'] = True
-        self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
 
         # submission of the next try #
         future = self.submit(YamboCalculation, **self.ctx.inputs)
