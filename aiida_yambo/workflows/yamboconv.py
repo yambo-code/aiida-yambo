@@ -53,15 +53,25 @@ class YamboConvergence(WorkChain):
         #fitting just the last conv window, but plotting all
 
     def start_workflow(self):
-        """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
+        """Initialize the workflow"""
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
-        try:
+        p2y={}
+        try:  #need parent?
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
-        except:
-            pass
+            p2y['needed'] = False
+        except: #yes!
+            self.report('no valid parent folder, so we will create it')
+            new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
+            new_settings['INITIALISE'] = True
+            self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+            p2y['needed'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
+            self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(p2y['needed'].pk))
+            new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
+            new_settings['INITIALISE'] = False
+            self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
 
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
         self.ctx.workflow_manager.global_step = 0
@@ -80,6 +90,8 @@ class YamboConvergence(WorkChain):
         self.ctx.workflow_manager.first_calc = True
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.calc_manager.var))
+
+        return ToContext(p2y)
 
     def has_to_continue(self):
 
@@ -138,7 +150,6 @@ class YamboConvergence(WorkChain):
                 self.ctx.k_distance = value
 
             self.ctx.workflow_manager.values.append(value)
-
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i)] = future

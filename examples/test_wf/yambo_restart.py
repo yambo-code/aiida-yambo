@@ -58,9 +58,6 @@ builder.gw.precode_parameters = Dict(dict={})
 builder.gw.settings = Dict(dict={'INITIALISE': False, 'RESTART': False})
 builder.max_restarts = Int(5)
 
-
-
-
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='YAMBO calculation.')

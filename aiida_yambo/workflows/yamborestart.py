@@ -115,17 +115,7 @@ class YamboRestartWf(WorkChain):
                     .format(calc.pk))
                 return True
 
-            if calc.exit_status == 102:
-                self.report('Something goes wrong, but we don\'t know what, so we just try one restart with hard_link for the SAVE')
-                new_settings =  self.ctx.inputs.settings.get_dict()
-                new_settings['HARD_LINK'] = True
-                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
-                self.ctx.restart = self.inputs.max_restarts
-                return True
-
-
-
-            # timing errors#
+            #walltime exceeded#
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
                                         self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart
@@ -142,6 +132,19 @@ class YamboRestartWf(WorkChain):
                     .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
                 return True
 
+            if calc.exit_status == 102:
+                self.report('Something goes wrong, but we don\'t know what')
+                new_settings =  self.ctx.inputs.settings.get_dict()
+                if abs(self.ctx.inputs.metadata.options['max_wallclock_seconds'] - self.inputs.max_walltime)<= 60*3:
+                    self.ctx.still_a_restart == True
+                    new_settings['PARENT_DB'] = True
+                    self.report('Trying to restart using parent db: probabily walltime exceeded but not detected')
+                else:
+                    new_settings['HARD_LINK'] = True
+                    self.ctx.still_a_restart == False
+                    self.report('Trying to hard copy the SAVE')
+                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
+                return True
 
             # parallelization errors # but there should be something already in yambo...but mpi-openmpi balance #
             if calc.exit_status == 104:
@@ -164,7 +167,7 @@ class YamboRestartWf(WorkChain):
             raise ValidationError("restart calculations can not start: calculation no found")
             #return self.exit_code.WFL_NOT_COMPLETED
 
-        if calc.exit_status == 102:
+        if calc.exit_status == 102 and not self.ctx.still_a_restart:
             pass
         else:
             self.ctx.inputs.parent_folder = calc.outputs.remote_folder
