@@ -6,7 +6,7 @@ import traceback
 
 from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
-from aiida.engine import WorkChain, while_
+from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
@@ -39,6 +39,10 @@ class YamboConvergence(WorkChain):
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
+                    if_(cls.p2y_needed)(
+                    cls.do_p2y,
+                    cls.prepare_convergences,
+                    ),
                     while_(cls.has_to_continue)(
                     cls.next_step,
                     cls.conv_eval),
@@ -58,20 +62,6 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
-        p2y={}
-        try:  #need parent?
-            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
-            p2y['needed'] = False
-        except: #yes!
-            self.report('no valid parent folder, so we will create it')
-            new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
-            new_settings['INITIALISE'] = True
-            self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
-            p2y['needed'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
-            self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(p2y['needed'].pk))
-            new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
-            new_settings['INITIALISE'] = False
-            self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
 
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
         self.ctx.workflow_manager.global_step = 0
@@ -90,8 +80,6 @@ class YamboConvergence(WorkChain):
         self.ctx.workflow_manager.first_calc = True
 
         self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.calc_manager.var))
-
-        return ToContext(p2y)
 
     def has_to_continue(self):
 
@@ -234,6 +222,47 @@ class YamboConvergence(WorkChain):
         converged_var = List(list=self.ctx.workflow_manager.conv_story).store()
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
+
+    def p2y_needed(self):
+        self.report('do we need a p2y??')
+        try:
+            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
+            
+            try:
+                parent_calc = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+            except:
+                parent_calc = self.inputs.parent_folder.get_incoming().all_nodes()[-1]
+
+            self.report('detecting if we need a p2y starting calculation...')
+            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
+                self.report('no, yambo parent')
+                return False
+            else:
+                self.report('yes, quantumespresso parent')
+                return True
+        except:
+            self.report('yes, no parent provided')
+            return True
+
+
+    def do_p2y(self):
+        self.report('doing the p2y')
+        calc = {}
+        self.report('no valid parent folder, so we will create it')
+        new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
+        new_settings['INITIALISE'] = True
+        self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+        calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
+        self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
+        new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
+        new_settings['INITIALISE'] = False
+        self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+
+        return ToContext(calc)
+
+    def prepare_convergences(self):
+        self.report('setting the p2y calc as parent')
+        self.ctx.calc_inputs.parent_folder = self.ctx.calc['p2y'].outputs.yambo_calc_folder
 
 if __name__ == "__main__":
     pass
