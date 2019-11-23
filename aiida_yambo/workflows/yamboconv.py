@@ -227,7 +227,7 @@ class YamboConvergence(WorkChain):
         self.report('do we need a p2y??')
         try:
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
-            
+
             try:
                 parent_calc = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
             except:
@@ -257,12 +257,12 @@ class YamboConvergence(WorkChain):
         new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
         new_settings['INITIALISE'] = False
         self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
-
+        self.ctx.p2y = calc['p2y']
         return ToContext(calc)
 
     def prepare_convergences(self):
         self.report('setting the p2y calc as parent')
-        self.ctx.calc_inputs.parent_folder = self.ctx.calc['p2y'].outputs.yambo_calc_folder
+        self.ctx.calc_inputs.parent_folder = self.ctx.p2y.outputs.yambo_calc_folder
 
 if __name__ == "__main__":
     pass

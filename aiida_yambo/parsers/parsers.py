@@ -199,7 +199,7 @@ class YamboParser(Parser):
                 output_params['last_time'] = result.last_time  # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
             else:
-                output_params['last_time'] = 30  # seconds
+                output_params['last_time'] = max_wall # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
@@ -295,6 +295,8 @@ class YamboParser(Parser):
                 return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error'] == True:
                 return self.exit_codes.PARA_ERROR
+            elif out_folder and initialise:
+                success = True #a p2y
             else:
                 return self.exit_codes.NO_SUCCESS
 

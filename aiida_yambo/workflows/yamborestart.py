@@ -60,7 +60,6 @@ class YamboRestartWf(WorkChain):
         """setup of the calculation and run
         """
         self.ctx.restart = 0
-
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
@@ -85,7 +84,7 @@ class YamboRestartWf(WorkChain):
         self.report("Checking if yambo restart is needed")
 
         ### check of the number of restarts ###
-        if self.ctx.restart >= self.inputs.max_restarts:
+        if self.ctx.restart >= self.inputs.max_restarts.value:
             self.report(
                 "I will not restart: maximum restarts reached: {}".format(
                     self.inputs.max_restarts))
@@ -94,7 +93,7 @@ class YamboRestartWf(WorkChain):
         else:
             self.report(
                 "I can restart (# {}), max restarts ({}) not reached yet".format(
-                    self.ctx.restart, self.inputs.max_restarts))
+                    self.ctx.restart, self.inputs.max_restarts.value))
 
         ### check if the calculation is failed ###
         if calc.is_finished_ok:
@@ -118,10 +117,10 @@ class YamboRestartWf(WorkChain):
             #walltime exceeded#
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
-                                        self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart
+                                        int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
 
-                if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime:
-                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime
+                if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime.value:
+                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime.value
 
                 new_settings =  self.ctx.inputs.settings.get_dict()
                 new_settings['PARENT_DB'] = True
@@ -135,14 +134,8 @@ class YamboRestartWf(WorkChain):
             if calc.exit_status == 102:
                 self.report('Something goes wrong, but we don\'t know what')
                 new_settings =  self.ctx.inputs.settings.get_dict()
-                if abs(self.ctx.inputs.metadata.options['max_wallclock_seconds'] - self.inputs.max_walltime)<= 60*3:
-                    self.ctx.still_a_restart == True
-                    new_settings['PARENT_DB'] = True
-                    self.report('Trying to restart using parent db: probabily walltime exceeded but not detected')
-                else:
-                    new_settings['HARD_LINK'] = True
-                    self.ctx.still_a_restart == False
-                    self.report('Trying to hard copy the SAVE')
+                new_settings['HARD_LINK'] = True
+                self.report('Trying to hard copy the SAVE')
                 self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
                 return True
 
@@ -167,7 +160,7 @@ class YamboRestartWf(WorkChain):
             raise ValidationError("restart calculations can not start: calculation no found")
             #return self.exit_code.WFL_NOT_COMPLETED
 
-        if calc.exit_status == 102 and not self.ctx.still_a_restart:
+        if calc.exit_status == 102:
             pass
         else:
             self.ctx.inputs.parent_folder = calc.outputs.remote_folder
