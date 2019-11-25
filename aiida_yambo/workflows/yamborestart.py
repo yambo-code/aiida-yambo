@@ -84,7 +84,7 @@ class YamboRestartWf(WorkChain):
         self.report("Checking if yambo restart is needed")
 
         ### check of the number of restarts ###
-        if self.ctx.restart >= self.inputs.max_restarts.value:
+        if self.ctx.restart > self.inputs.max_restarts.value:
             self.report(
                 "I will not restart: maximum restarts reached: {}".format(
                     self.inputs.max_restarts))
