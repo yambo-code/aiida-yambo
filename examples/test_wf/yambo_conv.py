@@ -144,26 +144,35 @@ builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
 builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'RESTART': False})
 builder.ywfl.yres.max_restarts = Int(5)
 
-var_to_conv = [{'var':'bands','delta': 8, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.07, 'conv_window': 3},
+var_to_conv = [{'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
+                             'conv_thr': 0.03, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
                {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                            'conv_thr': 0.05, 'conv_window': 3},
-               {'var':'bands','delta': 8, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.03, 'conv_window': 3},
+                            'conv_thr': 0.03, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
+               {'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
+                             'conv_thr': 0.025, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
                {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3},
-               {'var':'bands','delta': 8, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3},
+                             'conv_thr': 0.025, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
+               {'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
+                             'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
                {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                            'conv_thr': 0.02, 'conv_window': 3},#,
-               {'var':'kpoints','delta': 2, 'steps': 3, 'max_restarts': 5, \
+                            'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
+               {'var':'kpoints','delta': 1, 'steps': 3, 'max_restarts': 5, \
                              'conv_thr': 0.02, 'conv_window': 3, 'starting_k_distance': 5},
-               {'var':'bands','delta': 8, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3},
+               {'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
+                             'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
                {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                            'conv_thr': 0.02, 'conv_window': 3},#,
-               {'var':'kpoints','delta': 2, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3},]
+                            'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
+               {'var':'kpoints','delta': 1, 'steps': 3, 'max_restarts': 5, \
+                             'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},]
 
 
 for i in range(len(var_to_conv)):
