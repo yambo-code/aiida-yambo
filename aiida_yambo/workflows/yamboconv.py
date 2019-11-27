@@ -228,10 +228,7 @@ class YamboConvergence(WorkChain):
         try:
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
 
-            try:
-                parent_calc = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-            except:
-                parent_calc = self.inputs.parent_folder.get_incoming().all_nodes()[-1]
+            parent_calc = find_parent()
 
             self.report('detecting if we need a p2y starting calculation...')
             if parent_calc.process_type=='aiida.calculations:yambo.yambo':
