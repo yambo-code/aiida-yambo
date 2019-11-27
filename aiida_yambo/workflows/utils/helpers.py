@@ -164,14 +164,23 @@ class workflow_manager:
             self.type = 'not_AiiDA'
             self.ideal_iter = copy.deepcopy(conv_opt)
             self.true_iter = copy.deepcopy(conv_opt)
-            pass
 
-        self.absolute_story = []
-        self.conv_story = [] #se dalla absolute story mi metto una flag: conv_path che mi distingue conv_path da abs_path? meglio eh!!
+    def update_story(self, calc_manager):
 
-    def update_story(self, iter_info):
-        self.absolute_story = self.absolute_story
-        self.conv_story
+        quantities = calc_manager.take_quantities()
+
+        if calc_manager.iter == 1:
+            try:
+                self.array_conv=np.array(self.conv_story[-1][-1])
+                self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
+            except:
+                self.array_conv=np.array(quantities[:,:,1])
+        else:
+            self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
+
+
+
+
 
 ################################################################################
 ############################## convergence_evaluator ######################################
