@@ -28,7 +28,7 @@ class calc_manager: #the interface class to AiiDA
         except:
             #this is not an AiiDA calculation
             self.type = 'not_AiiDA'
-            pass
+
 ################################## update_parameters #####################################
     def updater(self, inp_to_update, k_distance, first):    #mettere supporto anche x lista di parametri, non solo aumento cosi'...
 
@@ -89,7 +89,7 @@ class calc_manager: #the interface class to AiiDA
         what = self.what
 
         if self.type == 'not_AiiDA':
-            pass  #implementerò poi.. ho già qualcosina, almeno per yambo...x qe mi basta estrarre etot e le strutture(con ase da output!!)
+            pass  #yambopy
 
         else:
 
@@ -99,11 +99,10 @@ class calc_manager: #the interface class to AiiDA
                 print('sto cercando {} per i kpoints {}'.format(what,where))
 
                 quantities = np.zeros((len(where),backtrace,3))
-
-                for j in range(len(where)): #no steps*self.iter xk in teoria voglio andare x steps
-                    for i in range(1,backtrace+1): #qui devo capire come generalizzare in caso di wfl o superwfl o simple calc
+                for j in range(len(where)):
+                    for i in range(1,backtrace+1):
                         yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
-                        if what == 'gap': #bisognerebbe cambiare come parsa parser.py, fa schifo cosi': dovrei fare per k e per bande...
+                        if what == 'gap': #datasets from parser????
                             quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1]+
                                         yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1]-
                                         (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2]+
@@ -151,7 +150,7 @@ class calc_manager: #the interface class to AiiDA
         return workchain_node
 
 ################################################################################
-############################# Astratti da AiiDA ##################################
+############################# AiiDA - independent ##################################
 
 class workflow_manager:
 
