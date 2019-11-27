@@ -327,7 +327,7 @@ class YamboCalculation(CalcJob):
         calcinfo.retrieve_list.append('LOG/l-*_CPU_1')
         extra_retrieved = settings.pop(
             'ADDITIONAL_RETRIEVE_LIST',
-            ['aiida/ndb.QP', 'aiida/ndb.HF_and_locXC'])
+            ['aiida.out/ndb.QP', 'aiida.out/ndb.HF_and_locXC'])
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append(extra)
 
