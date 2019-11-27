@@ -5,7 +5,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
 from collections.abc import Mapping
-import traceback
+
 from aiida.orm import Dict, Str, load_node
 from aiida.plugins import CalculationFactory, DataFactory
 
@@ -108,7 +108,6 @@ def last_relax_calc_recovering(calcs_info,last_params,last_conv_story):
                     if np.max(abs(cells-lcells)) < calcs_info['conv_thr_cell'] and \
                     np.max(abs(atoms[j]-latoms[j])) < calcs_info['conv_thr_atoms']:
                         last_conv_calc = load_node(last_conv_story[-2]).caller.pk
-                        last_conv = i
                 else:
                     break
             else:
@@ -153,27 +152,40 @@ def last_conv_calc_recovering(calcs_info,last_val,what,last_conv_story):
 
     last_conv = calcs_info['steps']
     last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
-    trace = ''
+
     for i in range(calcs_info['steps']+1, calcs_info['iter']*calcs_info['steps']+2):
 
         try:
-            value = last_conv_story[-i][-3]
-            trace = last_conv_story[-i]
-            if abs(value-last_val) < calcs_info['conv_thr']:
-                last_conv = i
-                if what == 'energy':
-                    last_conv_calc = load_node(last_conv_story[-i][-2]).caller.pk
+            if i == calcs_info['iter']*calcs_info['steps']+1:
+                value = last_conv_story[-(calcs_info['iter']*calcs_info['steps']+1)][-3]
+                if abs(value-last_val) < calcs_info['conv_thr']:
+                    if what == 'energy':
+                        last_conv_calc = load_node(last_conv_story[-2]).caller.pk
+                    else:
+                        last_conv_calc = load_node(last_conv_story[-2]).caller.caller.pk
                 else:
-                    trace = value-last_val
-                    last_conv_calc = load_node(last_conv_story[-i][-2]).caller.caller.pk
+                    break
             else:
-                break
+                calc = load_node(calcs_info['wfl_pk']).caller.called[i-1].called[0]
+                if what == 'energy':
+                    value = calc.outputs.output_parameters.get_dict()[str(what)]
+                else:
+                    value = abs((calc.called[0].outputs.array_qp.get_array('Eo')[1]+
+                                calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[1])-
+                               (calc.called[0].outputs.array_qp.get_array('Eo')[0]+
+                                calc.called[0].outputs.array_qp.get_array('E_minus_Eo')[0]))
+
+                if abs(value-last_val) < calcs_info['conv_thr']:
+                    last_conv = i
+                    last_conv_calc = load_node(calcs_info['wfl_pk']).caller.called[last_conv-1].pk #last wfl ok
+                else:
+                    break
         except:
-            trace = str(traceback.format_exc())
+            last_conv = calcs_info['steps']
             break
 
 
-    return  int(last_conv_calc), last_conv-1, trace
+    return  int(last_conv_calc), last_conv-1
 
 
 

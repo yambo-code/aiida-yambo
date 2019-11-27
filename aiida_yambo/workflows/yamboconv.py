@@ -6,13 +6,12 @@ import traceback
 
 from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
-from aiida.engine import WorkChain, while_
+from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.conv_utils import convergence_evaluation, take_gw_gap, last_conv_calc_recovering
+from aiida_yambo.workflows.utils.helpers import *
 
 class YamboConvergence(WorkChain):
 
@@ -34,12 +33,16 @@ class YamboConvergence(WorkChain):
 
         spec.input("var_to_conv", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("fit_options", valid_type=Dict, required=True, \
+        spec.input("fit_options", valid_type=Dict, required=False, \
                     help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
+                    if_(cls.p2y_needed)(
+                    cls.do_p2y,
+                    cls.prepare_convergences,
+                    ),
                     while_(cls.has_to_continue)(
                     cls.next_step,
                     cls.conv_eval),
@@ -54,66 +57,59 @@ class YamboConvergence(WorkChain):
         #fitting just the last conv window, but plotting all
 
     def start_workflow(self):
-        """Initialize the workflow""" #meglio fare prima un conto di prova? almeno se nn ho un parent folder magari... giusto per non fare dei quantum espresso di continuo...pero' mesh? rischio
-
+        """Initialize the workflow"""
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
-        try:
-            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
+
+        self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
+        self.ctx.workflow_manager.global_step = 0
+        self.ctx.workflow_manager.fully_converged = False
+
+        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+        self.ctx.calc_manager.type = 'yambo.yambo'
+        self.ctx.calc_manager.iter  = 1
+        self.ctx.calc_manager.converged = False
+
+        try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
+            self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
-            pass
-        \
-        self.ctx.variables = self.inputs.var_to_conv.get_list()
-        self.ctx.act_var = self.ctx.variables.pop()
-        #self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
+            self.ctx.k_distance = 1
 
-        self.ctx.converged = False
-        self.ctx.fully_converged = False
+        self.ctx.workflow_manager.first_calc = True
 
-        self.ctx.act_var['iter']  = 1
-
-        self.ctx.all_calcs = []
-        self.ctx.conv_var = []
-
-        try:
-            self.ctx.k_distance = self.ctx.act_var['starting_k_distance']
-        except:
-            pass
-
-        self.ctx.first_calc = True
-
-        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.act_var['var']))
+        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.calc_manager.var))
 
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts']:
-            self.report('max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
+        if self.ctx.workflow_manager.fully_converged:
+            self.report('Convergence finished')
             return False
 
+        if self.ctx.calc_manager.iter  > self.ctx.calc_manager.max_restarts:
+            self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
+            return False
+
+        elif self.ctx.calc_manager.converged:
+            #update variable
+            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+            self.ctx.calc_manager.type = 'yambo.yambo'
+            try:
+                self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+            except:
+                pass
+            self.ctx.calc_manager.iter = 1
+            self.ctx.calc_manager.converged = False
+            self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
+            return True
+        elif not self.ctx.calc_manager.converged:
+            self.report('Still convergence on {}'.format(self.ctx.calc_manager.var))
+            return True
         else:
-
-            if not self.ctx.converged:
-                self.report('Convergence on {}'.format(self.ctx.act_var['var']))
-                return True
-
-            elif self.ctx.fully_converged:
-                self.report('the workflow is finished successfully')
-                return False
-
-            elif self.ctx.converged and not self.ctx.fully_converged:
-                #update variable
-                self.ctx.act_var = self.ctx.variables.pop()
-                try:
-                    self.ctx.k_distance = self.ctx.act_var['starting_k_distance']
-                except:
-                    pass
-                self.ctx.act_var['iter']  = 1
-                self.ctx.converged = False
-                self.report('next variable to converge: {}'.format(self.ctx.act_var['var']))
-                return True
+            self.report('Undefined state on {}'.format(self.ctx.calc_manager.var))
+            return False
 
 
     def next_step(self):
@@ -123,139 +119,150 @@ class YamboConvergence(WorkChain):
 
         calc = {}
 
-        self.ctx.param_vals = []
+        self.ctx.workflow_manager.values = []
 
-        for i in range(self.ctx.act_var['steps']):
+        for i in range(self.ctx.calc_manager.steps):
 
-            self.report('Preparing iteration number {} on {}'.format(i+(self.ctx.act_var['iter']-1)*self.ctx.act_var['steps']+1,self.ctx.act_var['var']))
+            self.report('Preparing iteration number {} on {}'.\
+                format(i+(self.ctx.calc_manager.iter-1)*self.ctx.calc_manager.steps+1,self.ctx.calc_manager.var))
 
-            if i == 0 and self.ctx.first_calc:
+            if i == 0 and self.ctx.workflow_manager.first_calc:
                 self.report('first calc will be done with the starting params')
                 first = 0 #it is the first calc, I use it's original values
             else: #the true flow
                 first = 1
 
+            self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance,first)
 
-            if self.ctx.act_var['var'] == 'bands': #bands!!  e poi dovrei fare insieme le due bande...come fare? magari
-                                                 #metto 'bands' come variabile e lo faccio automaticamente il cambio doppio....
+            if self.ctx.calc_manager.var == 'kpoints':
+                self.ctx.k_distance = value
 
-                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params['BndsRnXp'][-1] = self.ctx.new_params['BndsRnXp'][-1] + self.ctx.act_var['delta']*first
-                self.ctx.new_params['GbndRnge'][-1] = self.ctx.new_params['GbndRnge'][-1] + self.ctx.act_var['delta']*first
+            self.ctx.workflow_manager.values.append(value)
 
-                self.ctx.calc_inputs.yres.gw.parameters = Dict(dict=self.ctx.new_params)
-
-                self.ctx.param_vals.append(self.ctx.new_params['GbndRnge'][-1])
-
-            elif self.ctx.act_var['var'] == 'kpoints': #meshes are different, so I need to do YamboWorkflow from scf (scratch).
-
-                self.ctx.k_distance = self.ctx.k_distance + self.ctx.act_var['delta']*first
-                self.ctx.calc_inputs.scf.kpoints = KpointsData()
-                self.ctx.calc_inputs.scf.kpoints.set_cell(self.ctx.calc_inputs.scf.pw.structure.cell)
-                self.ctx.calc_inputs.scf.kpoints.set_kpoints_mesh_from_density(1/self.ctx.k_distance, force_parity=True)
-                self.ctx.calc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints
-                self.report('Mesh used: {} \nfrom density: {}'.format(self.ctx.calc_inputs.scf.kpoints.get_kpoints_mesh(),1/self.ctx.k_distance))
-                try:
-                    del self.ctx.calc_inputs.parent_folder  #I need to start from scratch...
-                except:
-                    pass
-
-                self.ctx.param_vals.append(self.ctx.calc_inputs.nscf.kpoints.get_kpoints_mesh()[0])
-
-
-            else: #"scalar" quantity
-
-                self.ctx.new_params = self.ctx.calc_inputs.yres.gw.parameters.get_dict()
-                self.ctx.new_params[str(self.ctx.act_var['var'])] = self.ctx.new_params[str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
-
-                self.ctx.calc_inputs.yres.gw.parameters = Dict(dict=self.ctx.new_params)
-
-                self.ctx.param_vals.append(self.ctx.new_params[str(self.ctx.act_var['var'])])
-
-            self.ctx.calc_inputs.yres.gw.settings = Dict(dict={'RESTART': False}) # to avoid the link to the db
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(i+1)] = future        #va cambiata eh!!! o forse no...forse basta mettere future
-            self.ctx.act_var['wfl_pk'] = future.pk
+            calc[str(i)] = future
 
-        return ToContext(calc) #questo aspetta tutti i calcoli
+            self.ctx.calc_manager.wfl_pk = future.pk
+
+        return ToContext(calc)
 
 
     def conv_eval(self):
 
-        self.ctx.first_calc = False
-        self.report('Convergence evaluation')
+        self.report('Convergence evaluation, we will try to parse some result')
+        convergence_evaluator = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
         try:
-            converged, gaps = convergence_evaluation(self.ctx.act_var,take_gw_gap(self.ctx.act_var)) #redundancy..
+            quantities = self.ctx.calc_manager.take_quantities()
 
-            for i in range(self.ctx.act_var['steps']):
+            if self.ctx.calc_manager.iter == 1:
+                try:
+                    self.ctx.workflow_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
+                    self.ctx.workflow_manager.array_conv = np.column_stack((self.ctx.workflow_manager.array_conv,quantities[:,:,1]))
+                except:
+                    self.ctx.workflow_manager.array_conv=np.array(quantities[:,:,1])
+            else:
+                self.ctx.workflow_manager.array_conv = np.column_stack((self.ctx.workflow_manager.array_conv,quantities[:,:,1]))
 
-                self.ctx.all_calcs.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
-                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
-                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
+            self.report(self.ctx.workflow_manager.array_conv)
+            self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
 
-                self.ctx.conv_var.append([self.ctx.act_var['var'],self.ctx.act_var['delta'],self.ctx.act_var['steps'], \
-                                        self.ctx.act_var['conv_thr'],self.ctx.act_var['conv_window'], self.ctx.act_var['max_restarts'],  self.ctx.act_var['iter'], \
-                                        len(load_node(self.ctx.act_var['wfl_pk']).caller.called)-self.ctx.act_var['steps']+i, \
-                                        self.ctx.param_vals[i], gaps[i,1], int(gaps[i,2]), str(converged)]) #tracking the whole iterations and gaps
-            if converged:
+            if self.ctx.workflow_manager.first_calc:
+                self.ctx.workflow_manager.absolute_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
+                            ['value', 'calc_pk','result'])
+                self.ctx.workflow_manager.conv_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
+                            ['value', 'calc_pk','result'])
+                self.ctx.workflow_manager.first_calc = False
 
-                self.ctx.converged = True
+            for i in range(self.ctx.calc_manager.steps):
+                    self.ctx.workflow_manager.global_step += 1
+                    self.ctx.workflow_manager.absolute_story.append([self.ctx.workflow_manager.global_step]+list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.ctx.workflow_manager.conv_story.append([self.ctx.workflow_manager.global_step]+list(self.ctx.calc_manager.__dict__.values())+\
+                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
-                #taking as starting point just the first of the convergence window...
-                last_ok_pk, oversteps,trace = last_conv_calc_recovering(self.ctx.act_var,gaps[-1,1],'gap',self.ctx.conv_var)
-                self.report('oversteps:{}, traceback: {}'.format(oversteps,str(trace)))
+            if self.ctx.calc_manager.converged:
+                self.report('Success, updating the history... oversteps: {}'.format(oversteps))
 
-                self.ctx.conv_var = self.ctx.conv_var[:-oversteps]
+                self.ctx.workflow_manager.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
-                last_ok_pk = load_node(self.ctx.conv_var[-1][-2]).caller.caller.pk
+                last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
+                self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
 
-                last_ok = load_node(last_ok_pk)
-                self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters'] #valutare utilizzo builder restart nel loop!!
-                self.ctx.calc_inputs.scf.kpoints = last_ok.get_builder_restart().scf.kpoints #sistemare xk dovrebbe tornare alla density a conv... non lo farà ...  capire
-                self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
+                if self.ctx.calc_manager.var == 'kpoints':
+                    self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
-                if self.ctx.act_var['var'] == 'kpoints':
-                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.act_var['delta']*oversteps
+                if self.ctx.calc_manager.var == 'kpoints':
+                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.calc_manager.delta*oversteps
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*self.ctx.act_var['iter'], self.ctx.conv_var[-1][-3] ))
+                            .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
+                             self.ctx.workflow_manager.conv_story[-1][-1] ))
 
-                if self.ctx.variables == [] : #variables to be converged are finished
-
-                    self.ctx.fully_converged = True
+                if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
+                     self.ctx.workflow_manager.fully_converged = True
 
             else:
-                self.ctx.converged = False
                 self.report('Convergence on {} not reached yet in {} calculations' \
-                            .format(self.ctx.act_var['var'], self.ctx.act_var['steps']*(self.ctx.act_var['iter'] )))
-                self.ctx.calc_inputs.parent_folder = load_node(self.ctx.act_var['wfl_pk']).outputs.yambo_calc_folder
-
-
-
+                            .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
+                #self.ctx.calc_inputs.parent_folder = load_node(self.ctx.calc_manager.wfl_pk).outputs.yambo_calc_folder
         except:
-            self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
-            self.report('if no datas are parsed: are you sure of your convergence windows?')
+            self.report('problems during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
+            self.report('if no datas are parsed: are you sure of your convergence window?')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
-            self.ctx.converged = True
-            self.ctx.fully_converged = True
 
-        self.ctx.act_var['iter']  += 1
+        self.ctx.calc_manager.iter +=1
+
 
 
     def report_wf(self): #mancano le unita'
 
-        self.report('Final step. The workflow now will collect some info about the calculations in the "calc_info" output node ')
-
-        #self.ctx.conv_var = (list(self.ctx.act_var.keys())+['calc_number','params_vals','gap']).append(self.ctx.conv_var)
-
-        self.report('Converged variables: {}'.format(self.ctx.conv_var))
-        #inserire una lista finale dei parametri di convergenza...xk la storia potrebbe non essere sufficiente, perdo delle partenze..
-        converged_var = List(list=self.ctx.conv_var).store()
-        all_var = List(list=self.ctx.all_calcs).store()
+        self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_converged)))
+        all_var = List(list=self.ctx.workflow_manager.absolute_story).store()
+        converged_var = List(list=self.ctx.workflow_manager.conv_story).store()
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
+
+    def p2y_needed(self):
+        self.report('do we need a p2y??')
+        try:
+            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
+
+            try:
+                parent_calc = self.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+            except:
+                parent_calc = self.inputs.parent_folder.get_incoming().all_nodes()[-1]
+
+            self.report('detecting if we need a p2y starting calculation...')
+            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
+                self.report('no, yambo parent')
+                return False
+            else:
+                self.report('yes, quantumespresso parent')
+                return True
+        except:
+            self.report('yes, no parent provided')
+            return True
+
+
+    def do_p2y(self):
+        self.report('doing the p2y')
+        calc = {}
+        self.report('no valid parent folder, so we will create it')
+        new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
+        new_settings['INITIALISE'] = True
+        self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+        calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
+        self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
+        new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
+        new_settings['INITIALISE'] = False
+        self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+        self.ctx.p2y = calc['p2y']
+        return ToContext(calc)
+
+    def prepare_convergences(self):
+        self.report('setting the p2y calc as parent')
+        self.ctx.calc_inputs.parent_folder = self.ctx.p2y.outputs.yambo_calc_folder
 
 if __name__ == "__main__":
     pass

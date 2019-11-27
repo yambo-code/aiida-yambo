@@ -93,8 +93,8 @@ class QEConv(WorkChain):
     def has_to_continue(self):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts']:   #+1 because it starts from zero
-            self.report(' max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
+        if self.ctx.act_var['iter']  > self.ctx.act_var['max_restarts'] and not self.ctx.converged and not self.ctx.fully_converged:   #+1 because it starts from zero
+            self.report('the workflow is failed due to max restarts exceeded for variable {}'.format(self.ctx.act_var['var']))
             return False
 
         else:
@@ -270,7 +270,6 @@ class QEConv(WorkChain):
         except:
             self.report('problem during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
-            self.ctx.converged = True
             self.ctx.fully_converged = True
 
         self.ctx.act_var['iter']  += 1

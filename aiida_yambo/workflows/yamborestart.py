@@ -60,7 +60,6 @@ class YamboRestartWf(WorkChain):
         """setup of the calculation and run
         """
         self.ctx.restart = 0
-
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'gw')
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
@@ -85,7 +84,7 @@ class YamboRestartWf(WorkChain):
         self.report("Checking if yambo restart is needed")
 
         ### check of the number of restarts ###
-        if self.ctx.restart >= self.inputs.max_restarts:
+        if self.ctx.restart > self.inputs.max_restarts.value:
             self.report(
                 "I will not restart: maximum restarts reached: {}".format(
                     self.inputs.max_restarts))
@@ -94,7 +93,7 @@ class YamboRestartWf(WorkChain):
         else:
             self.report(
                 "I can restart (# {}), max restarts ({}) not reached yet".format(
-                    self.ctx.restart, self.inputs.max_restarts))
+                    self.ctx.restart, self.inputs.max_restarts.value))
 
         ### check if the calculation is failed ###
         if calc.is_finished_ok:
@@ -115,28 +114,30 @@ class YamboRestartWf(WorkChain):
                     .format(calc.pk))
                 return True
 
-            if calc.exit_status == 102:
-                self.report('Something goes wrong, but we don\'t know what, so we cannot restart')
-                return False
-
-
-
-            # timing errors: e se il walltime max é già usato? solo restart normale--> mi serve input"max walltime, default 24:00:00" #
+            #walltime exceeded#
             if calc.exit_status == 101:
                 self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
                                         int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
 
                 if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime.value:
-                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= int(self.inputs.max_walltime.value)
-                    self.report(
-                        "Failed calculation, likely queue time exhaustion, restarting with same max_input_seconds = {}"
-                        .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
-                else:
-                    self.report(
-                        "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
-                        .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
+                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime.value
+
+                new_settings =  self.ctx.inputs.settings.get_dict()
+                new_settings['PARENT_DB'] = True
+                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
+
+                self.report(
+                    "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
+                    .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
                 return True
 
+            if calc.exit_status == 102:
+                self.report('Something goes wrong, but we don\'t know what')
+                new_settings =  self.ctx.inputs.settings.get_dict()
+                new_settings['HARD_LINK'] = True
+                self.report('Trying to hard copy the SAVE')
+                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
+                return True
 
             # parallelization errors # but there should be something already in yambo...but mpi-openmpi balance #
             if calc.exit_status == 104:
@@ -159,8 +160,10 @@ class YamboRestartWf(WorkChain):
             raise ValidationError("restart calculations can not start: calculation no found")
             #return self.exit_code.WFL_NOT_COMPLETED
 
-        self.ctx.inputs.parent_folder = calc.outputs.remote_folder
-        self.ctx.inputs.settings = Dict(dict={'RESTART': True}) # to link the db
+        if calc.exit_status == 102:
+            pass
+        else:
+            self.ctx.inputs.parent_folder = calc.outputs.remote_folder
 
         # submission of the next try #
         future = self.submit(YamboCalculation, **self.ctx.inputs)

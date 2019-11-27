@@ -153,7 +153,7 @@ class YamboParser(Parser):
                     parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
                 #parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
 
-                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw': #calling its parent ensures a nscf parent...
+                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
                     try:
                         cell = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1].inputs.structure.cell #to load the node from a workchain...
                     except:
@@ -199,7 +199,7 @@ class YamboParser(Parser):
                 output_params['last_time'] = result.last_time  # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
             else:
-                output_params['last_time'] = 30  # seconds
+                output_params['last_time'] = max_wall # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
@@ -291,10 +291,12 @@ class YamboParser(Parser):
 
 
         if success == False:
-            if (float(max_wall)-float(output_params['last_time']))/float(max_wall) < 0.8:
+            if abs(float(max_wall)-float(output_params['last_time'])) < 3*60:
                 return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error'] == True:
                 return self.exit_codes.PARA_ERROR
+            elif out_folder and initialise:
+                success = True #a p2y
             else:
                 return self.exit_codes.NO_SUCCESS
 
