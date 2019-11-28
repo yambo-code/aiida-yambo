@@ -23,7 +23,7 @@ from aiida.engine import submit
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_yambo.workflows.utils.helpers_aiida import calc_manager_aiida as calc_manager
-from aiida_yambo.workflows.utils.helpers_workflows import *
+from aiida_yambo.workflows.utils.helpers_workflow import *
 
 class YamboConvergence(WorkChain):
 
