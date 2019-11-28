@@ -129,15 +129,14 @@ class calc_manager: #the interface class to AiiDA
 
         return calc
 
-    def update_converged_parameters(self, node):
+    def update_converged_parameters(self, node, params):
 
         if self.type == 'not_AiiDA':
             pass  #yambopy
 
         else:
-            self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
+            self.ctx.calc_inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
-        return calc
 
 ######################### AiiDA specific #############################
     def take_down(self, node = 0, what = 'CalcJobNode'):
@@ -221,10 +220,8 @@ class workflow_manager:
 
         self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
-        #last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
-        #self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
         parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
-        calc_manager.update_converged_parameters(parent_folder) #specifying outputs
+        calc_manager.update_converged_parameters(parent_folder) 
 
         if calc_manager.var == 'kpoints':
             #self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
