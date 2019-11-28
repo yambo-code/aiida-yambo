@@ -225,7 +225,7 @@ if __name__ == "__main__":
     builder.ywfl.scf.pw.code = load_node(args.pwcode_pk)
     builder.ywfl.nscf.pw.code = load_node(args.pwcode_pk)
     builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.ywfl.pw.structure, pseudo_family = Str(args.pseudo_family))
+                builder.ywfl.scf.pw.structure, pseudo_family = Str(args.pseudo_family))
     builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
 
     running = submit(builder)
