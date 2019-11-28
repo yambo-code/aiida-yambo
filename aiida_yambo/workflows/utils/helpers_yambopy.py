@@ -103,9 +103,10 @@ class workflow_manager:
         try: #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
             self.ideal_iter = copy.deepcopy(conv_opt.get_list())
             self.true_iter = copy.deepcopy(conv_opt.get_list())
+            self.type = 'AiiDA_calculation'
         except:
             #this is not an AiiDA calculation
-            self.type = 'not_AiiDA'
+            self.type = 'not_AiiDA_calculation'
             self.ideal_iter = copy.deepcopy(conv_opt)
             self.true_iter = copy.deepcopy(conv_opt)
 
