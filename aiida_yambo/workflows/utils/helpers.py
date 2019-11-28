@@ -16,7 +16,7 @@ except:
 ################################################################################
 ################################################################################
 
-class calc_manager: #the interface class to AiiDA
+class calc_manager: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
     def __init__(self, calc_info):
 
