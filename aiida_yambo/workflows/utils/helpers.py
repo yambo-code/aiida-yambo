@@ -139,7 +139,7 @@ class calc_manager: #the interface class to AiiDA
 
         return calc
 
-######################################################
+######################### AiiDA specific #############################
     def take_down(self, node = 0, what = 'CalcJobNode'):
 
         global calc_node
