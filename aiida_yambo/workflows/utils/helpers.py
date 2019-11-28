@@ -178,10 +178,6 @@ class workflow_manager:
         else:
             self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
 
-
-
-
-
 ################################################################################
 ############################## convergence_evaluator ######################################
 
