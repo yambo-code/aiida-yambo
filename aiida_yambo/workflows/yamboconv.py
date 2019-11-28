@@ -59,14 +59,17 @@ class YamboConvergence(WorkChain):
     def start_workflow(self):
         """Initialize the workflow"""
 
+        #calc_inputs = prepare_variable() ----> self.ctx.something if aiida!
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
+        #workflow_manager = prepare_variable() ---> if aiida self.ctx.
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_converged = False
 
+        #workflow_manager = prepare_variable() ---> if aiida self.ctx.
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
         self.ctx.calc_manager.type = 'yambo.yambo'
         self.ctx.calc_manager.iter  = 1
@@ -88,7 +91,7 @@ class YamboConvergence(WorkChain):
             self.report('Convergence finished')
             return False
 
-        if self.ctx.calc_manager.iter  > self.ctx.calc_manager.max_restarts:
+        if self.ctx.calc_manager.iter > self.ctx.calc_manager.max_restarts:
             self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
             return False
 
@@ -154,46 +157,17 @@ class YamboConvergence(WorkChain):
 
         try:
             quantities = self.ctx.calc_manager.take_quantities()
-
-            if self.ctx.calc_manager.iter == 1:
-                try:
-                    self.ctx.workflow_manager.array_conv=np.array(self.ctx.workflow_manager.conv_story[-1][-1])
-                    self.ctx.workflow_manager.array_conv = np.column_stack((self.ctx.workflow_manager.array_conv,quantities[:,:,1]))
-                except:
-                    self.ctx.workflow_manager.array_conv=np.array(quantities[:,:,1])
-            else:
-                self.ctx.workflow_manager.array_conv = np.column_stack((self.ctx.workflow_manager.array_conv,quantities[:,:,1]))
-
+            self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager)
             self.report(self.ctx.workflow_manager.array_conv)
+
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
 
-            if self.ctx.workflow_manager.first_calc:
-                self.ctx.workflow_manager.absolute_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
-                            ['value', 'calc_pk','result'])
-                self.ctx.workflow_manager.conv_story.append(['global_step']+list(self.ctx.calc_manager.__dict__.keys())+\
-                            ['value', 'calc_pk','result'])
-                self.ctx.workflow_manager.first_calc = False
-
-            for i in range(self.ctx.calc_manager.steps):
-                    self.ctx.workflow_manager.global_step += 1
-                    self.ctx.workflow_manager.absolute_story.append([self.ctx.workflow_manager.global_step]+list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], quantities[0,i,2], quantities[:,i,1]])
-                    self.ctx.workflow_manager.conv_story.append([self.ctx.workflow_manager.global_step]+list(self.ctx.calc_manager.__dict__.values())+\
-                                [self.ctx.workflow_manager.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
+            self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, oversteps)
 
             if self.ctx.calc_manager.converged:
+
                 self.report('Success, updating the history... oversteps: {}'.format(oversteps))
-
-                self.ctx.workflow_manager.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
-
-                last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
-                self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
-
-                if self.ctx.calc_manager.var == 'kpoints':
-                    self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
-
-                if self.ctx.calc_manager.var == 'kpoints':
-                    self.ctx.k_distance = self.ctx.k_distance - self.ctx.calc_manager.delta*oversteps
+                self.ctx.workflow_manager.update_convergence_story(self.ctx.calc_manager)
 
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\

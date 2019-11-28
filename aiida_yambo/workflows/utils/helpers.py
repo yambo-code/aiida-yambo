@@ -24,17 +24,17 @@ class calc_manager: #the interface class to AiiDA
             setattr(self, str(key), calc_info[key])
 
         try: #AiiDA calculation
-            self.type = str(self.take_down().get_description).split()[-1]
+            self.type = str(self.take_down().get_description).split()[-1] #not working now
         except:
             #this is not an AiiDA calculation
             self.type = 'not_AiiDA'
 
 ################################## update_parameters #####################################
-    def updater(self, inp_to_update, k_distance, first):    #mettere supporto anche x lista di parametri, non solo aumento cosi'...
+    def updater(self, inp_to_update, k_distance, first):    #parameter list? yambopy philosophy
 
         if self.type == 'not_AiiDA':
             pass
-        else:
+        else:    #aiida_yambo_conv_updater()...
             if self.var == 'bands':
 
                 new_params = inp_to_update.yres.gw.parameters.get_dict()
@@ -94,9 +94,9 @@ class calc_manager: #the interface class to AiiDA
         else:
 
             if 'quantumespresso.pw' in self.type:
-                print('quindi mi cerco la etot o una struttura... procedura da specificare, ma cmq ho tutto in conv_utils.')
+                print('from conv_utils.')
             if 'yambo.yambo' in self.type:
-                print('sto cercando {} per i kpoints {}'.format(what,where))
+                print('looking for {} in k-points {}'.format(what,where))
 
                 quantities = np.zeros((len(where),backtrace,3))
                 for j in range(len(where)):
@@ -113,10 +113,33 @@ class calc_manager: #the interface class to AiiDA
                                         yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1]
 
                         quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
-                        quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
+                        quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk
 
                 return quantities
 
+#######################################################
+    def get_caller(self, calc, depth = 2):
+
+        for i in range(depth):
+
+            if self.type == 'not_AiiDA':
+                pass  #yambopy
+            else:
+                calc = load_node(calc).caller
+
+        return calc
+
+    def update_converged_parameters(self, node):
+
+        if self.type == 'not_AiiDA':
+            pass  #yambopy
+
+        else:
+            self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
+
+        return calc
+
+######################################################
     def take_down(self, node = 0, what = 'CalcJobNode'):
 
         global calc_node
@@ -150,13 +173,13 @@ class calc_manager: #the interface class to AiiDA
         return workchain_node
 
 ################################################################################
-############################# AiiDA - independent ##################################
+############################# AiiDA - independent - another file !?################################
 
 class workflow_manager:
 
     def __init__(self, conv_opt):
 
-        try: #AiiDA calculation --> this is the only AiiDA dependence of the class...the remaining is abstract
+        try: #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
             self.ideal_iter = copy.deepcopy(conv_opt.get_list())
             self.true_iter = copy.deepcopy(conv_opt.get_list())
         except:
@@ -165,7 +188,7 @@ class workflow_manager:
             self.ideal_iter = copy.deepcopy(conv_opt)
             self.true_iter = copy.deepcopy(conv_opt)
 
-    def update_story(self, calc_manager):
+    def build_story_global(self, calc_manager):
 
         quantities = calc_manager.take_quantities()
 
@@ -178,6 +201,37 @@ class workflow_manager:
         else:
             self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
 
+    def update_story_global(self,calc_manager):
+
+        if self.first_calc:
+            self.absolute_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
+                        ['value', 'calc_pk','result'])
+            self.conv_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
+                        ['value', 'calc_pk','result'])
+            self.first_calc = False
+
+        for i in range(calc_manager.steps):
+                self.global_step += 1
+                self.absolute_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
+                            [self.values[i], quantities[0,i,2], quantities[:,i,1]])
+                self.conv_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
+                            [self.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
+
+    def update_convergence_story(self,calc_manager,oversteps):
+
+        self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
+
+        #last_ok = load_node(self.ctx.workflow_manager.conv_story[-1][-2]).caller.caller
+        #self.ctx.calc_inputs.yres.gw.parameters = last_ok.get_builder_restart().yres.gw['parameters']
+        parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
+        calc_manager.update_converged_parameters(parent_folder) #specifying outputs
+
+        if calc_manager.var == 'kpoints':
+            #self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
+            calc_manager.set_parent(parent_folder)
+
+        if calc_manager.var == 'kpoints':
+            k_distance = k_distance - calc_manager.delta*oversteps
 ################################################################################
 ############################## convergence_evaluator ######################################
 
