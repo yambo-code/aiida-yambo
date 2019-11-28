@@ -103,7 +103,9 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
 
             return quantities
 
-#######################################################
+
+######################### AiiDA specific #############################
+
     def get_caller(self, calc, depth = 2):
 
         for i in range(depth):
@@ -122,8 +124,6 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
 
         self.ctx.calc_inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
-
-######################### AiiDA specific #############################
     def take_down(self, node = 0, what = 'CalcJobNode'):
 
         global calc_node

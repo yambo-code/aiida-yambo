@@ -8,6 +8,8 @@ if ypy:
     import _to_context as ctx....
     import wait_calcs as ToContext
     import boh as WorkChain
+    from helpers_yambopy import workflow_manager, the_evaluator
+    from helpers_yambopy import calc_manager_yambopy as calc_manager
     list as List...
 '''
 
@@ -19,7 +21,8 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.helpers import *
+from aiida_yambo.workflows.utils.helpers_aiida import calc_manager_aiida as calc_manager
+from aiida_yambo.workflows.utils.helpers_yambopy import *
 
 class YamboConvergence(WorkChain):
 
