@@ -28,9 +28,9 @@ def find_pw_parent(parent_calc):
     while (not has_found_pw):
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             has_found_pw = False
-                parent_calc = find_parent(parent_calc)
-                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
-                    has_found_pw = True
+            parent_calc = find_parent(parent_calc)
+            if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
+                has_found_pw = True
         elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
             has_found_pw = True
 
