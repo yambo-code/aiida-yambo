@@ -181,7 +181,7 @@ class workflow_manager:
 ################################################################################
 ############################## convergence_evaluator ######################################
 
-class the_evaluator: #astratto totalmente da AiiDA
+class the_evaluator:
 
     def __init__(self, window = 3, tol = 1e-3):
 
