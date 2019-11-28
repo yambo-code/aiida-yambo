@@ -119,32 +119,23 @@ class YamboConvergence(WorkChain):
         """This function will submit the next step"""
 
         #loop on the given steps of a given variable to make convergence
-
         calc = {}
-
         self.ctx.workflow_manager.values = []
-
         for i in range(self.ctx.calc_manager.steps):
-
             self.report('Preparing iteration number {} on {}'.\
                 format(i+(self.ctx.calc_manager.iter-1)*self.ctx.calc_manager.steps+1,self.ctx.calc_manager.var))
-
             if i == 0 and self.ctx.workflow_manager.first_calc:
                 self.report('first calc will be done with the starting params')
                 first = 0 #it is the first calc, I use it's original values
             else: #the true flow
                 first = 1
-
             self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, self.ctx.k_distance,first)
-
             if self.ctx.calc_manager.var == 'kpoints':
                 self.ctx.k_distance = value
-
             self.ctx.workflow_manager.values.append(value)
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i)] = future
-
             self.ctx.calc_manager.wfl_pk = future.pk
 
         return ToContext(calc)
@@ -159,16 +150,12 @@ class YamboConvergence(WorkChain):
             quantities = self.ctx.calc_manager.take_quantities()
             self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager)
             self.report(self.ctx.workflow_manager.array_conv)
-
             self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
-
             self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, oversteps)
 
             if self.ctx.calc_manager.converged:
-
                 self.report('Success, updating the history... oversteps: {}'.format(oversteps))
                 self.ctx.workflow_manager.update_convergence_story(self.ctx.calc_manager)
-
                 self.report('Convergence on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
                              self.ctx.workflow_manager.conv_story[-1][-1] ))
