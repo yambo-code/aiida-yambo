@@ -117,7 +117,7 @@ params_gw = {
 params_gw = Dict(dict=params_gw)
 
 
-builder = YamboWorkflow.get_builder()
+builder = YamboConvergence.get_builder()
 
 
 ##################scf+nscf part of the builder
@@ -227,8 +227,7 @@ if __name__ == "__main__":
     builder.ywfl.nscf.pw.code = load_node(args.pwcode_pk)
     builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.ywfl.pw.structure, pseudo_family = Str(args.pseudo_family))
-    builder.ywfl.nscf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.ywfl.pw.structure, pseudo_family = Str(args.pseudo_family))
+    builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
 
     running = submit(builder)
     print("Created calculation; with pk={}".format(running.pk))
