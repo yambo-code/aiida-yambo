@@ -3,7 +3,15 @@ from __future__ import absolute_import
 import sys
 import itertools
 import traceback
+'''
+if ypy:
+    import _to_context as ctx....
+    import wait_calcs as ToContext
+    import boh as WorkChain
+    list as List...
+'''
 
+#if aiida_calcs:
 from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
 from aiida.engine import WorkChain, while_ , if_
@@ -96,7 +104,7 @@ class YamboConvergence(WorkChain):
             return False
 
         elif self.ctx.calc_manager.converged:
-            #update variable
+            #update variable to conv
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
             self.ctx.calc_manager.type = 'yambo.yambo'
             try:

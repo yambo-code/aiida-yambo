@@ -129,6 +129,17 @@ class calc_manager: #the interface class to AiiDA
 
         return calc
 
+    def get_called(self, calc, depth = 2):
+
+        for i in range(depth):
+
+            if self.type == 'not_AiiDA':
+                pass  #yambopy
+            else:
+                calc = load_node(calc).called[0]
+
+        return calc
+
     def update_converged_parameters(self, node, params):
 
         if self.type == 'not_AiiDA':
@@ -221,7 +232,7 @@ class workflow_manager:
         self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
         parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
-        calc_manager.update_converged_parameters(parent_folder) 
+        calc_manager.update_converged_parameters(parent_folder)
 
         if calc_manager.var == 'kpoints':
             #self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
