@@ -131,7 +131,6 @@ builder.ywfl.scf.pw.metadata.options.custom_scheduler_commands = options['custom
 
 builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
 builder.ywfl.nscf.pw.parameters = parameter_nscf
-builder.kpoints = builder.ywfl.scf.kpoints
 builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 
 ##################yambo part of the builder
