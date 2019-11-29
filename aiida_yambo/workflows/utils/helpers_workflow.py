@@ -94,7 +94,7 @@ class the_evaluator:
 
 ################################################################################
 ################################## plots&tables #####################################
-class workflow_inspector:
+class workflow_inspector: #to change
 
     def __init__(self, conv_info):
 
