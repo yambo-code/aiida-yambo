@@ -7,10 +7,9 @@ import traceback
 if ypy:
     import _to_context as ctx....
     import wait_calcs as ToContext
-    import yambochain as WorkChain
+    import yambochain as WorkChain ---> with ctx and report....
     import print as report
     from helpers_workflows import *
-    from helpers_yambopy import calc_manager_yambopy as calc_manager
     list as List...
 '''
 
@@ -22,7 +21,6 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_yambo.workflows.utils.helpers_aiida import calc_manager_aiida as calc_manager
 from aiida_yambo.workflows.utils.helpers_workflow import *
 
 class YamboConvergence(WorkChain):
@@ -77,13 +75,14 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
         #workflow_manager = prepare_variable() ---> if aiida self.ctx.
-        self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
+        #self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
+        self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv)
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_converged = False
 
         #workflow_manager = prepare_variable() ---> if aiida self.ctx.
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
-        self.ctx.calc_manager.type = 'yambo.yambo'
+        #self.ctx.calc_manager.type = 'yambo.yambo'
         self.ctx.calc_manager.iter  = 1
         self.ctx.calc_manager.converged = False
 
