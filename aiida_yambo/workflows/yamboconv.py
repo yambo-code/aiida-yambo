@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 import traceback
+
 '''
 if ypy:
     import _to_context as ctx....
@@ -63,30 +64,25 @@ class YamboConvergence(WorkChain):
 
         spec.output('conv_info', valid_type = List, help='list with convergence path')
         spec.output('all_calcs_info', valid_type = List, help='all calculations')
-        #plots of single and multiple convergences, with data.txt to plot whenever you want
-        #fitting just the last conv window, but plotting all
+
 
     def start_workflow(self):
         """Initialize the workflow"""
 
-        #calc_inputs = prepare_variable() ----> self.ctx.something if aiida!
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
-        #workflow_manager = prepare_variable() ---> if aiida self.ctx.
-        #self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv.get_list())
         self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv)
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_converged = False
 
-        #workflow_manager = prepare_variable() ---> if aiida self.ctx.
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
-        #self.ctx.calc_manager.type = 'yambo.yambo'
+        #self.ctx.calc_manager._type = 'yambo.yambo' in the inputs?
         self.ctx.calc_manager.iter  = 1
         self.ctx.calc_manager.converged = False
 
-        try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
+        try: #--> need find mesh here
             self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
         except:
             self.ctx.k_distance = 1

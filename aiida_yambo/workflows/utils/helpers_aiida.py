@@ -18,7 +18,7 @@ except:
 
 class calc_manager_aiida: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info):
+    def __init__(self, calc_info={}):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
