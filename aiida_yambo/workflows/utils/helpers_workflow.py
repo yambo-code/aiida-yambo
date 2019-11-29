@@ -22,7 +22,7 @@ class workflow_manager:
         except:
             #this is not an AiiDA calculation
             self.type = 'not_AiiDA_calculation'
-            from helpers_yambopy import calc_manager_yambopy as calc_manager
+            from helpers_yambopy import calc_manager_yambopy as calc_manager     #qe py?
             self.ideal_iter = copy.deepcopy(conv_opt)
             self.true_iter = copy.deepcopy(conv_opt)
 

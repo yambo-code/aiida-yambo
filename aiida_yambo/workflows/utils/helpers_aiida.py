@@ -74,29 +74,26 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
         where = self.where
         what = self.what
 
-        if 'quantumespresso.pw' in self.type:
-            print('from conv_utils.')
-        if 'yambo.yambo' in self.type:
-            print('looking for {} in k-points {}'.format(what,where))
+        print('looking for {} in k-points {}'.format(what,where))
 
-            quantities = np.zeros((len(where),backtrace,3))
-            for j in range(len(where)):
-                for i in range(1,backtrace+1):
-                    yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
-                    if what == 'gap': #datasets from parser????
-                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1]+
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1]-
-                                    (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2]+
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][0]-1)*2])))
+        quantities = np.zeros((len(where),backtrace,3))
+        for j in range(len(where)):
+            for i in range(1,backtrace+1):
+                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
+                if what == 'gap': #datasets from parser????
+                    quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1]+
+                                yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1]-
+                                (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2]+
+                                yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][0]-1)*2])))
 
-                    if what == 'single-levels':
-                        quantities[j,i-1,1] = yambo_calc.outputs.array_qp.get_array('Eo')[where[j]-1]+ \
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1]
+                if what == 'single-levels':
+                    quantities[j,i-1,1] = yambo_calc.outputs.array_qp.get_array('Eo')[where[j]-1]+ \
+                                yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1]
 
-                    quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
-                    quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk
+                quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
+                quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk
 
-            return quantities
+        return quantities
 
 
 ######################### AiiDA specific #############################

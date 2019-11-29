@@ -78,7 +78,7 @@ class YamboConvergence(WorkChain):
         self.ctx.workflow_manager.fully_converged = False
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
-        #self.ctx.calc_manager._type = 'yambo.yambo' in the inputs?
+        self.ctx.calc_manager._type = 'yambo'
         self.ctx.calc_manager.iter  = 1
         self.ctx.calc_manager.converged = False
 
