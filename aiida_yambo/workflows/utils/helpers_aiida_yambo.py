@@ -16,7 +16,7 @@ except:
 ################################################################################
 ################################################################################
 
-class calc_manager_aiida: #the interface class to AiiDA... could be separated fro aiida and yambopy
+class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
     def __init__(self, calc_info={}):
         for key in calc_info.keys():
@@ -68,7 +68,7 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
         return inp_to_update, value
 
 ################################## parsers #####################################
-    def take_quantities(self, start = 1):
+    def take_quantities(self, start = 1): #yambopy philosophy?
 
         backtrace = self.steps #*self.iter
         where = self.where
@@ -80,7 +80,7 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
         for j in range(len(where)):
             for i in range(1,backtrace+1):
                 yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
-                if what == 'gap': #datasets from parser????
+                if what == 'gap': #yambo helps a lot....but needs ndb.QP
                     quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1]+
                                 yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1]-
                                 (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2]+
@@ -108,11 +108,11 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
             calc = load_node(calc).called[0]
         return calc
 
-    def start_from_converged(self, node, params):
-        self.ctx.calc_inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
+    def start_from_converged(self, inputs, node):
+        inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
-    def set_parent(self, last_ok):
-        self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
+    def set_parent(self, inputs,last_ok):
+        inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
     def take_down(self, node = 0, what = 'CalcJobNode'):
 
