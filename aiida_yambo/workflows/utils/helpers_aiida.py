@@ -109,9 +109,7 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
     def get_caller(self, calc, depth = 2):
 
         for i in range(depth):
-
             calc = load_node(calc).caller
-
         return calc
 
     def get_called(self, calc, depth = 2):
@@ -120,8 +118,7 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
             calc = load_node(calc).called[0]
         return calc
 
-    def update_converged_parameters(self, node, params):
-
+    def start_from_converged(self, node, params):
         self.ctx.calc_inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
     def take_down(self, node = 0, what = 'CalcJobNode'):

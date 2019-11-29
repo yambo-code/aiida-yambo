@@ -57,7 +57,7 @@ class workflow_manager:
         self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
         parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
-        calc_manager.update_converged_parameters(parent_folder)
+        calc_manager.start_from_converged(parent_folder)
 
         if calc_manager.var == 'kpoints':
             #self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
