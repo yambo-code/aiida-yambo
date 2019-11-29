@@ -60,7 +60,6 @@ class workflow_manager:
         calc_manager.start_from_converged(parent_folder)
 
         if calc_manager.var == 'kpoints':
-            #self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
             calc_manager.set_parent(parent_folder)
 
         if calc_manager.var == 'kpoints':

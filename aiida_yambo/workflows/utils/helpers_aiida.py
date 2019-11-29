@@ -19,7 +19,6 @@ except:
 class calc_manager_aiida: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
     def __init__(self, calc_info):
-
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
@@ -27,7 +26,6 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
     def updater(self, inp_to_update, k_distance, first):    #parameter list? yambopy philosophy
 
         if self.var == 'bands':
-
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params['BndsRnXp'][-1] = new_params['BndsRnXp'][-1] + self.delta*first
             new_params['GbndRnge'][-1] = new_params['GbndRnge'][-1] + self.delta*first
@@ -37,7 +35,6 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
             value = new_params['GbndRnge'][-1]
 
         elif self.var == 'kpoints':
-
             k_distance = k_distance + self.delta*first
 
             inp_to_update.scf.kpoints = KpointsData()
@@ -53,7 +50,6 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
             value = k_distance
 
         elif self.var == 'cutoff':
-
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params['CUTBox'] = new_params['CUTBox'] + [1,1,1]*self.delta*first
 
@@ -62,7 +58,6 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
             value = new_params['CUTBox'][-1]
 
         else: #"scalar" quantity
-
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params[str(self.var)] = new_params[str(self.var)] + self.delta*first
 
@@ -107,19 +102,20 @@ class calc_manager_aiida: #the interface class to AiiDA... could be separated fr
 ######################### AiiDA specific #############################
 
     def get_caller(self, calc, depth = 2):
-
         for i in range(depth):
             calc = load_node(calc).caller
         return calc
 
     def get_called(self, calc, depth = 2):
-
         for i in range(depth):
             calc = load_node(calc).called[0]
         return calc
 
     def start_from_converged(self, node, params):
         self.ctx.calc_inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
+
+    def set_parent(self, last_ok):
+        self.ctx.calc_inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
     def take_down(self, node = 0, what = 'CalcJobNode'):
 
