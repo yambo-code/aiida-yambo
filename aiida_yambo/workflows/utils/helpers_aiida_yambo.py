@@ -111,7 +111,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
     def start_from_converged(self, inputs, node):
         inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
-    def set_parent(self, inputs,last_ok):
+    def set_parent(self, inputs, last_ok):
         inputs.parent_folder = last_ok.outputs.yambo_calc_folder
 
     def take_down(self, node = 0, what = 'CalcJobNode'):
