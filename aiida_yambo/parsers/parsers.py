@@ -188,8 +188,7 @@ class YamboParser(Parser):
                 output_params['last_memory'] = result.last_memory  # Gb
                 output_params['last_memory_units'] = 'Gb'  # Gb
             if result.last_memory_time:
-                output_params[
-                    'last_memory_time'] = result.last_memory_time  # seconds
+                output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
             if result.wall_time:
                 output_params['wall_time'] = result.last_time  # seconds
@@ -292,7 +291,9 @@ class YamboParser(Parser):
                 if abs(float(max_wall)-float(output_params['last_time'])) < 3*60:
                     return self.exit_codes.WALLTIME_ERROR
             except:
-                if output_params['para_error'] == True:
+                if output_params['yambo_wrote'] == True: #no timing infos but something is written...
+                     return self.exit_codes.WALLTIME_ERROR
+                elif output_params['para_error'] == True:
                     return self.exit_codes.PARA_ERROR
                 elif out_folder and initialise:
                     success = True #a p2y
