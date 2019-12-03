@@ -81,7 +81,7 @@ class YamboParser(Parser):
                 "Input calculation must be a YamboCalculation")
 
         self._calc = calculation
-        last_job_info = self_calc.get_last_job_info()
+        last_job_info = self._calc.get_last_job_info()
         self._eels_array_linkname = 'array_eels'
         self._eps_array_linkname = 'array_eps'
         self._alpha_array_linkname = 'array_alpha'
