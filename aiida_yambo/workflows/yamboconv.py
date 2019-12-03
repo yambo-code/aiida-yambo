@@ -192,8 +192,7 @@ class YamboConvergence(WorkChain):
     def p2y_needed(self):
         self.report('do we need a p2y??')
         try:
-            self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
-
+            self.ctx.calc_manager.set_parent(self.ctx.calc_inputs.parent_folder, self.inputs.parent_folder)
             parent_calc = find_parent()
 
             self.report('detecting if we need a p2y starting calculation...')
@@ -212,20 +211,16 @@ class YamboConvergence(WorkChain):
         self.report('doing the p2y')
         calc = {}
         self.report('no valid parent folder, so we will create it')
-        new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
-        new_settings['INITIALISE'] = True
-        self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+        self.ctx.calc_manager.update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', True)
         calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
         self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
-        new_settings = self.ctx.calc_inputs.yres.gw.settings.get_dict()
-        new_settings['INITIALISE'] = False
-        self.ctx.calc_inputs.yres.gw.settings = Dict(dict=new_settings)
+        self.ctx.calc_manager.update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', False)
         self.ctx.p2y = calc['p2y']
         return ToContext(calc)
 
     def prepare_convergences(self):
         self.report('setting the p2y calc as parent')
-        self.ctx.calc_inputs.parent_folder = self.ctx.p2y.outputs.yambo_calc_folder
+        self.ctx.calc_manager.set_parent(self.ctx.calc_inputs.parent_folder, self.ctx.p2y.outputs.yambo_calc_folder)
 
 if __name__ == "__main__":
     pass

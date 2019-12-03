@@ -97,7 +97,12 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
 
 ######################### AiiDA specific #############################
+    def update_dict(self, _dict, what, how):
+        new = _dict.get_dict()
+        new[what] = how
+        _dict = Dict(dict=new)
 
+        
     def get_caller(self, calc, depth = 2):
         for i in range(depth):
             calc = load_node(calc).caller
