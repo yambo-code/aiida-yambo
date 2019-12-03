@@ -18,6 +18,7 @@ import glob, os, re
 from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
 from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder
 from aiida_yambo.calculations.gw import YamboCalculation
+from aiida_yambo.utils.common_helpers import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
