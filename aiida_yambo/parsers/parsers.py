@@ -135,37 +135,8 @@ class YamboParser(Parser):
         # retrieve the cell: if parent_calc is a YamboCalculation we must find the original PwCalculation
         # going back through the graph tree.
 
-        try:
-            parent_calc = self._calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
-        except:
-            parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-
-        #parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-
-        cell = {}
-        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
-            has_found_pw = False
-            while (not has_found_pw):
-
-                try:
-                    parent_calc = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
-                except:
-                    parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-                #parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-
-                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
-                    try:
-                        cell = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1].inputs.structure.cell #to load the node from a workchain...
-                    except:
-                        cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
-                    #cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
-                    has_found_pw = True
-        elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
-                try:
-                    cell = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1].inputs.structure.cell #to load the node from a workchain...
-                except:
-                    cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
-            #cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
+        parent_calc = find_pw_parent(self._calc)
+        cell = parent_calc.inputs.structure.cell
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False}
