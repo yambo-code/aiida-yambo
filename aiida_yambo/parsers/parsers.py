@@ -80,7 +80,7 @@ class YamboParser(Parser):
                 "Input calculation must be a YamboCalculation")
 
         self._calc = calculation
-
+        last_job_info = self_calc.get_last_job_info()
         self._eels_array_linkname = 'array_eels'
         self._eps_array_linkname = 'array_eps'
         self._alpha_array_linkname = 'array_alpha'
@@ -190,10 +190,11 @@ class YamboParser(Parser):
             if result.last_memory_time:
                 output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
-            if result.wall_time:
-                output_params['wall_time'] = result.last_time  # seconds
-                output_params['wall_time_units'] = 'seconds'  # seconds_calc
-
+            #if result.wall_time:
+            #    output_params['wall_time'] = result.last_time  # seconds
+            #    output_params['wall_time_units'] = 'seconds'  # seconds_calc
+            output_params['wall_time'] = last_job_info.wallclock_time_seconds()  # seconds
+            output_params['wall_time_units'] = 'seconds'  # seconds_calc
             if result.last_time:
                 output_params['last_time'] = result.last_time  # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
@@ -287,12 +288,9 @@ class YamboParser(Parser):
 
 
         if success == False:
-            try:
-                if abs(float(max_wall)-float(output_params['last_time'])) < 3*60:
+                if abs(float(last_job_info.RequestedWallclockTime) \
+                -float(output_params['wall_time'])) < 3*60:
                     return self.exit_codes.WALLTIME_ERROR
-            except:
-                if output_params['yambo_wrote'] == True: #no timing infos but something is written...
-                     return self.exit_codes.WALLTIME_ERROR
                 elif output_params['para_error'] == True:
                     return self.exit_codes.PARA_ERROR
                 elif out_folder and initialise:
