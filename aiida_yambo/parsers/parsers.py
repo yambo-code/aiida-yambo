@@ -18,6 +18,7 @@ import glob, os, re
 from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
 from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder
 from aiida_yambo.calculations.gw import YamboCalculation
+from aiida_yambo.utils.common_helpers import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
@@ -80,7 +81,7 @@ class YamboParser(Parser):
                 "Input calculation must be a YamboCalculation")
 
         self._calc = calculation
-
+        last_job_info = self_calc.get_last_job_info()
         self._eels_array_linkname = 'array_eels'
         self._eps_array_linkname = 'array_eps'
         self._alpha_array_linkname = 'array_alpha'
@@ -135,37 +136,8 @@ class YamboParser(Parser):
         # retrieve the cell: if parent_calc is a YamboCalculation we must find the original PwCalculation
         # going back through the graph tree.
 
-        try:
-            parent_calc = self._calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
-        except:
-            parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-
-        #parent_calc = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-
-        cell = {}
-        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
-            has_found_pw = False
-            while (not has_found_pw):
-
-                try:
-                    parent_calc = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
-                except:
-                    parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-                #parent_calc = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
-
-                if parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
-                    try:
-                        cell = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1].inputs.structure.cell #to load the node from a workchain...
-                    except:
-                        cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
-                    #cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
-                    has_found_pw = True
-        elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw':
-                try:
-                    cell = parent_calc.inputs.parent_folder.get_incoming().all_nodes()[-1].inputs.structure.cell #to load the node from a workchain...
-                except:
-                    cell = parent_calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
-            #cell = self._calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder').inputs.structure.cell
+        parent_calc = find_pw_parent(self._calc)
+        cell = parent_calc.inputs.structure.cell
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False}
@@ -188,13 +160,13 @@ class YamboParser(Parser):
                 output_params['last_memory'] = result.last_memory  # Gb
                 output_params['last_memory_units'] = 'Gb'  # Gb
             if result.last_memory_time:
-                output_params[
-                    'last_memory_time'] = result.last_memory_time  # seconds
+                output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
-            if result.wall_time:
-                output_params['wall_time'] = result.last_time  # seconds
-                output_params['wall_time_units'] = 'seconds'  # seconds_calc
-
+            #if result.wall_time:
+            #    output_params['wall_time'] = result.last_time  # seconds
+            #    output_params['wall_time_units'] = 'seconds'  # seconds_calc
+            output_params['wall_time'] = last_job_info.wallclock_time_seconds()  # seconds
+            output_params['wall_time_units'] = 'seconds'  # seconds_calc
             if result.last_time:
                 output_params['last_time'] = result.last_time  # seconds
                 output_params['last_time_units'] = 'seconds'  # seconds
@@ -288,11 +260,10 @@ class YamboParser(Parser):
 
 
         if success == False:
-            try:
-                if abs(float(max_wall)-float(output_params['last_time'])) < 3*60:
+                if abs(float(last_job_info.RequestedWallclockTime) \
+                -float(output_params['wall_time'])) < 3*60:
                     return self.exit_codes.WALLTIME_ERROR
-            except:
-                if output_params['para_error'] == True:
+                elif output_params['para_error'] == True:
                     return self.exit_codes.PARA_ERROR
                 elif out_folder and initialise:
                     success = True #a p2y
