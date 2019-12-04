@@ -81,7 +81,7 @@ class YamboParser(Parser):
                 "Input calculation must be a YamboCalculation")
 
         self._calc = calculation
-        last_job_info = self._calc.get_last_job_info()
+        self.last_job_info = self._calc.get_last_job_info()
         self._eels_array_linkname = 'array_eels'
         self._eps_array_linkname = 'array_eps'
         self._alpha_array_linkname = 'array_alpha'
@@ -149,7 +149,7 @@ class YamboParser(Parser):
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-        max_wall = self._calc.get_options()['max_wallclock_seconds']
+        max_wall = self.last_job_info.RequestedWallclockTime
         for result in results.yambofiles:
             if results is None:
                 continue
@@ -165,7 +165,7 @@ class YamboParser(Parser):
             #if result.wall_time:
             #    output_params['wall_time'] = result.last_time  # seconds
             #    output_params['wall_time_units'] = 'seconds'  # seconds_calc
-            output_params['wall_time'] = last_job_info.wallclock_time_seconds()  # seconds
+            output_params['wall_time'] = self.last_job_info.wallclock_time_seconds()  # seconds
             output_params['wall_time_units'] = 'seconds'  # seconds_calc
             if result.last_time:
                 output_params['last_time'] = result.last_time  # seconds
@@ -260,8 +260,7 @@ class YamboParser(Parser):
 
 
         if success == False:
-                if abs(float(last_job_info.RequestedWallclockTime) \
-                -float(output_params['wall_time'])) < 3*60:
+                if abs((float(max_wall)-float(output_params['wall_time']))/float(max_wall)) < 0.1:
                     return self.exit_codes.WALLTIME_ERROR
                 elif output_params['para_error'] == True:
                     return self.exit_codes.PARA_ERROR
