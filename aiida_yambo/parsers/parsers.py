@@ -165,7 +165,7 @@ class YamboParser(Parser):
             #if result.wall_time:
             #    output_params['wall_time'] = result.last_time  # seconds
             #    output_params['wall_time_units'] = 'seconds'  # seconds_calc
-            output_params['wall_time'] = self.last_job_info.wallclock_time_seconds()  # seconds
+            output_params['wall_time'] = self.last_job_info.wallclock_time_seconds  # seconds
             output_params['wall_time_units'] = 'seconds'  # seconds_calc
             if result.last_time:
                 output_params['last_time'] = result.last_time  # seconds
