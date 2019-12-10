@@ -120,11 +120,7 @@ class YamboParser(Parser):
         try:
             out_folder = self.retrieved
         except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER                #spec.exit_code(...)??
-
-        #with out_folder.open('output_file_name') as handle:                #we deleted this two lines...why?
-        #     self.out('output_link_label', SinglefileData(file=handle))
-
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         try:
             input_params = self._calc.inputs.parameters.get_dict()
@@ -147,7 +143,10 @@ class YamboParser(Parser):
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
             success = False
-            return self.exit_codes.PARSER_ANOMALY
+            if abs((float(max_wall)-float(output_params['wall_time']))/float(max_wall)) < 0.1:
+                return self.exit_codes.WALLTIME_ERROR
+            else:
+                return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
         max_wall = self.last_job_info.RequestedWallclockTime
         for result in results.yambofiles:
@@ -162,14 +161,8 @@ class YamboParser(Parser):
             if result.last_memory_time:
                 output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
-            #if result.wall_time:
-            #    output_params['wall_time'] = result.last_time  # seconds
-            #    output_params['wall_time_units'] = 'seconds'  # seconds_calc
             output_params['wall_time'] = self.last_job_info.wallclock_time_seconds  # seconds
             output_params['wall_time_units'] = 'seconds'  # seconds_calc
-            if result.last_time:
-                output_params['last_time'] = result.last_time  # seconds
-                output_params['last_time_units'] = 'seconds'  # seconds
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
             if result.timing:
