@@ -141,15 +141,15 @@ class YamboParser(Parser):
         ndbqp = {}
         ndbhf = {}
 
+        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
+         / float(output_params['requested_time'])) < 0.1:
+            return self.exit_codes.WALLTIME_ERROR
+
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
             success = False
-            if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
-             / float(output_params['requested_time'])) < 0.1:
-                return self.exit_codes.WALLTIME_ERROR
-            else:
-                return self.exit_codes.PARSER_ANOMALY
+            return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
         for result in results.yambofiles:
             if results is None:
@@ -253,10 +253,7 @@ class YamboParser(Parser):
 
 
         if success == False:
-            if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
-             / float(output_params['requested_time'])) < 0.1:
-                return self.exit_codes.WALLTIME_ERROR
-            elif output_params['para_error'] == True:
+            if output_params['para_error'] == True:
                 return self.exit_codes.PARA_ERROR
             elif out_folder and initialise:
                 success = True #a p2y
