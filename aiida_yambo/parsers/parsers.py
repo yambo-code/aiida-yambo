@@ -136,19 +136,21 @@ class YamboParser(Parser):
         cell = parent_calc.inputs.structure.cell
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
-        'p2y_completed': False}
+        'p2y_completed': False, 'execution_time':self.last_job_info.wallclock_time_seconds, \
+        'requested_time':self.last_job_info.RequestedWallclockTime,'time_units':'seconds'}
         ndbqp = {}
         ndbhf = {}
+
+        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
+         / float(output_params['requested_time'])) < 0.1:
+            return self.exit_codes.WALLTIME_ERROR
+
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
             success = False
-            if abs((float(max_wall)-float(output_params['wall_time']))/float(max_wall)) < 0.1:
-                return self.exit_codes.WALLTIME_ERROR
-            else:
-                return self.exit_codes.PARSER_ANOMALY
+            return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-        max_wall = self.last_job_info.RequestedWallclockTime
         for result in results.yambofiles:
             if results is None:
                 continue
@@ -161,8 +163,6 @@ class YamboParser(Parser):
             if result.last_memory_time:
                 output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
-            output_params['wall_time'] = self.last_job_info.wallclock_time_seconds  # seconds
-            output_params['wall_time_units'] = 'seconds'  # seconds_calc
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
             if result.timing:
@@ -253,14 +253,12 @@ class YamboParser(Parser):
 
 
         if success == False:
-                if abs((float(max_wall)-float(output_params['wall_time']))/float(max_wall)) < 0.1:
-                    return self.exit_codes.WALLTIME_ERROR
-                elif output_params['para_error'] == True:
-                    return self.exit_codes.PARA_ERROR
-                elif out_folder and initialise:
-                    success = True #a p2y
-                else:
-                    return self.exit_codes.NO_SUCCESS
+            if output_params['para_error'] == True:
+                return self.exit_codes.PARA_ERROR
+            elif out_folder and initialise:
+                success = True #a p2y
+            else:
+                return self.exit_codes.NO_SUCCESS
 
 
 
