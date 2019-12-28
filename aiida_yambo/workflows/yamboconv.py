@@ -74,6 +74,7 @@ class YamboConvergence(WorkChain):
 
         try: #qualcosa di meglio...--> voglio un find mesh qui...col metodo
             self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+            del self.ctx.calc_manager.starting_k_distance
         except:
             self.ctx.k_distance = 1
 
@@ -98,6 +99,7 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager.type = 'yambo.yambo'
             try:
                 self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+                del self.ctx.calc_manager.starting_k_distance
             except:
                 pass
             self.ctx.calc_manager.iter = 1
