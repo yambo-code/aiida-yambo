@@ -191,7 +191,7 @@ class YamboConvergence(WorkChain):
     def p2y_needed(self):
         self.report('do we need a p2y??')
         try:
-            self.ctx.calc_manager.set_parent(self.ctx.calc_inputs.parent_folder, self.inputs.parent_folder)
+            self.ctx.calc_manager.set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
             parent_calc = find_parent()
 
             self.report('detecting if we need a p2y starting calculation...')
