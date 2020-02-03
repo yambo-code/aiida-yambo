@@ -192,8 +192,6 @@ class YamboConvergence(WorkChain):
         self.report('do we need a p2y??')
         try:
             self.ctx.calc_manager.set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
-            parent_calc = find_parent()
-
             self.report('detecting if we need a p2y starting calculation...')
             if parent_calc.process_type=='aiida.calculations:yambo.yambo':
                 self.report('no, yambo parent')
