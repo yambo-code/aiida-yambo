@@ -18,46 +18,43 @@ except:
 
 class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info={}):
+    def __init__(self, calc_info={}, philosophy):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
-################################## update_parameters #####################################
-    def updater(self, inp_to_update, k_distance, first):
+################################## update_parameters - create parameters space #####################################
 
-        if self.var == 'bands':
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
-            new_params['BndsRnXp'] = new_params['BndsRnXp'] + self.delta*first #e.g self.delta=[0,50]
-            new_params['GbndRnge'] = new_params['GbndRnge'] + self.delta*first
+    def updater(self, inp_to_update, parameters):
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+        variables = parameters[0]
+        new_values = parameters[1]
+        if philosophy == 'automatic_convergence':
 
-            value = new_params['GbndRnge']
+            if variable == 'kpoints':
+                k_distance = new_values
 
-        elif self.var == 'kpoints':
-            k_distance = k_distance + self.delta*first
+                inp_to_update.scf.kpoints = KpointsData()
+                inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
+                inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
+                inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
-            inp_to_update.scf.kpoints = KpointsData()
-            inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
-            inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
-            inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
+                try:
+                    del inp_to_update.parent_folder  #I need to start from scratch...
+                except:
+                    pass
 
-            try:
-                del inp_to_update.parent_folder  #I need to start from scratch...
-            except:
-                pass
+                value = k_distance
 
-            value = k_distance
+            elif isinstance(self.var,list).: #general
+                for i in variables :
+                    new_params = inp_to_update.yres.gw.parameters.get_dict()
+                    new_params[str(i)] = new_values
 
-        else: #general
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
-            new_params[str(self.var)] = new_params[str(self.var)] + self.delta*first
+                inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+                value = new_values
 
-            value = new_params[str(self.var)]
-
-        return inp_to_update, value
+            return inp_to_update, value
 
 ################################## parsers #####################################
     def take_quantities(self, start = 1): #yambopy philosophy?

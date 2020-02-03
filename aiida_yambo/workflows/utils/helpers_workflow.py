@@ -7,11 +7,11 @@ from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
 
-############################# AiiDA - independent - another file !?################################
+############################# AiiDA - independent ################################
 
 class workflow_manager:
 
-    def __init__(self, conv_opt):
+    def __init__(self, conv_opt, philosophy):
 
         try:
             #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
@@ -26,47 +26,56 @@ class workflow_manager:
             self.ideal_iter = copy.deepcopy(conv_opt)
             self.true_iter = copy.deepcopy(conv_opt)
 
-    def build_story_global(self, calc_manager):
+        self.philosophy == philosophy
+    if self.philosophy == 'automatic_convergence':
 
-        quantities = calc_manager.take_quantities()
+        def build_story_global(self, calc_manager):
 
-        if calc_manager.iter == 1:
-            try:
-                self.array_conv=np.array(self.conv_story[-1][-1])
+            quantities = calc_manager.take_quantities()
+
+            if calc_manager.iter == 1:
+                try:
+                    self.array_conv=np.array(self.conv_story[-1][-1])
+                    self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
+                except:
+                    self.array_conv=np.array(quantities[:,:,1])
+            else:
                 self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
-            except:
-                self.array_conv=np.array(quantities[:,:,1])
-        else:
-            self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
 
-    def update_story_global(self,calc_manager):
+        def update_story_global(self,calc_manager):
 
-        if self.first_calc:
-            self.absolute_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
-                        ['value', 'calc_pk','result'])
-            self.conv_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
-                        ['value', 'calc_pk','result'])
-            self.first_calc = False
+            if self.first_calc:
+                self.absolute_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
+                            ['value', 'calc_pk','result'])
+                self.conv_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
+                            ['value', 'calc_pk','result'])
+                self.first_calc = False
 
-        for i in range(calc_manager.steps):
-                self.global_step += 1
-                self.absolute_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
-                            [self.values[i], quantities[0,i,2], quantities[:,i,1]])
-                self.conv_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
-                            [self.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
+            for i in range(calc_manager.steps):
+                    self.global_step += 1
+                    self.absolute_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
+                                [self.values[i], quantities[0,i,2], quantities[:,i,1]])
+                    self.conv_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
+                                [self.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
-    def update_convergence_story(self,inputs, calc_manager,oversteps):
+        def update_convergence_story(self,inputs, calc_manager,oversteps):
 
-        self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
+            self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
 
-        parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
-        calc_manager.start_from_converged(inputs, parent_folder)
+            parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
+            calc_manager.start_from_converged(inputs, parent_folder)
 
-        if calc_manager.var == 'kpoints':
-            calc_manager.set_parent(inputs, parent_folder)
+            if calc_manager.var == 'kpoints':
+                calc_manager.set_parent(inputs, parent_folder)
 
-        if calc_manager.var == 'kpoints':
-            k_distance = k_distance - calc_manager.delta*oversteps
+            if calc_manager.var == 'kpoints':
+                k_distance = k_distance - calc_manager.delta*oversteps
+
+    def parameters_space_creator(self,calc_manager):
+
+        if self.philosophy == 'automatic_convergence':
+
+
 ################################################################################
 ############################## convergence_evaluator ######################################
 
