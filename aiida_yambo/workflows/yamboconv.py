@@ -96,11 +96,11 @@ class YamboConvergence(WorkChain):
 
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
         if self.ctx.workflow_manager.fully_success:
-            self.report('Convergence finished')
+            self.report('Workflow finished')
             return False
 
         if self.ctx.calc_manager.iter > self.ctx.calc_manager.max_restarts:
-            self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
+            self.report('Workflow failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
             return False
 
         elif self.ctx.calc_manager.success:
@@ -129,7 +129,7 @@ class YamboConvergence(WorkChain):
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager.values = []
-        parameters_space = self.ctx.workflow_manager.parameters_space_creator(self.ctx.calc_manager)
+        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs)
         for parameter in parameters_space:
             self.report('Preparing iteration number {} on {}'.\
                 format(i+(self.ctx.calc_manager.iter-1)*parameters_space.index(parameter),self.ctx.calc_manager.var))

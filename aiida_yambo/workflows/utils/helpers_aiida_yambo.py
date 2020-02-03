@@ -30,33 +30,31 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         variables = parameters[0]
         new_values = parameters[1]
 
-        if philosophy == 'automatic_convergence':
+        if variable == 'kpoints':
+            k_distance = new_values
 
-            if variable == 'kpoints':
-                k_distance = new_values
+            inp_to_update.scf.kpoints = KpointsData()
+            inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
+            inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
+            inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
-                inp_to_update.scf.kpoints = KpointsData()
-                inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
-                inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
-                inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
+            try:
+                del inp_to_update.parent_folder  #I need to start from scratch...
+            except:
+                pass
 
-                try:
-                    del inp_to_update.parent_folder  #I need to start from scratch...
-                except:
-                    pass
+            value = k_distance
 
-                value = k_distance
+        elif isinstance(self.var,list).: #general
+            for i in variables :
+                new_params = inp_to_update.yres.gw.parameters.get_dict()
+                new_params[str(i)] = new_values
 
-            elif isinstance(self.var,list).: #general
-                for i in variables :
-                    new_params = inp_to_update.yres.gw.parameters.get_dict()
-                    new_params[str(i)] = new_values
+            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 
-                inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            value = new_values
 
-                value = new_values
-
-            return inp_to_update, value
+        return inp_to_update, value
 
 ################################## parsers #####################################
     def take_quantities(self, start = 1): #yambopy philosophy?
