@@ -33,7 +33,7 @@ class YamboMassive(WorkChain):
         spec.input('parent_folder', valid_type=RemoteData, required = False)
 
         spec.input("parameters", valid_type=List, required=True, \
-                    help = 'variables to converge, range, steps, and max restarts')
+                    help = 'list of parameters and their values')
 
 ##################################### OUTLINE ####################################
 
@@ -44,7 +44,7 @@ class YamboMassive(WorkChain):
                     ),
                     cls.massive_calcs,
                     if_(cls.post_processing)(
-                    cls.final_analysis
+                    cls.final_analysis,
                     ),
                     cls.report_wf,
                     )

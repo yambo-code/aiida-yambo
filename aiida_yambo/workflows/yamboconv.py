@@ -42,27 +42,27 @@ class YamboConvergence(WorkChain):
         spec.input('kpoints', valid_type=KpointsData, required = True) #not from exposed because otherwise I cannot modify it!
         spec.input('parent_folder', valid_type=RemoteData, required = False)
 
-        spec.input("var_to_conv", valid_type=List, required=True, \
+        spec.input("parameter_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("fit_options", valid_type=Dict, required=False, \
-                    help = 'fit to converge: 1/x or e^-x') #many possibilities, also to define by hand the fitting functions.
+        spec.input("workflow_philosophy", valid_type=Dict, required=False, \
+                    help = 'convergence, massive...') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
                     if_(cls.p2y_needed)(
                     cls.do_p2y,
-                    cls.prepare_convergences,
+                    cls.prepare_calculations,
                     ),
                     while_(cls.has_to_continue)(
                     cls.next_step,
-                    cls.conv_eval),
+                    cls.post_processing),
                     cls.report_wf,
                     )
 
 ##################################################################################
 
-        spec.output('conv_info', valid_type = List, help='list with convergence path')
+        spec.output('conv_info', valid_type = List, help='list with convergence path') #to remove, just put a flag in all_calcs_info
         spec.output('all_calcs_info', valid_type = List, help='all calculations')
 
 
@@ -148,7 +148,7 @@ class YamboConvergence(WorkChain):
         return ToContext(calc)
 
 
-    def conv_eval(self):
+    def post_processing(self):
 
         self.report('Convergence evaluation, we will try to parse some result')
         convergence_evaluator = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
@@ -218,7 +218,7 @@ class YamboConvergence(WorkChain):
         self.ctx.p2y = calc['p2y']
         return ToContext(calc)
 
-    def prepare_convergences(self):
+    def prepare_calculations(self):
         self.report('setting the p2y calc as parent')
         self.ctx.calc_manager.set_parent(self.ctx.calc_inputs.parent_folder, self.ctx.p2y.outputs.yambo_calc_folder)
 

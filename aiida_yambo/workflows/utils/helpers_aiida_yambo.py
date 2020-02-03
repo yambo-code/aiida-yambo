@@ -23,16 +23,16 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             setattr(self, str(key), calc_info[key])
 
 ################################## update_parameters #####################################
-    def updater(self, inp_to_update, k_distance, first):    #parameter list? yambopy philosophy
+    def updater(self, inp_to_update, k_distance, first):
 
         if self.var == 'bands':
             new_params = inp_to_update.yres.gw.parameters.get_dict()
-            new_params['BndsRnXp'][-1] = new_params['BndsRnXp'][-1] + self.delta*first
-            new_params['GbndRnge'][-1] = new_params['GbndRnge'][-1] + self.delta*first
+            new_params['BndsRnXp'] = new_params['BndsRnXp'] + self.delta*first #e.g self.delta=[0,50]
+            new_params['GbndRnge'] = new_params['GbndRnge'] + self.delta*first
 
             inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 
-            value = new_params['GbndRnge'][-1]
+            value = new_params['GbndRnge']
 
         elif self.var == 'kpoints':
             k_distance = k_distance + self.delta*first
@@ -49,15 +49,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             value = k_distance
 
-        elif self.var == 'cutoff':
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
-            new_params['CUTBox'] = new_params['CUTBox'] + [1,1,1]*self.delta*first
-
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
-
-            value = new_params['CUTBox'][-1]
-
-        else: #"scalar" quantity
+        else: #general
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params[str(self.var)] = new_params[str(self.var)] + self.delta*first
 
@@ -102,7 +94,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         new[what] = how
         _dict = Dict(dict=new)
 
-        
+
     def get_caller(self, calc, depth = 2):
         for i in range(depth):
             calc = load_node(calc).caller
