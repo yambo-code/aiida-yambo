@@ -81,7 +81,7 @@ class YamboParser(Parser):
                 "Input calculation must be a YamboCalculation")
 
         self._calc = calculation
-
+        self.last_job_info = self._calc.get_last_job_info()
         self._eels_array_linkname = 'array_eels'
         self._eps_array_linkname = 'array_eps'
         self._alpha_array_linkname = 'array_alpha'
@@ -120,11 +120,7 @@ class YamboParser(Parser):
         try:
             out_folder = self.retrieved
         except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER                #spec.exit_code(...)??
-
-        #with out_folder.open('output_file_name') as handle:                #we deleted this two lines...why?
-        #     self.out('output_link_label', SinglefileData(file=handle))
-
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         try:
             input_params = self._calc.inputs.parameters.get_dict()
@@ -139,17 +135,27 @@ class YamboParser(Parser):
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
 
+        try:
+            walltime = self.last_job_info.wallclock_time_seconds
+        except:
+            walltime = self.attributes['max_wallclock_seconds']
+
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
-        'p2y_completed': False}
+        'p2y_completed': False, 'execution_time':walltime, \
+        'requested_time':self.attributes['max_wallclock_seconds'],'time_units':'seconds'}
         ndbqp = {}
         ndbhf = {}
+
+        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
+         / float(output_params['requested_time'])) < 0.1:
+            return self.exit_codes.WALLTIME_ERROR
+
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-        max_wall = self._calc.get_options()['max_wallclock_seconds']
         for result in results.yambofiles:
             if results is None:
                 continue
@@ -160,19 +166,8 @@ class YamboParser(Parser):
                 output_params['last_memory'] = result.last_memory  # Gb
                 output_params['last_memory_units'] = 'Gb'  # Gb
             if result.last_memory_time:
-                output_params[
-                    'last_memory_time'] = result.last_memory_time  # seconds
+                output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
-            if result.wall_time:
-                output_params['wall_time'] = result.last_time  # seconds
-                output_params['wall_time_units'] = 'seconds'  # seconds_calc
-
-            if result.last_time:
-                output_params['last_time'] = result.last_time  # seconds
-                output_params['last_time_units'] = 'seconds'  # seconds
-            else:
-                output_params['last_time'] = max_wall # seconds
-                output_params['last_time_units'] = 'seconds'  # seconds
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
             if result.timing:
@@ -263,9 +258,7 @@ class YamboParser(Parser):
 
 
         if success == False:
-            if abs(float(max_wall)-float(output_params['last_time'])) < 3*60:
-                return self.exit_codes.WALLTIME_ERROR
-            elif output_params['para_error'] == True:
+            if output_params['para_error'] == True:
                 return self.exit_codes.PARA_ERROR
             elif out_folder and initialise:
                 success = True #a p2y
