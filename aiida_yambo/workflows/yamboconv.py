@@ -22,6 +22,7 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida.yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager 
 from aiida_yambo.workflows.utils.helpers_workflow import *
 
 class YamboConvergence(WorkChain):
@@ -73,7 +74,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
-        self.ctx.workflow_manager = workflow_manager(self.inputs.var_to_conv)
+        self.ctx.workflow_manager = workflow_manager(self.inputs.parameter_space)
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_converged = False
 
@@ -151,13 +152,13 @@ class YamboConvergence(WorkChain):
     def post_processing(self):
 
         self.report('Convergence evaluation, we will try to parse some result')
-        convergence_evaluator = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
+        post_processor = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
         try:
             quantities = self.ctx.calc_manager.take_quantities()
             self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager)
             self.report(self.ctx.workflow_manager.array_conv)
-            self.ctx.calc_manager.converged, oversteps = convergence_evaluator.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
+            self.ctx.calc_manager.converged, oversteps = post_processor.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
             self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, oversteps)
 
             if self.ctx.calc_manager.converged:
