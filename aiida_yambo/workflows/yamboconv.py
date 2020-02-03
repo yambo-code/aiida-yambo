@@ -74,7 +74,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
-        self.ctx.workflow_manager = workflow_manager(self.inputs.parameter_space, self.inputs.workflow_philosophy)
+        self.ctx.workflow_manager = workflow_manager(self.inputs.parameter_space.get_list(), self.inputs.workflow_philosophy)
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_success = False
 

@@ -22,12 +22,14 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
+        self.philosophy = philosophy
 ################################## update_parameters - create parameters space #####################################
 
     def updater(self, inp_to_update, parameters):
 
         variables = parameters[0]
         new_values = parameters[1]
+
         if philosophy == 'automatic_convergence':
 
             if variable == 'kpoints':

@@ -71,7 +71,7 @@ class workflow_manager:
             if calc_manager.var == 'kpoints':
                 k_distance = k_distance - calc_manager.delta*oversteps
 
-    def parameters_space_creator(self,calc_manager):
+    def parameters_space_creator(self, calc_manager, starting_inputs = []):
 
         if self.philosophy == 'automatic_convergence':
 
