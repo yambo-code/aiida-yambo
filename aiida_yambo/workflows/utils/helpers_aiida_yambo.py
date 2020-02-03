@@ -18,44 +18,44 @@ except:
 
 class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info={}, philosophy):
+    def __init__(self, calc_info={}, philosophy = ' '):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
         self.philosophy = philosophy
 ################################## update_parameters - create parameters space #####################################
-    def parameters_space_creator(last_inputs = {}, k_distance = 1):
+    def parameters_space_creator(self, last_inputs = {}, k_distance = 1):
         space = []
-
+        
         if self.philosophy == 'automatic_1D_convergence':
 
-            if self.var == 'kpoints':
+            for i in range(self.steps):
 
-                k_distance = k_distance + self.delta*first
+                if last_inputs == {}:
+                    first = 0
+                else:
+                    first = 1
 
-                inp_to_update.scf.kpoints = KpointsData()
-                inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
-                inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
-                inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
+                if self.var == 'kpoints':
 
-                try:
-                    del inp_to_update.parent_folder  #I need to start from scratch...
-                except:
-                    pass
+                    k_distance = k_distance + self.delta*(first+i)
+                    new_value = k_distance
 
-                value = k_distance
+                elif isinstance(self.var,list): #general
+                    new_value = []
+                    for j in self.var:
+                        new_params = np.array(last_inputs[j])
+                        new_params = new_params +  np.array(self.delta)*(first+i)
+                        new_value.append(list(new_params))
 
-            else: #"scalar" quantity
+                elif isinstance(self.var,str): #general
+                    new_params = last_inputs[self.var]
+                    new_params = new_params + self.delta*(first+i)
+                    new_value = new_params
 
-                new_params = inp_to_update.yres.gw.parameters.get_dict()
-                new_params[str(self.var)] = new_params[str(self.var)] + self.delta*first
+                space.append((self.var,new_value))
 
-                inp_to_update.yres.gw.parameters = Dict(dict=new_params)
-
-                value = new_params[str(self.var)]
-
-            return inp_to_update, value
-
+            return space
 
     def updater(self, inp_to_update, parameters):
 
@@ -80,7 +80,15 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         elif isinstance(self.var,list): #general
             for i in variables :
                 new_params = inp_to_update.yres.gw.parameters.get_dict()
-                new_params[str(i)] = new_values
+                new_params[str(i)] = new_values.index(i)
+
+            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+
+            value = new_values
+
+        elif isinstance(self.var,str): #general
+            new_params = inp_to_update.yres.gw.parameters.get_dict()
+            new_params = new_values
 
             inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 

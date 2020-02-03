@@ -22,7 +22,7 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida.yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
+from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
 from aiida_yambo.workflows.utils.helpers_workflow import *
 
 class YamboConvergence(WorkChain):
@@ -45,8 +45,8 @@ class YamboConvergence(WorkChain):
 
         spec.input("parameters_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("workflow_philosophy", valid_type=Dict, required=True, \
-                    help = 'automatic_1D_convergence, massive...') #many possibilities, also to define by hand the fitting functions.
+        spec.input("workflow_philosophy", valid_type=Str, required=True, \
+                    help = 'automatic_1D_convergence, set_given...') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
 
@@ -74,11 +74,11 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
-        self.ctx.workflow_manager = workflow_manager(self.inputs.parameter_space.get_list(), self.inputs.workflow_philosophy)
+        self.ctx.workflow_manager = workflow_manager(self.inputs.parameters_space, self.inputs.workflow_philosophy)
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_success = False
 
-        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), self.inputs.workflow_philosophy)
         self.ctx.calc_manager._type = 'yambo'
         self.ctx.calc_manager.iter  = 1
         self.ctx.calc_manager.success = False
@@ -90,7 +90,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.workflow_manager.first_calc = True
 
-        self.report("workflow initilization step completed, the first variable will be {}.".format(self.ctx.calc_manager.var))
+        self.report("workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager.var))
 
     def has_to_continue(self):
 
@@ -111,6 +111,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
             except:
                 pass
+
             self.ctx.calc_manager.iter = 1
             self.ctx.calc_manager.success = False
             self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
@@ -129,10 +130,11 @@ class YamboConvergence(WorkChain):
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager.values = []
-        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs)
+        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs.get_dict(), self.ctx.k_distance)
+        self.calc_manager.steps = len(parameters_space)
         for parameter in parameters_space:
             self.report('Preparing iteration number {} on {}'.\
-                format(i+(self.ctx.calc_manager.iter-1)*parameters_space.index(parameter),self.ctx.calc_manager.var))
+                format(parameters_space.index(parameter)+1+(self.ctx.calc_manager.iter-1)*parameters_space.index(parameter),self.ctx.calc_manager.var))
             self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter)
             if self.ctx.calc_manager.var == 'kpoints':
                 self.ctx.k_distance = value
@@ -217,7 +219,7 @@ class YamboConvergence(WorkChain):
 
     def prepare_calculations(self):
         self.report('setting the p2y calc as parent')
-        self.ctx.calc_manager.set_parent(self.ctx.calc_inputs.parent_folder, self.ctx.p2y.outputs.yambo_calc_folder)
+        self.ctx.calc_manager.set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.yambo_calc_folder)
 
 if __name__ == "__main__":
     pass
