@@ -24,6 +24,38 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         self.philosophy = philosophy
 ################################## update_parameters - create parameters space #####################################
+    def parameters_space_creator(last_inputs = {}, k_distance = 1):
+        space = []
+
+        if self.philosophy == 'automatic_1D_convergence':
+
+            if self.var == 'kpoints':
+
+                k_distance = k_distance + self.delta*first
+
+                inp_to_update.scf.kpoints = KpointsData()
+                inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
+                inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
+                inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
+
+                try:
+                    del inp_to_update.parent_folder  #I need to start from scratch...
+                except:
+                    pass
+
+                value = k_distance
+
+            else: #"scalar" quantity
+
+                new_params = inp_to_update.yres.gw.parameters.get_dict()
+                new_params[str(self.var)] = new_params[str(self.var)] + self.delta*first
+
+                inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+
+                value = new_params[str(self.var)]
+
+            return inp_to_update, value
+
 
     def updater(self, inp_to_update, parameters):
 
@@ -45,7 +77,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             value = k_distance
 
-        elif isinstance(self.var,list).: #general
+        elif isinstance(self.var,list): #general
             for i in variables :
                 new_params = inp_to_update.yres.gw.parameters.get_dict()
                 new_params[str(i)] = new_values
