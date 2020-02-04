@@ -156,6 +156,9 @@ class YamboParser(Parser):
             if result.last_memory:
                 output_params['last_memory'] = result.last_memory  # Gb
                 output_params['last_memory_units'] = 'Gb'  # Gb
+            if result.walltime:
+                output_params['walltime'] = result.last_memory  # Gb
+                output_params['walltime_units'] = 'seconds'  # Gb
             if result.last_memory_time:
                 output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
@@ -164,7 +167,7 @@ class YamboParser(Parser):
                 walltime = self.last_job_info.wallclock_time_seconds
             except:
                 try:
-                    walltime = output_params['last_memory_time']
+                    walltime = output_params['walltime']
                 except:
                     walltime = 30
 
