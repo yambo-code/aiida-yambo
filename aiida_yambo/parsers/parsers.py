@@ -136,14 +136,10 @@ class YamboParser(Parser):
         cell = parent_calc.inputs.structure.cell
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
-        'p2y_completed': False, 'execution_time':self.last_job_info.wallclock_time_seconds, \
-        'requested_time':self.last_job_info.RequestedWallclockTime,'time_units':'seconds'}
+        'p2y_completed': False, \
+        'requested_time':self._calc.attributes['max_wallclock_seconds'],'time_units':'seconds'}
         ndbqp = {}
         ndbhf = {}
-
-        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
-         / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
@@ -251,6 +247,9 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
+        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
+         / float(output_params['requested_time'])) < 0.1:
+            return self.exit_codes.WALLTIME_ERROR
 
         if success == False:
             if output_params['para_error'] == True:
