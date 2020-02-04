@@ -135,20 +135,11 @@ class YamboParser(Parser):
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
 
-        try:
-            walltime = self.last_job_info.wallclock_time_seconds
-        except:
-            walltime = self._calc.attributes['max_wallclock_seconds']
-
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
-        'p2y_completed': False, 'execution_time':walltime, \
+        'p2y_completed': False, \
         'requested_time':self.attributes['max_wallclock_seconds'],'time_units':'seconds'}
         ndbqp = {}
         ndbhf = {}
-
-        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
-         / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
@@ -168,6 +159,21 @@ class YamboParser(Parser):
             if result.last_memory_time:
                 output_params['last_memory_time'] = result.last_memory_time  # seconds
                 output_params['last_memory_time_units'] = 'seconds'  #  seconds
+
+            try:
+                walltime = self.last_job_info.wallclock_time_seconds
+            except:
+                try:
+                    walltime = output_params['last_memory_time']
+                except:
+                    walltime = 30
+
+            output_params['execution_time'] = walltime
+
+            if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
+             / float(output_params['requested_time'])) < 0.1:
+                return self.exit_codes.WALLTIME_ERROR
+
             if result.yambo_wrote:
                 output_params['yambo_wrote'] = True  # boolean
             if result.timing:
