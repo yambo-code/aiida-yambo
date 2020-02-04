@@ -130,18 +130,20 @@ class YamboConvergence(WorkChain):
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager.values = []
-        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs.get_dict(), self.ctx.k_distance)
-        self.calc_manager.steps = len(parameters_space)
+        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs.yres.gw.parameters.get_dict(), self.ctx.k_distance)
+        self.report('paramter space will be {}'.format(parameters_space))
+        self.ctx.calc_manager.steps = len(parameters_space)
         for parameter in parameters_space:
             self.report('Preparing iteration number {} on {}'.\
                 format(parameters_space.index(parameter)+1+(self.ctx.calc_manager.iter-1)*parameters_space.index(parameter),self.ctx.calc_manager.var))
+            self.report('{}'.format(parameter))
             self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter)
             if self.ctx.calc_manager.var == 'kpoints':
                 self.ctx.k_distance = value
             self.ctx.workflow_manager.values.append(value)
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(i)] = future
+            calc[str(parameters_space.index(parameter))] = future
             self.ctx.calc_manager.wfl_pk = future.pk
 
         return ToContext(calc)
@@ -190,17 +192,15 @@ class YamboConvergence(WorkChain):
 
     def p2y_needed(self):
         self.report('do we need a p2y??')
-        try:
-            self.ctx.calc_manager.set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
-            self.report('detecting if we need a p2y starting calculation...')
-            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
-                self.report('no, yambo parent')
-                return False
-            else:
-                self.report('yes, quantumespresso parent')
-                return True
-        except:
-            self.report('yes, no parent provided')
+
+        self.report('detecting if we need a p2y starting calculation...')
+        self.ctx.calc_manager.set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
+        parent_calc = self.ctx.calc_inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
+            self.report('no, yambo parent')
+            return False
+        else:
+            self.report('yes, no yambo parent')
             return True
 
 

@@ -8,7 +8,7 @@ import pandas as pd
 import copy
 
 try:
-    from aiida.orm import Dict, Str, load_node, KpointsData
+    from aiida.orm import Dict, Str, load_node, KpointsData, RemoteData
     from aiida.plugins import CalculationFactory, DataFactory
 except:
     pass
@@ -26,7 +26,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 ################################## update_parameters - create parameters space #####################################
     def parameters_space_creator(self, last_inputs = {}, k_distance = 1):
         space = []
-        
+
         if self.philosophy == 'automatic_1D_convergence':
 
             for i in range(self.steps):
@@ -62,7 +62,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         variables = parameters[0]
         new_values = parameters[1]
 
-        if variable == 'kpoints':
+        if variables == 'kpoints':
             k_distance = new_values
 
             inp_to_update.scf.kpoints = KpointsData()
@@ -77,10 +77,10 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             value = k_distance
 
-        elif isinstance(self.var,list): #general
+        elif isinstance(variables,list): #general
             for i in variables :
                 new_params = inp_to_update.yres.gw.parameters.get_dict()
-                new_params[str(i)] = new_values.index(i)
+                new_params[i] = new_values[variables.index(i)]
 
             inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 
@@ -145,8 +145,11 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
     def start_from_converged(self, inputs, node):
         inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
-    def set_parent(self, inputs, last_ok):
-        inputs.parent_folder = last_ok.outputs.yambo_calc_folder
+    def set_parent(self, inputs, parent):
+        if isinstance(parent, RemoteData):
+            inputs.parent_folder = parent
+        else:
+            inputs.parent_folder = parent.outputs.remote_folder
 
     def take_down(self, node = 0, what = 'CalcJobNode'):
 
