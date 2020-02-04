@@ -134,12 +134,12 @@ class YamboParser(Parser):
 
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
+        ndbqp = {}
+        ndbhf = {}
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, \
-        'requested_time':self.attributes['max_wallclock_seconds'],'time_units':'seconds'}
-        ndbqp = {}
-        ndbhf = {}
+        'requested_time':self._calc.attributes['max_wallclock_seconds'],'time_units':'seconds'}
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)

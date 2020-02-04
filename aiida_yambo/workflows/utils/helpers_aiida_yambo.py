@@ -24,14 +24,14 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         self.philosophy = philosophy
 ################################## update_parameters - create parameters space #####################################
-    def parameters_space_creator(self, last_inputs = {}, k_distance = 1):
+    def parameters_space_creator(self, last_inputs = {}, k_distance = 1, first_calc):
         space = []
 
         if self.philosophy == 'automatic_1D_convergence':
 
             for i in range(self.steps):
 
-                if last_inputs == {}:
+                if first_calc:
                     first = 0
                 else:
                     first = 1
@@ -78,15 +78,15 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             value = k_distance
 
         elif isinstance(variables,list): #general
-            for i in variables :
-                new_params = inp_to_update.yres.gw.parameters.get_dict()
+            new_params = inp_to_update.yres.gw.parameters.get_dict()
+            for i in variables:
                 new_params[i] = new_values[variables.index(i)]
 
             inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 
             value = new_values
 
-        elif isinstance(self.var,str): #general
+        elif isinstance(variables,str): #general
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params = new_values
 

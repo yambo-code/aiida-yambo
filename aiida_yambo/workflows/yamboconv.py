@@ -130,17 +130,17 @@ class YamboConvergence(WorkChain):
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager.values = []
-        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs.yres.gw.parameters.get_dict(), self.ctx.k_distance)
+        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.calc_inputs.yres.gw.parameters.get_dict(), self.ctx.k_distance, self.ctx.workflow_manager.first_calc)
         self.report('paramter space will be {}'.format(parameters_space))
         self.ctx.calc_manager.steps = len(parameters_space)
         for parameter in parameters_space:
-            self.report('Preparing iteration number {} on {}'.\
-                format(parameters_space.index(parameter)+1+(self.ctx.calc_manager.iter-1)*parameters_space.index(parameter),self.ctx.calc_manager.var))
-            self.report('{}'.format(parameter))
+
             self.ctx.calc_inputs, value = self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter)
             if self.ctx.calc_manager.var == 'kpoints':
                 self.ctx.k_distance = value
             self.ctx.workflow_manager.values.append(value)
+            self.report('Preparing iteration number {} on {}: {}'.\
+                format((self.ctx.calc_manager.iter-1)*parameters_space.index(parameter) + parameters_space.index(parameter)+1,parameter[0],value))
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(parameters_space.index(parameter))] = future
