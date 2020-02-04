@@ -138,7 +138,7 @@ class YamboParser(Parser):
         try:
             walltime = self.last_job_info.wallclock_time_seconds
         except:
-            walltime = self.attributes['max_wallclock_seconds']
+            walltime = self._calc.attributes['max_wallclock_seconds']
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, 'execution_time':walltime, \
