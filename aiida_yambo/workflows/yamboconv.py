@@ -138,7 +138,7 @@ class YamboConvergence(WorkChain):
         for parameter in parameters_space:
 
             self.ctx.calc_inputs, value = \
-                        self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter, self.ctx.k_distance)
+                        self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter)
 
             if self.ctx.calc_manager.var == 'kpoints':
                 self.ctx.k_distance = value
