@@ -6,6 +6,7 @@ from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
+import cmath
 
 try:
     from aiida.orm import Dict, Str, load_node, KpointsData
@@ -104,14 +105,14 @@ class calc_manager: #the interface class to AiiDA
                     for i in range(1,backtrace+1): #qui devo capire come generalizzare in caso di wfl o superwfl o simple calc
                         yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
                         if what == 'gap': #bisognerebbe cambiare come parsa parser.py, fa schifo cosi': dovrei fare per k e per bande...
-                            quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1]+
-                                        yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1]-
-                                        (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2]+
-                                        yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][0]-1)*2])))
+                            quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
+                                        yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
+                                        (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
+                                        yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
 
                         if what == 'single-levels':
-                            quantities[j,i-1,1] = yambo_calc.outputs.array_qp.get_array('Eo')[where[j]-1]+ \
-                                        yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1]
+                            quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
+                                        yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real
 
                         quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
                         quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
