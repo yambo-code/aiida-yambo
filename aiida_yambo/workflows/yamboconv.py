@@ -165,7 +165,8 @@ class YamboConvergence(WorkChain):
             self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager)
             self.report(self.ctx.workflow_manager.array_conv)
             self.ctx.calc_manager.success, oversteps = post_processor.convergence_and_backtracing(self.ctx.workflow_manager.array_conv)
-            self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, oversteps)
+
+            self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager)
 
             if self.ctx.calc_manager.success:
                 self.report('Success, updating the history... oversteps: {}'.format(oversteps))
@@ -187,7 +188,7 @@ class YamboConvergence(WorkChain):
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
 
         self.ctx.calc_manager.iter +=1
-
+        self.ctx.workflow_manager.first_calc = False
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))

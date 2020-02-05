@@ -48,6 +48,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
                         new_params = last_inputs[j]
                         for steps in range(i):
                             new_params = [sum(x) for x in zip(new_params, self.delta[self.var.index(j)])]
+                        if first == 1:
+                            new_params = [sum(x) for x in zip(new_params, self.delta[self.var.index(j)])]
                         new_value.append(new_params)
 
                 elif isinstance(self.var,str): #general
@@ -122,7 +124,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
                     quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
                                 yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real
 
-                quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
+                quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
                 quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
 
         return quantities

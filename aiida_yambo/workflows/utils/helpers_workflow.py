@@ -41,7 +41,7 @@ class workflow_manager:
         else:
             self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
 
-    def update_story_global(self,calc_manager):
+    def update_story_global(self, calc_manager):
 
         if self.first_calc:
             self.absolute_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
