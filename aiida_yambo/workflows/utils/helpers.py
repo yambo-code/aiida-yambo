@@ -98,25 +98,25 @@ class calc_manager: #the interface class to AiiDA... could be separated fro aiid
             if 'yambo.yambo' in self.type:
                 print('looking for {} in k-points {}'.format(what,where))
 
-                quantities = np.zeros((len(where),backtrace,3))
+            quantities = np.zeros((len(where),backtrace,3))
 
-                for j in range(len(where)): #no steps*self.iter xk in teoria voglio andare x steps
-                    for i in range(1,backtrace+1): #qui devo capire come generalizzare in caso di wfl o superwfl o simple calc
-                        yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
-                        if what == 'gap': #bisognerebbe cambiare come parsa parser.py, fa schifo cosi': dovrei fare per k e per bande...
-                            quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
-                                        yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
-                                        (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
-                                        yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
+            for j in range(len(where)): #no steps*self.iter xk in teoria voglio andare x steps
+                for i in range(1,backtrace+1): #qui devo capire come generalizzare in caso di wfl o superwfl o simple calc
+                    yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
+                    if what == 'gap': #bisognerebbe cambiare come parsa parser.py, fa schifo cosi': dovrei fare per k e per bande...
+                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
+                                    (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
 
-                        if what == 'single-levels':
-                            quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
-                                        yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real
+                    if what == 'single-levels':
+                        quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real
 
-                        quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
-                        quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
+                    quantities[j,i-1,0] = i*self.delta  #number of the iteration times the delta... to be used in a fit
+                    quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
 
-                return quantities
+            return quantities
 
 #######################################################
     def get_caller(self, calc, depth = 2):
