@@ -24,7 +24,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         self.philosophy = philosophy
 ################################## update_parameters - create parameters space #####################################
-    def parameters_space_creator(self, last_inputs = {}, k_distance = 1, first_calc):
+    def parameters_space_creator(self, first_calc, last_inputs = {}, k_distance = 1):
         space = []
 
         if self.philosophy == 'automatic_1D_convergence':
