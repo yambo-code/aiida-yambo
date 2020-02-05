@@ -44,8 +44,10 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
                 elif isinstance(self.var,list): #general
                     new_value = []
                     for j in self.var:
-                        new_params = np.array(last_inputs[j])
-                        new_params = new_params +  np.array(self.delta)*(first+i)
+                        new_params = last_inputs[j]
+                        for k in new_params:
+                            index = new_params.index(k)
+                            new_params[index] = new_params[index] + self.delta[index]*(first+i)
                         new_value.append(list(new_params))
 
                 elif isinstance(self.var,str): #general

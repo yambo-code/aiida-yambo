@@ -144,8 +144,8 @@ class YamboConvergence(WorkChain):
                 self.ctx.k_distance = value
 
             self.ctx.workflow_manager.values.append(value)
-            self.report('Preparing iteration number {} on {}: {}'.\
-                format((self.ctx.calc_manager.iter-1)*self.ctx.calc_manager.steps \
+            self.report('Preparing iteration number {} on {}: {}'.format((self.ctx.calc_manager.iter-1)* \
+                        self.ctx.calc_manager.steps \
                         + parameters_space.index(parameter)+1,parameter[0],value))
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
