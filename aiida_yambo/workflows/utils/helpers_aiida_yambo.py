@@ -92,7 +92,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         elif isinstance(variables,str): #general
             new_params = inp_to_update.yres.gw.parameters.get_dict()
-            new_params = new_values
+            new_params[variables] = new_values
 
             inp_to_update.yres.gw.parameters = Dict(dict=new_params)
 
@@ -136,7 +136,6 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         new[what] = how
         _dict = Dict(dict=new)
 
-
     def get_caller(self, calc, depth = 2):
         for i in range(depth):
             calc = load_node(calc).caller
@@ -148,7 +147,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         return calc
 
     def start_from_converged(self, inputs, node):
-        inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
+        inputs.yres.gw.parameters = load_node(node).get_builder_restart().yres.gw['parameters']
 
     def set_parent(self, inputs, parent):
         if isinstance(parent, RemoteData):

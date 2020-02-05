@@ -57,11 +57,11 @@ class workflow_manager:
                 self.conv_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
                             [self.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
 
-    def update_convergence_story(self,inputs, calc_manager,oversteps):
+    def update_convergence_story(self,inputs, calc_manager, oversteps):
 
-        self.conv_story = self.ctx.workflow_manager.conv_story[:-oversteps]
+        self.conv_story = self.conv_story[:-oversteps]
 
-        parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
+        parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 0)
         calc_manager.start_from_converged(inputs, parent_folder)
 
         if calc_manager.var == 'kpoints':
