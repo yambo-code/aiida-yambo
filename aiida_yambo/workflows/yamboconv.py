@@ -89,7 +89,7 @@ class YamboConvergence(WorkChain):
             self.report('Convergence finished')
             return False
 
-        if self.ctx.calc_manager.iter  > self.ctx.calc_manager.max_restarts:
+        if self.ctx.calc_manager.iter  > self.ctx.calc_manager.max_restarts+1:
             self.report('Convergence failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
             return False
 

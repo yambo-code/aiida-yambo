@@ -150,23 +150,14 @@ class YamboParser(Parser):
         for result in results.yambofiles:
             if results is None:
                 continue
-            if result.max_memory:
-                output_params['max_memory'] = result.max_memory  # Gb
-                output_params['max_memory_units'] = 'Gb'  # Gb
-            if result.last_memory:
-                output_params['last_memory'] = result.last_memory  # Gb
-                output_params['last_memory_units'] = 'Gb'  # Gb
-            if result.last_memory_time:
-                output_params['last_memory_time'] = result.last_memory_time  # seconds
-                output_params['last_memory_time_units'] = 'seconds'  #  seconds
-            if result.yambo_wrote:
-                output_params['yambo_wrote'] = True  # boolean
+            if result.memstats:
+                output_params['memstats'] = result.memstats  # Gb
+                output_params['memstats_units'] = 'Gb'  # Gb
             if result.timing:
-                output_params['timing'] = result.timing
-            if result.timing_section:
-                output_params['timing_section'] = result.timing_section
-            if result.timing_overview:
-                output_params['timing_overview'] = result.timing_overview
+                output_params['timing']=[]
+                for t in result.timing:
+                    output_params['timing'].append(self._yambotiming_to_seconds(t))
+                output_params['timing_units'] = 's'  # seconds
             if result.warnings:
                 output_params['warnings'].extend(result.warnings)
             if result.errors:
@@ -176,24 +167,6 @@ class YamboParser(Parser):
                         break
                     else:
                         output_params['errors'].extend(result.errors)
-            if hasattr(result, 'para_error'):
-                if result.para_error == True:
-                    output_params['para_error'] = True
-                else:
-                    output_params['para_error'] = False
-            if hasattr(result, 'game_over'):
-                if result.game_over == True:
-                    output_params['game_over'] = True
-                    success = True
-                else:
-                    success = False
-            if initialise:
-                # we do not have game_over, but we do have P2Y completed.
-                if hasattr(result, 'p2y_completed'):
-                    if result.p2y_completed == True:
-                       output_params['p2y_completed'] = True
-                       success = True
-
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
                 self.out(self._eels_array_linkname, eels_array)
@@ -247,10 +220,12 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
-        if abs((float(output_params['execution_time'])-float(output_params['requested_time'])) \
+
+        if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
          / float(output_params['requested_time'])) < 0.1:
             return self.exit_codes.WALLTIME_ERROR
 
+        success=True
         if success == False:
             if output_params['para_error'] == True:
                 return self.exit_codes.PARA_ERROR
@@ -383,3 +358,18 @@ class YamboParser(Parser):
         pdata.set_array('Vxc', Vxc)
         pdata.set_array('qp_table', numpy.array(ndbqp['qp_table']))
         return pdata
+
+    def _yambotiming_to_seconds(self, yt):
+        t = 0
+        th = 0
+        tm = 0
+        ts = 0
+        for i in yt.replace('-',' ').split():
+         if 'h' in i:
+             th = int(i.replace('h',''))*3600
+         if 'm' in i:
+             tm = int(i.replace('m',''))*60
+         if 's' in i:
+              ts = int(i.replace('s',''))
+        t = th+tm+ts
+        return t
