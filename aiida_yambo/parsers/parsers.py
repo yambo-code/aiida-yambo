@@ -364,7 +364,7 @@ class YamboParser(Parser):
         th = 0
         tm = 0
         ts = 0
-        for i in s.replace('-',' ').split():
+        for i in yt.replace('-',' ').split():
          if 'h' in i:
              th = int(i.replace('h',''))*3600
          if 'm' in i:
