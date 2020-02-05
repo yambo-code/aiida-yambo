@@ -154,8 +154,10 @@ class YamboParser(Parser):
                 output_params['memstats'] = result.memstats  # Gb
                 output_params['memstats_units'] = 'Gb'  # Gb
             if result.timing:
-                    output_params['timing'] = int(i.replace('s',''))
-                    output_params['timing_units'] = 's'  # seconds
+                output_params['timing']=[]
+                for t in result.timing:
+                    output_params['timing'].append(self._yambotiming_to_seconds(t))
+                output_params['timing_units'] = 's'  # seconds
             if result.warnings:
                 output_params['warnings'].extend(result.warnings)
             if result.errors:
@@ -356,3 +358,18 @@ class YamboParser(Parser):
         pdata.set_array('Vxc', Vxc)
         pdata.set_array('qp_table', numpy.array(ndbqp['qp_table']))
         return pdata
+
+    def _yambotiming_to_seconds(self, yt):
+        t = 0
+        th = 0
+        tm = 0
+        ts = 0
+        for i in s.replace('-',' ').split():
+         if 'h' in i:
+             th = int(i.replace('h',''))*3600
+         if 'm' in i:
+             tm = int(i.replace('m',''))*60
+         if 's' in i:
+              ts = int(i.replace('s',''))
+        t = th+tm+ts
+        return t
