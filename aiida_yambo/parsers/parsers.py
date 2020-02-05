@@ -364,12 +364,15 @@ class YamboParser(Parser):
         th = 0
         tm = 0
         ts = 0
-        for i in yt.replace('-',' ').split():
-         if 'h' in i:
-             th = int(i.replace('h',''))*3600
-         if 'm' in i:
-             tm = int(i.replace('m',''))*60
-         if 's' in i:
-              ts = int(i.replace('s',''))
-        t = th+tm+ts
-        return t
+        if isinstance(yt, str):
+            for i in yt.replace('-',' ').split():
+             if 'h' in i:
+                 th = int(i.replace('h',''))*3600
+             if 'm' in i:
+                 tm = int(i.replace('m',''))*60
+             if 's' in i:
+                  ts = int(i.replace('s',''))
+            t = th+tm+ts
+            return t
+        else:
+            return yt
