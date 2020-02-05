@@ -105,7 +105,7 @@ class YamboConvergence(WorkChain):
 
         elif self.ctx.calc_manager.success:
             #update variable to conv
-            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop())
+            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), self.inputs.workflow_philosophy)
             self.ctx.calc_manager.type = 'yambo.yambo'
             try:
                 self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
@@ -133,7 +133,7 @@ class YamboConvergence(WorkChain):
         parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.workflow_manager.first_calc, \
                             self.ctx.calc_inputs.yres.gw.parameters.get_dict(), \
                             self.ctx.k_distance)
-        self.report('paramter space will be {}'.format(parameters_space))
+        self.report('parameter space will be {}'.format(parameters_space))
         self.ctx.calc_manager.steps = len(parameters_space)
         for parameter in parameters_space:
 

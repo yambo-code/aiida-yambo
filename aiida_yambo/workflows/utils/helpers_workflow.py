@@ -61,11 +61,11 @@ class workflow_manager:
 
         self.conv_story = self.conv_story[:-oversteps]
 
-        parent_folder = calc_manager.get_caller(self.conv_story[-1][-2], depth = 0)
-        calc_manager.start_from_converged(inputs, parent_folder)
+        last_ok_wfl = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
+        calc_manager.start_from_converged(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
-            calc_manager.set_parent(inputs, parent_folder)
+            calc_manager.set_parent(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
             k_distance = k_distance - calc_manager.delta*oversteps

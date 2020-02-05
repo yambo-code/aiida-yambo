@@ -136,18 +136,19 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         new[what] = how
         _dict = Dict(dict=new)
 
-    def get_caller(self, calc, depth = 2):
+    def get_caller(self, calc_pk, depth = 2):
         for i in range(depth):
-            calc = load_node(calc).caller
+            calc = load_node(calc_pk)
+            calc = calc.caller.caller
         return calc
 
     def get_called(self, calc, depth = 2):
         for i in range(depth):
-            calc = load_node(calc).called[0]
+            calc = calc.called[0]
         return calc
 
     def start_from_converged(self, inputs, node):
-        inputs.yres.gw.parameters = load_node(node).get_builder_restart().yres.gw['parameters']
+        inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
 
     def set_parent(self, inputs, parent):
         if isinstance(parent, RemoteData):
