@@ -28,9 +28,7 @@ class workflow_manager:
 
         self.philosophy = philosophy
 
-    def build_story_global(self, calc_manager):
-
-        quantities = calc_manager.take_quantities()
+    def build_story_global(self, calc_manager, quantities):
 
         if calc_manager.iter == 1:
             try:
@@ -41,9 +39,11 @@ class workflow_manager:
         else:
             self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
 
-    def update_story_global(self, calc_manager):
+    def update_story_global(self, calc_manager, quantities):
 
         if self.first_calc:
+            self.absolute_story = []
+            self.conv_story = []
             self.absolute_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
                         ['value', 'calc_pk','result'])
             self.conv_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
