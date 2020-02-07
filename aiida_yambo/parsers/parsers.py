@@ -158,6 +158,9 @@ class YamboParser(Parser):
                 for t in result.timing:
                     output_params['timing'].append(self._yambotiming_to_seconds(t))
                 output_params['timing_units'] = 's'  # seconds
+            else:
+                output_params['timing'] = [30]
+                output_params['timing_units'] = 's'  # seconds
             if result.warnings:
                 output_params['warnings'].extend(result.warnings)
             if result.errors:
