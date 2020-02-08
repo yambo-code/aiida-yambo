@@ -114,10 +114,10 @@ class YamboConvergence(WorkChain):
 
             self.ctx.calc_manager.iter = 1
             self.ctx.calc_manager.success = False
-            self.report('Next variable to converge: {}'.format(self.ctx.calc_manager.var))
+            self.report('Next parameters: {}'.format(self.ctx.calc_manager.var))
             return True
         elif not self.ctx.calc_manager.success:
-            self.report('Still convergence on {}'.format(self.ctx.calc_manager.var))
+            self.report('Still iteration on {}'.format(self.ctx.calc_manager.var))
             return True
         else:
             self.report('Undefined state on {}'.format(self.ctx.calc_manager.var))
