@@ -171,7 +171,7 @@ class YamboConvergence(WorkChain):
             if self.ctx.calc_manager.success:
                 self.report('Success, updating the history... oversteps: {}'.format(oversteps))
                 self.ctx.workflow_manager.update_convergence_story(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
-                self.report('Convergence on {} reached in {} calculations, the gap is {}' \
+                self.report('Success of '+self.inputs.workflow_philosophy+' on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
                              self.ctx.workflow_manager.conv_story[-1][-1] ))
 
