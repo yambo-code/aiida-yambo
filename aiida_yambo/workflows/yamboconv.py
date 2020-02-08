@@ -158,19 +158,20 @@ class YamboConvergence(WorkChain):
     def data_analysis(self):
 
         self.report('Data analysis, we will try to parse some result and decide what next')
-        post_processor = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
+        post_processor = the_evaluator(self.ctx.calc_manager.workflow_philosophy, \
+                                self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
         try:
             quantities = self.ctx.calc_manager.take_quantities()
             self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager, quantities)
-            self.report(self.ctx.workflow_manager.array_conv)
+            #self.report(self.ctx.workflow_manager.array_conv)
             self.ctx.calc_manager.success, oversteps = \
-                    post_processor.convergence_and_backtracing(self.ctx.workflow_manager.array_conv) #change 'conv...' with something general: analysis...
+                    post_processor.analysis_and_decision(self.ctx.workflow_manager.array_conv)
 
             self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities)
 
             if self.ctx.calc_manager.success:
-                self.report('Success, updating the history... oversteps: {}'.format(oversteps))
+                self.report('Success, updating the history... ')
                 self.ctx.workflow_manager.update_convergence_story(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
                 self.report('Success of '+self.inputs.workflow_philosophy+' on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\

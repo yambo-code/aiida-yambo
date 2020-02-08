@@ -76,31 +76,34 @@ class workflow_manager:
 
 class the_evaluator:
 
-    def __init__(self, window = 3, tol = 1e-3):
+    def __init__(self, philosophy, window = 3, tol = 1e-3):
 
+        self.philosophy = philosophy
         self.window = window
         self.tol = tol
 
-    def convergence_and_backtracing(self, quantities):
+    def analysis_and_decision(self, quantities):
 
-        converged = True
-        oversteps = 0
+        if self.philosophy == 'automatic_1D_convergence':
+            '''documentation...'''
+            converged = True
+            oversteps = 0
 
-        for i in range(2,len(quantities[0,:])+1): #check it
-            if np.max(abs(quantities[:,-1]-quantities[:,-i])) < self.tol: #backcheck
-                oversteps = i-1
-            else:
-                print(abs(quantities[:,-1]-quantities[:,-i]),quantities[:,-i])
-                break
-        if oversteps < self.window-1:
-            converged = False
+            for i in range(2,len(quantities[0,:])+1): #check it
+                if np.max(abs(quantities[:,-1]-quantities[:,-i])) < self.tol: #backcheck
+                    oversteps = i-1
+                else:
+                    print(abs(quantities[:,-1]-quantities[:,-i]),quantities[:,-i])
+                    break
+            if oversteps < self.window-1:
+                converged = False
 
-        return converged, oversteps
+            return converged, oversteps
 
 
 ################################################################################
 ################################## plots&tables #####################################
-class workflow_inspector: #to change
+class workflow_inspector: #not working.
 
     def __init__(self, conv_info):
 
