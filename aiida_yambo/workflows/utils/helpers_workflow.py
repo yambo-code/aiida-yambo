@@ -11,20 +11,20 @@ import copy
 
 class workflow_manager:
 
-    def __init__(self, conv_opt, philosophy = ' '):
+    def __init__(self, parameters_space, philosophy = ' '):
 
         try:
             #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
-            self.ideal_iter = copy.deepcopy(conv_opt.get_list())
-            self.true_iter = copy.deepcopy(conv_opt.get_list())
+            self.ideal_iter = copy.deepcopy(parameters_space.get_list())
+            self.true_iter = copy.deepcopy(parameters_space.get_list())
             self.type = 'AiiDA_calculation'
             #from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
         except:
             #this is not an AiiDA calculation
             self.type = 'not_AiiDA_calculation'
             #from helpers_yambopy import calc_manager_yambopy as calc_manager     #qe py?
-            self.ideal_iter = copy.deepcopy(conv_opt)
-            self.true_iter = copy.deepcopy(conv_opt)
+            self.ideal_iter = copy.deepcopy(parameters_space)
+            self.true_iter = copy.deepcopy(parameters_space)
 
         self.philosophy = philosophy
 
