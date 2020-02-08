@@ -46,7 +46,7 @@ class YamboConvergence(WorkChain):
         spec.input("parameters_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
         spec.input("workflow_philosophy", valid_type=Str, required=True, \
-                    help = 'automatic_1D_convergence, set_given...') #many possibilities, also to define by hand the fitting functions.
+                    help = '1D_convergence, 2D_convergence, Extrapolation...') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
 
