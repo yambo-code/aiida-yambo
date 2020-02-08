@@ -157,7 +157,7 @@ class YamboConvergence(WorkChain):
 
     def data_analysis(self):
 
-        self.report('Convergence evaluation, we will try to parse some result')
+        self.report('Data analysis, we will try to parse some result and decide what next')
         post_processor = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
         try:
@@ -183,8 +183,7 @@ class YamboConvergence(WorkChain):
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
 
         except:
-            self.report('problems during the convergence evaluation, the workflows will stop and collect the previous info, so you can restart from there')
-            self.report('if no datas are parsed: are you sure of your convergence window?')
+            self.report('problems during the data parsing/analysis, the workflows will stop and collect the previous info, so you can restart from there')
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
 
         self.ctx.calc_manager.iter +=1
