@@ -57,7 +57,7 @@ class YamboConvergence(WorkChain):
                     ),
                     while_(cls.has_to_continue)(
                     cls.next_step,
-                    cls.post_processing),
+                    cls.data_analysis),
                     cls.report_wf,
                     )
 
@@ -155,7 +155,7 @@ class YamboConvergence(WorkChain):
         return ToContext(calc)
 
 
-    def post_processing(self):
+    def data_analysis(self):
 
         self.report('Convergence evaluation, we will try to parse some result')
         post_processor = the_evaluator(self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
