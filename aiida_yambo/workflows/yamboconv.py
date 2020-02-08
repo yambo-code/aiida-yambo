@@ -165,7 +165,7 @@ class YamboConvergence(WorkChain):
             self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager, quantities)
             self.report(self.ctx.workflow_manager.array_conv)
             self.ctx.calc_manager.success, oversteps = \
-                    post_processor.convergence_and_backtracing(self.ctx.workflow_manager.array_conv) #change 'conv...'
+                    post_processor.convergence_and_backtracing(self.ctx.workflow_manager.array_conv) #change 'conv...' with something general: analysis...
 
             self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities)
 
@@ -193,7 +193,7 @@ class YamboConvergence(WorkChain):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
         all_var = List(list=self.ctx.workflow_manager.absolute_story).store()
-        converged_var = List(list=self.ctx.workflow_manager.conv_story).store()
+        converged_var = List(list=self.ctx.workflow_manager.conv_story).store()  #sufficient the all_var, but with some 'conv_flag'
         self.out('conv_info', converged_var)
         self.out('all_calcs_info', all_var)
 

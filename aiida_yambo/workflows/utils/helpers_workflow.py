@@ -59,7 +59,7 @@ class workflow_manager:
 
     def update_convergence_story(self,inputs, calc_manager, oversteps):
 
-        self.conv_story = self.conv_story[:-oversteps]
+        self.conv_story = self.conv_story[:-oversteps] #instead, I want a flag in absolute_story
 
         last_ok_wfl = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
         calc_manager.start_from_converged(inputs, last_ok_wfl)
