@@ -223,10 +223,12 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
-
-        if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
-         / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
+        try:
+            if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
+             / float(output_params['requested_time'])) < 0.1:
+                return self.exit_codes.WALLTIME_ERROR
+        except:
+            pass  #not enough time to detect something
 
         success=True
         if success == False:
