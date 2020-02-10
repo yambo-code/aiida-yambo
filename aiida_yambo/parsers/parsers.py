@@ -22,6 +22,7 @@ from aiida_yambo.utils.common_helpers import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
+import cmath
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -345,7 +346,7 @@ class YamboParser(Parser):
 
          Sc = 1/Z[ E-Eo] -S_x + Vxc
         """
-        Eo = numpy.array(ndbqp['E-Eo'])
+        Eo = numpy.array(ndbqp['Eo'])
         Z = numpy.array(ndbqp['Z'])
         E_minus_Eo = numpy.array(ndbqp['E-Eo'])
         Sx = numpy.array(ndbhf['Sx'])

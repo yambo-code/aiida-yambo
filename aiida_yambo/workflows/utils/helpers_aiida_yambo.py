@@ -13,6 +13,13 @@ try:
 except:
     pass
 
+#we try to use netcdf
+try:
+    from netCDF4 import Dataset
+except ImportError:
+    _has_netcdf = False
+else:
+    _has_netcdf = True
 ################################################################################
 ################################################################################
 
@@ -123,15 +130,26 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             for i in range(1,backtrace+1):
                 yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
                 if what == 'gap':
-                    quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
-                                (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))*27.2114
+                    if _has_netcdf:
+                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
+                                    (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
+                    else:
+                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1].real+
+                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
+                                    (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2].real+
+                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
 
                 if what == 'single-levels':
-                    quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real)*27.2114
+                    if _has_netcdf:
+                        quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real)
+                    else:
+                        quantities[j,i-1,1] = abs(yambo_calc.outputs.array_qp.get_array('Eo')[where[j]-1].real+ \
+                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1].real)
 
+                quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
                 quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
                 quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
 
