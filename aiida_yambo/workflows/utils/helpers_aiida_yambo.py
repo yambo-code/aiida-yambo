@@ -18,16 +18,16 @@ except:
 
 class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info={}, philosophy = ' '):
+    def __init__(self, calc_info={}, wfl_type = 'automatic_1D_convergence'):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
-        self.philosophy = philosophy
+        self.wfl_type = wfl_type
 ################################## update_parameters - create parameters space #####################################
     def parameters_space_creator(self, first_calc, last_inputs = {}, k_distance = 1):
         space = []
 
-        if self.philosophy == 'automatic_1D_convergence':
+        if self.wfl_type == 'automatic_1D_convergence':
 
             for i in range(self.steps):
 
@@ -58,6 +58,14 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
                     new_value = new_params
 
                 space.append((self.var,new_value))
+
+            return space
+
+        elif self.wfl_type == '2D_extrapolation': #pass as input the space
+
+            self.delta = 0
+            for step in self.space:
+                space.append([self.var,step])
 
             return space
 
@@ -101,7 +109,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         return inp_to_update, value
 
 ################################## parsers #####################################
-    def take_quantities(self, start = 1): #yambopy philosophy?
+    def take_quantities(self, start = 1): #yambopy wfl_type?
 
         backtrace = self.steps #*self.iter
         where = self.where
@@ -111,18 +119,18 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         quantities = np.zeros((len(where),backtrace,3))
 
-        for j in range(len(where)): #no steps*self.iter xk in teoria voglio andare x steps
-            for i in range(1,backtrace+1): #qui devo capire come generalizzare in caso di wfl o superwfl o simple calc
+        for j in range(len(where)):
+            for i in range(1,backtrace+1):
                 yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
-                if what == 'gap': #bisognerebbe cambiare come parsa parser.py, fa schifo cosi': dovrei fare per k e per bande...
+                if what == 'gap':
                     quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
                                 yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
                                 (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))*27.2114
 
                 if what == 'single-levels':
-                    quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real
+                    quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real)*27.2114
 
                 quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
                 quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
@@ -136,9 +144,9 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         new[what] = how
         _dict = Dict(dict=new)
 
-    def get_caller(self, calc_pk, depth = 2):
+    def get_caller(self, calc_pk, depth = 1):
         for i in range(depth):
-            calc = load_node(calc_pk)
+            calc = load_node(int(calc_pk))
             calc = calc.caller.caller
         return calc
 

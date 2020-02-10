@@ -45,8 +45,8 @@ class YamboConvergence(WorkChain):
 
         spec.input("parameters_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
-        spec.input("workflow_philosophy", valid_type=Str, required=True, \
-                    help = '1D_convergence, 2D_convergence, Extrapolation...') #many possibilities, also to define by hand the fitting functions.
+        spec.input("wfl_type", valid_type=Str, required=True, \
+                    help = '1D_convergence, 2D_convergence, 2D_extrapolation...') #many possibilities, also to define by hand the fitting functions.
 
 ##################################### OUTLINE ####################################
 
@@ -63,8 +63,7 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        spec.output('conv_info', valid_type = List, help='list with convergence path') #to remove, just put a flag in all_calcs_info
-        spec.output('all_calcs_info', valid_type = List, help='all calculations')
+        spec.output('story', valid_type = List, help='all calculations')
 
 
     def start_workflow(self):
@@ -74,11 +73,11 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs.scf.kpoints = self.inputs.kpoints
         self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints
 
-        self.ctx.workflow_manager = workflow_manager(self.inputs.parameters_space, self.inputs.workflow_philosophy)
+        self.ctx.workflow_manager = workflow_manager(self.inputs.parameters_space, self.inputs.wfl_type)
         self.ctx.workflow_manager.global_step = 0
         self.ctx.workflow_manager.fully_success = False
 
-        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), self.inputs.workflow_philosophy)
+        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), wfl_type = self.inputs.wfl_type)
         self.ctx.calc_manager._type = 'yambo'
         self.ctx.calc_manager.iter  = 1
         self.ctx.calc_manager.success = False
@@ -90,6 +89,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.workflow_manager.first_calc = True
 
+        self.report('Workflow on {}'.format(self.ctx.calc_manager.wfl_type.value))
         self.report("workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager.var))
 
     def has_to_continue(self):
@@ -105,7 +105,7 @@ class YamboConvergence(WorkChain):
 
         elif self.ctx.calc_manager.success:
             #update variable to conv
-            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), self.inputs.workflow_philosophy)
+            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(),  wfl_type = self.inputs.wfl_type)
             self.ctx.calc_manager.type = 'yambo.yambo'
             try:
                 self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
@@ -136,7 +136,7 @@ class YamboConvergence(WorkChain):
         self.report('parameter space will be {}'.format(parameters_space))
         self.ctx.calc_manager.steps = len(parameters_space)
         for parameter in parameters_space:
-
+            self.report(parameter)
             self.ctx.calc_inputs, value = \
                         self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter)
 
@@ -158,8 +158,8 @@ class YamboConvergence(WorkChain):
     def data_analysis(self):
 
         self.report('Data analysis, we will try to parse some result and decide what next')
-        post_processor = the_evaluator(self.ctx.calc_manager.workflow_philosophy, \
-                                self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
+        post_processor = the_evaluator(self.ctx.calc_manager) #.wfl_type, \
+                                #self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
         try:
             quantities = self.ctx.calc_manager.take_quantities()
@@ -172,10 +172,10 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.calc_manager.success:
                 self.report('Success, updating the history... ')
-                self.ctx.workflow_manager.update_convergence_story(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
-                self.report('Success of '+self.inputs.workflow_philosophy+' on {} reached in {} calculations, the gap is {}' \
+                self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
+                self.report('Success of '+self.inputs.wfl_type.value+' on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
-                             self.ctx.workflow_manager.conv_story[-1][-1] ))
+                             self.ctx.workflow_manager.workflow_story[-(oversteps+1)][-2] ))
 
                 if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                      self.ctx.workflow_manager.fully_success = True
@@ -193,10 +193,8 @@ class YamboConvergence(WorkChain):
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
-        all_var = List(list=self.ctx.workflow_manager.absolute_story).store()
-        converged_var = List(list=self.ctx.workflow_manager.conv_story).store()  #sufficient the all_var, but with some 'conv_flag'
-        self.out('conv_info', converged_var)
-        self.out('all_calcs_info', all_var)
+        all_var = List(list=self.ctx.workflow_manager.workflow_story).store()
+        self.out('story', all_var)
 
     def p2y_needed(self):
         self.report('do we need a p2y??')

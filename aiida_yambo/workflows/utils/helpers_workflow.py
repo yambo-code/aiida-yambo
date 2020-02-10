@@ -11,7 +11,7 @@ import copy
 
 class workflow_manager:
 
-    def __init__(self, parameters_space, philosophy = ' '):
+    def __init__(self, parameters_space, wfl_type = ' '):
 
         try:
             #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
@@ -26,7 +26,7 @@ class workflow_manager:
             self.ideal_iter = copy.deepcopy(parameters_space)
             self.true_iter = copy.deepcopy(parameters_space)
 
-        self.philosophy = philosophy
+        self.wfl_type = wfl_type
 
     def build_story_global(self, calc_manager, quantities):
 
@@ -42,32 +42,26 @@ class workflow_manager:
     def update_story_global(self, calc_manager, quantities):
 
         if self.first_calc:
-            self.absolute_story = []
-            self.conv_story = []
-            self.absolute_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
-                        ['value', 'calc_pk','result'])
-            self.conv_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
-                        ['value', 'calc_pk','result'])
+            self.workflow_story = []
+            self.workflow_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
+                        ['value', 'calc_pk','result (eV)','useful'])
             self.first_calc = False
 
         for i in range(calc_manager.steps):
                 self.global_step += 1
-                self.absolute_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
-                            [self.values[i], quantities[0,i,2], quantities[:,i,1]])
-                self.conv_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
-                            [self.values[i], int(quantities[0,i,2]), quantities[:,i,1]])
+                self.workflow_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
+                            [self.values[i], quantities[0,i,2], quantities[:,i,1], True])
 
-    def update_convergence_story(self,inputs, calc_manager, oversteps):
+    def post_analysis_update(self,inputs, calc_manager, oversteps):
 
-        self.conv_story = self.conv_story[:-oversteps] #instead, I want a flag in absolute_story
+        for i in range(oversteps):
+            self.workflow_story[-(i+1)][-1]=False
 
-        last_ok_wfl = calc_manager.get_caller(self.conv_story[-1][-2], depth = 2)
+        last_ok_wfl = calc_manager.get_caller(self.workflow_story[-(oversteps+1)][-3], depth = 1)
         calc_manager.start_from_converged(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
             calc_manager.set_parent(inputs, last_ok_wfl)
-
-        if calc_manager.var == 'kpoints':
             k_distance = k_distance - calc_manager.delta*oversteps
 
 
@@ -76,16 +70,16 @@ class workflow_manager:
 
 class the_evaluator:
 
-    def __init__(self, philosophy, window = 3, tol = 1e-3):
+    def __init__(self, infos):
 
-        self.philosophy = philosophy
-        self.window = window
-        self.tol = tol
+        self.wfl_type = infos.wfl_type
 
     def analysis_and_decision(self, quantities):
 
-        if self.philosophy == 'automatic_1D_convergence':
+        if self.wfl_type == 'automatic_1D_convergence':
             '''documentation...'''
+            self.window =  infos.window
+            self.tol =  infos.tol
             converged = True
             oversteps = 0
 
@@ -100,7 +94,7 @@ class the_evaluator:
 
             return converged, oversteps
 
-        if self.philosophy == '2D_extrapolation':
+        if self.wfl_type == '2D_extrapolation':
             '''documentation...'''
 
             return True, 0
