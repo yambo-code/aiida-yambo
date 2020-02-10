@@ -100,6 +100,11 @@ class the_evaluator:
 
             return converged, oversteps
 
+        if self.philosophy == '2D_extrapolation':
+            '''documentation...'''
+
+            return True, 0
+
 
 ################################################################################
 ################################## plots&tables #####################################
