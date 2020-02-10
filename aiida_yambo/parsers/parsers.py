@@ -22,6 +22,8 @@ from aiida_yambo.utils.common_helpers import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
+import cmath
+import netCDF4
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -223,10 +225,12 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
-
-        if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
-         / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
+        try:
+            if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
+             / float(output_params['requested_time'])) < 0.1:
+                return self.exit_codes.WALLTIME_ERROR
+        except:
+            pass  #not enough time to detect something
 
         success=True
         if success == False:
@@ -343,7 +347,7 @@ class YamboParser(Parser):
 
          Sc = 1/Z[ E-Eo] -S_x + Vxc
         """
-        Eo = numpy.array(ndbqp['E-Eo'])
+        Eo = numpy.array(ndbqp['Eo'])
         Z = numpy.array(ndbqp['Z'])
         E_minus_Eo = numpy.array(ndbqp['E-Eo'])
         Sx = numpy.array(ndbhf['Sx'])
