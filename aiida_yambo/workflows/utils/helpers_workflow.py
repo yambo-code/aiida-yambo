@@ -76,7 +76,7 @@ class the_evaluator:
 
     def analysis_and_decision(self, quantities):
 
-        if self.wfl_type == 'automatic_1D_convergence':
+        if self.wfl_type == '1D_convergence':
             '''documentation...'''
             self.window =  infos.window
             self.tol =  infos.tol

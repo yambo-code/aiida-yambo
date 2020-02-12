@@ -25,7 +25,7 @@ else:
 
 class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info={}, wfl_type = 'automatic_1D_convergence'):
+    def __init__(self, calc_info={}, wfl_type = '1D_convergence'):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
@@ -34,7 +34,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
     def parameters_space_creator(self, first_calc, last_inputs = {}, k_distance = 1):
         space = []
 
-        if self.wfl_type == 'automatic_1D_convergence':
+        if self.wfl_type == '1D_convergence':
 
             for i in range(self.steps):
 
