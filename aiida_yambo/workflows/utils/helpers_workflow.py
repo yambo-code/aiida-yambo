@@ -45,7 +45,7 @@ class workflow_manager:
             self.workflow_story = []
             self.workflow_story.append(['global_step']+list(calc_manager.__dict__.keys())+\
                         ['value', 'calc_pk','result (eV)','useful'])
-            self.first_calc = False
+
 
         for i in range(calc_manager.steps):
                 self.global_step += 1
