@@ -166,7 +166,7 @@ class YamboConvergence(WorkChain):
         try:
             quantities = self.ctx.calc_manager.take_quantities()
             self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager, quantities)
-            #self.report(self.ctx.workflow_manager.array_conv)
+            self.report('results: {}'.format(self.ctx.workflow_manager.array_conv))
             self.ctx.calc_manager.success, oversteps = \
                     post_processor.analysis_and_decision(self.ctx.workflow_manager.array_conv)
 
