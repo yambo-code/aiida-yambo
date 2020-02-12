@@ -72,14 +72,14 @@ class the_evaluator:
 
     def __init__(self, infos):
 
-        self.wfl_type = infos.wfl_type
+        self.infos = infos
 
     def analysis_and_decision(self, quantities):
 
-        if self.wfl_type == '1D_convergence':
+        if self.infos.wfl_type == '1D_convergence':
             '''documentation...'''
-            self.window =  infos.window
-            self.tol =  infos.tol
+            self.window =  self.infos.conv_window
+            self.tol = self.infos.conv_thr
             converged = True
             oversteps = 0
 
