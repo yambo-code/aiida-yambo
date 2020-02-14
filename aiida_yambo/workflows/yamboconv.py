@@ -158,7 +158,7 @@ class YamboConvergence(WorkChain):
 
     def data_analysis(self):
 
-        self.ctx.workflow_manager.first_calc = False
+
         self.report('Data analysis, we will try to parse some result and decide what next')
         post_processor = the_evaluator(self.ctx.calc_manager) #.wfl_type, \
                                 #self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
@@ -191,7 +191,7 @@ class YamboConvergence(WorkChain):
             self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
 
         self.ctx.calc_manager.iter +=1
-
+        self.ctx.workflow_manager.first_calc = False
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
