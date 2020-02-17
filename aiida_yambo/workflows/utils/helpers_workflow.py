@@ -94,7 +94,7 @@ class the_evaluator:
 
             return converged, oversteps
 
-        if self.wfl_type == '2D_space':
+        if self.infos.wfl_type == '2D_space':
             '''documentation...'''
 
             return True, 0
