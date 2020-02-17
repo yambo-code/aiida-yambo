@@ -16,12 +16,12 @@ options = {
     'max_wallclock_seconds': 24*60*60,
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine":9,
+        "num_mpiprocs_per_machine":1,
         "num_cores_per_mpiproc":1,
     },
-    'queue_name':'s3par',
+#    'queue_name':'s3par',
     'environment_variables': {},
-    'custom_scheduler_commands': u"#PBS -N example_gw \nexport OMP_NUM_THREADS=1",
+#    'custom_scheduler_commands': u"#PBS -N example_gw \nexport OMP_NUM_THREADS=1",
     }
 
 metadata = {
@@ -103,15 +103,15 @@ params_gw = {
         'Chimod': 'hartree',
         #'EXXRLvcs': 40,
         #'EXXRLvcs_units': 'Ry',
-        'BndsRnXp': [1, 60],
+        'BndsRnXp': [1, 10],
         'NGsBlkXp': 2,
         'NGsBlkXp_units': 'Ry',
-        'GbndRnge': [1, 60],
+        'GbndRnge': [1, 10],
         'DysSolver': "n",
         'QPkrange': [[1, 1, 8, 9]],
-        'X_all_q_CPU': "1 1 3 3",
+        'X_all_q_CPU': "1 1 1 1",
         'X_all_q_ROLEs': "q k c v",
-        'SE_CPU': "1 1 9",
+        'SE_CPU': "1 1 1",
         'SE_ROLEs': "q qp b",
     }
 params_gw = Dict(dict=params_gw)
@@ -126,8 +126,8 @@ builder.ywfl.scf.pw.parameters = parameter_scf
 builder.kpoints = kpoints
 builder.ywfl.scf.pw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
 builder.ywfl.scf.pw.metadata.options.resources = options['resources']
-builder.ywfl.scf.pw.metadata.options.queue_name = options['queue_name']
-builder.ywfl.scf.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+#builder.ywfl.scf.pw.metadata.options.queue_name = options['queue_name']
+#builder.ywfl.scf.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
 builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
 builder.ywfl.nscf.pw.parameters = parameter_nscf
@@ -136,51 +136,36 @@ builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 ##################yambo part of the builder
 builder.ywfl.yres.gw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
 builder.ywfl.yres.gw.metadata.options.resources = options['resources']
-builder.ywfl.yres.gw.metadata.options.queue_name = options['queue_name']
-builder.ywfl.yres.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+#builder.ywfl.yres.gw.metadata.options.queue_name = options['queue_name']
+#builder.ywfl.yres.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 builder.ywfl.yres.gw.parameters = params_gw
 builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
-builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'RESTART': False})
+builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
 builder.ywfl.yres.max_restarts = Int(5)
 
-var_to_conv = [{'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.03, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+builder.wfl_type = Str('1D_convergence')
+var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 3, \
+                             'conv_thr': 0.2, 'conv_window': 2, 'what':'gap','where':[(1,1)], \
                              'where_word':['Gamma'],},
-               {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                            'conv_thr': 0.03, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+               {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
+                            'conv_thr': 0.2, 'conv_window': 2, 'what':'gap','where':[(1,1)], \
                              'where_word':['Gamma'],},
-               {'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.025, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+               {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 5, \
+                             'conv_thr': 0.1, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
                              'where_word':['Gamma'],},
-               {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.025, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},
-               {'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},
-               {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                            'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},
-               {'var':'kpoints','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3, 'starting_k_distance': 5},
-               {'var':'bands','delta': 50, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},
-               {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                            'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},
-               {'var':'kpoints','delta': 1, 'steps': 3, 'max_restarts': 5, \
-                             'conv_thr': 0.02, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
+               {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
+                             'conv_thr': 0.1, 'conv_window': 3, 'what':'gap','where':[(1,1)], \
                              'where_word':['Gamma'],},]
-
+'''
+               {'var':'kpoints','delta': 1, 'steps': 2, 'max_restarts': 2, \
+                             'conv_thr': 0.1, 'conv_window': 2, 'what':'gap','where':[(1,1)], \
+                'starting_k_distance': 1},]
+'''
 
 for i in range(len(var_to_conv)):
     print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 var_to_conv.reverse()
-builder.var_to_conv = List(list = var_to_conv)
-
-
-
+builder.parameters_space = List(list = var_to_conv)
 
 if __name__ == "__main__":
     import argparse

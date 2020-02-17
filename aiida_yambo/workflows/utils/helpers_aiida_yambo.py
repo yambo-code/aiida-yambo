@@ -68,7 +68,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             return space
 
-        elif self.wfl_type == '2D_extrapolation': #pass as input the space; actually, it's n-dimensional
+        elif self.wfl_type == '2D_space': #pass as input the space; actually, it's n-dimensional
 
             self.delta = 0
             for step in self.space:
