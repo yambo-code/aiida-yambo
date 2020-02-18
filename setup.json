@@ -24,13 +24,13 @@
             "prospector==0.12.11",
             "pylint==1.9.3"
           ]
-
       }, 
     "install_requires": [
         "aiida_core[docs,atomic_tools]>=1.0.0a2",
         "aiida-quantumespresso>=3.0.0a5",
         "reentry>=1.0.2",
-	"netcdf4"
+	"netcdf4",
+	"setuptools>=45.2.0"
         ],
     "keywords": "yambo aiida workflows",
     "entry_points": {
