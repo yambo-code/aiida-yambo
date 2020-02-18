@@ -30,4 +30,5 @@ European Centre of Excellence](<http://www.max-centre.eu/>) funded by the Horizo
 Grant No. 676598.
 
 .. class:: center
+
 ![MARVEL](miscellaneous/logos/MARVEL.png) ![MaX](miscellaneous/logos/MaX.png)
