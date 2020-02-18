@@ -40,12 +40,6 @@
         "aiida.parsers": [
             "yambo.yambo = aiida_yambo.parsers.parsers:YamboParser"
         ],
-        "aiida.data":[],
-        "console_scripts": [
-            "plotyamboconv = aiida_yambo.commands.plotting:plotconv",
-            "mock_qe = aiida_yambo.commands.mocks:mock_qe",
-            "mock_yambo = aiida_yambo.commands.mocks:mock_yambo",
-            "mock_p2y = aiida_yambo.commands.mocks:mock_p2y"
-        ]
+        "aiida.data":[]
     }
 }
