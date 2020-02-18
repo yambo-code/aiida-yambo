@@ -6,6 +6,7 @@ from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
+import cmath
 
 try:
     from aiida.orm import Dict, Str, load_node, KpointsData

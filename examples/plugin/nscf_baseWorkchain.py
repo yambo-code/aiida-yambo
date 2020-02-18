@@ -14,20 +14,18 @@ options = {
     'max_wallclock_seconds': 24* 60 * 60,
     'resources': {
         "num_machines": 1,
-        "num_mpiprocs_per_machine":8,
-        "num_cores_per_mpiproc":16//8,
+        "num_mpiprocs_per_machine":1,
+#        "num_cores_per_mpiproc":16//8,
     },
-    'queue_name':'s3par',
+#    'queue_name':'s3par',
     'environment_variables': {},
-    'custom_scheduler_commands': u"#PBS -N hBN_gw \nexport OMP_NUM_THREADS=2",
+#    'custom_scheduler_commands': u"#PBS -N hBN_gw \nexport OMP_NUM_THREADS=2",
     }
 
 metadata = {
     'options':options,
-    'label': 'hBN -GW- workflow',
+    'label': 'hBN -scf- workchain',
 }
-
-
 
 alat = 2.4955987320 # Angstrom
 the_cell = [[1.000000*alat,   0.000000,   0.000000],
@@ -52,7 +50,7 @@ kpoints.set_kpoints_mesh([6,6,2])
 Dict = DataFactory('dict')
 params_scf = {
     'CONTROL': {
-        'calculation': 'scf',
+        'calculation': 'nscf',
         'verbosity': 'high',
         'wf_collect': True
     },
@@ -80,8 +78,8 @@ builder.pw.metadata.options.max_wallclock_seconds = \
         options['max_wallclock_seconds']
 builder.pw.metadata.options.resources = \
         dict = options['resources']
-builder.pw.metadata.options.queue_name = options['queue_name']
-builder.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+#builder.pw.metadata.options.queue_name = options['queue_name']
+#builder.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
 
 if __name__ == "__main__":
@@ -93,6 +91,12 @@ if __name__ == "__main__":
         dest='code_pk',
         required=True,
         help='The pw codename to use')
+    parser.add_argument(
+        '--parent',
+        type=int,
+        dest='parent_pk',
+        required=True,
+        help='The parent to use')
 
     parser.add_argument(
         '--pseudo',
@@ -104,5 +108,7 @@ if __name__ == "__main__":
     builder.pw.code = load_node(args.code_pk)
     builder.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.pw.structure, pseudo_family = Str(args.pseudo_family))
+    builder.pw.parent_folder = load_node(args.parent_pk).outputs.remote_folder
+
     running = submit(builder)
     print("Submitted PwBaseWorkchain; with pk={}".format(running.pk))
