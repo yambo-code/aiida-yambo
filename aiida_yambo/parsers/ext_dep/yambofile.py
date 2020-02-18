@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+
 import os
 import re
 import numpy as np
@@ -295,3 +296,4 @@ class YamboFile(object):
 
     def __str__(self):
         return "type: %9s   file: %s/%s"%(self.type, self.folder, self.filename)
+

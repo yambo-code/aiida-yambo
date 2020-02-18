@@ -7,7 +7,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida_yambo.workflows.yamboconv import YamboConvergence
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 
@@ -103,10 +103,10 @@ params_gw = {
         'Chimod': 'hartree',
         #'EXXRLvcs': 40,
         #'EXXRLvcs_units': 'Ry',
-        'BndsRnXp': [1, 60],
+        'BndsRnXp': [1, 10],
         'NGsBlkXp': 2,
         'NGsBlkXp_units': 'Ry',
-        'GbndRnge': [1, 60],
+        'GbndRnge': [1, 10],
         'DysSolver': "n",
         'QPkrange': [[1, 1, 8, 9]],
         'X_all_q_CPU': "1 1 1 1",
@@ -117,35 +117,49 @@ params_gw = {
 params_gw = Dict(dict=params_gw)
 
 
-builder = YamboWorkflow.get_builder()
+builder = YamboConvergence.get_builder()
 
 
 ##################scf+nscf part of the builder
-builder.scf.pw.structure = structure
-builder.scf.pw.parameters = parameter_scf
-builder.scf.kpoints = kpoints
-builder.scf.pw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
-builder.scf.pw.metadata.options.resources = options['resources']
-#builder.scf.pw.metadata.options.queue_name = options['queue_name']
-#builder.scf.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+builder.ywfl.scf.pw.structure = structure
+builder.ywfl.scf.pw.parameters = parameter_scf
+builder.kpoints = kpoints
+builder.ywfl.scf.pw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
+builder.ywfl.scf.pw.metadata.options.resources = options['resources']
+#builder.ywfl.scf.pw.metadata.options.queue_name = options['queue_name']
+#builder.ywfl.scf.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
-builder.nscf.pw.structure = builder.scf.pw.structure
-builder.nscf.pw.parameters = parameter_nscf
-builder.nscf.kpoints = builder.scf.kpoints
-builder.nscf.pw.metadata = builder.scf.pw.metadata
+builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
+builder.ywfl.nscf.pw.parameters = parameter_nscf
+builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 
 ##################yambo part of the builder
-builder.yres.gw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
-builder.yres.gw.metadata.options.resources = options['resources']
-#builder.yres.gw.metadata.options.queue_name = options['queue_name']
-#builder.yres.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
-builder.yres.gw.parameters = params_gw
-builder.yres.gw.precode_parameters = Dict(dict={})
-builder.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
-builder.yres.max_restarts = Int(5)
+builder.ywfl.yres.gw.metadata.options.max_wallclock_seconds = options['max_wallclock_seconds']
+builder.ywfl.yres.gw.metadata.options.resources = options['resources']
+#builder.ywfl.yres.gw.metadata.options.queue_name = options['queue_name']
+#builder.ywfl.yres.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+builder.ywfl.yres.gw.parameters = params_gw
+builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
+builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
+builder.ywfl.yres.max_restarts = Int(5)
+
+builder.wfl_type = Str('2D_space')
+var_to_conv = [{'var':['BndsRnXp','GbndRnge'],
+                'space': [[[1,10],[1,10]], \
+                          [[1,50],[1,75]], \
+                          [[1,75],[1,50]]], \
+                             'max_restarts': 0,'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},
+              {'var':['BndsRnXp','GbndRnge'],
+                'space': [[[1,75],[1,75]]],
+                             'max_restarts': 0,'what':'gap','where':[(1,1)], \
+                             'where_word':['Gamma'],},]
 
 
-
+for i in range(len(var_to_conv)):
+    print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
+var_to_conv.reverse()
+builder.parameters_space = List(list = var_to_conv)
 
 if __name__ == "__main__":
     import argparse
@@ -183,16 +197,15 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
-    builder.yres.gw.preprocessing_code = load_node(args.yamboprecode_pk)
-    builder.yres.gw.code = load_node(args.yambocode_pk)
+    builder.ywfl.yres.gw.preprocessing_code = load_node(args.yamboprecode_pk)
+    builder.ywfl.yres.gw.code = load_node(args.yambocode_pk)
     builder.parent_folder = load_node(args.parent_pk).outputs.remote_folder
 
-    builder.scf.pw.code = load_node(args.pwcode_pk)
-    builder.nscf.pw.code = load_node(args.pwcode_pk)
-    builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.scf.pw.structure, pseudo_family = Str(args.pseudo_family))
-    builder.nscf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.scf.pw.structure, pseudo_family = Str(args.pseudo_family))
+    builder.ywfl.scf.pw.code = load_node(args.pwcode_pk)
+    builder.ywfl.nscf.pw.code = load_node(args.pwcode_pk)
+    builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
+                builder.ywfl.scf.pw.structure, pseudo_family = Str(args.pseudo_family))
+    builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
 
     running = submit(builder)
     print("Created calculation; with pk={}".format(running.pk))

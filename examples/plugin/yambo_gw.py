@@ -13,13 +13,13 @@ from aiida_yambo.calculations.gw import YamboCalculation
 options = {
     'max_wallclock_seconds': 24*60*60,
     'resources': {
-        "num_machines": 2,
-        "num_mpiprocs_per_machine":9,
+        "num_machines": 1,
+        "num_mpiprocs_per_machine":1,
         "num_cores_per_mpiproc":1,
     },
-    'queue_name':'s3par',
+#    'queue_name':'s3par',
     'environment_variables': {},
-    'custom_scheduler_commands': u"#PBS -N example_gw \nexport OMP_NUM_THREADS=1",
+#    'custom_scheduler_commands': u"#PBS -N example_gw \nexport OMP_NUM_THREADS=1",
     }
 
 metadata = {
@@ -35,15 +35,15 @@ params_gw = {
         'Chimod': 'hartree',
         #'EXXRLvcs': 40,
         #'EXXRLvcs_units': 'Ry',
-        'BndsRnXp': [1, 60],
+        'BndsRnXp': [1, 10],
         'NGsBlkXp': 2,
         'NGsBlkXp_units': 'Ry',
-        'GbndRnge': [1, 60],
+        'GbndRnge': [1, 10],
         'DysSolver': "n",
         'QPkrange': [[1, 1, 8, 9]],
-        'X_all_q_CPU': "1 1 3 3",
+        'X_all_q_CPU': "1 1 1 1",
         'X_all_q_ROLEs': "q k c v",
-        'SE_CPU': "1 1 9",
+        'SE_CPU': "1 1 1",
         'SE_ROLEs': "q qp b",
     }
 params_gw = Dict(dict=params_gw)
@@ -54,8 +54,8 @@ builder.metadata.options.max_wallclock_seconds = \
         options['max_wallclock_seconds']
 builder.metadata.options.resources = \
         dict = options['resources']
-builder.metadata.options.queue_name = options['queue_name']
-builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+#builder.metadata.options.queue_name = options['queue_name']
+#builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 builder.parameters = params_gw
 builder.precode_parameters = Dict(dict={})
 builder.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
