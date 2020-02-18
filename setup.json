@@ -30,7 +30,7 @@
         "aiida_core[docs,atomic_tools]>=1.0.0a2",
         "aiida-quantumespresso>=3.0.0a5",
         "reentry>=1.0.2",
-	"netcdf4",
+	"netcdf4"
         ],
     "keywords": "yambo aiida workflows",
     "entry_points": {
