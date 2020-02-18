@@ -4,16 +4,6 @@ import sys
 import itertools
 import traceback
 
-'''
-if ypy:
-    import _to_context as ctx....
-    import wait_calcs as ToContext
-    import yambochain as WorkChain ---> with ctx and report....
-    import print as report
-    from helpers_workflows import *
-    list as List...
-'''
-
 #if aiida_calcs:
 from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
 
