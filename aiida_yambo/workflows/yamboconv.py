@@ -74,6 +74,7 @@ class YamboConvergence(WorkChain):
 
         try: #--> need find mesh here
             self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+            del self.ctx.calc_manager.starting_k_distance
         except:
             self.ctx.k_distance = 1
 
@@ -92,6 +93,7 @@ class YamboConvergence(WorkChain):
         elif not self.ctx.calc_manager.success and \
                     self.ctx.calc_manager.iter > self.ctx.calc_manager.max_restarts +1:
             self.report('Workflow failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
+
             return False
 
         elif self.ctx.calc_manager.success:
@@ -100,6 +102,7 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager.type = 'yambo.yambo'
             try:
                 self.ctx.k_distance = self.ctx.calc_manager.starting_k_distance
+                del self.ctx.calc_manager.starting_k_distance
             except:
                 pass
 

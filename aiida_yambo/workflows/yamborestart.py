@@ -108,6 +108,11 @@ class YamboRestartWf(WorkChain):
                 self.report('Killed from AiiDA for unknown reasons, we try to resubmit')
                 return True
 
+            if calc.is_excepted:
+                self.report('excepted for unknown reasons, we try to resubmit just one time')
+                self.ctx.restart = self.inputs.max_restarts.value
+                return True
+
             if calc.exit_status == 100 or calc.exit_status == 103:
                 self.report(
                     "Calculation {} failed or did not generate outputs for unknown reason, restarting with no changes"
@@ -155,9 +160,9 @@ class YamboRestartWf(WorkChain):
         """
 
         calc = self.ctx.calc
-        self.report("Now we restart with new inputs")
+        self.report("Now we restart")
         if not calc:
-            raise ValidationError("restart calculations can not start: calculation no found")
+            raise ValidationError("restart calculations cannot start: calculation not found")
             #return self.exit_code.WFL_NOT_COMPLETED
 
         if calc.exit_status == 102:
