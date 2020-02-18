@@ -306,9 +306,9 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
         pass
     # Loading the dbenv. The backend should be fixed before compiling the
     # documentation.
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
+#    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+#    if not is_dbenv_loaded():
+#        load_dbenv()
 else:
     # Back-end settings for readthedocs online documentation -
     # we don't want to create a profile there

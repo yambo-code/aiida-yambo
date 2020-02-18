@@ -1,5 +1,4 @@
-.. _2-ref-to-yambo-tutorial:
-   
+  
 Getting the plugin
 ------------------
 
@@ -13,9 +12,9 @@ or downloaded from github
 
 ::
 
-    git clone https://github.com/yambo-code/yambo-aiida.git   aiida_yambo
+    git clone https://github.com/yambo-code/yambo-aiida.git
     cd aiida_yambo
-    python setup.py install
+    pip install -e aiida-yambo 
 
 
 

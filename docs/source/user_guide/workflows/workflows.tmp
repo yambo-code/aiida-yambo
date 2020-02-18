@@ -21,7 +21,7 @@ causes including:
 
 Example usage:
 
-.. include:: ../../../../examples/test_wf/test_yambo.py
+.. include:: ../../../../examples/test_wf/yambo_wfl.py
    :literal:
 
 
