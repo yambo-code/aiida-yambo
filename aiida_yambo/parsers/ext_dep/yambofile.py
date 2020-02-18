@@ -2,7 +2,10 @@
 # All rights reserved.
 #
 # This file is part of yamboparser
-#
+
+from __future__ import absolute_import
+from __future__ import print_function
+
 import os
 import re
 import numpy as np
@@ -18,7 +21,7 @@ else:
 def if_has_netcdf(f):
     if _has_netcdf:
         return f
-    
+
 class YamboFile(object):
     """
     This is the Yambo file class.
@@ -56,10 +59,10 @@ class YamboFile(object):
             #read lines from file
             with open(os.path.join(folder,filename),'r') as f:
                 self.lines = f.readlines()
-            
+
         #parse the file
         self.parse()
-    
+
     @staticmethod
     def get_filetype(filename,folder):
         """
@@ -193,7 +196,7 @@ class YamboFile(object):
             data['Sx'] = Sx[:,0] + Sx[:,1]*1j
             Vxc = f.variables['Vxc'][:]
             data['Vxc'] = Vxc[:,0] + Vxc[:,1]*1j
-            
+
         self.data=data
         f.close()
 
