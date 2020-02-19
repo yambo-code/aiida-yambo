@@ -1,5 +1,4 @@
 
-cython
 aiida-core==1.1.0
 aiida-quantumespresso==3.0.0a5
 alabaster==0.7.12
