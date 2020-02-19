@@ -1,4 +1,4 @@
-setuptools>=45
+setuptools==41.0.1
 aiida-core[docs,atomic_tools]>=1.0.0a2
 cython
 
