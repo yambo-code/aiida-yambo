@@ -9,9 +9,8 @@ if __name__ == '__main__':
         kwargs = json.load(info)
     setup(
         include_package_data=True,
-        setup_requires=['reentry'],
         reentry_register=True,
-	zip_safe = False,
+	zip_safe = True,
         packages=find_packages(
             where='.', exclude=("gw.*", "parser.*", "gw*", "parser*")),
         **kwargs)
