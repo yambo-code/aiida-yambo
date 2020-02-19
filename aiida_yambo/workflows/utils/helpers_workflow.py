@@ -102,41 +102,43 @@ class the_evaluator:
 
 ################################################################################
 ################################## plots&tables #####################################
-class workflow_inspector: #not working.
+class workflow_inspector: 
 
-    def __init__(self, conv_info):
+    def __init__(self, story):
 
         pass
 
-    def conv_plotter(self, all_list, conv_list, what = 'ciao', save = False):
+        def plot_conv(story,title,axis_labels):
 
-        all_story =  pd.DataFrame(all_list)
-        conv_story =  pd.DataFrame(conv_list)
+            for i in range(len(story)):
+                string=''
+                if isinstance(story[i][story[0].index('var')],list):
+                    #print(y[i][y[0].index('var')])
+                    for k in story[i][story[0].index('var')]:
+                        string += k+' & '
+                    string = string+'qwerty'
+                    string = string.replace('& qwerty','')
+                    #print(string)
+                    story[i][story[0].index('var')]=string
 
-        conv_story_array = conv_story.to_numpy()
+            df = pd.DataFrame(story[1:],columns=story[0])
 
-        fig,ax = plt.subplots()
-        plt.xlabel('iteration')
-        plt.ylabel(what)
-        plt.grid()
+            fig,ax = plt.subplots()
+            condition = df['useful'] == True  #means converged
 
-        plt.title('Convergence of {}, pk = {}'.format(what,wfl_pk))
-        ax.plot(all_story['global_step'],all_story[what],'*--',label='all calculations')
-        ax.plot(conv_story['global_step'],conv_story[what],label='convergence path')
-
-        b=[]
-
-        for i in conv_story['var']:
-            if i not in b:
-                a = np.ma.masked_where(conv_story_array[:,0]!=str(i),conv_story_array[:,9])
-                ax.plot(conv_story['global_step'],a,'*-',label=str(i)+' - '+str(conv_story['value'][conv_story['var']==i].to_numpy()[-1]))
-                b.append(i)
-        plt.legend()
-
-        if save == True:
-            plt.savefig(str(wfl_pk)+"_"+str(what)+".pdf",dpi=300)
-
-    def conv_table(self, save = False):
-        pass
-        if save == True:
-            plt.savefig(str(wfl_pk)+"_"+str(what)+"_table.pdf",dpi=300)
+            x_axis='global_step'
+            y_axis='result (eV)'
+            ax.set_title(title)
+            ax.set_ylabel(axis_labels[1])
+            ax.set_xlabel(axis_labels[0])
+            ax.plot([i for i in df[x_axis]],[j for j in df[y_axis]],'--*',color='black',label='full path')
+            ax.plot([i for i in df[x_axis][condition]],[j for j in df[y_axis][condition]],'-',label='convergence path')
+            collection=[]
+            for va in df['var']:
+                if va not in collection:
+                    collection.append(va)
+            for k in collection:
+                ax.plot([ii for ii in df[x_axis][(condition) & (df['var']==k)]],\
+                        [jj for jj in df[y_axis][(condition) & (df['var']==k)]],'o',label=k,markersize=8)
+            ax.legend()
+            ax.grid()
