@@ -4,7 +4,8 @@ This is the official repository containing the AiiDA plugin and workflows for Ya
 
 ## Documentation
 
-The documentation of this package is available on [read the docs](http://aiida-yambo.readthedocs.io/en/latest/).
+The documentation for this package can be found on Read the Docs at https://aiida-yambo.readthedocs.io/en/latest
+[![Documentation Status](https://readthedocs.org/projects/aiida-yambo/badge/?version=latest)](https://aiida-yambo.readthedocs.io/en/latest/?badge=latest)
 
 ## Installation instructions:
 
