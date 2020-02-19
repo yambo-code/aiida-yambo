@@ -1,3 +1,4 @@
-setuptools==36.6.0
-aiida-core>=0.11.0[atomic_tools]
+setuptools>=45.2.0
+aiida-core>=1.0.0a2
 git+https://github.com/yambo-code/yambo-aiida.git#egg=aiida-yambo
+cython
