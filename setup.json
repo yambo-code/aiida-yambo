@@ -30,7 +30,8 @@
         "aiida-quantumespresso>=3.0.0a5",
         "reentry>=1.0.2",
 	"netcdf4",
-	"setuptools>=45.2.0"
+	"setuptools>=45.2.0",
+	"h5py"
         ],
     "keywords": "yambo aiida workflows",
     "entry_points": {
