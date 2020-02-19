@@ -4,6 +4,8 @@ This is the official Yambo plugin for AiiDA. It is now maintained for AiiDA >= v
 ## Documentation
 
 The documentation for this package can be found on Read the Docs at https://aiida-yambo.readthedocs.io/en/latest
+[![Documentation Status](https://readthedocs.org/projects/aiida-yambo/badge/?version=latest)](https://aiida-yambo.readthedocs.io/en/latest/?badge=latest)
+
 
 ## Installation instructions:
 
