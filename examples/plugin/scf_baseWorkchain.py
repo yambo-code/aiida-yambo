@@ -10,6 +10,7 @@ from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pse
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from ase import Atoms
 
+###### setting the machine options ######
 options = {
     'max_wallclock_seconds': 24* 60 * 60,
     'resources': {
@@ -27,6 +28,8 @@ metadata = {
     'label': 'hBN -scf- workchain',
 }
 
+###### setting the lattice structure ######
+
 alat = 2.4955987320 # Angstrom
 the_cell = [[1.000000*alat,   0.000000,   0.000000],
             [-0.500000*alat,  0.866025*alat,   0.000000],
@@ -43,9 +46,13 @@ atoms.set_pbc([True,True,True])
 StructureData = DataFactory('structure')
 structure = StructureData(ase=atoms)
 
+###### setting the kpoints mesh ######
+
 KpointsData = DataFactory('array.kpoints')
 kpoints = KpointsData()
 kpoints.set_kpoints_mesh([6,6,2])
+
+###### setting the scf parameters ######
 
 Dict = DataFactory('dict')
 params_scf = {
@@ -70,6 +77,9 @@ params_scf = {
 
 parameter_scf = Dict(dict=params_scf)
 
+
+###### creation of the workchain ######
+
 builder = PwBaseWorkChain.get_builder()
 builder.pw.structure = structure
 builder.pw.parameters = parameter_scf
@@ -81,6 +91,7 @@ builder.pw.metadata.options.resources = \
 #builder.pw.metadata.options.queue_name = options['queue_name']
 #builder.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
+###### inputs parameters, to be provided from shell ######
 
 if __name__ == "__main__":
     import argparse
