@@ -13,4 +13,5 @@ The plugin currently support 4 options to start or restart a Yambo calculation:
 - **p2y + yambo from a NSCF**: triggered by using as parent calculation an NSCF calculation run with the quantumespresso.pw plugin
 - **yambo from a (previous) yambo**: useful for restarts, it is triggered by using as parent calculation a Yambo calculation run with the yambo plugin. If you want also to copy the output databases produced from the previous yambo calculation,
   you can set:
-  inputs['settings'] = ParameterData(dict={'PARENT_DB': True}) )
+    
+    inputs['settings'] = ParameterData(dict={'PARENT_DB': True}) )

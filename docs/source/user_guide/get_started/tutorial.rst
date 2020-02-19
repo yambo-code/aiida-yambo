@@ -583,10 +583,10 @@ To retrieve additional files:
 ::
 
     settings = ParameterData(dict={"ADDITIONAL_RETRIEVE_LIST":['r-*','o-*','LOG/l-*01',
-                        'aiida/ndb.QP','aiida/ndb.HF_and_locXC']})
+                        'aiida.out/ndb.QP','aiida.out/ndb.HF_and_locXC']})
     builder.use_settings(settings)
 
 This selects the additional files that will  be retrieved and parsed after a calculation. Supported
 files include the report files ``r-*``, text outputs ``o-*``, logs, the quasiparticle
-database for GW calculations ``aiida/ndb.QP``, and the Hartree-Fock and local exchange
-db ``aiida/ndb.HF_and_locXC``.
+database for GW calculations ``aiida.out/ndb.QP``, and the Hartree-Fock and local exchange
+db ``aiida.out/ndb.HF_and_locXC``.
