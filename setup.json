@@ -16,8 +16,7 @@
          "docs": [
             "Sphinx", 
             "docutils", 
-            "sphinx_rtd_theme",
-            "cython"
+            "sphinx_rtd_theme"
           ],
          "pre-commit": [
             "pre-commit==1.11.0",
