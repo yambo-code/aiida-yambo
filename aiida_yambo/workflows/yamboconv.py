@@ -185,6 +185,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.calc_manager.iter +=1
         self.ctx.workflow_manager.first_calc = False
+
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))

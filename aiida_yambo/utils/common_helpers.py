@@ -35,3 +35,14 @@ def find_pw_parent(parent_calc):
             has_found_pw = True
 
     return parent_calc
+
+def get_distance_from_kmesh(calc):
+    mesh = calc.inputs.kpoints.get_kpoints_mesh()[0]
+    k = KpointsData()
+    k.set_cell(calc.inputs.structure.cell)
+    for i in range(1,100):
+         k.set_kpoints_mesh_from_density(1/i)
+         if k.get_kpoints_mesh()[0]==mesh:
+             print('ok, {} is the density'.format(i))
+             print(k.get_kpoints_mesh()[0],mesh)
+             return i

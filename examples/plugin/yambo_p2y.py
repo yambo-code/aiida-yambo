@@ -35,7 +35,7 @@ builder.metadata.options.resources = \
 #builder.metadata.options.queue_name = options['queue_name']
 #builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 builder.precode_parameters = Dict(dict={})
-builder.settings = Dict(dict={'INITIALISE': False})
+builder.settings = Dict(dict={'INITIALISE': True})
 
 
 if __name__ == "__main__":

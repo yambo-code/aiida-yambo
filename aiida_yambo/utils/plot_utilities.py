@@ -39,10 +39,10 @@ def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='g
     ax.grid()
 
     ax.set_title(title)
-    ax.plot(conv['global_step'],np.array(conv['result (eV)'].to_list())[:,range(where)],'-',\
+    ax.plot(conv['global_step'],np.array(conv['result_eV'].to_list())[:,range(where)],'-',\
             label='convergence path')
     for j in range(where):
-        ax.plot(tot['global_step'],np.array(tot['result (eV)'].to_list())[:,j],'*--',
+        ax.plot(tot['global_step'],np.array(tot['result_eV'].to_list())[:,j],'*--',
                 color='black',label='full path - '+str(tot['where_word'].to_list()[0][j]))
 
     b=[]
@@ -62,7 +62,7 @@ def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='g
                 else:
                     label = None
                 ax.plot(conv['global_step'],np.ma.masked_where(np.array(conv['var'].to_numpy()!=str(i)),\
-                            np.array(conv['result (eV)'].to_list())[:,j]),'o-' \
+                            np.array(conv['result_eV'].to_list())[:,j]),'o-' \
                         ,label=label)
             b.append(i)
 
@@ -77,11 +77,11 @@ def take_2d_results(node):    #returns array (val_1,val_2,result_eV) to be furth
          if isinstance(p['value'].iloc[i][0],list):
             k[i,0] = p['value'].iloc[i][0][1]
             k[i,1] = p['value'].iloc[i][1][1]
-            k[i,2] = p['result (eV)'].iloc[i][0]
+            k[i,2] = p['result_eV'].iloc[i][0]
          else:
             k[i,0] = p['value'].iloc[i][0]
             k[i,1] = p['value'].iloc[i][1]
-            k[i,2] = p['result (eV)'].iloc[i][0]
+            k[i,2] = p['result_eV'].iloc[i][0]
 
     return k
 
@@ -93,11 +93,11 @@ def plot_2d_results(node,lab = ''):      #just a 3d plot
          if isinstance(p['value'].iloc[i][0],list):
             k[i,0] = p['value'].iloc[i][0][1]
             k[i,1] = p['value'].iloc[i][1][1]
-            k[i,2] = p['result (eV)'].iloc[i][0]
+            k[i,2] = p['result_eV'].iloc[i][0]
          else:
             k[i,0] = p['value'].iloc[i][0]
             k[i,1] = p['value'].iloc[i][1]
-            k[i,2] = p['result (eV)'].iloc[i][0]
+            k[i,2] = p['result_eV'].iloc[i][0]
 
     matplotlib.rcParams['legend.fontsize'] = 10
     fig = plt.figure()
