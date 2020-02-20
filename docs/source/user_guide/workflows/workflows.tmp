@@ -41,7 +41,7 @@ Example usage.
 YamboConvergence
 ----------------------------
 
-The `YamboConvergence` provides the functionality to run G0W0 calculations over several paramaeters,
+The `YamboConvergence` provides the functionality to run G0W0 calculations over several parameters,
 and it can be used (for now) to perform multi-parameter investigation of the quasiparticle corrections.
 It is possible to accomplish automatic convergence by iteration over one or more parameter in a serial way,
 or to explore a provided 2-dimensional space of parameters, in order to perform a successive extrapolation of the results(these can be useful
@@ -50,7 +50,7 @@ Let's see the case of automatic convergence over an arbitrary number of paramete
 
 Example usage:
 
-.. include:: ../../../../examples/test_wf/yambo_conv.py
+.. include:: ../../../../examples/test_wf/yambo_convergence.py
    :literal:
 
 As we notice, we have to provide a list of dictionaries, each representing a given step of the investigation: we have to specify the variables, the increment (delta) that has to be done

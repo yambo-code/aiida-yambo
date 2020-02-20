@@ -140,7 +140,8 @@ class YamboParser(Parser):
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, \
-        'requested_time':self._calc.attributes['max_wallclock_seconds'],'time_units':'seconds'}
+        'requested_time':self._calc.attributes['max_wallclock_seconds'],'time_units':'seconds',\
+        'memstats':[],'memstats_units':'Gb'}
         ndbqp = {}
         ndbhf = {}
 
@@ -235,10 +236,10 @@ class YamboParser(Parser):
 
         success=True
         if success == False:
-            if output_params['para_error'] == True:
-                return self.exit_codes.PARA_ERROR
-            elif out_folder and initialise:
+            if out_folder and initialise:
                 success = True #a p2y
+            elif output_params['memstats'] != [] and output_params['memstats'][-1] > 10:  #to be substituted with machine specific?
+                return self.exit_codes.PARA_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
 
