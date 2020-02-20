@@ -29,7 +29,8 @@
         "aiida_core[docs,atomic_tools]>=1.0.0a2",
         "aiida-quantumespresso==3.0.0a5",
        	"netcdf4",
-	"h5py"
+	"h5py",
+        "pytest"
         ],
     "keywords": "yambo aiida workflows",
     "entry_points": {
