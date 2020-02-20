@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Classes for calcs e wfls analysis. hybrid AiiDA and not_AiiDA...hopefully"""
+"""Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
 import numpy as np
 from scipy.optimize import curve_fit
@@ -10,6 +10,7 @@ import copy
 try:
     from aiida.orm import Dict, Str, load_node, KpointsData, RemoteData
     from aiida.plugins import CalculationFactory, DataFactory
+    from aiida_yambo.utils.common_helpers import *
 except:
     pass
 
@@ -25,16 +26,22 @@ else:
 
 class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info={}, wfl_type = '1D_convergence'):
+    def __init__(self, calc_info={}, wfl_settings={}):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
-        self.wfl_type = wfl_type
+        for key in wfl_settings.keys():
+            setattr(self, str(key), wfl_settings[key])
+
 ################################## update_parameters - create parameters space #####################################
-    def parameters_space_creator(self, first_calc, last_inputs = {}, k_distance = 1):
+    def parameters_space_creator(self, first_calc, parent, last_inputs = {}):
         space = []
 
-        if self.wfl_type == '1D_convergence':
+        if self.type == '1D_convergence':
+
+            if self.var == 'kpoints':
+
+                k_distance = get_distance_from_kmesh(find_pw_parent(parent))
 
             for i in range(self.steps):
 
@@ -68,7 +75,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             return space
 
-        elif self.wfl_type == '2D_space': #pass as input the space; actually, it's n-dimensional
+        elif self.type == '2D_space': #pass as input the space; actually, it's n-dimensional
 
             self.delta = 0
             for step in self.space:
@@ -90,7 +97,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
             try:
-                del inp_to_update.parent_folder  #I need to start from scratch...
+                inp_to_update.parent_folder = find_pw_parent(inp_to_update.parent_folder.get_incoming().get_node_by_label('remote_folder'),\
+                                                            calc_type='scf').outputs.remote_folder  #I need to start from the scf calc
             except:
                 pass
 
@@ -116,7 +124,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         return inp_to_update, value
 
 ################################## parsers #####################################
-    def take_quantities(self, start = 1): #yambopy wfl_type?
+    def take_quantities(self, start = 1):
 
         backtrace = self.steps #*self.iter
         where = self.where

@@ -12,7 +12,7 @@ import pandas as pd
 from aiida.orm import load_node
 
 def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='gap',\
-              units={'NGsBlkXp':'Ry','kpoints':'density^-1'):
+              units={'NGsBlkXp':'Ry','kpoints':'density^-1'}):
 
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
 
@@ -43,7 +43,7 @@ def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='g
             label='convergence path')
     for j in range(where):
         ax.plot(tot['global_step'],np.array(tot['result_eV'].to_list())[:,j],'*--',
-                color='black',label='full path - '+str(tot['where_word'].to_list()[0][j]))
+                color='black',label='full path - '+str(tot['where_in_words'].to_list()[0][j]))
 
     b=[]
 
