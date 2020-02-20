@@ -59,9 +59,10 @@ class workflow_manager:
 
         last_ok_wfl = calc_manager.get_caller(self.workflow_story[-(oversteps+1)][-3], depth = 1)
         calc_manager.start_from_converged(inputs, last_ok_wfl)
-
-        if calc_manager.var == 'kpoints':
+        try:
             calc_manager.set_parent(inputs, last_ok_wfl)
+        except:
+            pass
             #k_distance = k_distance - calc_manager.delta*oversteps
 
 

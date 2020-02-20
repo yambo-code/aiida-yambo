@@ -7,7 +7,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yamboconv import YamboConvergence
+from aiida_yambo.workflows.yamboconvergence import YamboConvergence
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 
@@ -143,17 +143,15 @@ builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
 builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
 builder.ywfl.yres.max_restarts = Int(5)
 
-builder.wfl_type = Str('2D_space')
+builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[(1,1)],'where_in_words':['Gamma']})
 var_to_conv = [{'var':['BndsRnXp','GbndRnge'],
                 'space': [[[1,10],[1,10]], \
                           [[1,50],[1,75]], \
                           [[1,75],[1,50]]], \
-                             'max_restarts': 0,'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},
+                             'max_restarts': 0,},
               {'var':['BndsRnXp','GbndRnge'],
                 'space': [[[1,75],[1,75]]],
-                             'max_restarts': 0,'what':'gap','where':[(1,1)], \
-                             'where_word':['Gamma'],},]
+                             'max_restarts': 0,}]
 
 
 for i in range(len(var_to_conv)):
