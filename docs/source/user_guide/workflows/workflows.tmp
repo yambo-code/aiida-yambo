@@ -44,9 +44,8 @@ YamboConvergence
 The `YamboConvergence` provides the functionality to run G0W0 calculations over several parameters,
 and it can be used (for now) to perform multi-parameter investigation of the quasiparticle corrections.
 It is possible to accomplish automatic convergence by iteration over one or more parameter in a serial way,
-or to explore a provided 2-dimensional space of parameters, in order to perform a successive extrapolation of the results(these can be useful
-in particular to obtain competitive results in molecular systems).
-Let's see the case of automatic convergence over an arbitrary number of parameters ("wfl_type": 1D_convergence):
+or to explore a provided 2-dimensional space of parameters, in order to perform a successive extrapolation of the results.
+Let's see the case of automatic convergence over an arbitrary number of parameters ("type": 1D_convergence):
 
 Example usage:
 
@@ -68,5 +67,5 @@ Let's see the case of 2-dimensional space exploration:
 
 Example usage:
 
-.. include:: ../../../../examples/test_wf/yambo_2d.py
+.. include:: ../../../../examples/test_wf/yambo_2d_space.py
    :literal:

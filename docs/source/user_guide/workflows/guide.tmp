@@ -9,16 +9,14 @@ Yambo Workflows Usage Guide
 The following documents the usage of the workflows provided by the  `aiida yambo` plugin.
 
 
-YamboRestartWf 
+YamboRestartWf
 --------------
 
-This workflow will run a single yambo calculation, (P2Y or Yambo init, or Yambo run), with a tolerance
-for failed calculations, and it will restart calculations that have failed due to 
+This workflow will run a single yambo calculation, with a tolerance
+for failed calculations, and it will restart calculations that have failed due to
 
 - Time Exhaustion on the queue.
 - Memory errors.
-- Incorrect Parallism errors.
-- Errors from a few select unphysical input like very low number of bands.
 
 Inputs
 ~~~~~~
@@ -66,7 +64,7 @@ Inputs
 - **gamma_pw** : Whether its a gamma  point calculation (optional), type `Bool`,
 - **parameters_pw** : PW SCF parameters , type `ParameterData`
 - **parameters_pw_nscf** : PW NSCF specific parameters (optional), type `ParameterData`, when not provided the **parameters_pw** with
-  modifications to `nbnd` and `calculation_type` changed 
+  modifications to `nbnd` and `calculation_type` changed
 - **parameters_p2y** : input parameters for P2Y, currently an empty `ParameterData`, needed since P2Y and YAMBO share the same plugin.
 - **parameters_yambo** : Parameters for Yambo, type `ParameterData` .
 - **parent_folder** : Parent calculation (optional), type `RemoteData`.
@@ -98,7 +96,7 @@ only one must be provided. It uses the YamboWorkflow as a subworkflow.
 Accepted Inputs
 ~~~~~~~~~~~~~~~
 
-- **precode** : the yambo  P2Y converter code, type `Str` 
+- **precode** : the yambo  P2Y converter code, type `Str`
 - **pwcode** :  the PW code, type `Str`
 - **yambocode** : Yambo code, type `Str`
 - **pseudo** :  pseudopotential family name, type `Str`
@@ -135,35 +133,35 @@ Outputs
 
 The output consists of a `ParameterData` consisting of the following keys
 
-- **convergence** :  `ParameterData` with these keys: 
-  `parameters`:  converged GW parameters.  
-  `convergence_space`: data about the convergece behaviour.  
-  `energy_widths`:  VBM-CBM gap widths. 
+- **convergence** :  `ParameterData` with these keys:
+  `parameters`:  converged GW parameters.
+  `convergence_space`: data about the convergece behaviour.
+  `energy_widths`:  VBM-CBM gap widths.
 - **yambo_remote_folder**: `RemoteData` from GW calculation performed by YamboRestart subworkflow
 - **scf_remote_folder**: `RemoteData` from PW calculation performed by PW subworkflow
 - **nscf_remote_folder**: `RemoteData` from PW calculation performed by PW subworkflow
 
 
 YamboFullConvergenceWorkflow
-----------------------------                                                                                                                                                     
+----------------------------
 
 The full convergence workflow takes a set of minimal inputs, and as output returns the converged
 parameters of a GW calculation. It uses as a subworkflow the YamboConvergenceWorkflow, and will
 converge the  bands, Greens function cutoff, the FFT grid and K-point mesh. The method used is
-the following:  
-**First** Converge the kpoints  
-**Then**  Converge the FFT with converged Kpoint inputs  
-**Then**  Converge the Bands with converged Kpoint and FFT grid  
-**Then**  Converge the G-cutoff with converged Bands, FFT and Kpoints.   
-**Then**  Reconverge the Bands to achieve consistency between bands and G-cutoff  
-**Then if** If previous is converged, end the full convergence  
-**Then if** If previous is  **NOT** converged, repeat the G-cutoff with new Bands. (Repeat consistency check for Bands/G-cutoff co-convergence as neccessary).  
+the following:
+**First** Converge the kpoints
+**Then**  Converge the FFT with converged Kpoint inputs
+**Then**  Converge the Bands with converged Kpoint and FFT grid
+**Then**  Converge the G-cutoff with converged Bands, FFT and Kpoints.
+**Then**  Reconverge the Bands to achieve consistency between bands and G-cutoff
+**Then if** If previous is converged, end the full convergence
+**Then if** If previous is  **NOT** converged, repeat the G-cutoff with new Bands. (Repeat consistency check for Bands/G-cutoff co-convergence as neccessary).
 
 
 Accepted inputs
 ~~~~~~~~~~~~~~~
 
-- **precode** : The P2Y converted code, type `Str` 
+- **precode** : The P2Y converted code, type `Str`
 - **pwcode** : the PW code, type `Str`
 - **yambocode** : the Yambo code, type `Str`
 - **pseudo** : the pseudopotential family, type `Str`

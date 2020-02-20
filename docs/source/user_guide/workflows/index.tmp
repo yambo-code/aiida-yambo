@@ -5,12 +5,12 @@ AiiDA Workflows for Yambo
 
 Description
 ^^^^^^^^^^^
-This plugin provides several workflows for performing automated MBPT with `Yambo` 
+This plugin provides several workflows for performing automated MBPT with `Yambo`
 
 
 Available Workflows
 ^^^^^^^^^^^^^^^^^^^
-   
+
 
 Workflow Usage
 ^^^^^^^^^^^^^^

@@ -147,6 +147,7 @@ As you can notice, we use the "argparse" module to provide some inputs from the 
 the simulation. In practice, the command to be run would be like:
 
 ::
+
     verdi run name_of_the_script.py --code <pk of the pw code> --pseudo <name of the pseudofamily>
 
 NSCF step (Quantum ESPRESSO) for G0W0
