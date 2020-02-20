@@ -56,7 +56,6 @@ class YamboConvergence(WorkChain):
 
         spec.output('story', valid_type = List, help='all calculations')
         spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
-        spec.output('last_remote', valid_type = RemoteData, help='last useful calculation remote folder')
 
 
     def start_workflow(self):
@@ -183,7 +182,6 @@ class YamboConvergence(WorkChain):
         self.out('story', story)
         final_result = Dict(dict=self.ctx.final_result).store()
         self.out('last_calculation',final_result)
-        self.out('last_remote', self.ctx.calc_inputs.parent_folder)
 
     def p2y_needed(self):
         self.report('do we need a p2y??')
