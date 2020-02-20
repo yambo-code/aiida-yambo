@@ -176,7 +176,7 @@ if __name__ == "__main__":
         '--parent',
         type=int,
         dest='parent_pk',
-        required=True,
+        required=False,
         help='The parent to use')
     parser.add_argument(
         '--yamboprecode',
