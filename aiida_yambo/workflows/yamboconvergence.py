@@ -55,7 +55,7 @@ class YamboConvergence(WorkChain):
 ##################################################################################
 
         spec.output('story', valid_type = List, help='all calculations')
-        spec.output('last_remote', valid_type = RemoteData, help='last useful calculation remote folder')
+        spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
 
 
     def start_workflow(self):
@@ -156,7 +156,7 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.calc_manager.success:
                 self.report('Success, updating the history... ')
-                self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
+                self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
                 self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the gap is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
                              self.ctx.workflow_manager.workflow_story[-(oversteps+1)][-2] ))
@@ -180,7 +180,8 @@ class YamboConvergence(WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
         story = List(list=self.ctx.workflow_manager.workflow_story).store()
         self.out('story', story)
-        self.out('last_remote', self.ctx.calc_inputs.parent_folder)
+        final_result = Dict(dict=self.ctx.final_result).store()
+        self.out('last_calculation',final_result)
 
     def p2y_needed(self):
         self.report('do we need a p2y??')

@@ -54,6 +54,8 @@ class workflow_manager:
 
     def post_analysis_update(self,inputs, calc_manager, oversteps):
 
+        final_result = {}
+
         for i in range(oversteps):
             self.workflow_story[-(i+1)][-1]=False
 
@@ -61,9 +63,12 @@ class workflow_manager:
         calc_manager.start_from_converged(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
-            calc_manager.set_parent(inputs, last_ok_wfl)
-            #k_distance = k_distance - calc_manager.delta*oversteps
+            calc_manager.set_parent(inputs, load_node(self.workflow_story[-(oversteps+1)][-3]))
 
+        final_result={'calculation_pk': self.workflow_story[-(oversteps+1)][-3],\
+                    'result_eV':self.workflow_story[-(oversteps+1)][-2],'success':self.workflow_story[-(oversteps+1)][-1]}
+
+        return final_result
 
 ################################################################################
 ############################## convergence_evaluator ######################################

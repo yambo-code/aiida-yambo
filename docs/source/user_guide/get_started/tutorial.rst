@@ -8,12 +8,16 @@ Yambo-AiiDA  Tutorial
 .. toctree::
    :maxdepth: 2
 
-The following tutorial shows how to run a G0W0 calculation and how to compute an IP-RPA spectrum with Yambo for bulk GaAs. In order to keep the tutorial light in terms of computational resources and time of execution, calculations are not fully converged with respect to parameters such as k-points, empty bands or G-vectors.
+The following tutorial shows how to run a G0W0 calculation and how to compute an IP-RPA spectrum with Yambo for bulk hBN.
+In order to keep the tutorial light in terms of computational resources and time of execution, calculations are
+not fully converged with respect to parameters such as k-points, empty bands or G-vectors.
 
 SCF step (Quantum ESPRESSO)
 ----------------------------
 
-Using the AiiDA quantumespresso.pw plugin, we begin with submitting an SCF calculation. We are going to use the ``pk`` of the SCF calculation in the next steps. We use the PwBaseWorkChain to submit a pw calculation, in such  a way to have automatic
+Using the AiiDA quantumespresso.pw plugin, we begin with submitting an SCF calculation.
+We are going to use the ``pk`` of the SCF calculation in the next steps.
+We use the PwBaseWorkChain to submit a pw calculation, in such  a way to have automatic
 error handling and restarting from failed runs.
 
 For details on how to use the quantumespresso.pw plugin, please refer to the plugins documentation page. Remember to replace the codename
@@ -142,8 +146,7 @@ and pseudo-family with those configured in your AiiDA installation. NB: Yambo ca
 
 NSCF step (Quantum ESPRESSO) for G0W0
 -------------------------------------
-Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation. GW calculations often require several empty states and few k-points (at least in 3D), so we are going to use a different NSCF to compute the IP-RPA spectrum for which more k-points and less empty bands are needed.
-
+Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation.
 
 ::
 
@@ -351,7 +354,7 @@ Now we use the Yambo plugin to run the p2y code, converting the Quantum ESPRESSO
 
 G0W0 (Yambo)
 ------------
-Now we are ready to run a G0W0 calculation in the plasmon-pole approximation (PPA), in particular we compute the direct band gap at Gamma of GaAs.
+Now we are ready to run a G0W0 calculation in the plasmon-pole approximation (PPA), in particular we compute the direct band gap at Gamma of hBN.
 
 ::
 
