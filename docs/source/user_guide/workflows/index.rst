@@ -10,6 +10,10 @@ This plugin provides several workflows for performing automated MBPT with `Yambo
 
 Available Workflows
 ^^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 4
+
+   workflows
 
 
 Workflow Usage
