@@ -10,7 +10,7 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+#from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
@@ -25,6 +25,8 @@ class YamboWorkflow(WorkChain):
         """Workfunction definition
 
         """
+        from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+
         super(YamboWorkflow, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, \
@@ -108,6 +110,8 @@ class YamboWorkflow(WorkChain):
 
         The next step will be a yambo calculation if the provided inputs are a previous yambo/p2y run
         Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
+
+        from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 
         self.report('performing a {} calculation'.format(self.ctx.calc_to_do))
 
