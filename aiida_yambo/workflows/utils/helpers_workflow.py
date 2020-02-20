@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Classes for calcs e wfls analysis. hybrid AiiDA and not_AiiDA...hopefully"""
+"""Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
 import numpy as np
 from scipy.optimize import curve_fit
@@ -11,7 +11,7 @@ import copy
 
 class workflow_manager:
 
-    def __init__(self, parameters_space, wfl_type = ' '):
+    def __init__(self, parameters_space, wfl_settings):
 
         try:
             #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
@@ -26,7 +26,7 @@ class workflow_manager:
             self.ideal_iter = copy.deepcopy(parameters_space)
             self.true_iter = copy.deepcopy(parameters_space)
 
-        self.wfl_type = wfl_type
+        self.type = wfl_settings['type']
 
     def build_story_global(self, calc_manager, quantities):
 
@@ -62,7 +62,7 @@ class workflow_manager:
 
         if calc_manager.var == 'kpoints':
             calc_manager.set_parent(inputs, last_ok_wfl)
-            k_distance = k_distance - calc_manager.delta*oversteps
+            #k_distance = k_distance - calc_manager.delta*oversteps
 
 
 ################################################################################
@@ -76,7 +76,7 @@ class the_evaluator:
 
     def analysis_and_decision(self, quantities):
 
-        if self.infos.wfl_type == '1D_convergence':
+        if self.infos.type == '1D_convergence':
             '''documentation...'''
             self.window =  self.infos.conv_window
             self.tol = self.infos.conv_thr
@@ -94,7 +94,7 @@ class the_evaluator:
 
             return converged, oversteps
 
-        if self.infos.wfl_type == '2D_space':
+        if self.infos.type == '2D_space':
             '''documentation...'''
 
             return True, 0
