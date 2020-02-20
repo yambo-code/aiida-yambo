@@ -5,5 +5,4 @@ Modules provided with aiida-yambo (API reference)
     :maxdepth: 3
 
     calculations
-    parsers
     workflows

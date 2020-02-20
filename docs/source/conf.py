@@ -36,7 +36,7 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/2.7', None),
+    'python': ('https://docs.python.org/3.5', None),
     'aiida': ('http://aiida_core.readthedocs.io/en/latest/', None),
 }
 
@@ -306,16 +306,21 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
         pass
     # Loading the dbenv. The backend should be fixed before compiling the
     # documentation.
-    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
-    if not is_dbenv_loaded():
-        load_dbenv()
+#    from aiida.backends.utils import load_dbenv, is_dbenv_loaded
+#    if not is_dbenv_loaded():
+#        load_dbenv()
 else:
     # Back-end settings for readthedocs online documentation -
     # we don't want to create a profile there
-    from aiida.backends import settings
-    settings.IN_DOC_MODE = True
-    settings.BACKEND = "django"
-    settings.AIIDADB_PROFILE = "default"
+    # Back-end settings for readthedocs online documentation.
+    from aiida.manage import configuration
+    configuration.IN_RT_DOC_MODE = True
+    configuration.BACKEND = 'django'
+#OLD
+#    from aiida.backends import settings
+#    settings.IN_DOC_MODE = True
+#    settings.BACKEND = "django"
+#    settings.AIIDADB_PROFILE = "default"
 
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance
