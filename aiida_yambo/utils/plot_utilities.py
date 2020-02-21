@@ -85,7 +85,7 @@ def take_2d_results(node):    #returns array (val_1,val_2,result_eV) to be furth
 
     return k
 
-def plot_2d_results(node,lab = ''):      #just a 3d plot
+def plot_2d_results(node,lab = '',title=''):      #just a 3d plot
     y = load_node(node).outputs.story.get_list()
     p = pd.DataFrame(y[1:][:],columns = y[0][:])
     k = np.zeros((len(p),3)) ;
@@ -102,6 +102,7 @@ def plot_2d_results(node,lab = ''):      #just a 3d plot
     matplotlib.rcParams['legend.fontsize'] = 10
     fig = plt.figure()
     ax = fig.gca(projection='3d')
+    ax.set_title(title)
     z = k[:,2]
     x = k[:,0]
     y = k[:,1]

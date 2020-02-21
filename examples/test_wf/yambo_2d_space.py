@@ -143,8 +143,9 @@ builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
 builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
 builder.ywfl.yres.max_restarts = Int(5)
 
-builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[(1,1)],'where_in_words':['Gamma']})
-var_to_conv = [{'var':['BndsRnXp','GbndRnge'],
+builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[[(1,8,1,9)]],'where_in_words':['Gamma']})
+#'what': 'single-levels','where':[(1,8),(1,9)]
+para_space = [{'var':['BndsRnXp','GbndRnge'],
                 'space': [[[1,10],[1,10]], \
                           [[1,50],[1,75]], \
                           [[1,75],[1,50]]], \
@@ -154,10 +155,10 @@ var_to_conv = [{'var':['BndsRnXp','GbndRnge'],
                              'max_restarts': 0,}]
 
 
-for i in range(len(var_to_conv)):
-    print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
-var_to_conv.reverse()
-builder.parameters_space = List(list = var_to_conv)
+for i in range(len(para_space)):
+    print('{}-th variable will be {}'.format(i+1,para_space[i]['var']))
+
+builder.parameters_space = List(list = para_space)
 
 if __name__ == "__main__":
     import argparse

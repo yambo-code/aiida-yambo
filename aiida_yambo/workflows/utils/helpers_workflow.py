@@ -15,8 +15,10 @@ class workflow_manager:
 
         try:
             #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
-            self.ideal_iter = copy.deepcopy(parameters_space.get_list())
-            self.true_iter = copy.deepcopy(parameters_space.get_list())
+            ps = parameters_space.get_list()
+            ps.reverse()
+            self.ideal_iter = copy.deepcopy(ps)
+            self.true_iter = copy.deepcopy(ps)
             self.type = 'AiiDA_calculation'
             #from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
         except:

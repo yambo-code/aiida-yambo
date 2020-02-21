@@ -56,3 +56,12 @@ def get_distance_from_kmesh(calc):
 def find_pw_type(calc):
     type = calc.inputs.parameters.get_dict()['CONTROL']['calculation']
     return type
+
+def find_table_ind(kpoint,band,_array_ndb):
+     kk = _array_ndb.get_array('qp_table')
+     b = kk[-1]==band
+     c = kk[0]==kpoint
+     g = (c == True) & (b == True)
+     for i in range(len(g)):
+         if g[i] == True:
+             return(i)

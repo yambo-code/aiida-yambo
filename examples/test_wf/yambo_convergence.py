@@ -143,8 +143,8 @@ builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
 builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
 builder.ywfl.yres.max_restarts = Int(5)
 
-builder.workflow_settings = Dict(dict={'type':'1D_convergence','what':'gap','where':[(1,1)],'where_in_words':['Gamma']})
-
+builder.workflow_settings = Dict(dict={'type':'1D_convergence','what':'gap','where':[(1,8,1,9)],'where_in_words':['Gamma']})
+#'what': 'single-levels','where':[(1,8),(1,9)]
 var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 3, \
                              'conv_thr': 0.2, 'conv_window': 2},
                {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
@@ -160,7 +160,7 @@ var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps':
 
 for i in range(len(var_to_conv)):
     print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
-var_to_conv.reverse()
+
 builder.parameters_space = List(list = var_to_conv)
 
 if __name__ == "__main__":
@@ -176,7 +176,7 @@ if __name__ == "__main__":
         '--parent',
         type=int,
         dest='parent_pk',
-        required=False,
+        required=True,
         help='The parent to use')
     parser.add_argument(
         '--yamboprecode',

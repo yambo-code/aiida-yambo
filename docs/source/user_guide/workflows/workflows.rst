@@ -12,12 +12,15 @@ The following shows how to use the workflows provided by the  `aiida yambo` plug
 YamboRestartWf
 --------------
 
-The `YamboRestartWf` provides the ability to run yambo GW calculations, starting from completed
-NSCF PW calculations.  It can restart the calculations should they fail from several types of
-causes including:
+This is the basic workflow and will run a single yambo calculation, with a tolerance
+for failed calculations, and it will restart calculations that have failed due to
 
-  1.) Queue time exhaustion
-  2.) Memory related failures (the workflow will adjust the parallelism before resubmitting, by reducing MPI in favour of threading)
+- Time Exhaustion on the queue.
+- Memory errors.
+
+After each calculation, this workflow will check the exit status(provided by the parser) and, if the calculation is failed,
+try to fix some parameters in order to resubmit the calculation and obtain results. As inputs, we have to provide
+the maximum number of attempted restarts.
 
 Example usage:
 
@@ -41,7 +44,7 @@ Example usage.
 YamboConvergence
 ----------------------------
 
-The `YamboConvergence` provides the functionality to run G0W0 calculations over several parameters,
+The `YamboConvergence` provides the functionality to run G0W0 calculations(using YamboWorkflow) over several parameters,
 and it can be used (for now) to perform multi-parameter investigation of the quasiparticle corrections.
 It is possible to accomplish automatic convergence by iteration over one or more parameter in a serial way,
 or to explore a provided 2-dimensional space of parameters, in order to perform a successive extrapolation of the results.
@@ -52,16 +55,32 @@ Example usage:
 .. include:: ../../../../examples/test_wf/yambo_convergence.py
    :literal:
 
-As we notice, we have to provide a list of dictionaries, each representing a given step of the investigation: we have to specify the variables, the increment (delta) that has to be done
-at each step, the convergence threshold which determines the convergence or not, what we want to converge(gap or single-levels), where we want to observe these results in terms of bands and k-points (quasiparticle corrections
-are ordered first by k-points, and then by bands: [[k1_b1,k1_b2],[k2_b1,k2_b2]] etc.).
-When we converge k-points, we need to specify the 'starting_k_distance': these because the creation and variation of the k-point mesh is
-managed using the 'set_kpoints_mesh_from_density' function.
+As you can see, we have to provide workflow_settings, which encode some workflow logic:
 
-The complete workflow will return the results of the convergence iterations, as well as a final converged set of parameters.
-The data can be plotted to produce the following:
+::
 
-.. image:: ../../images/Conv_tio2.png
+    {'type':'1D_convergence','what':'gap','where':[(k_v,vbM,k_c,cbm)],'where_in_words':['Gamma']})
+
+The workflow submitted here looks for convergence on different parameters, searching each step a given parameter(1D). The quantity that tries
+to converge is the gap('what') between given bands evaluated at fixed k-points. It is possible to choose also and indirect gap(notice that,
+changing the k-point mesh, the k-points will change index). The other functionality of the converge workflow is to converge single levels
+('gap'->'single-levels', [(k_v,vbM,k_c,cbm)]->[(k,b)]), useful in the study of molecules. It is possible also to search convergence simultaneously for
+multiple gaps/levels, just adding tuples in the 'where' list. The workflow will take care of it and doesn't stop until all the quantities are
+converged(or the maximum restarts are reached).
+
+The complete workflow will return the results of the convergence iterations, as well as a final converged calculation, from which we can parse the
+converged parameters, and a complete story of all the calculations of the workflow with all the information provided.
+
+The data can be plotted using a function in :
+
+::
+
+    from aiida_yambo.utils.plot_utilities import plot_conv
+    plot_conv(<workflow_pk>,title='Gap at Gamma for bulk hBN')
+
+
+.. image:: ../../images/conv_hBN.png
+
 
 Let's see the case of 2-dimensional space exploration:
 
@@ -69,3 +88,8 @@ Example usage:
 
 .. include:: ../../../../examples/test_wf/yambo_2d_space.py
    :literal:
+
+It is possible to use some functions(that may be as a starting point for more complex parsing) to parse and plot the results of
+this type of workflow, in order to perform successive analysis.
+
+.. image:: ../../images/2d_hBN.png

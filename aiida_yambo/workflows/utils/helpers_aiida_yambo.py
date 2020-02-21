@@ -138,24 +138,17 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             for i in range(1,backtrace+1):
                 yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
                 if what == 'gap':
-                    if _has_netcdf:
-                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
-                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
-                                    (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
-                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
-                    else:
-                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1].real+
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
-                                    (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2].real+
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
+                    _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
+                    _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)
+                    quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[_vb].real+
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real)-
+                                (yambo_calc.outputs.array_ndb.get_array('Eo')[_cb].real+
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real))
 
                 if what == 'single-levels':
-                    if _has_netcdf:
-                        quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
-                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real)
-                    else:
-                        quantities[j,i-1,1] = abs(yambo_calc.outputs.array_qp.get_array('Eo')[where[j]-1].real+ \
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1].real)
+                    _level=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
+                    quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real)
 
                 quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
                 quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
