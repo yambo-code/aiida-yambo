@@ -143,7 +143,7 @@ builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
 builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
 builder.ywfl.yres.max_restarts = Int(5)
 
-builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[[(1,8,1,9)]],'where_in_words':['Gamma']})
+builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[(1,8,1,9)],'where_in_words':['Gamma']})
 #'what': 'single-levels','where':[(1,8),(1,9)]
 para_space = [{'var':['BndsRnXp','GbndRnge'],
                 'space': [[[1,10],[1,10]], \

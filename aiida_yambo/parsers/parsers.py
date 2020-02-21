@@ -227,19 +227,21 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
-        try:
-            if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
-             / float(output_params['requested_time'])) < 0.1:
-                return self.exit_codes.WALLTIME_ERROR
-        except:
-            pass  #not enough time to detect something
+
+        if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
+         / float(output_params['requested_time'])) < 0.1:
+            return self.exit_codes.WALLTIME_ERROR
+        elif 'tim' in self._calc.get_scheduler_stderr():
+            return self.exit_codes.WALLTIME_ERROR
 
         success=True
         if success == False:
             if out_folder and initialise:
                 success = True #a p2y
-            elif output_params['memstats'] != [] and output_params['memstats'][-1] > 10:  #to be substituted with machine specific?
+            elif output_params['memstats'] == [] and parent_calc.exit_code!=304:
                 return self.exit_codes.PARA_ERROR
+            elif parent_calc.exit_code==304:
+                return self.exit_codes.MEMORY_ISSUE
             else:
                 return self.exit_codes.NO_SUCCESS
 
