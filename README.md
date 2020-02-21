@@ -21,7 +21,7 @@ reentry scan
 # License  
 The terms of the yambo-aiida license can be found in the LICENSE.txt file.
 
-[![Build Status](https://travis-ci.org/mikeatm/yambo-aiida.svg?branch=master)](https://travis-ci.org/mikeatm/yambo-aiida)
+[![Build Status](https://travis-ci.org/yambo-code/yambo-aiida.svg?branch=master)](https://travis-ci.org/yambo-code/yambo-aiida)
 
 # Acknowledgements
 
