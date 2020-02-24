@@ -113,7 +113,7 @@ class YamboRestartWf(WorkChain):
                 self.ctx.restart = self.inputs.max_restarts.value
                 return True
 
-            if calc.exit_status == 100 or calc.exit_status == 103:
+            if calc.exit_status == 300 or calc.exit_status == 303:
                 self.report(
                     "Calculation {} failed or did not generate outputs for unknown reason, restarting with no changes"
                     .format(calc.pk))
@@ -121,22 +121,16 @@ class YamboRestartWf(WorkChain):
 
             #walltime exceeded#
             if calc.exit_status == 101:
-                self.ctx.inputs.metadata.options['max_wallclock_seconds'] = \
-                                        int(self.ctx.inputs.metadata.options['max_wallclock_seconds']*1.3*self.ctx.restart)
+                self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.restart,self.inputs.max_walltime)
 
-                if self.ctx.inputs.metadata.options['max_wallclock_seconds'] > self.inputs.max_walltime.value:
-                    self.ctx.inputs.metadata.options['max_wallclock_seconds']= self.inputs.max_walltime.value
-
-                new_settings =  self.ctx.inputs.settings.get_dict()
-                new_settings['PARENT_DB'] = True
-                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
+                update_dict(self.ctx.inputs.settings,'PARENT_DB',True) # to link the db
 
                 self.report(
                     "Failed calculation, likely queue time exhaustion, restarting with new max_input_seconds = {}"
                     .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
                 return True
 
-            if calc.exit_status == 102:
+            if calc.exit_status == 302:
                 self.report('Something goes wrong, but we don\'t know what')
                 new_settings =  self.ctx.inputs.settings.get_dict()
                 new_settings['HARD_LINK'] = True
@@ -145,11 +139,17 @@ class YamboRestartWf(WorkChain):
                 return True
 
             # parallelization errors # but there should be something already in yambo...but mpi-openmpi balance #
-            if calc.exit_status == 104:
-                #self.something = parallelism_optimization(self.ctx.metadata.options)
-                self.report("Calculation {} failed likely from memory issues".format(calc))
+        '''
+            if calc.exit_status == 304:
+                self.ctx.inputs.metadata.options = fix_parallelism(self.ctx.inputs)
+                self.report("Calculation {} failed likely from parallelism errors".format(calc))
                 return False
 
+            if calc.exit_status == 305:
+                self.ctx.inputs.metadata.options = fix_memory(self.ctx.inputs)
+                self.report("Calculation {} failed likely from memory issues".format(calc))
+                return False
+        '''
 
 
     def yambo_restart(self):

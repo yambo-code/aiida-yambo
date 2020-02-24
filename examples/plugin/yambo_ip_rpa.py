@@ -24,7 +24,7 @@ options = {
 
 metadata = {
     'options':options,
-    'label': 'example_gw',
+    'label': 'example_IP_RPA',
 }
 
 params_ip_rpa = {
@@ -57,7 +57,7 @@ builder.metadata.options.resources = \
         dict = options['resources']
 #builder.metadata.options.queue_name = options['queue_name']
 #builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
-builder.parameters = params_gw
+builder.parameters = params_ip_rpa
 builder.precode_parameters = Dict(dict={})
 builder.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
 

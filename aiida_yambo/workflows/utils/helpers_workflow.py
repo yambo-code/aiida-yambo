@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Classes for calcs e wfls analysis. hybrid AiiDA and not_AiiDA...hopefully"""
+"""Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
 import numpy as np
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
-
+from aiida_yambo.utils.common_helpers import *
 ############################# AiiDA - independent ################################
 
 class workflow_manager:
 
-    def __init__(self, parameters_space, wfl_type = ' '):
+    def __init__(self, parameters_space, wfl_settings):
 
         try:
             #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
-            self.ideal_iter = copy.deepcopy(parameters_space.get_list())
-            self.true_iter = copy.deepcopy(parameters_space.get_list())
+            ps = parameters_space.get_list()
+            ps.reverse()
+            self.ideal_iter = copy.deepcopy(ps)
+            self.true_iter = copy.deepcopy(ps)
             self.type = 'AiiDA_calculation'
             #from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
         except:
@@ -26,7 +28,7 @@ class workflow_manager:
             self.ideal_iter = copy.deepcopy(parameters_space)
             self.true_iter = copy.deepcopy(parameters_space)
 
-        self.wfl_type = wfl_type
+        self.type = wfl_settings['type']
 
     def build_story_global(self, calc_manager, quantities):
 
@@ -54,16 +56,21 @@ class workflow_manager:
 
     def post_analysis_update(self,inputs, calc_manager, oversteps):
 
+        final_result = {}
+
         for i in range(oversteps):
             self.workflow_story[-(i+1)][-1]=False
 
-        last_ok_wfl = calc_manager.get_caller(self.workflow_story[-(oversteps+1)][-3], depth = 1)
+        last_ok_wfl = get_caller(self.workflow_story[-(oversteps+1)][-3], depth = 1)
         calc_manager.start_from_converged(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
-            calc_manager.set_parent(inputs, last_ok_wfl)
-            k_distance = k_distance - calc_manager.delta*oversteps
+            set_parent(inputs, load_node(self.workflow_story[-(oversteps+1)][-3]))
 
+        final_result={'calculation_pk': self.workflow_story[-(oversteps+1)][-3],\
+                    'result_eV':self.workflow_story[-(oversteps+1)][-2],'success':self.workflow_story[-(oversteps+1)][-1]}
+
+        return final_result
 
 ################################################################################
 ############################## convergence_evaluator ######################################
@@ -76,7 +83,7 @@ class the_evaluator:
 
     def analysis_and_decision(self, quantities):
 
-        if self.infos.wfl_type == '1D_convergence':
+        if self.infos.type == '1D_convergence':
             '''documentation...'''
             self.window =  self.infos.conv_window
             self.tol = self.infos.conv_thr
@@ -94,7 +101,7 @@ class the_evaluator:
 
             return converged, oversteps
 
-        if self.infos.wfl_type == '2D_space':
+        if self.infos.type == '2D_space':
             '''documentation...'''
 
             return True, 0

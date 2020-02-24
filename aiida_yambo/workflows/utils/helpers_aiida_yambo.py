@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Classes for calcs e wfls analysis. hybrid AiiDA and not_AiiDA...hopefully"""
+"""Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
 import numpy as np
 from scipy.optimize import curve_fit
@@ -10,6 +10,7 @@ import copy
 try:
     from aiida.orm import Dict, Str, load_node, KpointsData, RemoteData
     from aiida.plugins import CalculationFactory, DataFactory
+    from aiida_yambo.utils.common_helpers import *
 except:
     pass
 
@@ -25,16 +26,22 @@ else:
 
 class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
 
-    def __init__(self, calc_info={}, wfl_type = '1D_convergence'):
+    def __init__(self, calc_info={}, wfl_settings={}):
         for key in calc_info.keys():
             setattr(self, str(key), calc_info[key])
 
-        self.wfl_type = wfl_type
+        for key in wfl_settings.keys():
+            setattr(self, str(key), wfl_settings[key])
+
 ################################## update_parameters - create parameters space #####################################
-    def parameters_space_creator(self, first_calc, last_inputs = {}, k_distance = 1):
+    def parameters_space_creator(self, first_calc, parent, last_inputs = {}):
         space = []
 
-        if self.wfl_type == '1D_convergence':
+        if self.type == '1D_convergence':
+
+            if self.var == 'kpoints':
+
+                k_distance = get_distance_from_kmesh(find_pw_parent(parent))
 
             for i in range(self.steps):
 
@@ -68,7 +75,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             return space
 
-        elif self.wfl_type == '2D_space': #pass as input the space; actually, it's n-dimensional
+        elif self.type == '2D_space': #pass as input the space; actually, it's n-dimensional
 
             self.delta = 0
             for step in self.space:
@@ -90,7 +97,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
             try:
-                del inp_to_update.parent_folder  #I need to start from scratch...
+                inp_to_update.parent_folder = find_pw_parent(inp_to_update.parent_folder.get_incoming().get_node_by_label('remote_folder'),\
+                                                            calc_type='scf').outputs.remote_folder  #I need to start from the scf calc
             except:
                 pass
 
@@ -116,7 +124,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         return inp_to_update, value
 
 ################################## parsers #####################################
-    def take_quantities(self, start = 1): #yambopy wfl_type?
+    def take_quantities(self, start = 1):
 
         backtrace = self.steps #*self.iter
         where = self.where
@@ -130,24 +138,17 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             for i in range(1,backtrace+1):
                 yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
                 if what == 'gap':
-                    if _has_netcdf:
-                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][1]-1)*2+1].real+
-                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
-                                    (yambo_calc.outputs.array_ndb.get_array('Eo')[(where[j][0]-1)*2].real+
-                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
-                    else:
-                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][1]-1)*2+1].real+
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][1]-1)*2+1].real-
-                                    (yambo_calc.outputs.array_qp.get_array('Eo')[(where[j][0]-1)*2].real+
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[(where[j][0]-1)*2].real)))
+                    _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
+                    _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)
+                    quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[_vb].real+
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real)-
+                                (yambo_calc.outputs.array_ndb.get_array('Eo')[_cb].real+
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real))
 
                 if what == 'single-levels':
-                    if _has_netcdf:
-                        quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[where[j]-1].real+ \
-                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[where[j]-1].real)
-                    else:
-                        quantities[j,i-1,1] = abs(yambo_calc.outputs.array_qp.get_array('Eo')[where[j]-1].real+ \
-                                    yambo_calc.outputs.array_qp.get_array('E_minus_Eo')[where[j]-1].real)
+                    _level=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
+                    quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real)
 
                 quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
                 quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
@@ -155,61 +156,5 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         return quantities
 
-
-######################### AiiDA specific #############################
-    def update_dict(self, _dict, what, how):
-        new = _dict.get_dict()
-        new[what] = how
-        _dict = Dict(dict=new)
-
-    def get_caller(self, calc_pk, depth = 1):
-        for i in range(depth):
-            calc = load_node(int(calc_pk))
-            calc = calc.caller.caller
-        return calc
-
-    def get_called(self, calc, depth = 2):
-        for i in range(depth):
-            calc = calc.called[0]
-        return calc
-
     def start_from_converged(self, inputs, node):
-        inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
-
-    def set_parent(self, inputs, parent):
-        if isinstance(parent, RemoteData):
-            inputs.parent_folder = parent
-        else:
-            inputs.parent_folder = parent.outputs.remote_folder
-
-    def take_down(self, node = 0, what = 'CalcJobNode'):
-
-        global calc_node
-
-        if node == 0:
-            node = load_node(self.wfl_pk)
-        else:
-            node = load_node(node)
-
-        if what not in str(node.get_description):
-            self.take_down(node.called[0])
-        else:
-            calc_node = node
-
-        return calc_node
-
-    def take_super(self, node = 0, what = 'WorkChainNode'):
-
-        global workchain_node
-
-        if node == 0:
-            node = load_node(self.wfl_pk)
-        else:
-            node = load_node(node)
-
-        if what not in str(node.get_description):
-            self.take_super(node.caller)
-        else:
-            workchain_node = node
-
-        return workchain_node
+         inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']

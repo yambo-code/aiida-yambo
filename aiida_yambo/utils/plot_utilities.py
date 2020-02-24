@@ -12,7 +12,7 @@ import pandas as pd
 from aiida.orm import load_node
 
 def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='gap',\
-              units={'NGsBlkXp':'Ry','kpoints':'density^-1'):
+              units={'NGsBlkXp':'Ry','kpoints':'density^-1'}):
 
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
 
@@ -43,7 +43,7 @@ def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='g
             label='convergence path')
     for j in range(where):
         ax.plot(tot['global_step'],np.array(tot['result_eV'].to_list())[:,j],'*--',
-                color='black',label='full path - '+str(tot['where_word'].to_list()[0][j]))
+                color='black',label='full path - '+str(tot['where_in_words'].to_list()[0][j]))
 
     b=[]
 
@@ -85,7 +85,7 @@ def take_2d_results(node):    #returns array (val_1,val_2,result_eV) to be furth
 
     return k
 
-def plot_2d_results(node,lab = ''):      #just a 3d plot
+def plot_2d_results(node,lab = '',title=''):      #just a 3d plot
     y = load_node(node).outputs.story.get_list()
     p = pd.DataFrame(y[1:][:],columns = y[0][:])
     k = np.zeros((len(p),3)) ;
@@ -102,6 +102,7 @@ def plot_2d_results(node,lab = ''):      #just a 3d plot
     matplotlib.rcParams['legend.fontsize'] = 10
     fig = plt.figure()
     ax = fig.gca(projection='3d')
+    ax.set_title(title)
     z = k[:,2]
     x = k[:,0]
     y = k[:,1]

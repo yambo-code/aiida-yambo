@@ -27,6 +27,7 @@ metadata = {
     'label': 'example_gw',
 }
 
+
 builder = YamboCalculation.get_builder()
 builder.metadata.options.max_wallclock_seconds = \
         options['max_wallclock_seconds']

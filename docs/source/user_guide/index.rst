@@ -2,4 +2,8 @@
    :maxdepth: 4
 
    ./get_started/index
-  
+
+.. toctree::
+   :maxdepth: 4
+
+   ./workflows/index

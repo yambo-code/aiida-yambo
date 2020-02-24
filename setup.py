@@ -14,3 +14,6 @@ if __name__ == '__main__':
         packages=find_packages(
             where='.', exclude=("gw.*", "parser.*", "gw*", "parser*")),
         **kwargs)
+    #import reentry
+    #reentry.manager.scan()
+    
