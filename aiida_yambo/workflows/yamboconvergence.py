@@ -239,7 +239,7 @@ class YamboConvergence(WorkChain):
         self.report('doing the HF')
         calc = {}
         self.ctx.HF_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-
+        set_parent(self.ctx.HF_inputs, self.ctx.p2y.outputs.yambo_calc_folder)
         for i in ['ppa','gw0','em1d']:
             update_dict(self.ctx.HF_inputs.yres.gw.parameters, i, False)
         update_dict(self.ctx.HF_inputs.yres.gw.parameters,'HF_and_locXC',True)
