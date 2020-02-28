@@ -47,6 +47,10 @@ class YamboConvergence(WorkChain):
                     cls.do_p2y,
                     cls.prepare_calculations,
                     ),
+                    if_(cls.HF_needed)(
+                    cls.do_HF,
+                    cls.prepare_post_HF,
+                    ),
                     while_(cls.has_to_continue)(
                     cls.next_step,
                     cls.data_analysis),
@@ -184,6 +188,7 @@ class YamboConvergence(WorkChain):
         final_result = Dict(dict=self.ctx.final_result).store()
         self.out('last_calculation',final_result)
 
+###############################starting p2y#####################
     def p2y_needed(self):
         self.report('do we need a p2y??')
 
@@ -206,16 +211,47 @@ class YamboConvergence(WorkChain):
         self.report('doing the p2y')
         calc = {}
         self.report('no valid parent folder, so we will create it')
-        update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', True)
+        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', True)
         calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
         self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
-        update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', False)
+        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', False)
         self.ctx.p2y = calc['p2y']
         return ToContext(calc)
 
     def prepare_calculations(self):
         self.report('setting the p2y calc as parent')
         set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.yambo_calc_folder)
+
+###############################starting HF####################
+
+    def HF_needed(self):
+        self.report('do we need a preliminary HF ??')
+        self.report('detecting if we need an HF preliminary calculation...')
+        needed = self.inputs.workflow_settings.get_dict().pop('HF')
+        self.report(needed)
+        if needed:
+            return True
+        else:
+            return False
+
+    def do_HF(self):
+        self.report('doing the HF')
+        calc = {}
+        self.ctx.HF_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+        set_parent(self.ctx.HF_inputs, self.ctx.calc_inputs.parent_folder)
+        for i in ['ppa','gw0','em1d']:
+            self.ctx.HF_inputs.yres.gw.parameters = update_dict(self.ctx.HF_inputs.yres.gw.parameters, i, False)
+        self.ctx.HF_inputs.yres.gw.parameters = update_dict(self.ctx.HF_inputs.yres.gw.parameters,'HF_and_locXC',True)
+
+        calc['HF'] = self.submit(YamboWorkflow, **self.ctx.HF_inputs) #################run
+        self.report('Submitted YamboWorkflow up to HF, pk = {}'.format(calc['HF'].pk))
+        self.ctx.HF = calc['HF']
+        return ToContext(calc)
+
+    def prepare_post_HF(self):
+        self.report('setting the HF calc as parent and its db as starting one')
+        set_parent(self.ctx.calc_inputs, self.ctx.HF.outputs.yambo_calc_folder)
+        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'HARD_LINK', True)
 
 
 if __name__ == "__main__":
