@@ -102,6 +102,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             except:
                 pass
 
+            inp_to_update.yres.gw.settings = update_dict(inp_to_update.yres.gw.settings, 'HARD_LINK', False)
+
             value = k_distance
 
         elif isinstance(variables,list): #general

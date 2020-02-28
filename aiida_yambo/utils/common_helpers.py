@@ -71,6 +71,7 @@ def update_dict(_dict, what, how):
     new = _dict.get_dict()
     new[what] = how
     _dict = Dict(dict=new)
+    return _dict
 
 def get_caller(calc_pk, depth = 1):
      for i in range(depth):
