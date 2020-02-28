@@ -234,25 +234,16 @@ class YamboConvergence(WorkChain):
         else:
             return False
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 7b6c6a56d31ca81ff6004f8c788cd2076a6c0417
     def do_HF(self):
         self.report('doing the HF')
         calc = {}
         self.ctx.HF_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-<<<<<<< HEAD
+
         set_parent(self.ctx.HF_inputs, self.ctx.calc_inputs.parent_folder)
         for i in ['ppa','gw0','em1d']:
             self.ctx.HF_inputs.yres.gw.parameters = update_dict(self.ctx.HF_inputs.yres.gw.parameters, i, False)
         self.ctx.HF_inputs.yres.gw.parameters = update_dict(self.ctx.HF_inputs.yres.gw.parameters,'HF_and_locXC',True)
-=======
-        set_parent(self.ctx.HF_inputs, self.ctx.p2y.outputs.yambo_calc_folder)
-        for i in ['ppa','gw0','em1d']:
-            update_dict(self.ctx.HF_inputs.yres.gw.parameters, i, False)
-        update_dict(self.ctx.HF_inputs.yres.gw.parameters,'HF_and_locXC',True)
->>>>>>> 7b6c6a56d31ca81ff6004f8c788cd2076a6c0417
 
         calc['HF'] = self.submit(YamboWorkflow, **self.ctx.HF_inputs) #################run
         self.report('Submitted YamboWorkflow up to HF, pk = {}'.format(calc['HF'].pk))
@@ -262,11 +253,9 @@ class YamboConvergence(WorkChain):
     def prepare_post_HF(self):
         self.report('setting the HF calc as parent and its db as starting one')
         set_parent(self.ctx.calc_inputs, self.ctx.HF.outputs.yambo_calc_folder)
-<<<<<<< HEAD
+
         self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'HARD_LINK', True)
-=======
-        update_dict(self.ctx.calc_inputs.yres.gw.settings, 'PARENT_DB', True)
->>>>>>> 7b6c6a56d31ca81ff6004f8c788cd2076a6c0417
+
 
 
 if __name__ == "__main__":
