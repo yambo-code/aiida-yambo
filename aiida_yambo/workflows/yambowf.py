@@ -11,7 +11,7 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 #from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
-
+from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
 class YamboWorkflow(WorkChain):
@@ -66,9 +66,9 @@ class YamboWorkflow(WorkChain):
 
         try:
 
-            parent = self.inputs.parent_folder.creator
+            parent = take_calc_from_remote(self.inputs.parent_folder)
 
-            if parent.process_type=='aiida.calculations:quantumespresso.pw' and parent.is_finished_ok:
+            if parent.process_type=='aiida.calculations:quantumespresso.pw':
 
                 if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf' or parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'relax' or \
                 parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'vc-relax':
@@ -128,7 +128,10 @@ class YamboWorkflow(WorkChain):
 
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
-            self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
+            try:
+                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
+            except:
+                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
 
             future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
 
@@ -137,7 +140,11 @@ class YamboWorkflow(WorkChain):
         elif self.ctx.calc_to_do == 'yambo':
 
             self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'yres')
-            self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
+
+            try:
+                self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.called[0].outputs.remote_folder
+            except:
+                self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
             future = self.submit(YamboRestartWf, **self.ctx.yambo_inputs)
 
