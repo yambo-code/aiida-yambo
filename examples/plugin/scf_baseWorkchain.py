@@ -96,6 +96,8 @@ def get_options():
     if args.qos:
         options['qos']=args.qos
 
+    return options
+
 def main(options):
 
     ###### setting the lattice structure ######
