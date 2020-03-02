@@ -80,6 +80,14 @@ def get_options():
         default=None,
         help='qos name')
 
+    parser.add_argument(
+        '--account',
+        type=str,
+        dest='account',
+        required=False,
+        default=None,
+        help='account name')
+
     args = parser.parse_args()
 
     ###### setting the machine options ######
@@ -102,11 +110,15 @@ def get_options():
     if args.qos:
         options['qos']=args.qos
 
+    if args.account:
+        options['account']=args.account
+
     return options
 
 def main(options):
 
     Dict = DataFactory('dict')
+
     ###### creation of the YamboCalculation ######
 
     builder = YamboCalculation.get_builder()
@@ -120,6 +132,9 @@ def main(options):
 
     if 'qos' in options:
         builder.metadata.options.qos = options['qos']
+
+    if 'account' in options:
+        builder.metadata.options.account = options['account']
 
     builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
@@ -141,4 +156,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted P2Y; with pk=<{}>".format(running.pk))
+    print("Submitted YamboCalculation; with pk=<{}>".format(running.pk))

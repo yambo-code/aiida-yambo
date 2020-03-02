@@ -28,13 +28,6 @@ def get_options():
         help='The pseudo family to use')
 
     parser.add_argument(
-        '--parent',
-        type=int,
-        dest='parent_pk',
-        required=True,
-        help='The parent to use')
-
-    parser.add_argument(
         '--time',
         type=int,
         dest='max_wallclock_seconds',
@@ -82,13 +75,20 @@ def get_options():
         default=None,
         help='qos name')
 
+    parser.add_argument(
+        '--account',
+        type=str,
+        dest='account',
+        required=False,
+        default=None,
+        help='account name')
+
     args = parser.parse_args()
 
     ###### setting the machine options ######
     options = {
         'code_pk': args.code_pk,
         'pseudo_family': args.pseudo_family,
-        'parent_pk': args.parent_pk,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
             "num_machines": args.num_machines,
@@ -103,6 +103,9 @@ def get_options():
 
     if args.qos:
         options['qos']=args.qos
+
+    if args.account:
+        options['account']=args.account
 
     return options
 
@@ -135,7 +138,7 @@ def main(options):
     ###### setting the scf parameters ######
 
     Dict = DataFactory('dict')
-    params_scf = {
+    params_nscf = {
         'CONTROL': {
             'calculation': 'nscf',
             'verbosity': 'high',
@@ -155,14 +158,14 @@ def main(options):
         },
     }
 
-    parameter_scf = Dict(dict=params_scf)
+    parameter_nscf = Dict(dict=params_nscf)
 
 
     ###### creation of the workchain ######
 
     builder = PwBaseWorkChain.get_builder()
     builder.pw.structure = structure
-    builder.pw.parameters = parameter_scf
+    builder.pw.parameters = parameter_nscf
     builder.kpoints = kpoints
     builder.pw.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
@@ -175,13 +178,14 @@ def main(options):
     if 'qos' in options:
         builder.pw.metadata.options.qos = options['qos']
 
+    if 'account' in options:
+        builder.metadata.options.account = options['account']
+
     builder.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
     builder.pw.code = load_node(options['code_pk'])
     builder.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.pw.structure, pseudo_family = Str(options['pseudo_family']))
-
-    builder.pw.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
     return builder
 
