@@ -149,8 +149,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
                 if what == 'single-levels':
                     _level=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
-                    quantities[j,i-1,1] = abs(yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real)
+                    quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
+                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real
 
                 quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
                 quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit

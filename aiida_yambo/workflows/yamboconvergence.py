@@ -162,7 +162,7 @@ class YamboConvergence(WorkChain):
             if self.ctx.calc_manager.success:
                 self.report('Success, updating the history... ')
                 self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
-                self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the gap is {}' \
+                self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
                              self.ctx.workflow_manager.workflow_story[-(oversteps+1)][-2] ))
 
@@ -227,7 +227,7 @@ class YamboConvergence(WorkChain):
     def HF_needed(self):
         self.report('do we need a preliminary HF ??')
         self.report('detecting if we need an HF preliminary calculation...')
-        needed = self.inputs.workflow_settings.get_dict().pop('HF')
+        needed = self.inputs.workflow_settings.get_dict().pop('HF',None)
         self.report(needed)
         if needed:
             return True
@@ -254,7 +254,7 @@ class YamboConvergence(WorkChain):
         self.report('setting the HF calc as parent and its db as starting one')
         set_parent(self.ctx.calc_inputs, self.ctx.HF.outputs.yambo_calc_folder)
 
-        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'HARD_LINK', True)
+        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'HARD_LINK_DB', True)
 
 
 

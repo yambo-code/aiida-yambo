@@ -144,6 +144,11 @@ class YamboCalculation(CalcJob):
             if not isinstance(hard_link, bool):
                 raise InputValidationError("HARD_LINK must be " " a boolean")
 
+        hard_link_DB = settings.pop('HARD_LINK_DB', None)
+        if hard_link_DB is not None:
+            if not isinstance(hard_link_DB, bool):
+                raise InputValidationError("HARD_LINK_DB must be " " a boolean")
+
         parameters = self.inputs.parameters
 
         if not initialise:
@@ -292,6 +297,8 @@ class YamboCalculation(CalcJob):
                     remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
                 except:
                     remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
+            elif hard_link_DB:
+                    remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
             else:
                 try:
                     remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
