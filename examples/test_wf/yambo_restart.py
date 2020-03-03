@@ -95,7 +95,7 @@ def get_options():
         required=False,
         default=None,
         help='account name')
-        
+
     args = parser.parse_args()
 
     ###### setting the machine options ######
@@ -165,6 +165,9 @@ def main(options):
     if 'qos' in options:
         builder.gw.metadata.options.qos = options['qos']
 
+    if 'account' in options:
+        builder.metadata.options.account = options['account']
+        
     builder.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
     builder.gw.parameters = params_gw
