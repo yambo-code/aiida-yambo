@@ -75,6 +75,14 @@ def get_options():
         default=None,
         help='qos name')
 
+    parser.add_argument(
+        '--account',
+        type=str,
+        dest='account',
+        required=False,
+        default=None,
+        help='account name')
+
     args = parser.parse_args()
 
     ###### setting the machine options ######
@@ -95,6 +103,9 @@ def get_options():
 
     if args.qos:
         options['qos']=args.qos
+
+    if args.account:
+        options['account']=args.account
 
     return options
 
@@ -166,6 +177,9 @@ def main(options):
 
     if 'qos' in options:
         builder.pw.metadata.options.qos = options['qos']
+
+    if 'account' in options:
+        builder.metadata.options.account = options['account']
 
     builder.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
