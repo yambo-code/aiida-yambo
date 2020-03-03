@@ -1,0 +1,1023 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Yambo-AiiDA Tutorial &mdash; yambo-aiida 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within yambo-aiida 0.1.0 documentation"
+          href="../../_static/opensearch.xml"/>
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Yambo restart" href="features.html" />
+    <link rel="prev" title="Getting the plugin" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> yambo-aiida
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Get started</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#installation">Installation</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#plugin-tutorial">Plugin tutorial</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Yambo-AiiDA  Tutorial</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#scf-step-quantum-espresso">SCF step (Quantum ESPRESSO)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nscf-step-quantum-espresso-for-g0w0">NSCF step (Quantum ESPRESSO) for G0W0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#p2y-step-yambo">P2Y step (Yambo)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#g0w0-yambo">G0W0 (Yambo)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#plugin-features">Plugin features</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../workflows/index.html">Workflows for AiiDA-Yambo</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../module_guide/index.html">Modules provided with aiida-yambo (API reference)</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">yambo-aiida</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">&lt;no title&gt;</a> &raquo;</li>
+        
+          <li><a href="index.html">Get started</a> &raquo;</li>
+        
+      <li>Yambo-AiiDA  Tutorial</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="yambo-aiida-tutorial">
+<span id="my-ref-to-yambo-tutorial"></span><span id="sec-yambo-calc-plugin"></span><h1>Yambo-AiiDA  Tutorial<a class="headerlink" href="#yambo-aiida-tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<p>The following tutorial shows how to run all the necessary steps to obtain a G0W0 result with Yambo for bulk hBN.
+In order to keep the tutorial light in terms of computational resources and time of execution, calculations are
+not fully converged with respect to parameters such as k-points, empty bands or G-vectors.</p>
+<div class="section" id="scf-step-quantum-espresso">
+<h2>SCF step (Quantum ESPRESSO)<a class="headerlink" href="#scf-step-quantum-espresso" title="Permalink to this headline">¶</a></h2>
+<p>Using the AiiDA quantumespresso.pw plugin, we begin with submitting an SCF calculation.
+We are going to use the <code class="docutils literal notranslate"><span class="pre">pk</span></code> of the SCF calculation in the next steps.
+We use the PwBaseWorkChain to submit a pw calculation, in such  a way to have automatic
+error handling and restarting from failed runs.</p>
+<p>For details on how to use the quantumespresso.pw plugin, please refer to the plugins documentation page. Remember to replace the codename
+and pseudo-family with those configured in your AiiDA installation. NB: Yambo can be used only with norm-conserving pseudopotentials!</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">aiida.plugins</span> <span class="k">import</span> <span class="n">DataFactory</span>
+<span class="kn">from</span> <span class="nn">aiida.engine</span> <span class="k">import</span> <span class="n">submit</span>
+<span class="kn">from</span> <span class="nn">aiida_quantumespresso.utils.pseudopotential</span> <span class="k">import</span> <span class="n">validate_and_prepare_pseudos_inputs</span>
+<span class="kn">from</span> <span class="nn">aiida_quantumespresso.workflows.pw.base</span> <span class="k">import</span> <span class="n">PwBaseWorkChain</span>
+<span class="kn">from</span> <span class="nn">ase</span> <span class="k">import</span> <span class="n">Atoms</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+
+<span class="k">def</span> <span class="nf">get_options</span><span class="p">():</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;SCF calculation.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--code&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;code_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The pw codename to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--pseudo&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;pseudo_family&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The pseudo family to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--time&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">30</span><span class="o">*</span><span class="mi">60</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;max wallclock in seconds&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--nodes&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_machines&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of machines&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--mpi&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_mpiprocs_per_machine&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of mpi processes per machine&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--threads&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_cores_per_mpiproc&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of threads per mpi process&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--queue_name&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue_name&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;queue(PBS) or partition(SLURM) name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--qos&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;qos&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;qos name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--account&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;account&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;account name&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1">###### setting the machine options ######</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;code_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">code_pk</span><span class="p">,</span>
+        <span class="s1">&#39;pseudo_family&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">pseudo_family</span><span class="p">,</span>
+        <span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">max_wallclock_seconds</span><span class="p">,</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;num_machines&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_machines</span><span class="p">,</span>
+            <span class="s2">&quot;num_mpiprocs_per_machine&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_mpiprocs_per_machine</span><span class="p">,</span>
+            <span class="s2">&quot;num_cores_per_mpiproc&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">:</span> <span class="sa">u</span><span class="s2">&quot;export OMP_NUM_THREADS=&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">queue_name</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">queue_name</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">qos</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">qos</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">account</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">account</span>
+
+    <span class="k">return</span> <span class="n">options</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+
+    <span class="c1">###### setting the lattice structure ######</span>
+
+    <span class="n">alat</span> <span class="o">=</span> <span class="mf">2.4955987320</span> <span class="c1"># Angstrom</span>
+    <span class="n">the_cell</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.000000</span><span class="o">*</span><span class="n">alat</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">],</span>
+                <span class="p">[</span><span class="o">-</span><span class="mf">0.500000</span><span class="o">*</span><span class="n">alat</span><span class="p">,</span>  <span class="mf">0.866025</span><span class="o">*</span><span class="n">alat</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">],</span>
+                <span class="p">[</span><span class="mf">0.000000</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">,</span>  <span class="mf">6.4436359260</span><span class="p">]]</span>
+
+    <span class="n">atoms</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;BNNB&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="mf">1.2477994910</span><span class="p">,</span> <span class="mf">0.7204172280</span><span class="p">,</span> <span class="mf">0.0000000000</span><span class="p">),</span>
+    <span class="p">(</span><span class="o">-</span><span class="mf">0.0000001250</span><span class="p">,</span> <span class="mf">1.4408346720</span><span class="p">,</span> <span class="mf">0.0000000000</span><span class="p">),</span>
+    <span class="p">(</span><span class="mf">1.2477994910</span><span class="p">,</span> <span class="mf">0.7204172280</span><span class="p">,</span> <span class="mf">3.2218179630</span><span class="p">),</span>
+    <span class="p">(</span><span class="o">-</span><span class="mf">0.0000001250</span><span class="p">,</span><span class="mf">1.4408346720</span><span class="p">,</span> <span class="mf">3.2218179630</span><span class="p">)],</span>
+    <span class="n">cell</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">atoms</span><span class="o">.</span><span class="n">set_cell</span><span class="p">(</span><span class="n">the_cell</span><span class="p">,</span> <span class="n">scale_atoms</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">atoms</span><span class="o">.</span><span class="n">set_pbc</span><span class="p">([</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">])</span>
+
+    <span class="n">StructureData</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;structure&#39;</span><span class="p">)</span>
+    <span class="n">structure</span> <span class="o">=</span> <span class="n">StructureData</span><span class="p">(</span><span class="n">ase</span><span class="o">=</span><span class="n">atoms</span><span class="p">)</span>
+
+    <span class="c1">###### setting the kpoints mesh ######</span>
+
+    <span class="n">KpointsData</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;array.kpoints&#39;</span><span class="p">)</span>
+    <span class="n">kpoints</span> <span class="o">=</span> <span class="n">KpointsData</span><span class="p">()</span>
+    <span class="n">kpoints</span><span class="o">.</span><span class="n">set_kpoints_mesh</span><span class="p">([</span><span class="mi">6</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="c1">###### setting the scf parameters ######</span>
+
+    <span class="n">Dict</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;dict&#39;</span><span class="p">)</span>
+    <span class="n">params_scf</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;CONTROL&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;calculation&#39;</span><span class="p">:</span> <span class="s1">&#39;scf&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;verbosity&#39;</span><span class="p">:</span> <span class="s1">&#39;high&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;wf_collect&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;SYSTEM&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;ecutwfc&#39;</span><span class="p">:</span> <span class="mf">130.</span><span class="p">,</span>
+            <span class="s1">&#39;force_symmorphic&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;nbnd&#39;</span><span class="p">:</span> <span class="mi">20</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;ELECTRONS&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;mixing_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;plain&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;mixing_beta&#39;</span><span class="p">:</span> <span class="mf">0.7</span><span class="p">,</span>
+            <span class="s1">&#39;conv_thr&#39;</span><span class="p">:</span> <span class="mf">1.e-8</span><span class="p">,</span>
+            <span class="s1">&#39;diago_thr_init&#39;</span><span class="p">:</span> <span class="mf">5.0e-6</span><span class="p">,</span>
+            <span class="s1">&#39;diago_full_acc&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+
+    <span class="n">parameter_scf</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="n">params_scf</span><span class="p">)</span>
+
+
+    <span class="c1">###### creation of the workchain ######</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">PwBaseWorkChain</span><span class="o">.</span><span class="n">get_builder</span><span class="p">()</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">parameter_scf</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">kpoints</span> <span class="o">=</span> <span class="n">kpoints</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">max_wallclock_seconds</span> <span class="o">=</span> \
+            <span class="n">options</span><span class="p">[</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">]</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">resources</span> <span class="o">=</span> \
+            <span class="nb">dict</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;resources&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;queue_name&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">queue_name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;qos&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">qos</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;account&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">account</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">custom_scheduler_commands</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;code_pk&#39;</span><span class="p">])</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">pseudos</span> <span class="o">=</span> <span class="n">validate_and_prepare_pseudos_inputs</span><span class="p">(</span>
+                <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">structure</span><span class="p">,</span> <span class="n">pseudo_family</span> <span class="o">=</span> <span class="n">Str</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;pseudo_family&#39;</span><span class="p">]))</span>
+
+    <span class="k">return</span> <span class="n">builder</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">get_options</span><span class="p">()</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">main</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+    <span class="n">running</span> <span class="o">=</span> <span class="n">submit</span><span class="p">(</span><span class="n">builder</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Submitted PwBaseWorkchain; with pk=&lt;</span><span class="si">{}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">running</span><span class="o">.</span><span class="n">pk</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>As you can notice, we use the “argparse” module to provide some inputs from the shell, like the code and the pseudos to be used in
+the simulation. In practice, the command to be run would be like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">verdi</span> <span class="n">run</span> <span class="n">name_of_the_script</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">code</span> <span class="o">&lt;</span><span class="n">pk</span> <span class="n">of</span> <span class="n">the</span> <span class="n">pw</span> <span class="n">code</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">pseudo</span> <span class="o">&lt;</span><span class="n">name</span> <span class="n">of</span> <span class="n">the</span> <span class="n">pseudofamily</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="nscf-step-quantum-espresso-for-g0w0">
+<h2>NSCF step (Quantum ESPRESSO) for G0W0<a class="headerlink" href="#nscf-step-quantum-espresso-for-g0w0" title="Permalink to this headline">¶</a></h2>
+<p>Using the <code class="docutils literal notranslate"><span class="pre">pk</span></code>  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">aiida.plugins</span> <span class="k">import</span> <span class="n">DataFactory</span>
+<span class="kn">from</span> <span class="nn">aiida.engine</span> <span class="k">import</span> <span class="n">submit</span>
+<span class="kn">from</span> <span class="nn">aiida_quantumespresso.utils.pseudopotential</span> <span class="k">import</span> <span class="n">validate_and_prepare_pseudos_inputs</span>
+<span class="kn">from</span> <span class="nn">aiida_quantumespresso.workflows.pw.base</span> <span class="k">import</span> <span class="n">PwBaseWorkChain</span>
+<span class="kn">from</span> <span class="nn">ase</span> <span class="k">import</span> <span class="n">Atoms</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+
+<span class="k">def</span> <span class="nf">get_options</span><span class="p">():</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;SCF calculation.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--code&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;code_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The pw codename to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--pseudo&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;pseudo_family&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The pseudo family to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--time&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">30</span><span class="o">*</span><span class="mi">60</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;max wallclock in seconds&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--nodes&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_machines&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of machines&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--mpi&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_mpiprocs_per_machine&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of mpi processes per machine&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--threads&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_cores_per_mpiproc&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of threads per mpi process&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--queue_name&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue_name&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;queue(PBS) or partition(SLURM) name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--qos&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;qos&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;qos name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--account&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;account&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;account name&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1">###### setting the machine options ######</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;code_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">code_pk</span><span class="p">,</span>
+        <span class="s1">&#39;pseudo_family&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">pseudo_family</span><span class="p">,</span>
+        <span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">max_wallclock_seconds</span><span class="p">,</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;num_machines&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_machines</span><span class="p">,</span>
+            <span class="s2">&quot;num_mpiprocs_per_machine&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_mpiprocs_per_machine</span><span class="p">,</span>
+            <span class="s2">&quot;num_cores_per_mpiproc&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">:</span> <span class="sa">u</span><span class="s2">&quot;export OMP_NUM_THREADS=&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">queue_name</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">queue_name</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">qos</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">qos</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">account</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">account</span>
+
+    <span class="k">return</span> <span class="n">options</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+
+    <span class="c1">###### setting the lattice structure ######</span>
+
+    <span class="n">alat</span> <span class="o">=</span> <span class="mf">2.4955987320</span> <span class="c1"># Angstrom</span>
+    <span class="n">the_cell</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.000000</span><span class="o">*</span><span class="n">alat</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">],</span>
+                <span class="p">[</span><span class="o">-</span><span class="mf">0.500000</span><span class="o">*</span><span class="n">alat</span><span class="p">,</span>  <span class="mf">0.866025</span><span class="o">*</span><span class="n">alat</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">],</span>
+                <span class="p">[</span><span class="mf">0.000000</span><span class="p">,</span>   <span class="mf">0.000000</span><span class="p">,</span>  <span class="mf">6.4436359260</span><span class="p">]]</span>
+
+    <span class="n">atoms</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;BNNB&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="mf">1.2477994910</span><span class="p">,</span> <span class="mf">0.7204172280</span><span class="p">,</span> <span class="mf">0.0000000000</span><span class="p">),</span>
+    <span class="p">(</span><span class="o">-</span><span class="mf">0.0000001250</span><span class="p">,</span> <span class="mf">1.4408346720</span><span class="p">,</span> <span class="mf">0.0000000000</span><span class="p">),</span>
+    <span class="p">(</span><span class="mf">1.2477994910</span><span class="p">,</span> <span class="mf">0.7204172280</span><span class="p">,</span> <span class="mf">3.2218179630</span><span class="p">),</span>
+    <span class="p">(</span><span class="o">-</span><span class="mf">0.0000001250</span><span class="p">,</span><span class="mf">1.4408346720</span><span class="p">,</span> <span class="mf">3.2218179630</span><span class="p">)],</span>
+    <span class="n">cell</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">atoms</span><span class="o">.</span><span class="n">set_cell</span><span class="p">(</span><span class="n">the_cell</span><span class="p">,</span> <span class="n">scale_atoms</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">atoms</span><span class="o">.</span><span class="n">set_pbc</span><span class="p">([</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">])</span>
+
+    <span class="n">StructureData</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;structure&#39;</span><span class="p">)</span>
+    <span class="n">structure</span> <span class="o">=</span> <span class="n">StructureData</span><span class="p">(</span><span class="n">ase</span><span class="o">=</span><span class="n">atoms</span><span class="p">)</span>
+
+    <span class="c1">###### setting the kpoints mesh ######</span>
+
+    <span class="n">KpointsData</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;array.kpoints&#39;</span><span class="p">)</span>
+    <span class="n">kpoints</span> <span class="o">=</span> <span class="n">KpointsData</span><span class="p">()</span>
+    <span class="n">kpoints</span><span class="o">.</span><span class="n">set_kpoints_mesh</span><span class="p">([</span><span class="mi">6</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="c1">###### setting the scf parameters ######</span>
+
+    <span class="n">Dict</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;dict&#39;</span><span class="p">)</span>
+    <span class="n">params_nscf</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;CONTROL&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;calculation&#39;</span><span class="p">:</span> <span class="s1">&#39;nscf&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;verbosity&#39;</span><span class="p">:</span> <span class="s1">&#39;high&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;wf_collect&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;SYSTEM&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;ecutwfc&#39;</span><span class="p">:</span> <span class="mf">130.</span><span class="p">,</span>
+            <span class="s1">&#39;force_symmorphic&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;nbnd&#39;</span><span class="p">:</span> <span class="mi">150</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;ELECTRONS&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;mixing_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;plain&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;mixing_beta&#39;</span><span class="p">:</span> <span class="mf">0.7</span><span class="p">,</span>
+            <span class="s1">&#39;conv_thr&#39;</span><span class="p">:</span> <span class="mf">1.e-8</span><span class="p">,</span>
+            <span class="s1">&#39;diago_thr_init&#39;</span><span class="p">:</span> <span class="mf">5.0e-6</span><span class="p">,</span>
+            <span class="s1">&#39;diago_full_acc&#39;</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+
+    <span class="n">parameter_nscf</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="n">params_nscf</span><span class="p">)</span>
+
+
+    <span class="c1">###### creation of the workchain ######</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">PwBaseWorkChain</span><span class="o">.</span><span class="n">get_builder</span><span class="p">()</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">parameter_nscf</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">kpoints</span> <span class="o">=</span> <span class="n">kpoints</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">max_wallclock_seconds</span> <span class="o">=</span> \
+            <span class="n">options</span><span class="p">[</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">]</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">resources</span> <span class="o">=</span> \
+            <span class="nb">dict</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;resources&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;queue_name&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">queue_name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;qos&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">qos</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;account&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">account</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">custom_scheduler_commands</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;code_pk&#39;</span><span class="p">])</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">pseudos</span> <span class="o">=</span> <span class="n">validate_and_prepare_pseudos_inputs</span><span class="p">(</span>
+                <span class="n">builder</span><span class="o">.</span><span class="n">pw</span><span class="o">.</span><span class="n">structure</span><span class="p">,</span> <span class="n">pseudo_family</span> <span class="o">=</span> <span class="n">Str</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;pseudo_family&#39;</span><span class="p">]))</span>
+
+    <span class="k">return</span> <span class="n">builder</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">get_options</span><span class="p">()</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">main</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+    <span class="n">running</span> <span class="o">=</span> <span class="n">submit</span><span class="p">(</span><span class="n">builder</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Submitted PwBaseWorkchain; with pk=&lt;</span><span class="si">{}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">running</span><span class="o">.</span><span class="n">pk</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="p2y-step-yambo">
+<h2>P2Y step (Yambo)<a class="headerlink" href="#p2y-step-yambo" title="Permalink to this headline">¶</a></h2>
+<p>Now we use the Yambo plugin to run the p2y code, converting the Quantum ESPRESSO files into a NetCDF Yambo database.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">aiida.plugins</span> <span class="k">import</span> <span class="n">DataFactory</span><span class="p">,</span> <span class="n">CalculationFactory</span>
+<span class="kn">from</span> <span class="nn">aiida.engine</span> <span class="k">import</span> <span class="n">submit</span>
+<span class="kn">from</span> <span class="nn">aiida_yambo.calculations.gw</span> <span class="k">import</span> <span class="n">YamboCalculation</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+
+<span class="k">def</span> <span class="nf">get_options</span><span class="p">():</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;SCF calculation.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--code&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;code_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The yambo codename to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--precode&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;precode_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The p2y codename to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--parent&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;parent_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The parent to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--time&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">30</span><span class="o">*</span><span class="mi">60</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;max wallclock in seconds&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--nodes&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_machines&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of machines&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--mpi&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_mpiprocs_per_machine&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of mpi processes per machine&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--threads&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_cores_per_mpiproc&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of threads per mpi process&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--queue_name&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue_name&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;queue(PBS) or partition(SLURM) name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--qos&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;qos&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;qos name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--account&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;account&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;account name&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1">###### setting the machine options ######</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;code_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">code_pk</span><span class="p">,</span>
+        <span class="s1">&#39;precode_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">precode_pk</span><span class="p">,</span>
+        <span class="s1">&#39;parent_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">parent_pk</span><span class="p">,</span>
+        <span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">max_wallclock_seconds</span><span class="p">,</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;num_machines&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_machines</span><span class="p">,</span>
+            <span class="s2">&quot;num_mpiprocs_per_machine&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_mpiprocs_per_machine</span><span class="p">,</span>
+            <span class="s2">&quot;num_cores_per_mpiproc&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">:</span> <span class="sa">u</span><span class="s2">&quot;export OMP_NUM_THREADS=&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">queue_name</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">queue_name</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">qos</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">qos</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">account</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">account</span>
+
+    <span class="k">return</span> <span class="n">options</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+
+    <span class="n">Dict</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;dict&#39;</span><span class="p">)</span>
+
+    <span class="c1">###### creation of the YamboCalculation ######</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">YamboCalculation</span><span class="o">.</span><span class="n">get_builder</span><span class="p">()</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">max_wallclock_seconds</span> <span class="o">=</span> \
+            <span class="n">options</span><span class="p">[</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">]</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">resources</span> <span class="o">=</span> \
+            <span class="nb">dict</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;resources&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;queue_name&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">queue_name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;qos&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">qos</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;account&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">account</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">custom_scheduler_commands</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="p">{})</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">precode_parameters</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="p">{})</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;INITIALISE&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;PARENT_DB&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;code_pk&#39;</span><span class="p">])</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">preprocessing_code</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;precode_pk&#39;</span><span class="p">])</span>
+
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">parent_folder</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;parent_pk&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">remote_folder</span>
+
+    <span class="k">return</span> <span class="n">builder</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">get_options</span><span class="p">()</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">main</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+    <span class="n">running</span> <span class="o">=</span> <span class="n">submit</span><span class="p">(</span><span class="n">builder</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Submitted YamboCalculation; with pk=&lt;</span><span class="si">{}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">running</span><span class="o">.</span><span class="n">pk</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="g0w0-yambo">
+<h2>G0W0 (Yambo)<a class="headerlink" href="#g0w0-yambo" title="Permalink to this headline">¶</a></h2>
+<p>Now we are ready to run a G0W0 calculation in the plasmon-pole approximation (PPA), in particular we compute the direct band gap at Gamma of hBN.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">aiida.plugins</span> <span class="k">import</span> <span class="n">DataFactory</span><span class="p">,</span> <span class="n">CalculationFactory</span>
+<span class="kn">from</span> <span class="nn">aiida.engine</span> <span class="k">import</span> <span class="n">submit</span>
+<span class="kn">from</span> <span class="nn">aiida_yambo.calculations.gw</span> <span class="k">import</span> <span class="n">YamboCalculation</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+
+<span class="k">def</span> <span class="nf">get_options</span><span class="p">():</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;SCF calculation.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--code&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;code_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The yambo codename to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--precode&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;precode_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The p2y codename to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--parent&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;parent_pk&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The parent to use&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--time&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">30</span><span class="o">*</span><span class="mi">60</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;max wallclock in seconds&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--nodes&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_machines&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of machines&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--mpi&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_mpiprocs_per_machine&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of mpi processes per machine&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--threads&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;num_cores_per_mpiproc&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of threads per mpi process&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--queue_name&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;queue_name&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;queue(PBS) or partition(SLURM) name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--qos&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;qos&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;qos name&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--account&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;account&#39;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;account name&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1">###### setting the machine options ######</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;code_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">code_pk</span><span class="p">,</span>
+        <span class="s1">&#39;precode_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">precode_pk</span><span class="p">,</span>
+        <span class="s1">&#39;parent_pk&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">parent_pk</span><span class="p">,</span>
+        <span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">max_wallclock_seconds</span><span class="p">,</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;num_machines&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_machines</span><span class="p">,</span>
+            <span class="s2">&quot;num_mpiprocs_per_machine&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_mpiprocs_per_machine</span><span class="p">,</span>
+            <span class="s2">&quot;num_cores_per_mpiproc&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">:</span> <span class="sa">u</span><span class="s2">&quot;export OMP_NUM_THREADS=&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">num_cores_per_mpiproc</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">queue_name</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">queue_name</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">qos</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">qos</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">account</span><span class="p">:</span>
+        <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">account</span>
+
+    <span class="k">return</span> <span class="n">options</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+
+    <span class="c1">###### setting the gw parameters ######</span>
+
+    <span class="n">Dict</span> <span class="o">=</span> <span class="n">DataFactory</span><span class="p">(</span><span class="s1">&#39;dict&#39;</span><span class="p">)</span>
+
+    <span class="n">params_gw</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;ppa&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;gw0&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;HF_and_locXC&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;em1d&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;Chimod&#39;</span><span class="p">:</span> <span class="s1">&#39;hartree&#39;</span><span class="p">,</span>
+            <span class="c1">#&#39;EXXRLvcs&#39;: 40,</span>
+            <span class="c1">#&#39;EXXRLvcs_units&#39;: &#39;Ry&#39;,</span>
+            <span class="s1">&#39;BndsRnXp&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+            <span class="s1">&#39;NGsBlkXp&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s1">&#39;NGsBlkXp_units&#39;</span><span class="p">:</span> <span class="s1">&#39;Ry&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;GbndRnge&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+            <span class="s1">&#39;DysSolver&#39;</span><span class="p">:</span> <span class="s2">&quot;n&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;QPkrange&#39;</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">]],</span>
+            <span class="s1">&#39;X_all_q_CPU&#39;</span><span class="p">:</span> <span class="s2">&quot;1 1 1 1&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;X_all_q_ROLEs&#39;</span><span class="p">:</span> <span class="s2">&quot;q k c v&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;SE_CPU&#39;</span><span class="p">:</span> <span class="s2">&quot;1 1 1&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;SE_ROLEs&#39;</span><span class="p">:</span> <span class="s2">&quot;q qp b&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="n">params_gw</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="n">params_gw</span><span class="p">)</span>
+
+    <span class="c1">###### creation of the YamboCalculation ######</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">YamboCalculation</span><span class="o">.</span><span class="n">get_builder</span><span class="p">()</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">max_wallclock_seconds</span> <span class="o">=</span> \
+            <span class="n">options</span><span class="p">[</span><span class="s1">&#39;max_wallclock_seconds&#39;</span><span class="p">]</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">resources</span> <span class="o">=</span> \
+            <span class="nb">dict</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;resources&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;queue_name&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">queue_name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;queue_name&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;qos&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">qos</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;qos&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;account&#39;</span> <span class="ow">in</span> <span class="n">options</span><span class="p">:</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">account</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;account&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">custom_scheduler_commands</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s1">&#39;custom_scheduler_commands&#39;</span><span class="p">]</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">params_gw</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">precode_parameters</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="p">{})</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;INITIALISE&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;PARENT_DB&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span>
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;code_pk&#39;</span><span class="p">])</span>
+    <span class="n">builder</span><span class="o">.</span><span class="n">preprocessing_code</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;precode_pk&#39;</span><span class="p">])</span>
+
+
+    <span class="n">builder</span><span class="o">.</span><span class="n">parent_folder</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;parent_pk&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">remote_folder</span>
+
+    <span class="k">return</span> <span class="n">builder</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">get_options</span><span class="p">()</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">main</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+    <span class="n">running</span> <span class="o">=</span> <span class="n">submit</span><span class="p">(</span><span class="n">builder</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Submitted YamboCalculation; with pk=&lt;</span><span class="si">{}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">running</span><span class="o">.</span><span class="n">pk</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The quasiparticle corrections and the renormalization factors can be accessed from the Yambo calculation (yambo_calc) using the output bands and array data:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">yambo_calc</span> <span class="o">=</span> <span class="n">load_node</span><span class="p">(</span><span class="n">pk</span><span class="p">)</span>
+<span class="n">energies_DFT</span> <span class="o">=</span> <span class="n">yambo_calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">array_ndb</span><span class="o">.</span><span class="n">get_array</span><span class="p">(</span><span class="s1">&#39;E_0&#39;</span><span class="p">)</span>
+<span class="n">QP_corrections</span> <span class="o">=</span>  <span class="n">yambo_calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">array_ndb</span><span class="o">.</span><span class="n">get_array</span><span class="p">(</span><span class="s1">&#39;E_minus_Eo&#39;</span><span class="p">)</span>
+<span class="n">Z_factors</span> <span class="o">=</span>  <span class="n">yambo_calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">array_ndb</span><span class="o">.</span><span class="n">get_array</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">)</span>
+<span class="n">kpoint_band_array</span> <span class="o">=</span> <span class="n">yambo_calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">array_ndb</span><span class="o">.</span><span class="n">get_array</span><span class="p">(</span><span class="s1">&#39;qp_table&#39;</span><span class="p">)</span>
+<span class="n">kpoints</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">bands_quasiparticle</span><span class="o">.</span><span class="n">get_kpoints</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>To retrieve additional files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">settings</span> <span class="o">=</span> <span class="n">ParameterData</span><span class="p">(</span><span class="nb">dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;ADDITIONAL_RETRIEVE_LIST&quot;</span><span class="p">:[</span><span class="s1">&#39;r-*&#39;</span><span class="p">,</span><span class="s1">&#39;o-*&#39;</span><span class="p">,</span><span class="s1">&#39;LOG/l-*01&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;aiida.out/ndb.QP&#39;</span><span class="p">,</span><span class="s1">&#39;aiida.out/ndb.HF_and_locXC&#39;</span><span class="p">]})</span>
+<span class="n">builder</span><span class="o">.</span><span class="n">use_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This selects the additional files that will  be retrieved and parsed after a calculation. Supported
+files include the report files <code class="docutils literal notranslate"><span class="pre">r-*</span></code>, text outputs <code class="docutils literal notranslate"><span class="pre">o-*</span></code>, logs, the quasiparticle
+database for GW calculations <code class="docutils literal notranslate"><span class="pre">aiida.out/ndb.QP</span></code>, and the Hartree-Fock and local exchange
+db <code class="docutils literal notranslate"><span class="pre">aiida.out/ndb.HF_and_locXC</span></code>.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="features.html" class="btn btn-neutral float-right" title="Yambo restart" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="installation.html" class="btn btn-neutral float-left" title="Getting the plugin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2020, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and CNR NANO Modena, Italy. All rights reserved.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
