@@ -126,7 +126,7 @@ def main(options):
     builder.parameters = Dict(dict={})
 
     builder.precode_parameters = Dict(dict={})
-    builder.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
+    builder.settings = Dict(dict={'INITIALISE': True, 'PARENT_DB': False})
 
     builder.code = load_node(options['code_pk'])
     builder.preprocessing_code = load_node(options['precode_pk'])
