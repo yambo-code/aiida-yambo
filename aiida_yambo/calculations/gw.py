@@ -116,9 +116,15 @@ class YamboCalculation(CalcJob):
                 required=False, help='returns the array for ndbQP')
         spec.output('array_ndb_HFlocXC', valid_type=ArrayData,
                 required=False, help='returns the array ndb for HFlocXC')
+        spec.output('system_info', valid_type=Dict,
+                required=False, help='returns some system information after a p2y')
+
 
 
     def prepare_for_submission(self, tempfolder):
+
+        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC',
+                         'ns.db1': 'ns.db1',}
 
         local_copy_list = []
         remote_copy_list = []
@@ -335,9 +341,21 @@ class YamboCalculation(CalcJob):
         calcinfo.retrieve_list.append('l*')
         calcinfo.retrieve_list.append('o*')
         calcinfo.retrieve_list.append('LOG/l-*_CPU_1')
-        extra_retrieved = settings.pop(
-            'ADDITIONAL_RETRIEVE_LIST',
-            ['aiida.out/ndb.QP', 'aiida.out/ndb.HF_and_locXC'])
+        extra_retrieved = []
+
+        if initialise:
+            extra_retrieved.append('SAVE/'+_dbs_accepted['ns.db1'])
+
+        else:
+            for dbs in _dbs_accepted.keys():
+                db = boolean_dict.pop(dbs,False)
+                if db:
+                    extra_retrieved.append('aiida.out/'+_dbs_accepted[dbs])
+
+        additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
+        if additional:
+            extra_retrieved.append(additional)
+
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append(extra)
 
