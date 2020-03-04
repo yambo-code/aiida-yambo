@@ -111,3 +111,17 @@ def plot_2d_results(node,lab = '',title=''):      #just a 3d plot
     ax.set_ylabel(p['var'].iloc[1][1])
     ax.legend()
     plt.show()
+
+def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
+
+    node = load_node(calc_node_pk)
+    path_folder = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
+    for i in os.listdir(path_folder):
+        if 'r-aiida.out' in i:
+            file = open(path_folder+i,'r')
+    for line in file:
+        if '[X]Fermi Level' in line:
+            print('The Fermi level is {}'.format(line.split()[3]))
+            ef = line.split()[3]
+
+    return ef
