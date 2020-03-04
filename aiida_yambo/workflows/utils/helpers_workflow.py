@@ -67,7 +67,7 @@ class workflow_manager:
         if calc_manager.var == 'kpoints':
             set_parent(inputs, load_node(self.workflow_story[-(oversteps+1)][-3]))
 
-        final_result={'calculation_pk': self.workflow_story[-(oversteps+1)][-3],\
+        final_result={'calculation_pk': int(self.workflow_story[-(oversteps+1)][-3]),\
                     'result_eV':self.workflow_story[-(oversteps+1)][-2],'success':self.workflow_story[-(oversteps+1)][-1]}
 
         return final_result
