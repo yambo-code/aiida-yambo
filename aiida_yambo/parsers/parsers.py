@@ -141,7 +141,7 @@ class YamboParser(Parser):
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, \
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
-        'memstats':[], 'para_error':False, 'memory_error':False}
+        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[]}
         ndbqp = {}
         ndbhf = {}
 
