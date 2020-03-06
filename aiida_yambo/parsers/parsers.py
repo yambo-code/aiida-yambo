@@ -15,8 +15,10 @@ from aiida.orm import Dict
 from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
-from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
-from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder
+
+from yamboparser import *
+from yambopy.dbs.savedb import *
+
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
@@ -95,6 +97,7 @@ class YamboParser(Parser):
         self._lifetime_bands_linkname = 'bands_lifetime'
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
+        self._system_info_linkname = 'system_info'
         super(YamboParser, self).__init__(calculation)
 
     def parse(self, retrieved, **kwargs):
@@ -204,6 +207,8 @@ class YamboParser(Parser):
         params=Dict(dict=output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
 
+        if initialise:
+            self.out(self._system_info_linkname, self._ns_db1_analysis(results))
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:  #
@@ -232,8 +237,6 @@ class YamboParser(Parser):
                 return self.exit_codes.MEMORY_ISSUE
             else:
                 return self.exit_codes.NO_SUCCESS
-
-
 
     def _aiida_array(self, data):
         arraydata = ArrayData()
@@ -376,6 +379,7 @@ class YamboParser(Parser):
         else:
             return yt
 
+
     def _parse_log(self, log, output_params):
 
         #just p2y...
@@ -426,3 +430,4 @@ class YamboParser(Parser):
         for line in report.lines:
             if game_over.findall(line):
                 output_params['game_over'] = True
+
