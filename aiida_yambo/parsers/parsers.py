@@ -154,6 +154,13 @@ class YamboParser(Parser):
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
+
+        for file in os.listdir(out_folder._repository._repo_folder.abspath):
+            if 'stderr' in file:
+                with open(file,'r') as std_err:
+                    stderr = std_err.readlines()
+                    self._parse_scheduler_stderr(stderr, output_params)
+                                
         for result in results.yambofiles:
             if results is None:
                 continue
@@ -431,3 +438,11 @@ class YamboParser(Parser):
             if game_over.findall(line):
                 output_params['game_over'] = True
 
+    def _parse_scheduler_stderr(self, stderr, output_params):
+
+        m1 = re.compile('out of memory')
+        m2 = re.compile('segmentation')
+        m3 = re.compile('dumped')
+        for line in stderr.lines:
+            if m1.findall(line) or m2.findall(line) or m3.findall(line):
+                output_params['memory_error'] = True
