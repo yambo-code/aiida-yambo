@@ -402,7 +402,7 @@ class YamboParser(Parser):
             if timing.match(line):
                 output_params['timing'].append(timing.match(line).string)
             elif timing_old.match(line):
-                    output_params['timing'].append(timing_old.match(line).string)
+                output_params['timing'].append(timing_old.match(line).string)
         #memstats...
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
         memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
