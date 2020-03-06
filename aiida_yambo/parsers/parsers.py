@@ -384,16 +384,12 @@ class YamboParser(Parser):
             if p2y_completed.findall(line):
                 output_params['p2y_completed'] = True
                 return output_params
-            else:
-                output_params['p2y_completed'] = False
 
         #Game over...
         game_over = re.compile('Game')
         for line in log.lines:
             if game_over.findall(line):
                 output_params['game_over'] = True
-            else:
-                output_params['game_over'] = False
 
         #timing sections...
         time = re.compile('<([0-9hms]+)>')
@@ -401,17 +397,22 @@ class YamboParser(Parser):
         output_params['last_time'] = self._yambotiming_to_seconds(last_time)
 
         timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
+        timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
         for line in log.lines:
             if timing.match(line):
                 output_params['timing'].append(timing.match(line).string)
-
+            elif timing_old.match(line):
+                    output_params['timing'].append(timing_old.match(line).string)
         #memstats...
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
+        memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
         alloc_error = re.compile('[ERROR]Allocation')
         para_error = re.compile('[ERROR]Incomplete')
         for line in log.lines:
             if memory.match(line):
                 output_params['memstats'].append(memory.match(line).string)
+            elif memory_old.match(line):
+                    output_params['memstats'].append(memory_old.match(line).string)
             elif  alloc_error.findall(line):
                 output_params['memory_error'] = True
             elif  alloc_error.findall(line):
@@ -425,5 +426,3 @@ class YamboParser(Parser):
         for line in report.lines:
             if game_over.findall(line):
                 output_params['game_over'] = True
-            else:
-                output_params['game_over'] = False
