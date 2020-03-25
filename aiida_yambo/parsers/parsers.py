@@ -21,6 +21,7 @@ from yambopy.dbs.savedb import *
 
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
+from aiida_yambo.parsers.utils import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
@@ -157,19 +158,18 @@ class YamboParser(Parser):
 
         for file in os.listdir(out_folder._repository._repo_folder.abspath):
             if 'stderr' in file:
-                with open(file,'r') as std_err:
-                    stderr = std_err.readlines()
-                    self._parse_scheduler_stderr(stderr, output_params)
-                                
+                with open(file,'r') as stderrZZ:
+                    parse_scheduler_stderr(stderr, output_params)
+
         for result in results.yambofiles:
             if results is None:
                 continue
 
             #This should be automatic in yambopy...
             if result.type=='log':
-                self._parse_log(result, output_params)
+                parse_log(result, output_params)
             if result.type=='report':
-                self._parse_report(result, output_params)
+                parse_report(result, output_params)
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
@@ -214,8 +214,7 @@ class YamboParser(Parser):
         params=Dict(dict=output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
 
-        if initialise:
-            self.out(self._system_info_linkname, self._ns_db1_analysis(results))
+
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:  #
@@ -233,8 +232,6 @@ class YamboParser(Parser):
 
         if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
          / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
-        elif 'tim' in self._calc.get_scheduler_stderr():
             return self.exit_codes.WALLTIME_ERROR
 
         if success == False:
@@ -367,82 +364,3 @@ class YamboParser(Parser):
         pdata.set_array('Vxc', Vxc)
         pdata.set_array('qp_table', numpy.array(ndbqp['qp_table']))
         return pdata
-
-    def _yambotiming_to_seconds(self, yt):
-        t = 0
-        th = 0
-        tm = 0
-        ts = 0
-        if isinstance(yt, str):
-            for i in yt.replace('-',' ').split():
-             if 'h' in i:
-                 th = int(i.replace('h',''))*3600
-             if 'm' in i:
-                 tm = int(i.replace('m',''))*60
-             if 's' in i:
-                  ts = int(i.replace('s',''))
-            t = th+tm+ts
-            return t
-        else:
-            return yt
-
-
-    def _parse_log(self, log, output_params):
-
-        #just p2y...
-        p2y_completed = re.compile('P2Y completed')
-        for line in log.lines:
-            if p2y_completed.findall(line):
-                output_params['p2y_completed'] = True
-                return output_params
-
-        #Game over...
-        game_over = re.compile('Game')
-        for line in log.lines:
-            if game_over.findall(line):
-                output_params['game_over'] = True
-
-        #timing sections...
-        time = re.compile('<([0-9hms]+)>')
-        last_time = time.findall(log.lines[-1])[-1]
-        output_params['last_time'] = self._yambotiming_to_seconds(last_time)
-
-        timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
-        timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
-        for line in log.lines:
-            if timing.match(line):
-                output_params['timing'].append(timing.match(line).string)
-            elif timing_old.match(line):
-                output_params['timing'].append(timing_old.match(line).string)
-        #memstats...
-        memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
-        memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
-        alloc_error = re.compile('[ERROR]Allocation')
-        para_error = re.compile('[ERROR]Incomplete')
-        for line in log.lines:
-            if memory.match(line):
-                output_params['memstats'].append(memory.match(line).string)
-            elif memory_old.match(line):
-                    output_params['memstats'].append(memory_old.match(line).string)
-            elif  alloc_error.findall(line):
-                output_params['memory_error'] = True
-            elif  alloc_error.findall(line):
-                output_params['para_error'] = True
-
-        return output_params
-
-    def _parse_report(self, report, output_params):
-        #Game over...
-        game_over = re.compile('Game')
-        for line in report.lines:
-            if game_over.findall(line):
-                output_params['game_over'] = True
-
-    def _parse_scheduler_stderr(self, stderr, output_params):
-
-        m1 = re.compile('out of memory')
-        m2 = re.compile('segmentation')
-        m3 = re.compile('dumped')
-        for line in stderr.lines:
-            if m1.findall(line) or m2.findall(line) or m3.findall(line):
-                output_params['memory_error'] = True
