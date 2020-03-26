@@ -72,7 +72,9 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'yambo')
 
     def validate_parameters(self):
-        """setup of the calculation and run
+        """validation of the input parameters... including settings and the namelist...
+           for example, the parallelism namelist is different from version the version... 
+           we need some input helpers to fix automatically this with respect to the version of yambo
         """
     def validate_resources(self):
         """setup of the calculation and run
@@ -84,42 +86,6 @@ class YamboRestartWf(BaseRestartWorkChain):
 
     '''
     def yambo_should_restart(self):
-
-        """This function encodes the logic to restart calculations from failures
-        ---> I want to do the error detection at the parser level..
-        """
-        calc = self.ctx.calc
-        self.report("Checking if yambo restart is needed")
-
-        ### check of the number of restarts ###
-        if self.ctx.restart > self.inputs.max_restarts.value:
-            self.report(
-                "I will not restart: maximum restarts reached: {}".format(
-                    self.inputs.max_restarts.value))
-            return False
-
-        else:
-            self.report(
-                "I can restart (# {}), max restarts ({}) not reached yet".format(
-                    self.ctx.restart, self.inputs.max_restarts.value))
-
-        ### check if the calculation is failed ###
-        if calc.is_finished_ok:
-            self.report('All went ok, I will not restart')
-            return False
-
-        else:
-            self.report('Some error occurred, checking')
-
-        ### error check ###
-            if calc.is_killed:
-                self.report('Killed from AiiDA for unknown reasons, we try to resubmit')
-                return True
-
-            if calc.is_excepted:
-                self.report('excepted for unknown reasons, we try to resubmit just one time')
-                self.ctx.restart = self.inputs.max_restarts.value
-                return True
 
             if calc.exit_status == 300 or calc.exit_status == 303:
                 self.report(
@@ -134,20 +100,6 @@ class YamboRestartWf(BaseRestartWorkChain):
                 self.report('Trying to hard copy the SAVE')
                 self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
                 return True
-
-            # parallelization errors # but there should be something already in yambo...but mpi-openmpi balance #
-
-            if calc.exit_status == 304:
-                self.ctx.inputs.metadata.options = fix_parallelism(self.ctx.inputs)
-                self.report("Calculation {} failed likely from parallelism errors".format(calc))
-                return False
-
-            if calc.exit_status == 305:
-                self.ctx.inputs.metadata.options = fix_memory(self.ctx.inputs)
-                self.report("Calculation {} failed likely from memory issues".format(calc))
-                return False
-
-
 
     def yambo_restart(self):
         """Submits a yambo calculation using the yambo plugin
@@ -216,14 +168,38 @@ class YamboRestartWf(BaseRestartWorkChain):
         """
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,\
                                                     self.ctx.iteration, self.inputs.max_walltime)
-
         update_dict(self.ctx.inputs.settings,'PARENT_DB',True) # to link the dbs in aiida.out
                    
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
                                                 seconds and copy dbs already done'\
-                                                .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds']))
+                                                .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
         return ProcessHandlerReport(True, True)
 
+    @process_handler(YamboRestartWf, 560)
+    def _handle_parallelism_error(self, calculation, exit_code = ['PARA_ERROR']):
+        """
+        Handle calculations for a parallelism error; 
+        we try to change the parallelism options.
+        """
+        new_para, self.ctx.inputs.metadata.options = fix_parallelism(self.ctx.inputs)
+        update_dict(self.ctx.inputs.parameters, new_para.keys(), new.para.values())
+                   
+        self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
+        return ProcessHandlerReport(True, True)
+
+    @process_handler(YamboRestartWf, 540)
+    def _handle_memory_error(self, calculation, exit_code = ['MEMORY_ERROR']):
+        """
+        Handle calculations for a memory error; 
+        we try to change the parallelism options, in particular the mpi-openmp balance.
+        if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
+        accordingly to the inputs permissions.
+        """
+        new_para, self.ctx.inputs.metadata.options = fix_memory(self.ctx.inputs)
+        update_dict(self.ctx.inputs.parameters, new_para.keys(), new.para.values())
+                   
+        self.report_error_handled(calculation, 'memory error detected, so we change nodes-mpi-openmpi balance')
+        return ProcessHandlerReport(True, True)
 
 if __name__ == "__main__":
     pass
