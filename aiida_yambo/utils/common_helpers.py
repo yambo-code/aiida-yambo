@@ -143,6 +143,6 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
     for line in file:
         if '[X]Fermi Level' in line:
             print('The Fermi level is {}'.format(line.split()[3]))
-            ef = line.split()[3]
+            ef = float(line.split()[3])
 
     return ef

@@ -10,9 +10,11 @@ from aiida.common import ValidationError
 from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
-from aiida.engine import BaseRestartWorkChain, register_process_handler, ProcessHandlerReport
-from aiida_yambo.calculations.gw import YamboCalculation
+from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
+from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
 
+from aiida_yambo.calculations.yambo import YamboCalculation
+from aiida_yambo.workflows.utils.helpers_yamborestart import *
 
 
 class YamboRestartWf(BaseRestartWorkChain):
@@ -26,6 +28,9 @@ class YamboRestartWf(BaseRestartWorkChain):
     3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)  -- to be fixed
     4. Errors originating from a few select unphysical input parameters like too low bands.  -- to be fixed
     """
+
+    _calculation_class = YamboCalculation
+    _error_handler_entry_point = 'aiida_yambo.workflow_error_handlers.yambo.yamborestart'
 
     @classmethod
     def define(cls, spec):
@@ -76,69 +81,17 @@ class YamboRestartWf(BaseRestartWorkChain):
            for example, the parallelism namelist is different from version the version... 
            we need some input helpers to fix automatically this with respect to the version of yambo
         """
+        pass
+
     def validate_resources(self):
         """validation of machines... ecc with respect para options
         """
+        pass
+
     def validate_parent(self):
         """validation of the parent calculation --> should be at least nscf/p2y
         """
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
-
-    '''
-    def yambo_should_restart(self):
-
-            if calc.exit_status == 300 or calc.exit_status == 303:
-                self.report(
-                    "Calculation {} failed or did not generate outputs for unknown reason, restarting with no changes"
-                    .format(calc.pk))
-                return True
-
-            if calc.exit_status == 302:
-                self.report('Something goes wrong, but we don\'t know what')
-                new_settings =  self.ctx.inputs.settings.get_dict()
-                new_settings['HARD_LINK'] = True
-                self.report('Trying to hard copy the SAVE')
-                self.ctx.inputs.settings = Dict(dict=new_settings) # to link the db
-                return True
-
-    def yambo_restart(self):
-        """Submits a yambo calculation using the yambo plugin
-
-        This function submits a calculation, usually this represents a
-        resubmission of a failed calculation, or a continuation from P2Y/Init run.
-        """
-
-        calc = self.ctx.calc
-        self.report("Now we restart")
-        if not calc:
-            raise ValidationError("restart calculations cannot start: calculation not found")
-            #return self.exit_code.WFL_NOT_COMPLETED
-
-        if calc.exit_status == 102:
-            pass
-        else:
-            self.ctx.inputs.parent_folder = calc.outputs.remote_folder
-
-        # submission of the next try #
-        future = self.submit(YamboCalculation, **self.ctx.inputs)
-        self.report("Workflow started, submitted process with pk = {}".format(future.pk))
-        self.ctx.restart += 1
-
-        return ToContext(calc = future)
-
-
-
-    def report_wf(self):
-        """Report the outputs of the workchain
-
-        Output final quantities
-        return information that may be used to figure out
-        the status of the calculation.
-        """
-        calc = self.ctx.calc
-        self.report("workflow completed successfully: {}, last calculation was <{}>".format(calc.is_finished_ok, calc.pk))
-        self.out('last_calc_folder', calc.outputs.remote_folder)
-    '''
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.
@@ -182,7 +135,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         we try to change the parallelism options.
         """
         new_para, self.ctx.inputs.metadata.options = fix_parallelism(self.ctx.inputs)
-        update_dict(self.ctx.inputs.parameters, new_para.keys(), new.para.values())
+        update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
         return ProcessHandlerReport(True, True)
@@ -196,7 +149,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         accordingly to the inputs permissions.
         """
         new_para, self.ctx.inputs.metadata.options = fix_memory(self.ctx.inputs)
-        update_dict(self.ctx.inputs.parameters, new_para.keys(), new.para.values())
+        update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'memory error detected, so we change nodes-mpi-openmpi balance')
         return ProcessHandlerReport(True, True)

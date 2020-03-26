@@ -4,20 +4,28 @@ Plugin to create a Yambo input file and run a calculation with the yambo executa
 """
 from __future__ import absolute_import
 import os
+import six
+
 from aiida.engine import CalcJob
-from aiida.common.exceptions import InputValidationError, ValidationError
+
+from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
+
 from aiida.common.datastructures import CalcInfo
 from aiida.common.datastructures import CalcJobState
-from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
-from aiida.common.exceptions import UniquenessError, InputValidationError
+from aiida.common.exceptions import UniquenessError, InputValidationError, ValidationError
 from aiida.common.utils import classproperty
+
+from aiida.orm import Code
 from aiida.orm.nodes import Dict
 from aiida.orm.nodes import RemoteData, BandsData, ArrayData
+
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import Code
+
 from aiida.common import AIIDA_LOGGER
 from aiida.common import LinkType
-import six
+
+from aiida_yambo.utils.common_helpers import * 
+
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
@@ -168,10 +176,7 @@ class YamboCalculation(CalcJob):
 
         preproc_code = self.inputs.preprocessing_code
 
-        try:
-            parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
-        except:
-            parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+        parent_calc = take_calc_from_remote(parent_calc_folder)
 
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
@@ -427,7 +432,7 @@ class YamboCalculation(CalcJob):
         return calcinfo
 
 ################################################################################
-    #the following functions are not used, so why are they here?
+    #the following functions are not used
     def _check_valid_parent(self, calc):
         """
         Check that calc is a valid parent for a YamboCalculation.

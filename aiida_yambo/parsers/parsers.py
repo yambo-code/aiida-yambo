@@ -19,9 +19,10 @@ import glob, os, re
 from yamboparser import *
 from yambopy.dbs.savedb import *
 
-from aiida_yambo.calculations.gw import YamboCalculation
+from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.parsers.utils import *
+
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
@@ -80,11 +81,11 @@ class YamboParser(Parser):
         self._logger = AIIDA_LOGGER.getChild('parser').getChild(
             self.__class__.__name__)
        # check for valid input
-        if calculation.process_type=='aiida.calculations:yambo.yambo':
+        if calculation.process_type=='aiida_yambo.calculations.yambo.YamboCalculation':
             yambo_parent=True
         else:
             raise OutputParsingError(
-                "Input calculation must be a YamboCalculation")
+                "Input calculation must be a YamboCalculation, not {}".format(calculation.process_type))
 
         self._calc = calculation
         self.last_job_info = self._calc.get_last_job_info()
