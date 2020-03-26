@@ -77,10 +77,10 @@ class YamboRestartWf(BaseRestartWorkChain):
            we need some input helpers to fix automatically this with respect to the version of yambo
         """
     def validate_resources(self):
-        """setup of the calculation and run
+        """validation of machines... ecc with respect para options
         """
     def validate_parent(self):
-        """validation of the parent calculation
+        """validation of the parent calculation --> should be at least nscf/p2y
         """
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
 
