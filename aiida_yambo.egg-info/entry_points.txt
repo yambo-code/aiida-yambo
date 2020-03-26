@@ -1,0 +1,9 @@
+[aiida.calculations]
+yambo.yambo = aiida_yambo.calculations.gw:YamboCalculation
+
+[aiida.data]
+
+
+[aiida.parsers]
+yambo.yambo = aiida_yambo.parsers.parsers:YamboParser
+

@@ -97,8 +97,8 @@ class YamboCalculation(CalcJob):
                 message='Unexpected behavior of YamboFolder')
         spec.exit_code(404, 'PARA_ERROR',
                 message='parallelization error')
-        spec.exit_code(405, 'MEMORY_ISSUE',
-                message='memory issues')
+        spec.exit_code(405, 'MEMORY_ERROR',
+                message='memory error')
 
 
         #outputs definition:

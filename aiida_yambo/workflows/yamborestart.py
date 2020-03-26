@@ -29,7 +29,7 @@ class YamboRestartWf(BaseRestartWorkChain):
     4. Errors originating from a few select unphysical input parameters like too low bands.  -- to be fixed
     """
 
-    _calculation_class = YamboCalculation
+    _process_class = YamboCalculation
     _error_handler_entry_point = 'aiida_yambo.workflow_error_handlers.yamborestart'
 
     @classmethod
@@ -39,7 +39,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         spec.expose_inputs(YamboCalculation, namespace='yambo', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
-        spec.input("max_walltime", valid_type=Int, default=Int(86400))
+        spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
 
 
 
@@ -51,7 +51,6 @@ class YamboRestartWf(BaseRestartWorkChain):
             cls.validate_resources,
             cls.validate_parent,
             while_(cls.should_run_process)(
-                cls.prepare_calculation,
                 cls.run_process,
                 cls.inspect_process,
             ),
@@ -61,9 +60,8 @@ class YamboRestartWf(BaseRestartWorkChain):
 
 ###################################################################################
 
-        spec.output('last_calc_folder', valid_type = RemoteData,
-            help='The last calculation remote folder.')
-
+        spec.expose_outputs(YamboCalculation)
+        
         spec.exit_code(300, 'ERROR_UNRECOVERABLE_FAILURE',
             message='The calculation failed with an unrecoverable error.')
 
@@ -103,18 +101,18 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.report('{}<{}> failed with exit status {}: {}'.format(*arguments))
         self.report('Action taken: {}'.format(action))
 
-    @process_handler(YamboRestartWf, 600)
+    @process_handler(priority = 600)
     def _handle_unrecoverable_failure(self, calculation):
         """
         Handle calculations with an exit status below 400 which are unrecoverable, 
         so abort the work chain.
         """        
-        if calculation.exit_status < 400:
+        if calculation.exit_status < 400 and not calculation.is_finished_ok:
             self.report_error_handled(calculation, 'unrecoverable error, aborting...')
-            return ProcessHandlerReport(True, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+            return ProcessHandlerReport(True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
    
-    @process_handler(YamboRestartWf, 580)
-    def _handle_walltime_error(self, calculation, exit_code = ['WALLTIME_ERROR']):
+    @process_handler(priority = 580, exit_codes = [YamboCalculation.exit_codes.WALLTIME_ERROR])
+    def _handle_walltime_error(self, calculation):
         """
         Handle calculations for a walltime error; 
         we increase the simulation time and copy the database already created.
@@ -126,10 +124,10 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
                                                 seconds and copy dbs already done'\
                                                 .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
-        return ProcessHandlerReport(True, True)
+        return ProcessHandlerReport(True)
 
-    @process_handler(YamboRestartWf, 560)
-    def _handle_parallelism_error(self, calculation, exit_code = ['PARA_ERROR']):
+    @process_handler(priority =  560, exit_codes = [YamboCalculation.exit_codes.PARA_ERROR])
+    def _handle_parallelism_error(self, calculation):
         """
         Handle calculations for a parallelism error; 
         we try to change the parallelism options.
@@ -138,10 +136,10 @@ class YamboRestartWf(BaseRestartWorkChain):
         update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
-        return ProcessHandlerReport(True, True)
+        return ProcessHandlerReport(True)
 
-    @process_handler(YamboRestartWf, 540)
-    def _handle_memory_error(self, calculation, exit_code = ['MEMORY_ERROR']):
+    @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR])
+    def _handle_memory_error(self, calculation):
         """
         Handle calculations for a memory error; 
         we try to change the parallelism options, in particular the mpi-openmp balance.
@@ -152,7 +150,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'memory error detected, so we change nodes-mpi-openmpi balance')
-        return ProcessHandlerReport(True, True)
+        return ProcessHandlerReport(True)
 
 if __name__ == "__main__":
     pass
