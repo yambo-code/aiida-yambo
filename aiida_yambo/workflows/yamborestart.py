@@ -30,7 +30,7 @@ class YamboRestartWf(BaseRestartWorkChain):
     """
 
     _calculation_class = YamboCalculation
-    _error_handler_entry_point = 'aiida_yambo.workflow_error_handlers.yambo.yamborestart'
+    _error_handler_entry_point = 'aiida_yambo.workflow_error_handlers.yamborestart'
 
     @classmethod
     def define(cls, spec):
