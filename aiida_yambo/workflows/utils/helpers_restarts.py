@@ -30,11 +30,11 @@ def fix_memory(inputs):
     #inputs.metadata.options['openMP']=inputs.metadata.options['openMP']*2
     return inputs.metadata.options
 
-def fix_time(inputs,restart):
-    inputs.metadata.options['max_wallclock_seconds'] = \
-                            int(inputs.metadata.options['max_wallclock_seconds']*1.3*restart)
+def fix_time(options, restart, max_walltime):
+    options['max_wallclock_seconds'] = \
+                            int(options['max_wallclock_seconds']*1.3*restart)
 
-    if inputs.metadata.options['max_wallclock_seconds'] > max_walltime.value:
-        inputs.metadata.options['max_wallclock_seconds'] = max_walltime.value
+    if options['max_wallclock_seconds'] > max_walltime:
+        options['max_wallclock_seconds'] = max_walltime
 
-    return inputs.metadata.options
+    return options

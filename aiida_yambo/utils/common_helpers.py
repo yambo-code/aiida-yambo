@@ -73,9 +73,8 @@ def update_dict(_dict, what, how):
     _dict = Dict(dict=new)
     return _dict
 
-def get_caller(calc_pk, depth = 1):
+def get_caller(calc, depth = 1):
      for i in range(depth):
-         calc = load_node(int(calc_pk))
          calc = calc.caller.caller
      return calc
 

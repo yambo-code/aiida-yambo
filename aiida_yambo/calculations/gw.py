@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Plugin to create a Yambo input file.
+Plugin to create a Yambo input file and run a calculation with the yambo executable.
 """
 from __future__ import absolute_import
 import os
@@ -20,7 +20,8 @@ from aiida.common import LinkType
 import six
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
-__authors__ = " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
+__authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
+              " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
               " Antimo Marrazzo (antimo.marrazzo@epfl.ch)," \
               " Michael Atambo (michaelontita.atambo@unimore.it)."
 
@@ -78,17 +79,17 @@ class YamboCalculation(CalcJob):
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
 
-        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER',
+        spec.exit_code(400, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
-        spec.exit_code(301, 'WALLTIME_ERROR',
+        spec.exit_code(401, 'WALLTIME_ERROR',
                 message='time exceeded the max walltime')
-        spec.exit_code(302, 'NO_SUCCESS',
+        spec.exit_code(402, 'NO_SUCCESS',
                 message='failed calculation for some reason: could be a low number of conduction bands')
-        spec.exit_code(303, 'PARSER_ANOMALY',
+        spec.exit_code(403, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
-        spec.exit_code(304, 'PARA_ERROR',
+        spec.exit_code(404, 'PARA_ERROR',
                 message='parallelization error')
-        spec.exit_code(305, 'MEMORY_ISSUE',
+        spec.exit_code(405, 'MEMORY_ISSUE',
                 message='memory issues')
 
 
