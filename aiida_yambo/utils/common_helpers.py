@@ -8,8 +8,9 @@ import pandas as pd
 import copy
 
 try:
-    from aiida.orm import Dict, Str, load_node, KpointsData, RemoteData
+    from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData
     from aiida.plugins import CalculationFactory, DataFactory
+    from aiida.engine.calcfunction 
 except:
     pass
 
@@ -146,3 +147,9 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
             ef = float(line.split()[3])
 
     return ef
+
+@calcfunction
+def store_List(a_list):
+    the_List = List(list=a_list)
+    the_List.store()
+    return the_List

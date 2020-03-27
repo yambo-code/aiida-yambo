@@ -10,14 +10,13 @@ from aiida.engine import WorkChain, while_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-#from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestartWf
 
 class YamboWorkflow(WorkChain):
 
     """This workflow will perform yambo calculation on the top of scf+nscf or from scratch,
-    invoking qe workchains.
+        using also the PwBaseWorkChain.
     """
 
     @classmethod
@@ -41,21 +40,23 @@ class YamboWorkflow(WorkChain):
         spec.input("parent_folder", valid_type=RemoteData, required= False,\
                     help = 'scf, nscf or yambo remote folder')
 
-        #spec.input("nscf_extra_parameters", valid_type=Dict, required=False, \
-        #            help = 'extra parameters if we start from scratch, so the exposed inputs are for a scf calculation')
-
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
                      while_(cls.can_continue)(
                      cls.perform_next),
-                     cls.report_wf,
+                     cls.resume,
                      )
 
 ##################################################################################
 
-        spec.output('yambo_calc_folder', valid_type = RemoteData,
-            help='The final yambo calculation remote folder.')
+        spec.expose_outputs(YamboRestartWf)
+
+        #self.out('calculation_list', valid_type=List,
+        #        required=True, help='returns the list of calculations finished_ok')
+
+        spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
+        message='The workchain failed with an unrecoverable error.')
 
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
@@ -154,15 +155,21 @@ class YamboWorkflow(WorkChain):
         return ToContext(calc = future)
 
 
-    def report_wf(self):
+    def resume(self):
 
         self.report('Final step.')
 
         calc = self.ctx.calc
-        self.report("workflow completed successfully: {}, parent folder of the last calculation is <{}>".format(calc.is_finished_ok, \
-                        calc.outputs.last_calc_folder.pk))
-        self.out('yambo_calc_folder', calc.outputs.last_calc_folder)
-
+        if calc.is_finished_ok:
+            self.report("workflow completed successfully, the pk of the last remote folder is {}"\
+                        .format(calc.outputs.remote_folder.pk))
+        else:
+            self.report("workflow NOT completed successfully, the pk of the last remote folder is {}"\
+                        .format(calc.outputs.remote_folder.pk))
+            return self.exit_codes.ERROR_WORKCHAIN_FAILED
+        
+        self.out(self.expose_outputs(YamboRestartWf))
+        
 
 if __name__ == "__main__":
     pass
