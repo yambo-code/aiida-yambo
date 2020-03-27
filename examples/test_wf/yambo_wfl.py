@@ -313,6 +313,8 @@ def main(options):
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
+    return builder 
+    
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)

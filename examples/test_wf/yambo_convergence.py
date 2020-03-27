@@ -331,6 +331,9 @@ def main(options):
         print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 
     builder.parameters_space = List(list = var_to_conv)
+
+    return builder
+    
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)
