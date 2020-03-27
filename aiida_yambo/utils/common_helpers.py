@@ -10,7 +10,7 @@ import copy
 try:
     from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData
     from aiida.plugins import CalculationFactory, DataFactory
-    from aiida.engine.calcfunction 
+    from aiida.engine import calcfunction 
 except:
     pass
 
