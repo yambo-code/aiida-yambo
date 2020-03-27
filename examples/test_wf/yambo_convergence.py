@@ -26,14 +26,14 @@ def get_options():
         '--parent',
         type=int,
         dest='parent_pk',
-        required=True,
+        required=False,
         help='The parent to use')
 
     parser.add_argument(
         '--yamboprecode',
         type=int,
         dest='yamboprecode_pk',
-        required=False,
+        required=True,
         help='The precode to use')
 
     parser.add_argument(
@@ -284,7 +284,7 @@ def main(options):
     builder.ywfl.scf.pw.code = load_node(options['pwcode_pk'])
     builder.ywfl.nscf.pw.code = load_node(options['pwcode_pk'])
     builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family'])
+                builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
     builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
 
     ##################yambo part of the builder
