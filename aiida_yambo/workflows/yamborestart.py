@@ -65,8 +65,6 @@ class YamboRestartWf(BaseRestartWorkChain):
         spec.exit_code(300, 'ERROR_UNRECOVERABLE_FAILURE',
             message='The calculation failed with an unrecoverable error.')
 
-
-
     def setup(self):
         """setup of the calculation and run
         """
@@ -117,12 +115,13 @@ class YamboRestartWf(BaseRestartWorkChain):
         Handle calculations for a walltime error; 
         we increase the simulation time and copy the database already created.
         """
+        self.ctx.inputs = calculation.get_builder_restart()
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,\
                                                     self.ctx.iteration, self.inputs.max_walltime)
-        update_dict(self.ctx.inputs.settings,'PARENT_DB',True) # to link the dbs in aiida.out
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
                    
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
-                                                seconds and copy dbs already done'\
+                                                seconds and link outputs'\
                                                 .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
         return ProcessHandlerReport(True)
 
@@ -132,8 +131,9 @@ class YamboRestartWf(BaseRestartWorkChain):
         Handle calculations for a parallelism error; 
         we try to change the parallelism options.
         """
-        new_para, self.ctx.inputs.metadata.options = fix_parallelism(self.ctx.inputs)
-        update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
+        new_para, new_options  = fix_parallelism(self.ctx.inputs.parameters,self.ctx.inputs.metadata.options)
+        self.ctx.inputs.metadata.options = update_dict(self.ctx.inputs.metadata.options, new_options.keys(), new_options.values())
+        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
         return ProcessHandlerReport(True)
@@ -146,11 +146,9 @@ class YamboRestartWf(BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
-        new_para, self.ctx.inputs.metadata.options = fix_memory(self.ctx.inputs)
-        update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
+        new_para, new_options  = fix_parallelism(self.ctx.inputs.parameters,self.ctx.inputs.metadata.options)
+        self.ctx.inputs.metadata.options = update_dict(self.ctx.inputs.metadata.options, new_options.keys(), new_options.values())
+        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'memory error detected, so we change nodes-mpi-openmpi balance')
         return ProcessHandlerReport(True)
-
-if __name__ == "__main__":
-    pass

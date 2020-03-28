@@ -68,7 +68,7 @@ def find_table_ind(kpoint,band,_array_ndb):
             return(i)
 
 
-def update_dict(_dict, whats, news):
+def update_dict(_dict, whats, hows):
     if not isinstance(whats, list):
         whats = [whats]
     if not isinstance(hows, list):

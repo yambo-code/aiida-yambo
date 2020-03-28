@@ -236,7 +236,10 @@ class YamboParser(Parser):
             return self.exit_codes.WALLTIME_ERROR
 
         if success == False:
-            if output_params['para_error']:
+            if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
+                  / float(output_params['requested_time'])) < 0.1:
+                return self.exit_codes.WALLTIME_ERROR
+            elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
             elif output_params['memory_error']:
                 return self.exit_codes.MEMORY_ISSUE
