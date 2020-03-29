@@ -61,13 +61,13 @@ def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
 
     nodes = mpi_new/mpi_per_node
     
-    resources = {'nodes': int(nodes),
-                 'mpi_per_node': int(mpi_per_node),
-                 'threads': int(threads)}
+    resources = {'num_machines': int(nodes),
+                 'num_mpiprocs_per_machine': int(mpi_per_node),
+                 'num_cores_per_mpiproc': int(threads)}
 
     return resources
 
-def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp=2, kpoints = 1, namelist = {}, what = ['bands'], last_qp = 1):
+def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp=2, kpoints = 1, what = ['bands'], last_qp = 1, namelist = {}):
     
     if last_qp == 1:
         last_qp == occupied 

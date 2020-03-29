@@ -153,3 +153,45 @@ def store_List(a_list):
     the_List = List(list=a_list)
     the_List.store()
     return the_List
+
+def find_pw_info(calc):
+
+    pw_parent = find_pw_parent(calc)
+    info = pw_parent.outputs.output_parameters.get_dict()   
+    return info
+
+def find_gw_info(calc):
+
+    parameters = calc.inputs.parameters.get_dict()
+    
+    ## bands ##
+    BndsRnXp = parameters.pop('BndsRnXp')
+    GbndRnge = parameters.pop('GbndRnge')
+    X_b = 1 + BndsRnXp[1] - BndsRnXp[0]
+    SE_b = 1 + GbndRnge[1] - GbndRnge[0]
+    if X_b and SE_b:
+        bands = min(X_b,SE_b)
+    elif X_b and not SE_b:
+        bands = X_b
+    elif not X_b and SE_b:
+        bands = SE_b
+    else: bands = 1
+
+    ## parallelism ##
+
+    ## qp ##
+
+    qp = 0
+    last_qp = 0
+    for i in parameters['QPkrange']:
+        qp += (1 + i[1]-i[0])*(1 + i[3]-i[2])
+        last_qp = max(i[3],last_qp)
+
+    ## runlevels ##
+    runlevels = []
+    for i in parameters.keys():
+        if parameters[i] == True:
+            runlevels.append(i)
+    
+    return bands, qp, last_qp, runlevels
+        

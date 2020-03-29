@@ -130,7 +130,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         Handle calculations for a parallelism error; 
         we try to change the parallelism options.
         """
-        new_para, new_options  = fix_parallelism(self.ctx.inputs)
+        new_para, new_options  = fix_parallelism(self.ctx.inputs.metadata.options, calculation)
         self.ctx.inputs.metadata.options = update_dict(self.ctx.inputs.metadata.options, new_options.keys(), new_options.values())
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
@@ -145,9 +145,9 @@ class YamboRestartWf(BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
-        new_para, new_options  = fix_memory(self.ctx.inputs)
+        new_para, new_options  = fix_memory(self.ctx.inputs, calculation)
         self.ctx.inputs.metadata.options = update_dict(self.ctx.inputs.metadata.options, new_options.keys(), new_options.values())
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
-        self.report_error_handled(calculation, 'memory error detected, so we change nodes-mpi-openmpi balance')
+        self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance')
         return ProcessHandlerReport(True)
