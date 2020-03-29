@@ -12,6 +12,7 @@ try:
     from aiida.orm import Dict, Str, load_node, KpointsData
     from aiida.plugins import CalculationFactory, DataFactory
     from aiida_yambo.utils.common_helpers import *
+    from aiida_yambo.utils.parallelism_finder import *
 except:
     pass
 
@@ -21,11 +22,15 @@ PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced
 '''
 ################################################################################
 def fix_parallelism(inputs):
-    update_dict(inputs.parameters, 'PAR_def_mode', 'balanced')
-    return inputs.metadata.options
+    what = ['bands']
+    bands, occupied, qp, kpoints, namelist, last_qp = recover_parallelism(inputs.parameters)
+    resources = inputs.metadata.options
+    new_parameters, new_options = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
+                                                      resources['nm_cores_per_mpiproc'], bands, \
+                                                      occupied, qp, kpoints, namelist = {},\
+                                                      what, last_qp)
 
 def fix_memory(inputs):
-    update_dict(inputs.parameters, 'PAR_def_mode', 'memory')
     #inputs.metadata.options['mpi']=inputs.metadata.options['mpi']//2
     #inputs.metadata.options['openMP']=inputs.metadata.options['openMP']*2
     return inputs.metadata.options

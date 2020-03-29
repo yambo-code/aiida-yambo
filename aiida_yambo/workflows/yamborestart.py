@@ -80,7 +80,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         pass
 
     def validate_resources(self):
-        """validation of machines... ecc with respect para options
+        """validation of machines... completeness and with respect para options
         """
         pass
 
@@ -115,9 +115,8 @@ class YamboRestartWf(BaseRestartWorkChain):
         Handle calculations for a walltime error; 
         we increase the simulation time and copy the database already created.
         """
-        self.ctx.inputs = calculation.get_builder_restart()
-        self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,\
-                                                    self.ctx.iteration, self.inputs.max_walltime)
+        
+        self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
                    
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
@@ -131,7 +130,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         Handle calculations for a parallelism error; 
         we try to change the parallelism options.
         """
-        new_para, new_options  = fix_parallelism(self.ctx.inputs.parameters,self.ctx.inputs.metadata.options)
+        new_para, new_options  = fix_parallelism(self.ctx.inputs)
         self.ctx.inputs.metadata.options = update_dict(self.ctx.inputs.metadata.options, new_options.keys(), new_options.values())
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
@@ -146,7 +145,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
-        new_para, new_options  = fix_parallelism(self.ctx.inputs.parameters,self.ctx.inputs.metadata.options)
+        new_para, new_options  = fix_memory(self.ctx.inputs)
         self.ctx.inputs.metadata.options = update_dict(self.ctx.inputs.metadata.options, new_options.keys(), new_options.values())
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
