@@ -138,7 +138,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         for j in range(len(where)):
             for i in range(1,backtrace+1):
-                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
+                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i]
                 if what == 'gap':
                     _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
                     _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)

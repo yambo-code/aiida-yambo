@@ -62,7 +62,8 @@ def parse_log(log, output_params):
     memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
     memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
     alloc_error = re.compile('[ERROR]Allocation')
-    para_error = re.compile('[ERROR]Incomplete')
+    incomplete_para_error = re.compile('[ERROR]Incomplete')
+    impossible_para_error = re.compile('[ERROR]Impossible')
     for line in log.lines:
         if memory.match(line):
             output_params['memstats'].append(memory.match(line).string)
@@ -70,7 +71,7 @@ def parse_log(log, output_params):
                 output_params['memstats'].append(memory_old.match(line).string)
         elif  alloc_error.findall(line):
             output_params['memory_error'] = True
-        elif  alloc_error.findall(line):
+        elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line):
             output_params['para_error'] = True
 
     return output_params
@@ -87,6 +88,9 @@ def parse_scheduler_stderr(stderr, output_params):
     m1 = re.compile('out of memory')
     m2 = re.compile('segmentation')
     m3 = re.compile('dumped')
+    t1 = re.compile('walltime')
     for line in stderr.lines:
         if m1.findall(line) or m2.findall(line) or m3.findall(line):
             output_params['memory_error'] = True
+        elif t1.findall(line):
+            output_params['time_error'] = True

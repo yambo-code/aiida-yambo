@@ -146,7 +146,7 @@ class YamboParser(Parser):
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, \
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
-        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[]}
+        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False}
         ndbqp = {}
         ndbhf = {}
 
@@ -243,6 +243,8 @@ class YamboParser(Parser):
                 return self.exit_codes.PARA_ERROR
             elif output_params['memory_error']:
                 return self.exit_codes.MEMORY_ISSUE
+            elif output_params['time_error']:
+                return self.exit_codes.WALLTIME_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
 

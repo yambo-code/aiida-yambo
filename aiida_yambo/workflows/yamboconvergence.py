@@ -31,6 +31,9 @@ class YamboConvergence(WorkChain):
 
         spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
                             exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
+        
+        spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': False}, \
+                    exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
         spec.input('kpoints', valid_type=KpointsData, required = True)
         spec.input('parent_folder', valid_type=RemoteData, required = False)
@@ -47,9 +50,9 @@ class YamboConvergence(WorkChain):
                     cls.do_p2y,
                     cls.prepare_calculations,
                     ),
-                    if_(cls.HF_needed)(
-                    cls.do_HF,
-                    cls.prepare_post_HF,
+                    if_(cls.precalc_needed)(
+                    cls.do_precalc,
+                    cls.post_processing,
                     ),
                     while_(cls.has_to_continue)(
                     cls.next_step,
@@ -222,12 +225,13 @@ class YamboConvergence(WorkChain):
         self.report('setting the p2y calc as parent')
         set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.yambo_calc_folder)
 
-###############################starting HF####################
+############################### starting precalculation ####################
 
-    def HF_needed(self):
-        self.report('do we need a preliminary HF ??')
-        self.report('detecting if we need an HF preliminary calculation...')
-        needed = self.inputs.workflow_settings.get_dict().pop('HF',None)
+
+    def precalc_needed(self):
+        self.report('do we need a preliminary calculation ??')
+        self.report('detecting if we need a preliminary calculation...')
+        needed = self.inputs.workflow_settings.get_dict().pop('PRE_CALC')
         self.report(needed)
         if needed:
             return True
@@ -235,26 +239,24 @@ class YamboConvergence(WorkChain):
             return False
 
 
-    def do_HF(self):
+    def do_precalc(self):
         self.report('doing the HF')
         calc = {}
-        self.ctx.HF_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-
-        set_parent(self.ctx.HF_inputs, self.ctx.calc_inputs.parent_folder)
-        for i in ['ppa','gw0','em1d']:
-            self.ctx.HF_inputs.yres.gw.parameters = update_dict(self.ctx.HF_inputs.yres.gw.parameters, i, False)
-        self.ctx.HF_inputs.yres.gw.parameters = update_dict(self.ctx.HF_inputs.yres.gw.parameters,'HF_and_locXC',True)
-
-        calc['HF'] = self.submit(YamboWorkflow, **self.ctx.HF_inputs) #################run
-        self.report('Submitted YamboWorkflow up to HF, pk = {}'.format(calc['HF'].pk))
-        self.ctx.HF = calc['HF']
+        self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
+        self.report('ciao!')
+        self.report(self.ctx.precalc_inputs['yres'])
+        set_parent(self.ctx.precalc_inputs, self.ctx.calc_inputs.parent_folder)
+        self.report(self.ctx.precalc_inputs['yres'])
+        calc['PRE_CALC'] = self.submit(YamboWorkflow, **self.ctx.precalc_inputs) #################run
+        self.report('Submitted preliminary YamboWorkflow, pk = {}'.format(calc['PRE_CALC'].pk))
+        self.ctx.HF = calc['PRE_CALC']
         return ToContext(calc)
 
-    def prepare_post_HF(self):
-        self.report('setting the HF calc as parent and its db as starting one')
+    def post_processing(self):
+        self.report('setting the preliminary calc as parent and its db as starting one')
         set_parent(self.ctx.calc_inputs, self.ctx.HF.outputs.yambo_calc_folder)
 
-        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'HARD_LINK_DB', True)
+        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'COPY_DB', True)
 
 
 
