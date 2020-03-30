@@ -18,7 +18,7 @@ from aiida_yambo.utils.common_helpers import *
 
 class YamboConvergence(WorkChain):
 
-    """This workflow will perform yambo convergences with the respect some parameter. It can be used also to run multi-parameter
+    """This workflow will perform yambo convergences with respect to some parameter. It can be used also to run multi-parameter
        calculations.
     """
 
@@ -41,7 +41,7 @@ class YamboConvergence(WorkChain):
         spec.input("parameters_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max restarts')
         spec.input("workflow_settings", valid_type=Dict, required=True, \
-                    help = 'settings for the workflow: type, quantity to be examinated..')
+                    help = 'settings for the workflow: type, quantity to be examinated...')
 
 ##################################### OUTLINE ####################################
 
@@ -123,7 +123,7 @@ class YamboConvergence(WorkChain):
         calc = {}
         self.ctx.workflow_manager.values = []
         parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.workflow_manager.first_calc, \
-                            self.ctx.calc_inputs.parent_folder.get_incoming().get_node_by_label('remote_folder'), \
+                            take_calc_from_remote(self.ctx.calc_inputs.parent_folder), \
                             self.ctx.calc_inputs.yres.yambo.parameters.get_dict())
         self.report('parameter space will be {}'.format(parameters_space))
         self.ctx.calc_manager.steps = len(parameters_space)
@@ -164,6 +164,7 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.calc_manager.success:
                 self.report('Success, updating the history... ')
+                self.report(self.ctx.workflow_manager.workflow_story)
                 self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
                 self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
                             .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\

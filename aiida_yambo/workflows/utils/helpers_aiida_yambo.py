@@ -102,24 +102,24 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             except:
                 pass
 
-            inp_to_update.yres.gw.settings = update_dict(inp_to_update.yres.gw.settings, 'HARD_LINK', False)
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'HARD_LINK', False)
 
             value = k_distance
 
         elif isinstance(variables,list): #general
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
+            new_params = inp_to_update.yres.yambo.parameters.get_dict()
             for i in variables:
                 new_params[i] = new_values[variables.index(i)]
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
 
             value = new_values
 
         elif isinstance(variables,str): #general
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
+            new_params = inp_to_update.yres.yambo.parameters.get_dict()
             new_params[variables] = new_values
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
 
             value = new_values
 
@@ -138,7 +138,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         for j in range(len(where)):
             for i in range(1,backtrace+1):
-                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i]
+                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
                 if what == 'gap':
                     _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
                     _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)
@@ -159,4 +159,4 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         return quantities
 
     def start_from_converged(self, inputs, node):
-         inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
+         inputs.yres.yambo.parameters = node.get_builder_restart().yres.yambo['parameters']

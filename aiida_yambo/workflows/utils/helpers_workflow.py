@@ -61,13 +61,14 @@ class workflow_manager:
         for i in range(oversteps):
             self.workflow_story[-(i+1)][-1]=False
 
-        last_ok_wfl = get_caller(self.workflow_story[-(oversteps+1)][-3], depth = 1)
+        last_ok_pk = int(self.workflow_story[-(oversteps+1)][-3])
+        last_ok_wfl = get_caller(last_ok_pk, depth = 1)
         calc_manager.start_from_converged(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
-            set_parent(inputs, load_node(self.workflow_story[-(oversteps+1)][-3]))
+            set_parent(inputs, last_ok_wfl)
 
-        final_result={'calculation_pk': int(self.workflow_story[-(oversteps+1)][-3]),\
+        final_result={'calculation_pk': last_ok_pk,\
                     'result_eV':self.workflow_story[-(oversteps+1)][-2],'success':self.workflow_story[-(oversteps+1)][-1]}
 
         return final_result

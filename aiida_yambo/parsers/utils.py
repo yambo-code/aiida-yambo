@@ -28,13 +28,6 @@ def yambotiming_to_seconds(yt):
 
 def parse_log(log, output_params):
 
-    #just p2y...
-    p2y_completed = re.compile('P2Y completed')
-    for line in log.lines:
-        if p2y_completed.findall(line):
-            output_params['p2y_completed'] = True
-            return output_params
-
     #Game over...
     game_over = re.compile('Game')
     for line in log.lines:
@@ -74,6 +67,14 @@ def parse_log(log, output_params):
         elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line):
             output_params['para_error'] = True
 
+
+    #just p2y...
+    p2y_completed = re.compile('P2Y completed')
+    for line in log.lines:
+        if p2y_completed.findall(line):
+            output_params['p2y_completed'] = True
+            return output_params
+            
     return output_params
 
 def parse_report(report, output_params):

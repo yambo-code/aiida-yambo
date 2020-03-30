@@ -79,12 +79,14 @@ def update_dict(_dict, whats, hows):
         _dict = Dict(dict=new)
     return _dict
 
-def get_caller(calc, depth = 1):
+def get_caller(calc_pk, depth = 1):
+     calc = load_node(calc_pk)
      for i in range(depth):
          calc = calc.caller.caller
      return calc
 
-def get_called(calc, depth = 2):
+def get_called(calc_pk, depth = 2):
+     calc = load_node(calc_pk)
      for i in range(depth):
          calc = calc.called[0]
      return calc
