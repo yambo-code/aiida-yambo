@@ -124,7 +124,7 @@ class YamboConvergence(WorkChain):
         self.ctx.workflow_manager.values = []
         parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.workflow_manager.first_calc, \
                             self.ctx.calc_inputs.parent_folder.get_incoming().get_node_by_label('remote_folder'), \
-                            self.ctx.calc_inputs.yres.gw.parameters.get_dict())
+                            self.ctx.calc_inputs.yres.yambo.parameters.get_dict())
         self.report('parameter space will be {}'.format(parameters_space))
         self.ctx.calc_manager.steps = len(parameters_space)
         for parameter in parameters_space:
@@ -214,10 +214,10 @@ class YamboConvergence(WorkChain):
         self.report('doing the p2y')
         calc = {}
         self.report('no valid parent folder, so we will create it')
-        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', True)
+        self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', True)
         calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
         self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
-        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'INITIALISE', False)
+        self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', False)
         self.ctx.p2y = calc['p2y']
         return ToContext(calc)
 
@@ -253,7 +253,7 @@ class YamboConvergence(WorkChain):
         self.report('setting the preliminary calc as parent and its db as starting one')
         set_parent(self.ctx.calc_inputs, self.ctx.HF.outputs.yambo_calc_folder)
 
-        self.ctx.calc_inputs.yres.gw.settings = update_dict(self.ctx.calc_inputs.yres.gw.settings, 'COPY_DB', True)
+        self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'COPY_DBS', True)
 
 
 
