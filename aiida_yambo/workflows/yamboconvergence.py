@@ -223,7 +223,7 @@ class YamboConvergence(WorkChain):
 
     def prepare_calculations(self):
         self.report('setting the p2y calc as parent')
-        set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.remote)
+        set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.remote_folder)
 
 ############################### starting precalculation ####################
 
