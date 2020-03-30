@@ -243,10 +243,7 @@ class YamboConvergence(WorkChain):
         self.report('doing the HF')
         calc = {}
         self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
-        self.report('ciao!')
-        self.report(self.ctx.precalc_inputs['yres'])
         set_parent(self.ctx.precalc_inputs, self.ctx.calc_inputs.parent_folder)
-        self.report(self.ctx.precalc_inputs['yres'])
         calc['PRE_CALC'] = self.submit(YamboWorkflow, **self.ctx.precalc_inputs) #################run
         self.report('Submitted preliminary YamboWorkflow, pk = {}'.format(calc['PRE_CALC'].pk))
         self.ctx.HF = calc['PRE_CALC']
