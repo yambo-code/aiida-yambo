@@ -223,7 +223,7 @@ class YamboConvergence(WorkChain):
 
     def prepare_calculations(self):
         self.report('setting the p2y calc as parent')
-        set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.yambo_calc_folder)
+        set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.remote)
 
 ############################### starting precalculation ####################
 
@@ -240,18 +240,18 @@ class YamboConvergence(WorkChain):
 
 
     def do_precalc(self):
-        self.report('doing the HF')
+        self.report('doing the preliminary calculation')
         calc = {}
         self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
         set_parent(self.ctx.precalc_inputs, self.ctx.calc_inputs.parent_folder)
         calc['PRE_CALC'] = self.submit(YamboWorkflow, **self.ctx.precalc_inputs) #################run
         self.report('Submitted preliminary YamboWorkflow, pk = {}'.format(calc['PRE_CALC'].pk))
-        self.ctx.HF = calc['PRE_CALC']
+        self.ctx.PRE = calc['PRE_CALC']
         return ToContext(calc)
 
     def post_processing(self):
         self.report('setting the preliminary calc as parent and its db as starting one')
-        set_parent(self.ctx.calc_inputs, self.ctx.HF.outputs.yambo_calc_folder)
+        set_parent(self.ctx.calc_inputs, self.ctx.PRE.outputs.remote_folder)
 
         self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'COPY_DBS', True)
 
