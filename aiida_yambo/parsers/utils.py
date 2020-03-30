@@ -35,14 +35,13 @@ def parse_log(log, output_params):
             output_params['game_over'] = True
 
     #timing sections...
-    time = re.compile('<([0-9hms]+)>')
+    time = re.compile('<([0-9hms-]+)>')
     try:
         last_time = time.findall(log.lines[-1])[-1]
         output_params['last_time'] = yambotiming_to_seconds(last_time)
     except:
         last_time = 0
         output_params['last_time'] = 0
-
 
     timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
     timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
@@ -54,9 +53,9 @@ def parse_log(log, output_params):
     #memstats...
     memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
     memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
-    alloc_error = re.compile('[ERROR]Allocation')
-    incomplete_para_error = re.compile('[ERROR]Incomplete')
-    impossible_para_error = re.compile('[ERROR]Impossible')
+    alloc_error = re.compile('\[ERROR\]Allocation')
+    incomplete_para_error = re.compile('\[ERROR\]Incomplete')
+    impossible_para_error = re.compile('\[ERROR\]Impossible')
     for line in log.lines:
         if memory.match(line):
             output_params['memstats'].append(memory.match(line).string)
