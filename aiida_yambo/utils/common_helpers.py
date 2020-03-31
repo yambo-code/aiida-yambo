@@ -178,8 +178,8 @@ def take_number_kpts(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last
             file = open(path_folder+i,'r')
     for line in file:
         if 'K-points' in line:
-            print('# of kpts is {}'.format(line.split()[3]))
-            kpts = int(line.split()[3])
+            print('# of kpts is {}'.format(line.split()[2]))
+            kpts = int(line.split()[2])
             return kpts
     
 
