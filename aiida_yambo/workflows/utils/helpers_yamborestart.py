@@ -25,7 +25,7 @@ def fix_parallelism(options, failed_calc):
 
     what = ['bands','kpoints']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
-    occupied, kpoints = find_pw_info(failed_calc)['number_of_electrons']/2, find_pw_info(failed_calc)['number_of_k_points']
+    occupied, kpoints = take_filled_states(failed_calc), take_number_kpts(failed_calc)
 
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
