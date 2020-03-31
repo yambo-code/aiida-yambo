@@ -131,7 +131,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         we try to change the parallelism options.
         """
         new_para, new_resources  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
-        self.ctx.inputs.metadata.options.resources = update_dict(self.ctx.inputs.metadata.options.resources, new_resources.keys(), new_resources.values())
+        self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
@@ -146,7 +146,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         accordingly to the inputs permissions.
         """
         new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation)
-        self.ctx.inputs.metadata.options.resources = update_dict(self.ctx.inputs.metadata.options.resources, new_resources.keys(), new_resources.values())
+        self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, new_para.keys(), new_para.values())
                    
         self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance')
