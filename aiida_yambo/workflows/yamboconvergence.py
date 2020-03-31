@@ -201,7 +201,7 @@ class YamboConvergence(WorkChain):
         if not self.ctx.calc_manager.success:
             self.report('Convergence not reached')
             return self.exit_codes.CONVERGENCE_NOT_REACHED
-        elif: self.ctx.calc_manager.success == 'undefined':
+        elif self.ctx.calc_manager.success == 'undefined':
             self.report('Undefined state')
             return self.exit_codes.UNDEFINED_STATE
 
