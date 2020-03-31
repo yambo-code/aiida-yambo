@@ -70,7 +70,7 @@ def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
 def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp=2, kpoints = 1, what = ['bands'], last_qp = 1, namelist = {}):
     
     if last_qp == 1:
-        last_qp == occupied 
+        last_qp == occupied + 1
     mpi = nodes*mpi_per_node
 
     # GW #
