@@ -21,7 +21,7 @@ except:
 PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced"/"memory"/"workload")
 '''
 ################################################################################
-def fix_parallelism(options, failed_calc):
+def fix_parallelism(resources, failed_calc):
 
     what = ['bands','kpoints']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
@@ -29,35 +29,35 @@ def fix_parallelism(options, failed_calc):
 
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
-        new_parallelism, new_options = find_parallelism_qp(options['num_machines'], options['num_mpiprocs_per_machine'], \
-                                                        options['num_cores_per_mpiproc'], bands, \
+        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
+                                                        resources['num_cores_per_mpiproc'], bands, \
                                                         occupied, qp, kpoints,\
                                                         what, last_qp, namelist = {})
     elif 'bse' in runlevels:
         pass
     
-    return new_parallelism, new_options
+    return new_parallelism, new_resources
 
-def fix_memory(options, failed_calc):
+def fix_memory(resources, failed_calc):
 
     what = ['bands','kpoints']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
-    if options['num_mpiprocs_per_machine'] == 1:
-        options['num_machines'] = int(1.5*options['num_machines'])
-        options['num_mpiprocs_per_machine'] *= 2
-        options['num_cores_per_mpiproc'] /= 2
+    if resources['num_mpiprocs_per_machine'] == 1:
+        resources['num_machines'] = int(1.5*resources['num_machines'])
+        resources['num_mpiprocs_per_machine'] *= 2
+        resources['num_cores_per_mpiproc'] /= 2
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
-        new_parallelism, new_options = find_parallelism_qp(options['num_machines'], options['num_mpiprocs_per_machine']/2, \
-                                                        options['num_cores_per_mpiproc']*2, bands, \
+        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine']/2, \
+                                                        resources['num_cores_per_mpiproc']*2, bands, \
                                                         occupied, qp, kpoints,\
                                                         what, last_qp, namelist = {})
     elif 'bse' in runlevels:
         pass
     
-    return new_parallelism, new_options
+    return new_parallelism, new_resources
 
 def fix_time(options, restart, max_walltime):
     options['max_wallclock_seconds'] = \
