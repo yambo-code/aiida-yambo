@@ -8,8 +8,12 @@ def find_commensurate(max, ratio):
 
 def balance_tasks(mpi, a, b):
 
-    c = mpi/2
-    d = 2
+    if b > 2:
+        c = mpi/2
+        d = 2
+    else:
+        c = mpi
+        d = 1
     while c > a and 2*d <= b and c%2 == 0:
         c /= 2
         d *= 2
@@ -67,7 +71,7 @@ def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
 
     return resources
 
-def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp_corrected=2, kpoints = 1, what = ['bands'], last_qp = 1, namelist = {}):
+def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corrected=2, kpoints = 1, what = ['bands'], last_qp = 2, namelist = {}):
 
     mpi = nodes*mpi_per_node
 
