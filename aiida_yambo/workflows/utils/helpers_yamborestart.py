@@ -42,7 +42,7 @@ def fix_memory(options, failed_calc):
 
     what = ['bands','kpoints']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
-    occupied, kpoints = find_pw_info(failed_calc)['number_of_electrons']/2, find_pw_info(failed_calc)['number_of_k_points']
+    occupied, kpoints = take_filled_states(failed_calc), take_number_kpts(failed_calc)
 
     if options['num_mpiprocs_per_machine'] == 1:
         options['num_machines'] = int(1.5*options['num_machines'])

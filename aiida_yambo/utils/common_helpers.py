@@ -151,6 +151,38 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
 
     return ef
 
+def take_filled_states(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
+
+    node = load_node(calc_node_pk)
+    path_folder = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
+    get_line=False #not so good...
+    for i in os.listdir(path_folder):
+        if 'r-aiida.out' in i:
+            file = open(path_folder+i,'r')
+    for line in file:
+        if  get_line:
+            print('The VBM {}'.format(line.split()[3]))
+            valence = int(s.split()[0].replace('0001-',''))
+            return valence
+        if '[X]States summary ' in line:
+            get_line=True
+
+    
+
+def take_number_kpts(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
+
+    node = load_node(calc_node_pk)
+    path_folder = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
+    for i in os.listdir(path_folder):
+        if 'r-aiida.out' in i:
+            file = open(path_folder+i,'r')
+    for line in file:
+        if 'K-points' in line:
+            print('# of kpts is {}'.format(line.split()[3]))
+            kpts = int(line.split()[3])
+            return kpts
+    
+
 @calcfunction
 def store_List(a_list):
     the_List = List(list=a_list)
