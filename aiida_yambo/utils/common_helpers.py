@@ -161,7 +161,7 @@ def take_filled_states(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.la
             file = open(path_folder+i,'r')
     for line in file:
         if  get_line:
-            print('The VBM {}'.format(line.split()[3]))
+            print('The VBM {}'.format(line.split()[0]))
             valence = int(s.split()[0].replace('0001-',''))
             return valence
         if '[X]States summary ' in line:
@@ -183,13 +183,11 @@ def take_number_kpts(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last
             return kpts
     
 
-@calcfunction
 def store_List(a_list):
     the_List = List(list=a_list)
     the_List.store()
     return the_List
 
-@calcfunction
 def store_Dict(a_dict):
     the_Dict = Dict(dict=a_dict)
     the_Dict.store()
