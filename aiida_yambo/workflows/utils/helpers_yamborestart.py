@@ -25,7 +25,7 @@ def fix_parallelism(options, failed_calc):
 
     what = ['bands','kpoints']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
-    occupied, kpoints = take_filled_states(failed_calc), take_number_kpts(failed_calc)
+    occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
@@ -42,7 +42,7 @@ def fix_memory(options, failed_calc):
 
     what = ['bands','kpoints']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
-    occupied, kpoints = take_filled_states(failed_calc), take_number_kpts(failed_calc)
+    occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
     if options['num_mpiprocs_per_machine'] == 1:
         options['num_machines'] = int(1.5*options['num_machines'])
