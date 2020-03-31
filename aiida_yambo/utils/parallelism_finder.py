@@ -29,11 +29,11 @@ def parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied):
 
     return int(mpi), int(c), int(v)
 
-def parallelize_SE_bands(mpi_bands, qp):
+def parallelize_SE_bands(mpi, bands, qp):
     
-    b = mpi_bands/2
+    b, qp = balance_tasks(mpi, bands, qp) #prefer bands for memory reasons.
     
-    return int(b)
+    return int(b), int(qp)
     
 def parallelize_kpoints(mpi, mpi_per_node, kpoints):
 
@@ -53,9 +53,9 @@ def parallelize_bands_and_kpoints(mpi, mpi_per_node, bands, occupied, qp, kpoint
     mpi_b, mpi_k = balance_tasks(mpi, bands, kpoints) #prefer bands for memory reasons. 
 
     mpi_b, c, v = parallelize_DIP_X_bands(mpi_b, mpi_per_node/mpi_k, bands, occupied)
-    b = parallelize_SE_bands(c*v, qp)
+    b, qp = parallelize_SE_bands(mpi, c*v, qp)
 
-    return int(mpi), int(mpi_k), int(c), int(v), int(mpi_b)
+    return int(mpi), int(mpi_k), int(c), int(v), int(mpi_b), int(qp)
 
 def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
 
@@ -67,10 +67,8 @@ def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
 
     return resources
 
-def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp=2, kpoints = 1, what = ['bands'], last_qp = 1, namelist = {}):
-    
-    if last_qp == 1:
-        last_qp == occupied + 1
+def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp_corrected=2, kpoints = 1, what = ['bands'], last_qp = 1, namelist = {}):
+
     mpi = nodes*mpi_per_node
 
     # GW #
@@ -81,17 +79,20 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=1, qp=2, k
     c = 1
     v = 1
     b = 1
+    qp = 1
 
     if 'HF_issue' in what:
+        if last_qp <= occupied:
+             print('last_qp lower than occupied, setting to occupied + 1')
+             last_qp = occupied + 1
         bands = last_qp
-
     if 'bands' in what and not 'kpoints' in what:
         mpi, c, v = parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied)
-        b = parallelize_SE_bands(c*v, qp)
+        b, qp = parallelize_SE_bands(mpi, c*v, qp)
     elif 'kpoints' in what and not 'bands' in what:
         mpi, k = parallelize_kpoints(mpi, mpi_per_node, kpoints)
     else: 
-        mpi, k, c, v, b = parallelize_bands_and_kpoints(mpi, mpi_per_node, bands, occupied, qp, kpoints)
+        mpi, k, c, v, b, qp = parallelize_bands_and_kpoints(mpi, mpi_per_node, bands, occupied, qp, kpoints)
 
     mpi_DIP = {'k':k,'c':c,'v':v}
     mpi_X = {'q':q,'k':k,'g':g,'c':c,'v':v}
