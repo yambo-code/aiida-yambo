@@ -156,6 +156,12 @@ def store_List(a_list):
     the_List.store()
     return the_List
 
+@calcfunction
+def store_Dict(a_dict):
+    the_Dict = Dict(dict=a_dict)
+    the_Dict.store()
+    return the_Dict
+
 def find_pw_info(calc):
 
     pw_parent = find_pw_parent(calc)

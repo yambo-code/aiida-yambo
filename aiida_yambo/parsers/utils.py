@@ -56,6 +56,7 @@ def parse_log(log, output_params):
     alloc_error = re.compile('\[ERROR\]Allocation')
     incomplete_para_error = re.compile('\[ERROR\]Incomplete')
     impossible_para_error = re.compile('\[ERROR\]Impossible')
+    reading_explosion_of_memory = re.compile('Reading')
     for line in log.lines:
         if memory.match(line):
             output_params['memstats'].append(memory.match(line).string)
@@ -65,6 +66,8 @@ def parse_log(log, output_params):
             output_params['memory_error'] = True
         elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line):
             output_params['para_error'] = True
+    if  reading_explosion_of_memory.findall(log.lines[-1]):
+        output_params['memory_error'] = True
 
 
     #just p2y...

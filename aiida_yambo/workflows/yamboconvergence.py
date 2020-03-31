@@ -65,6 +65,10 @@ class YamboConvergence(WorkChain):
         spec.output('story', valid_type = List, help='all calculations')
         spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
 
+        spec.exit_code(300, 'UNDEFINED_STATE',
+                             message='The workchain is in an undefined state.')
+        spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
+                             message='The workchain failed to reach convergence.')
 
     def start_workflow(self):
         """Initialize the workflow"""
@@ -112,7 +116,8 @@ class YamboConvergence(WorkChain):
             self.report('Still iteration on {}'.format(self.ctx.calc_manager.var))
             return True
         else:
-            self.report('Undefined state on {}'.format(self.ctx.calc_manager.var))
+            self.report('Undefined state on {}, so we exit'.format(self.ctx.calc_manager.var))
+            self.ctx.calc_manager.success = 'undefined'
             return False
 
 
@@ -153,33 +158,33 @@ class YamboConvergence(WorkChain):
         post_processor = the_evaluator(self.ctx.calc_manager) #.wfl_type, \
                                 #self.ctx.calc_manager.conv_window, self.ctx.calc_manager.conv_thr)
 
-        try:
-            quantities = self.ctx.calc_manager.take_quantities()
-            self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager, quantities)
-            self.report('results: {}'.format(self.ctx.workflow_manager.array_conv))
-            self.ctx.calc_manager.success, oversteps = \
-                    post_processor.analysis_and_decision(self.ctx.workflow_manager.array_conv)
+        #try
+        quantities = self.ctx.calc_manager.take_quantities()
+        self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager, quantities)
+        self.report('results: {}'.format(self.ctx.workflow_manager.array_conv))
+        self.ctx.calc_manager.success, oversteps = \
+                post_processor.analysis_and_decision(self.ctx.workflow_manager.array_conv)
 
-            self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities)
+        self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities)
 
-            if self.ctx.calc_manager.success:
-                self.report('Success, updating the history... ')
-                self.report(self.ctx.workflow_manager.workflow_story)
-                self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
-                self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
-                            .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
-                             self.ctx.workflow_manager.workflow_story[-(oversteps+1)][-2] ))
+        if self.ctx.calc_manager.success:
+            self.report('Success, updating the history... ')
+            self.report(self.ctx.workflow_manager.workflow_story)
+            self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
+            self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
+                        .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
+                            self.ctx.workflow_manager.workflow_story[-(oversteps+1)][-2] ))
 
-                if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
-                     self.ctx.workflow_manager.fully_success = True
+            if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
+                    self.ctx.workflow_manager.fully_success = True
 
-            else:
-                self.report('Success on {} not reached yet in {} calculations' \
-                            .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
+        else:
+            self.report('Success on {} not reached yet in {} calculations' \
+                        .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
 
-        except:
-            self.report('problems during the data parsing/analysis, the workflows will stop and collect the previous info, so you can restart from there')
-            self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
+        #except:
+        #    self.report('problems during the data parsing/analysis, the workflows will stop and collect the previous info, so you can restart from there')
+        #    self.report('the error was: {}'.format(str(traceback.format_exc()))) #debug
 
         self.ctx.calc_manager.iter +=1
         self.ctx.workflow_manager.first_calc = False
@@ -187,10 +192,18 @@ class YamboConvergence(WorkChain):
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
-        story = List(list=self.ctx.workflow_manager.workflow_story).store()
+        
+        story = store_List(self.ctx.workflow_manager.workflow_story)
         self.out('story', story)
-        final_result = Dict(dict=self.ctx.final_result).store()
+        final_result = store_Dict(self.ctx.final_result)
         self.out('last_calculation',final_result)
+
+        if not self.ctx.calc_manager.success:
+            self.report('Convergence not reached')
+            return self.exit_codes.CONVERGENCE_NOT_REACHED
+        elif: self.ctx.calc_manager.success == 'undefined':
+            self.report('Undefined state')
+            return self.exit_codes.UNDEFINED_STATE
 
 ###############################starting p2y#####################
     def p2y_needed(self):

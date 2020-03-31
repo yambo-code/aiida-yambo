@@ -44,6 +44,11 @@ def fix_memory(options, failed_calc):
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = find_pw_info(failed_calc)['number_of_electrons']/2, find_pw_info(failed_calc)['number_of_k_points']
 
+    if options['num_mpiprocs_per_machine'] == 1:
+        options['num_machines'] = int(1.5*options['num_machines'])
+        options['num_mpiprocs_per_machine'] *= 2
+        options['num_cores_per_mpiproc'] /= 2
+
     if 'gw0' or 'HF_and_locXC' in runlevels:
         new_parallelism, new_options = find_parallelism_qp(options['num_machines'], options['num_mpiprocs_per_machine']/2, \
                                                         options['num_cores_per_mpiproc']*2, bands, \

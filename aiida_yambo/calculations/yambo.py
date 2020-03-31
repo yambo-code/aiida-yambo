@@ -87,17 +87,17 @@ class YamboCalculation(CalcJob):
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
 
-        spec.exit_code(400, 'ERROR_NO_RETRIEVED_FOLDER',
+        spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
-        spec.exit_code(401, 'WALLTIME_ERROR',
+        spec.exit_code(501, 'WALLTIME_ERROR',
                 message='time exceeded the max walltime')
-        spec.exit_code(402, 'NO_SUCCESS',
+        spec.exit_code(502, 'NO_SUCCESS',
                 message='failed calculation for some reason: could be a low number of conduction bands')
-        spec.exit_code(403, 'PARSER_ANOMALY',
+        spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
-        spec.exit_code(404, 'PARA_ERROR',
+        spec.exit_code(504, 'PARA_ERROR',
                 message='parallelization error')
-        spec.exit_code(405, 'MEMORY_ERROR',
+        spec.exit_code(505, 'MEMORY_ERROR',
                 message='memory error')
 
 
