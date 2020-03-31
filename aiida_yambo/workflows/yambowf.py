@@ -150,19 +150,16 @@ class YamboWorkflow(WorkChain):
 
         return ToContext(calc = future)
 
-
     def report_wf(self):
 
         self.report('Final step.')
 
         calc = self.ctx.calc
-        if not calc.is_failed:
-            self.report("workflow completed successfully, the pk of the last remote folder is {}"\
-                        .format(calc.outputs.remote_folder.pk))
+        if calc.is_finished_ok:
+            self.report("workflow completed successfully")
             
             self.out_many(self.exposed_outputs(calc,YamboRestartWf))
 
         else:
-            self.report("workflow NOT completed successfully, the pk of the last workchain is {}"\
-                        .format(calc.pk))
+            self.report("workflow NOT completed successfully")
             return self.exit_codes.ERROR_WORKCHAIN_FAILED
