@@ -23,7 +23,7 @@ PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced
 ################################################################################
 def fix_parallelism(resources, failed_calc):
 
-    what = ['bands','kpoints']
+    what = ['bands']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
@@ -40,7 +40,7 @@ def fix_parallelism(resources, failed_calc):
 
 def fix_memory(resources, failed_calc):
 
-    what = ['bands','kpoints']
+    what = ['bands']
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
