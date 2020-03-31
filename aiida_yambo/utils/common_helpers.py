@@ -162,7 +162,7 @@ def take_filled_states(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.la
     for line in file:
         if  get_line:
             print('The VBM {}'.format(line.split()[0]))
-            valence = int(s.split()[0].replace('0001-',''))
+            valence = int(line.split()[0].replace('0001-',''))
             return valence
         if '[X]States summary ' in line:
             get_line=True
