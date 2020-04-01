@@ -98,7 +98,9 @@ class YamboCalculation(CalcJob):
         spec.exit_code(504, 'PARA_ERROR',
                 message='parallelization error')
         spec.exit_code(505, 'MEMORY_ERROR',
-                message='memory error')
+                message='general memory error')
+        spec.exit_code(506, 'X_par_MEMORY_ERROR',
+                message='x_par allocation memory error')
 
 
         #outputs definition:

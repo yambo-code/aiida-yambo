@@ -69,21 +69,42 @@ def plot_conv(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='g
     plt.legend()
 
 
-def take_2d_results(node):    #returns array (val_1,val_2,result_eV) to be further analyzed
-    y = load_node(node).outputs.story.get_list()
-    p = pd.DataFrame(y[1:][:],columns = y[0][:])
-    k = np.zeros((len(p),3)) ;
-    for i in range(len(p)):
-         if isinstance(p['value'].iloc[i][0],list):
-            k[i,0] = p['value'].iloc[i][0][1]
-            k[i,1] = p['value'].iloc[i][1][1]
-            k[i,2] = p['result_eV'].iloc[i][0]
-         else:
-            k[i,0] = p['value'].iloc[i][0]
-            k[i,1] = p['value'].iloc[i][1]
-            k[i,2] = p['result_eV'].iloc[i][0]
+def collect_results(node_pk):    #returns array (val_1,val_2....,result_eV_1,...) to be further analyzed 
+        
+        y = load_node(node_pk).outputs.story.get_list() 
+        p = pd.DataFrame(y[1:][:],columns = y[0][:]) 
+        rows = len(p) 
+        cols = 0 
+        len_val = 1 
+        len_res = 1 
+        last_c = get_called(wfl_pk,depth=3)
+        ef = take_fermi(last_c.pk)
+        print('Fermi Energy is {} eV'.format(ef))
 
-    return k
+        if isinstance(p['value'].iloc[1],list): 
+            len_val = len(p['value'].iloc[1]) 
+            cols = cols + len(p['value'].iloc[1]) 
+        else: 
+            cols = cols+1 
+      
+        if isinstance(p['result_eV'].iloc[1],list): 
+            len_res = len(p['result_eV'].iloc[1]) 
+                cols = cols + len(p['result_eV'].iloc[1]) 
+        else: 
+            cols = cols+1    
+
+        print('varibles are {}'.format(p['var'].iloc[0]))    
+
+        k = np.zeros((rows,cols)) 
+        for i in range(rows): 
+            for j in range(len_val): 
+                if isinstance(p['value'].iloc[i][j],list): 
+                    k[i,j] = p['value'].iloc[i][j][-1]-p['value'].iloc[i][j][0]+1 
+                else: 
+                    k[i,j] = p['value'].iloc[i][j] 
+            for l in range(len_res): 
+                k[i,l+len_val] = p['result_eV'].iloc[i][l]+ef
+        return k
 
 def plot_2d_results(node,lab = '',title=''):      #just a 3d plot
     y = load_node(node).outputs.story.get_list()

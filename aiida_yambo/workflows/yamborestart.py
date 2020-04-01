@@ -117,6 +117,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         """
         
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.iteration, self.inputs.max_walltime)
+        self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
                    
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
@@ -137,7 +138,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
         return ProcessHandlerReport(True)
 
-    @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR])
+    @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, YamboCalculation.exit_codes.X_par_MEMORY_ERROR)
     def _handle_memory_error(self, calculation):
         """
         Handle calculations for a memory error; 
@@ -145,7 +146,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
-        new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation)
+        new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
                    

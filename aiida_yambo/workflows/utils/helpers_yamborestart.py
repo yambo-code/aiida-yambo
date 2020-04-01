@@ -38,14 +38,18 @@ def fix_parallelism(resources, failed_calc):
     
     return new_parallelism, new_resources
 
-def fix_memory(resources, failed_calc):
+def fix_memory(resources, failed_calc, exit_status):
 
-    what = ['bands']
+    if exit_status == 505:
+        what = ['bands']
+    else:
+        what = ['bands','g']
+        
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
-    if resources['num_mpiprocs_per_machine'] == 1:
-        resources['num_machines'] = int(1.5*resources['num_machines'])
+    if failed_calc.outputs.output_parameters.get_dict()['has_gpu']:
+        resources['num_machines'] = int(*resources['num_machines'])
         resources['num_mpiprocs_per_machine'] *= 2
         resources['num_cores_per_mpiproc'] /= 2
 

@@ -53,9 +53,11 @@ def parse_log(log, output_params):
     #memstats...
     memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
     memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
-    alloc_error = re.compile('\[ERROR\]Allocation')
+    alloc1_error = re.compile('\[ERROR\]Allocation')
+    alloc2_error = re.compile('\[MEMORY\] Alloc')
     incomplete_para_error = re.compile('\[ERROR\]Incomplete')
     impossible_para_error = re.compile('\[ERROR\]Impossible')
+    X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
     reading_explosion_of_memory = re.compile('Reading')
     for line in log.lines:
         if memory.match(line):
@@ -64,10 +66,18 @@ def parse_log(log, output_params):
                 output_params['memstats'].append(memory_old.match(line).string)
         elif  alloc_error.findall(line):
             output_params['memory_error'] = True
+            output_params['errors'].append('memory_general')
         elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line):
             output_params['para_error'] = True
     if  reading_explosion_of_memory.findall(log.lines[-1]):
         output_params['memory_error'] = True
+        output_params['errors'].append('memory_general')
+    if  X_par_mem.findall(log.lines[-1]):
+        output_params['memory_error'] = True
+        output_params['errors'].append('X_par_allocation')
+    if  alloc2_error.findall(log.lines[-1]):
+        output_params['memory_error'] = True
+        output_params['errors'].append('memory_general')
 
 
     #just p2y...
@@ -82,9 +92,13 @@ def parse_log(log, output_params):
 def parse_report(report, output_params):
     #Game over...
     game_over = re.compile('Game')
+    gpu_support = re.compile('CUDA')
     for line in report.lines:
         if game_over.findall(line):
             output_params['game_over'] = True
+    
+        if gpu_support.findall(line):
+            output_params['has_gpu'] = True
 
 def parse_scheduler_stderr(stderr, output_params):
 
@@ -95,5 +109,6 @@ def parse_scheduler_stderr(stderr, output_params):
     for line in stderr.lines:
         if m1.findall(line) or m2.findall(line) or m3.findall(line):
             output_params['memory_error'] = True
+            output_params['errors'].append('memory_general') 
         elif t1.findall(line):
             output_params['time_error'] = True
