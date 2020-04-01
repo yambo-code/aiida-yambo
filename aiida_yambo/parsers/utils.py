@@ -64,7 +64,7 @@ def parse_log(log, output_params):
             output_params['memstats'].append(memory.match(line).string)
         elif memory_old.match(line):
                 output_params['memstats'].append(memory_old.match(line).string)
-        elif  alloc_error.findall(line):
+        elif  alloc1_error.findall(line):
             output_params['memory_error'] = True
             output_params['errors'].append('memory_general')
         elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line):
