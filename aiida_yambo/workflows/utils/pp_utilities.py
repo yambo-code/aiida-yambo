@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import sys
 import os
+import shutil
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
@@ -77,23 +78,23 @@ def collect_results(node_pk):    #returns array (val_1,val_2....,result_eV_1,...
         cols = 0 
         len_val = 1 
         len_res = 1 
-        last_c = get_called(wfl_pk,depth=3)
+        last_c = get_called(node_pk,depth=3)
         ef = take_fermi(last_c.pk)
         print('Fermi Energy is {} eV'.format(ef))
 
-        if isinstance(p['value'].iloc[1],list): 
-            len_val = len(p['value'].iloc[1]) 
-            cols = cols + len(p['value'].iloc[1]) 
+        if isinstance(p['value'].iloc[0],list): 
+            len_val = len(p['value'].iloc[0]) 
+            cols = cols + len(p['value'].iloc[0]) 
         else: 
             cols = cols+1 
       
-        if isinstance(p['result_eV'].iloc[1],list): 
-            len_res = len(p['result_eV'].iloc[1]) 
-                cols = cols + len(p['result_eV'].iloc[1]) 
+        if isinstance(p['result_eV'].iloc[0],list): 
+            len_res = len(p['result_eV'].iloc[0]) 
+            cols = cols + len(p['result_eV'].iloc[0]) 
         else: 
             cols = cols+1    
 
-        print('varibles are {}'.format(p['var'].iloc[0]))    
+        print('variables are {}'.format(p['var'].iloc[0]))    
 
         k = np.zeros((rows,cols)) 
         for i in range(rows): 
@@ -102,10 +103,81 @@ def collect_results(node_pk):    #returns array (val_1,val_2....,result_eV_1,...
                     k[i,j] = p['value'].iloc[i][j][-1]-p['value'].iloc[i][j][0]+1 
                 else: 
                     k[i,j] = p['value'].iloc[i][j] 
-            for l in range(len_res): 
-                k[i,l+len_val] = p['result_eV'].iloc[i][l]+ef
-        return k
+            for l in range(len_res):
+                if p['result_eV'].iloc[i][l] == 0:
+                    pass
+                else:
+                    k[i,l+len_val] = p['result_eV'].iloc[i][l]+ef
+        return k, p
 
+
+def parse_data(wfl_pk, folder_name='', title='run'):
+
+    if folder_name == '':
+        folder_name = 'results_'+str(wfl_pk)
+    print('the folder name will be: {}'.format(folder_name))
+    k, p = collect_results(wfl_pk)
+    
+    if not folder_name in os.listdir():
+        os.mkdir(folder_name)
+        os.mkdir(folder_name+'/DATA/')
+        os.mkdir(folder_name+'/DATA/LOG/')
+    for i in range(len(k)):
+        try:
+            print(int(p['calc_pk'].iloc[i]))
+            repo = load_node(int(p['calc_pk'].iloc[i])).outputs.retrieved._repository._repo_folder.abspath
+            repo +='/path/'
+            title = ''
+            for j in range(len((p['var'].iloc[0]))):
+                title += '_'+str(int(k[i,j]))
+            print('the title will be: \n {}'.format(title))
+            if not load_node(int(p['calc_pk'].iloc[i])).is_finished_ok:
+                title += 'failed'
+            for file in os.listdir(repo):
+                print(file)
+                if 'o-' in file:
+                    shutil.copyfile(repo+file,folder_name+'/DATA/o-'+title+'.qp_'+str(int(p['calc_pk'].iloc[i])))
+                elif 'l-' in file:
+                    shutil.copyfile(repo+file,folder_name+'/DATA/LOG/'+'l-'+title+'_CPU_'+str(int(p['calc_pk'].iloc[i])))
+                elif 'r-' in file and not 'er-' in file:
+                    shutil.copyfile(repo+file,folder_name+'/DATA/r-'+title+'_'+str(int(p['calc_pk'].iloc[i]))) 
+                    np.set_printoptions(suppress=True)
+        except:
+            pass
+       
+    tot=''
+    try:
+        with open(folder_name+'/results.txt', 'r+') as resume:
+            for line in resume.readlines():
+                tot += line 
+                tot += '\n'
+    except:
+        print('not file with results found, creating....')
+        
+        
+    print('tot is {}'.format(tot))       
+    with open(folder_name+'/results.txt', 'a+') as resume:
+        for i in range(len(k)):
+            can_write= False
+            res = str(k[i,:]).replace('[','').replace(']','')
+            print('can I write {} ? '.format(res))
+            if res.split()[-1] != '0.':
+                print('can')
+                can_write = True
+            else:
+                print('cannot_ wrong')
+                can_write = False
+            if res+'\n' in tot:
+                print('cannot')
+                can_write = False
+            if can_write:
+                print('can write')
+                print(str(res.split()[-1]))
+                resume.write(res)
+                resume.write('\n')
+    
+            
+    return k
 def plot_2d_results(node,lab = '',title=''):      #just a 3d plot
     y = load_node(node).outputs.story.get_list()
     p = pd.DataFrame(y[1:][:],columns = y[0][:])
