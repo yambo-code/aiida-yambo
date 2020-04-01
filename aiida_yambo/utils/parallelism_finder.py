@@ -8,7 +8,7 @@ def find_commensurate(max, ratio):
 
 def balance_tasks(mpi, a, b):
 
-    if b >= 2:
+    if b > 1:
         c = mpi/2
         d = 2
     else:
@@ -103,15 +103,15 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
              print('last_qp lower than occupied, setting to occupied')
              last_qp = occupied
         bands = last_qp
-    if 'bands' in what and not 'kpoints' in what:
+    if 'bands' in what and not 'kpoints' in what and not 'g' in what:
         mpi, c, v = parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied)
-        b, qp = parallelize_SE_bands(mpi, c*v, qp)
-    elif 'kpoints' in what and not 'bands' in what:
+        b, qp = parallelize_SE_bands(mpi, c*v, qp_corrected)
+    elif 'kpoints' in what and not 'bands' in what and not 'g' in what:
         mpi, k = parallelize_kpoints(mpi, mpi_per_node, kpoints)
-    elif 'bands' in what and 'g' in what:
-        mpi, g, c, v, b, qp = parallelize_bands_and_g(mpi, mpi_per_node, bands, occupied, qp)
+    elif 'bands' in what and 'g' in what and not 'kpoints' in what:
+        mpi, g, c, v, b, qp = parallelize_bands_and_g(mpi, mpi_per_node, bands, occupied, qp_corrected)
     else: 
-        mpi, k, c, v, b, qp = parallelize_bands_and_kpoints(mpi, mpi_per_node, bands, occupied, qp, kpoints)
+        mpi, k, c, v, b, qp = parallelize_bands_and_kpoints(mpi, mpi_per_node, bands, occupied, qp_corrected, kpoints)
 
     mpi_DIP = {'k':k,'c':c,'v':v}
     mpi_X = {'q':q,'k':k,'g':g,'c':c,'v':v}
