@@ -138,7 +138,8 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
         return ProcessHandlerReport(True)
 
-    @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, YamboCalculation.exit_codes.X_par_MEMORY_ERROR)
+    @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, \
+                                                    YamboCalculation.exit_codes.X_par_MEMORY_ERROR])
     def _handle_memory_error(self, calculation):
         """
         Handle calculations for a memory error; 
