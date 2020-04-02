@@ -109,7 +109,7 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
     elif 'kpoints' in what and not 'bands' in what and not 'g' in what:
         mpi, k = parallelize_kpoints(mpi, mpi_per_node, kpoints, ratio = 2)
     elif 'bands' in what and 'g' in what and not 'kpoints' in what:
-        mpi, g, c, v, b, qp = parallelize_bands_and_g(mpi, mpi_per_node, bands, occupied, qp_corrected, g=50, ratio = 3)
+        mpi, g, c, v, b, qp = parallelize_bands_and_g(mpi, mpi_per_node, bands, occupied, qp_corrected, g, ratio = 3)
     else: 
         mpi, k, c, v, b, qp = parallelize_bands_and_kpoints(mpi, mpi_per_node, bands, occupied, qp_corrected, kpoints, ratio = 2)
 
