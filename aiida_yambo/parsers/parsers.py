@@ -235,6 +235,9 @@ class YamboParser(Parser):
          / float(output_params['requested_time'])) < 0.1:
             return self.exit_codes.WALLTIME_ERROR
 
+        if yambo_wrote(output_params):
+            output_params['yambo_wrote'] = True
+
         if success == False:
             if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
                   / float(output_params['requested_time'])) < 0.1:

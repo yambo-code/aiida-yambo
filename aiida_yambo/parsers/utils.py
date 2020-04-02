@@ -35,14 +35,6 @@ def parse_log(log, output_params):
             output_params['game_over'] = True
 
     #timing sections...
-    time = re.compile('<([0-9hms-]+)>')
-    try:
-        last_time = time.findall(log.lines[-1])[-1]
-        output_params['last_time'] = yambotiming_to_seconds(last_time)
-    except:
-        last_time = 0
-        output_params['last_time'] = 0
-
     timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
     timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
     for line in log.lines:
@@ -50,6 +42,19 @@ def parse_log(log, output_params):
             output_params['timing'].append(timing.match(line).string)
         elif timing_old.match(line):
             output_params['timing'].append(timing_old.match(line).string)
+
+    time = re.compile('<([0-9hms-]+)>')
+    try:
+        last_time = time.findall(log.lines[-1])[-1]
+        output_params['last_time'] = yambotiming_to_seconds(last_time)
+    except:
+        try:
+            last_time = time.findall(output_params['timing'][-1])[-1]
+            output_params['last_time'] = yambotiming_to_seconds(last_time)
+        except:
+            last_time = 0
+            output_params['last_time'] = 0
+
     #memstats...
     memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
     memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
@@ -112,3 +117,9 @@ def parse_scheduler_stderr(stderr, output_params):
             output_params['errors'].append('memory_general') 
         elif t1.findall(line):
             output_params['time_error'] = True
+
+def yambo_wrote(output_params):
+    if len(output_params['timing']) > 3:
+        return True
+    else:
+        return False
