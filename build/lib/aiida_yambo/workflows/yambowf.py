@@ -127,9 +127,9 @@ class YamboWorkflow(WorkChain):
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
             try:
-                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc[-1].called[0].outputs.remote_folder
+                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
             except:
-                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc[-1].outputs.remote_folder
+                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
 
             future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
 

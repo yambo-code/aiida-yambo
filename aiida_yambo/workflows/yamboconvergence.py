@@ -214,7 +214,7 @@ class YamboConvergence(WorkChain):
         try:
             set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
             parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)
-            if parent_calc.process_type=='aiida_yambo.calculations.yambo.YamboCalculation':
+            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
                 self.report('no, yambo parent')
                 return False
             else:
