@@ -84,7 +84,7 @@ class YamboParser(Parser):
         self._logger = AIIDA_LOGGER.getChild('parser').getChild(
             self.__class__.__name__)
        # check for valid input
-        if calculation.process_type=='aiida_yambo.calculations.yambo.YamboCalculation':
+        if calculation.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
             raise OutputParsingError(
