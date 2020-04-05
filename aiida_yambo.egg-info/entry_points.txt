@@ -1,8 +1,7 @@
 [aiida.calculations]
-yambo.yambo = aiida_yambo.calculations.gw:YamboCalculation
+yambo.yambo = aiida_yambo.calculations.yambo:YamboCalculation
 
 [aiida.data]
-
 
 [aiida.parsers]
 yambo.yambo = aiida_yambo.parsers.parsers:YamboParser
