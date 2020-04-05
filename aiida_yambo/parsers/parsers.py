@@ -15,10 +15,13 @@ from aiida.orm import Dict
 from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
-from aiida_yambo.parsers.ext_dep.yambofile import YamboFile
-from aiida_yambo.parsers.ext_dep.yambofolder import YamboFolder
+
+from yamboparser import *
+from yambopy.dbs.savedb import *
+
 from aiida_yambo.calculations.gw import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
+from aiida_yambo.parsers.utils import *
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
@@ -95,6 +98,7 @@ class YamboParser(Parser):
         self._lifetime_bands_linkname = 'bands_lifetime'
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
+        self._system_info_linkname = 'system_info'
         super(YamboParser, self).__init__(calculation)
 
     def parse(self, retrieved, **kwargs):
@@ -140,8 +144,8 @@ class YamboParser(Parser):
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, \
-        'requested_time':self._calc.attributes['max_wallclock_seconds'],'time_units':'seconds',\
-        'memstats':[],'memstats_units':'Gb'}
+        'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
+        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[]}
         ndbqp = {}
         ndbhf = {}
 
@@ -151,29 +155,22 @@ class YamboParser(Parser):
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
+
+        for file in os.listdir(out_folder._repository._repo_folder.abspath):
+            if 'stderr' in file:
+                with open(file,'r') as stderrZZ:
+                    parse_scheduler_stderr(stderr, output_params)
+
         for result in results.yambofiles:
             if results is None:
                 continue
-            if result.memstats:
-                output_params['memstats'] = result.memstats  # Gb
-                output_params['memstats_units'] = 'Gb'  # Gb
-            if result.timing:
-                output_params['timing']=[]
-                for t in result.timing:
-                    output_params['timing'].append(self._yambotiming_to_seconds(t))
-                output_params['timing_units'] = 's'  # seconds
-            else:
-                output_params['timing'] = [30]
-                output_params['timing_units'] = 's'  # seconds
-            if result.warnings:
-                output_params['warnings'].extend(result.warnings)
-            if result.errors:
-                for err in result.errors:
-                    if 'STOP' in err:
-                        success = False
-                        break
-                    else:
-                        output_params['errors'].extend(result.errors)
+
+            #This should be automatic in yambopy...
+            if result.type=='log':
+                parse_log(result, output_params)
+            if result.type=='report':
+                parse_report(result, output_params)
+
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
                 self.out(self._eels_array_linkname, eels_array)
@@ -217,6 +214,7 @@ class YamboParser(Parser):
         params=Dict(dict=output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
 
+
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:  #
@@ -227,25 +225,22 @@ class YamboParser(Parser):
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
+        if output_params['game_over']:
+            success = True
+        elif output_params['p2y_completed'] and initialise:
+            success = True
 
-        if abs((float(output_params['timing'][-1])-float(output_params['requested_time'])) \
+        if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
          / float(output_params['requested_time'])) < 0.1:
             return self.exit_codes.WALLTIME_ERROR
-        elif 'tim' in self._calc.get_scheduler_stderr():
-            return self.exit_codes.WALLTIME_ERROR
 
-        success=True
         if success == False:
-            if out_folder and initialise:
-                success = True #a p2y
-            elif output_params['memstats'] == [] and parent_calc.exit_code!=304:
+            if output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
-            elif parent_calc.exit_code==304:
+            elif output_params['memory_error']:
                 return self.exit_codes.MEMORY_ISSUE
             else:
                 return self.exit_codes.NO_SUCCESS
-
-
 
     def _aiida_array(self, data):
         arraydata = ArrayData()
@@ -369,21 +364,3 @@ class YamboParser(Parser):
         pdata.set_array('Vxc', Vxc)
         pdata.set_array('qp_table', numpy.array(ndbqp['qp_table']))
         return pdata
-
-    def _yambotiming_to_seconds(self, yt):
-        t = 0
-        th = 0
-        tm = 0
-        ts = 0
-        if isinstance(yt, str):
-            for i in yt.replace('-',' ').split():
-             if 'h' in i:
-                 th = int(i.replace('h',''))*3600
-             if 'm' in i:
-                 tm = int(i.replace('m',''))*60
-             if 's' in i:
-                  ts = int(i.replace('s',''))
-            t = th+tm+ts
-            return t
-        else:
-            return yt
