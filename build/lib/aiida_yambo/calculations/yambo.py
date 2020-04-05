@@ -180,7 +180,7 @@ class YamboCalculation(CalcJob):
 
         parent_calc = take_calc_from_remote(parent_calc_folder)
 
-        if parent_calc.process_type=='aiida_yambo.calculations.yambo.YamboCalculation':
+        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
             yambo_parent=False
