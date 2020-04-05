@@ -76,7 +76,7 @@ class YamboWorkflow(WorkChain):
                 elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
                     self.ctx.calc_to_do = 'yambo'
 
-            elif parent.process_type=='aiida_yambo.calculations.yambo.YamboCalculation':
+            elif parent.process_type=='aiida.calculations:yambo.yambo':
                 self.ctx.calc_to_do = 'yambo'
 
             else:
