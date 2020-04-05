@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from aiida.orm import load_node
+from aiida_yambo.utils.common_helpers import*
 
 def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
 
@@ -22,7 +23,7 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
     for line in file:
         if '[X]Fermi Level' in line:
             print('The Fermi level is {}'.format(line.split()[3]))
-            ef = line.split()[3]
+            ef = float(line.split()[3])
 
     return ef
 
