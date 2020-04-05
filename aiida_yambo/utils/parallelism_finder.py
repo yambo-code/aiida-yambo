@@ -101,7 +101,7 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
     if 'HF_issue' in what:
         if last_qp <= occupied:
              print('last_qp lower than occupied, setting to occupied')
-             last_qp = occupied
+             last_qp = occupied +1
         bands = last_qp
     if 'bands' in what and not 'kpoints' in what and not 'g' in what:
         mpi, c, v = parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied, ratio = 2)

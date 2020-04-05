@@ -16,8 +16,11 @@ from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 
-from yamboparser import *
-from yambopy.dbs.savedb import *
+try:
+    from yamboparser import *
+except: 
+    from aiida_yambo.parser.ext_dep.yambofile import *
+    from aiida_yambo.parser.ext_dep.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
