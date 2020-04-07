@@ -202,7 +202,12 @@ def plot_1D_convergence(pk,title='',xlabel='step',ylabel='eV',where=1,physical_q
 def plot_2D_convergence(xdata, ydata, zdata, labels = {'x_label':'bands','y_label':'Ry','z_label': 'eV'}, title='Gap', plot_type='3D', save = False):      
         
     #matplotlib.rcParams['legend.fontsize'] = 10
-    
+    if not isinstance(xdata, np.ndarray):
+        raise TypeError('xdata has to be numpy.ndarray')
+    if not isinstance(ydata, np.ndarray):
+        raise TypeError('ydata has to be numpy.ndarray')
+    if not isinstance(zdata, np.ndarray):
+        raise TypeError('zdata has to be numpy.ndarray')
     
     if plot_type=='3D':
         fig = plt.figure()
