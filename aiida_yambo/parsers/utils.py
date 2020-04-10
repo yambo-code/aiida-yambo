@@ -59,9 +59,10 @@ def parse_log(log, output_params):
     memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
     memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
     alloc1_error = re.compile('\[ERROR\]Allocation')
-    alloc2_error = re.compile('\[MEMORY\] Alloc')
+    #alloc2_error = re.compile('\[MEMORY\] Alloc')
     incomplete_para_error = re.compile('\[ERROR\]Incomplete')
     impossible_para_error = re.compile('\[ERROR\]Impossible')
+    impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
     X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
     reading_explosion_of_memory = re.compile('Reading')
     for line in log.lines:
@@ -72,7 +73,7 @@ def parse_log(log, output_params):
         elif  alloc1_error.findall(line):
             output_params['memory_error'] = True
             output_params['errors'].append('memory_general')
-        elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line):
+        elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
             output_params['para_error'] = True
     if  reading_explosion_of_memory.findall(log.lines[-1]):
         output_params['memory_error'] = True
@@ -80,9 +81,9 @@ def parse_log(log, output_params):
     if  X_par_mem.findall(log.lines[-1]):
         output_params['memory_error'] = True
         output_params['errors'].append('X_par_allocation')
-    if  alloc2_error.findall(log.lines[-1]):
-        output_params['memory_error'] = True
-        output_params['errors'].append('memory_general')
+   # if  alloc2_error.findall(log.lines[-1]):
+    #    output_params['memory_error'] = True
+    #    output_params['errors'].append('memory_general')
 
 
     #just p2y...

@@ -24,11 +24,11 @@ def parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied, ratio = 2):
     if mpi > bands:
         mpi = find_commensurate(bands, mpi_per_node)
     
-    if occupied/bands >= 0.25: # at least 25% of bands are occupied
-        c, v = balance_tasks(mpi, bands-occupied, occupied, ratio)
-    else:
-        c = mpi
-        v = 1
+    #if occupied/bands >= 0.25: # at least 25% of bands are occupied
+    #    c, v = balance_tasks(mpi, bands-occupied, occupied, ratio)
+    #else:
+    c = mpi
+    v = 1
 
     return int(mpi), int(c), int(v)
 
@@ -101,8 +101,9 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
     if 'HF_issue' in what:
         if last_qp <= occupied:
              print('last_qp lower than occupied, setting to occupied')
-             last_qp = occupied +1
-        bands = last_qp
+             last_qp = occupied+1 
+        bands = last_qp*qp_corrected
+
     if 'bands' in what and not 'kpoints' in what and not 'g' in what:
         mpi, c, v = parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied, ratio = 2)
         b, qp = parallelize_SE_bands(mpi, c*v, qp_corrected, ratio = 2)

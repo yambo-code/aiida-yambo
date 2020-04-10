@@ -38,7 +38,7 @@ def collect_results(node_pk, last_c=None):    #returns array (val_1,val_2....,re
         if last_c:
             pass
         else:
-            last_c = get_called(node_pk,depth=3)
+            last_c = get_called_ok(node_pk,depth=3)
         ef = take_fermi(last_c.pk)
         print('Fermi Energy is {} eV'.format(ef))
 
@@ -79,7 +79,7 @@ def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
     if last_c_ok_pk:
             pass
     else:
-            last_c_ok_pk = get_called(wfl_pk,depth=3)
+            last_c_ok_pk = get_called_ok(wfl_pk,depth=3)
     k, p = collect_results(wfl_pk, last_c=last_c_ok_pk)
     
     if not folder_name in os.listdir():

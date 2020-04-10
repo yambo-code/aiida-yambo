@@ -14,14 +14,14 @@ def func(xv,*args):
       y = y * ( A/xval + B)
    return y
 
-def fitting(func,xdata,ydata,p0=None,method="dogbox",weights=None):
+def fitting(func, xdata,ydata, p0=None,method=None,weights=None):
    #
    if (p0==None):
       nvars=len(xdata)
       p0=[1.0 for x in range(2*nvars)]
    #
    try:
-      params, pcov = curve_fit(func,xdata,ydata,p0=p0,sigma=weights)
+      params, pcov = curve_fit(func,xdata,ydata,p0=p0,method=None,sigma=weights)
    except ValueError:
       print("ValueError: Invalid input data")
       info=-1

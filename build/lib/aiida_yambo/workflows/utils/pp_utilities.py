@@ -27,7 +27,7 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
 
     return ef
 
-def collect_results(node_pk):    #returns array (val_1,val_2....,result_eV_1,...) to be further analyzed 
+def collect_results(node_pk, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
         
         y = load_node(node_pk).outputs.story.get_list() 
         p = pd.DataFrame(y[1:][:],columns = y[0][:]) 
@@ -35,7 +35,10 @@ def collect_results(node_pk):    #returns array (val_1,val_2....,result_eV_1,...
         cols = 0 
         len_val = 1 
         len_res = 1 
-        last_c = get_called(node_pk,depth=3)
+        if last_c:
+            pass
+        else:
+            last_c = get_called_ok(node_pk,depth=3)
         ef = take_fermi(last_c.pk)
         print('Fermi Energy is {} eV'.format(ef))
 
@@ -68,12 +71,16 @@ def collect_results(node_pk):    #returns array (val_1,val_2....,result_eV_1,...
         return k, p
 
 
-def parse_data(wfl_pk, folder_name='', title='run'):
+def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
 
     if folder_name == '':
         folder_name = 'results_'+str(wfl_pk)
     print('the folder name will be: {}'.format(folder_name))
-    k, p = collect_results(wfl_pk)
+    if last_c_ok_pk:
+            pass
+    else:
+            last_c_ok_pk = get_called_ok(wfl_pk,depth=3)
+    k, p = collect_results(wfl_pk, last_c=last_c_ok_pk)
     
     if not folder_name in os.listdir():
         os.mkdir(folder_name)
@@ -202,7 +209,12 @@ def plot_1D_convergence(pk,title='',xlabel='step',ylabel='eV',where=1,physical_q
 def plot_2D_convergence(xdata, ydata, zdata, labels = {'x_label':'bands','y_label':'Ry','z_label': 'eV'}, title='Gap', plot_type='3D', save = False):      
         
     #matplotlib.rcParams['legend.fontsize'] = 10
-    
+    if not isinstance(xdata, np.ndarray):
+        raise TypeError('xdata has to be numpy.ndarray')
+    if not isinstance(ydata, np.ndarray):
+        raise TypeError('ydata has to be numpy.ndarray')
+    if not isinstance(zdata, np.ndarray):
+        raise TypeError('zdata has to be numpy.ndarray')
     
     if plot_type=='3D':
         fig = plt.figure()

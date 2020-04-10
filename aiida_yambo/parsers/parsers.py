@@ -233,17 +233,13 @@ class YamboParser(Parser):
             success = True
         elif output_params['p2y_completed'] and initialise:
             success = True
-
-        if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
-         / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
-
+            
         if yambo_wrote(output_params):
             output_params['yambo_wrote'] = True
 
         if success == False:
             if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
-                  / float(output_params['requested_time'])) < 0.1:
+                  / float(output_params['requested_time'])) < 0.25:
                 return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
