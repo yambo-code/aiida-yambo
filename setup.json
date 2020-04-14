@@ -9,7 +9,8 @@
         "Programming Language :: Python",
         "License :: OSI Approved :: MIT License",
         "Environment :: Plugins",
-        "Topic :: Scientific/Engineering :: Physics"
+        "Topic :: Scientific/Engineering :: Physics",
+        "Framework :: AiiDA"
     ],
     "version": "1.0.1",
     "extras_require": {
