@@ -119,7 +119,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote'] :
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
                 self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out 
                                   
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
@@ -137,7 +137,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
         
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote'] :
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
 
 
@@ -157,7 +157,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
 
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote'] :
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
                    
         self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance')

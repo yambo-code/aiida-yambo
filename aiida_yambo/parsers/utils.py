@@ -119,8 +119,9 @@ def parse_scheduler_stderr(stderr, output_params):
         elif t1.findall(line):
             output_params['time_error'] = True
 
-def yambo_wrote(output_params):
+def yambo_wrote_dbs(output_params):
     if len(output_params['timing']) > 3:
-        return True
-    else:
-        return False
+        output_params['yambo_wrote'] True
+
+def get_yambo_version(report, output_params):
+    
