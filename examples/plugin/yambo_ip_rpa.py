@@ -5,7 +5,7 @@ import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.engine import submit
-from aiida_yambo.calculations.gw import YamboCalculation
+from aiida_yambo.calculations.yambo import YamboCalculation
 import argparse
 
 def get_options():
@@ -137,8 +137,8 @@ def main(options):
                      'DmRngeXd_units': 'eV',
                      'ETStpsXd': 1000,
                      'LongDrXd': [1.,0.0,0.0],
-                     'X_all_q_CPU': "1 1 1 1",
-                     'X_all_q_ROLEs': "q k c v",
+                     'X_CPU': "1 1 1 1",
+                     'X_ROLEs': "q k c v",
                     }
 
     params_ip_rpa = Dict(dict=params_ip_rpa)
@@ -165,7 +165,7 @@ def main(options):
     builder.parameters = params_ip_rpa
 
     builder.precode_parameters = Dict(dict={})
-    builder.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
+    builder.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
     builder.code = load_node(options['code_pk'])
     builder.preprocessing_code = load_node(options['precode_pk'])

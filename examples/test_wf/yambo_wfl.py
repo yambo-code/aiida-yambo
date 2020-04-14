@@ -26,28 +26,28 @@ def get_options():
         '--parent',
         type=int,
         dest='parent_pk',
-        required=True,
+        required=False,
         help='The parent to use')
 
     parser.add_argument(
         '--yamboprecode',
         type=int,
         dest='yamboprecode_pk',
-        required=False,
+        required=True,
         help='The precode to use')
 
     parser.add_argument(
         '--pwcode',
         type=int,
         dest='pwcode_pk',
-        required=False,
+        required=True,
         help='The pw to use')
 
     parser.add_argument(
         '--pseudo',
         type=str,
         dest='pseudo_family',
-        required=False,
+        required=True,
         help='The pseudo_family')
 
     parser.add_argument(
@@ -233,21 +233,24 @@ def main(options):
 
 
     params_gw = {
+            'HF_and_locXC': True,
+            'dipoles': True,
             'ppa': True,
             'gw0': True,
-            'HF_and_locXC': True,
             'em1d': True,
             'Chimod': 'hartree',
             #'EXXRLvcs': 40,
             #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 60],
+            'BndsRnXp': [1, 10],
             'NGsBlkXp': 2,
             'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 60],
+            'GbndRnge': [1, 10],
             'DysSolver': "n",
             'QPkrange': [[1, 1, 8, 9]],
-            'X_all_q_CPU': "1 1 1 1",
-            'X_all_q_ROLEs': "q k c v",
+            'DIP_CPU': "1 1 1",
+            'DIP_ROLEs': "k c v",
+            'X_CPU': "1 1 1 1",
+            'X_ROLEs': "q k c v",
             'SE_CPU': "1 1 1",
             'SE_ROLEs': "q qp b",
         }
@@ -289,32 +292,34 @@ def main(options):
     builder.nscf.pw.pseudos = builder.scf.pw.pseudos
 
     ##################yambo part of the builder
-    builder.yres.gw.metadata.options.max_wallclock_seconds = \
+    builder.yres.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.yres.gw.metadata.options.resources = \
+    builder.yres.yambo.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.yres.gw.metadata.options.queue_name = options['queue_name']
+        builder.yres.yambo.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.yres.gw.metadata.options.qos = options['qos']
+        builder.yres.yambo.metadata.options.qos = options['qos']
 
     if 'account' in options:
-        builder.yres.gw.metadata.options.account = options['account']
+        builder.yres.yambo.metadata.options.account = options['account']
 
-    builder.yres.gw.parameters = params_gw
-    builder.yres.gw.precode_parameters = Dict(dict={})
-    builder.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
+    builder.yres.yambo.parameters = params_gw
+    builder.yres.yambo.precode_parameters = Dict(dict={})
+    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
     builder.yres.max_restarts = Int(5)
 
-    builder.yres.gw.preprocessing_code = load_node(options['yamboprecode_pk'])
-    builder.yres.gw.code = load_node(options['yambocode_pk'])
+    builder.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
+    builder.yres.yambo.code = load_node(options['yambocode_pk'])
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+
+    return builder
 
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboCalculation; with pk=<{}>".format(running.pk))
+    print("Submitted YamboWorkflow workchain; with pk=<{}>".format(running.pk))
