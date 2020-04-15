@@ -72,7 +72,7 @@ To setup a code there is also the possibility to define a YAML-format file
 
 To store the code, just type "verdi code setup --config file.yml".
 
-Tip: for SLURM schedulers, we suggest to set 
+Tip: for SLURM schedulers, we suggest to set, in the code prepend text,
 ::
 
     export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK 
