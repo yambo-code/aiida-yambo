@@ -119,8 +119,7 @@ class YamboRestartWf(BaseRestartWorkChain):
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
-                self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out 
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out 
                                   
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
                                                 seconds and link outputs'\
