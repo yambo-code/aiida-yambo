@@ -175,7 +175,7 @@ class YamboParser(Parser):
                 parse_log(result, output_params)
             if result.type=='report':
                 parse_report(result, output_params)
-                yambo_wrote_dbs(output_params)
+                output_params['yambo_wrote_dbs'] = yambo_wrote_dbs(output_params)
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)

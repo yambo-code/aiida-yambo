@@ -149,7 +149,8 @@ class YamboParser(Parser):
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
         'p2y_completed': False, \
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
-        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False}
+        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
+        'yambo_version':'4.5'}
         ndbqp = {}
         ndbhf = {}
 
@@ -174,6 +175,7 @@ class YamboParser(Parser):
                 parse_log(result, output_params)
             if result.type=='report':
                 parse_report(result, output_params)
+                output_params['yambo_wrote_dbs'] = yambo_wrote_dbs(output_params)
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
@@ -234,8 +236,6 @@ class YamboParser(Parser):
         elif output_params['p2y_completed'] and initialise:
             success = True
             
-        if yambo_wrote(output_params):
-            output_params['yambo_wrote'] = True
 
         if success == False:
             if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \

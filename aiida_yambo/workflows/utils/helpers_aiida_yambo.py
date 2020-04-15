@@ -102,7 +102,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             except:
                 pass
 
-            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'HARD_LINK', False)
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False)
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)
 
             value = k_distance
 
