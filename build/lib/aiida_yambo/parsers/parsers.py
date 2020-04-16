@@ -193,7 +193,7 @@ class YamboParser(Parser):
             elif 'ndb.HF_and_locXC' == result.filename:
                 ndbhf = copy.deepcopy(result.data)
 
-            elif 'gw0' in input_params:
+            elif 'gw0___' in input_params:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
@@ -202,7 +202,7 @@ class YamboParser(Parser):
                     if type(arr) == ArrayData:  #
                         self.out(self._qp_array_linkname,arr)
 
-            elif 'life' in input_params:
+            elif 'life___' in input_params:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
