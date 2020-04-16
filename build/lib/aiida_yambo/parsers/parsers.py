@@ -233,7 +233,7 @@ class YamboParser(Parser):
 
         if output_params['game_over']:
             success = True
-        elif output_params['p2y_completed']:
+        elif output_params['p2y_completed'] and initialise:
             success = True
             
 
