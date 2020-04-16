@@ -19,8 +19,8 @@ import glob, os, re
 try:
     from yamboparser import *
 except: 
-    from aiida_yambo.parser.ext_dep.yambofile import *
-    from aiida_yambo.parser.ext_dep.yambofolder import *
+    from aiida_yambo.parsers.ext_dep.yambofile import *
+    from aiida_yambo.parsers.ext_dep.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *

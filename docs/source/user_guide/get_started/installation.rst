@@ -70,13 +70,13 @@ To setup a code there is also the possibility to define a YAML-format file
 
     append_text: ""
 
-To store the code, just type "verdi code setup --config file.yml".
+To store the code, just type ``verdi code setup --config file.yml``.
 
-Tip: for SLURM schedulers, we suggest to set, in the code prepend text,
+Tip: for SLURM schedulers, we suggest to set, in the computer(so, for all codes) or code prepend text,
 ::
 
     export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK 
 
 to automatically set the right number of threads. For PBS/Torque, you need to set the 
-environment variable OMP_NUM_THREADS by using the custom_scheduler_commands in the options 
+environment variable `OMP_NUM_THREADS `by using the custom_scheduler_commands in the options 
 of the calculation.  
