@@ -15,6 +15,7 @@ from aiida.engine.processes.workchains.utils import ProcessHandlerReport, proces
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.workflows.utils.helpers_yamborestart import *
+from aiida_yambo.utils.parallel_namelists import*
 
 
 class YamboRestartWf(BaseRestartWorkChain):
@@ -40,7 +41,7 @@ class YamboRestartWf(BaseRestartWorkChain):
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
         spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
-
+        spec.input("code_version", valid_type=Str, default=lambda: Str('4.5'))
 
 
 ##################################### OUTLINE ####################################
@@ -77,7 +78,10 @@ class YamboRestartWf(BaseRestartWorkChain):
            for example, the parallelism namelist is different from version the version... 
            we need some input helpers to fix automatically this with respect to the version of yambo
         """
-        pass
+        new_para = check_para_namelists(self.ctx.inputs.parameters.get_dict(), self.inputs.code_version.value)
+        if new_para:
+            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            self.report('adjusting parallelism namelist... please check yambo documentation')
 
     def validate_resources(self):
         """validation of machines... completeness and with respect para options
@@ -135,6 +139,12 @@ class YamboRestartWf(BaseRestartWorkChain):
         new_para, new_resources  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+
+        new_para = check_para_namelists(new_para, self.inputs.code_version.value)
+        if new_para:
+            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            self.report('adjusting parallelism namelist... please check yambo documentation')
+
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
@@ -155,6 +165,12 @@ class YamboRestartWf(BaseRestartWorkChain):
         new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            
+        new_para = check_para_namelists(new_para, self.inputs.code_version.value)
+        if new_para:
+            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            self.report('adjusting parallelism namelist... please check yambo documentation')
+
 
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
