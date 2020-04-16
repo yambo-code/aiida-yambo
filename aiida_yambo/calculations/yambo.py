@@ -347,8 +347,8 @@ class YamboCalculation(CalcJob):
         calcinfo.retrieve_list.append('r*')
         calcinfo.retrieve_list.append('l*')
         calcinfo.retrieve_list.append('o*')
-        calcinfo.retrieve_list.append('LOG/l-*_CPU_1')
-        calcinfo.retrieve_list.append('LOG/l-*_CPU_2')
+        calcinfo.retrieve_list.append('LOG/l*_CPU_1')
+        calcinfo.retrieve_list.append('LOG/l*_CPU_2')
         calcinfo.retrieve_list.append('*stderr*') #standard errors
         extra_retrieved = []
 
