@@ -27,7 +27,7 @@ def fix_parallelism(resources, failed_calc):
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
-    if kpoints/bands > 1:
+    if float(kpoints)/float(bands) > 0.5:
         what.append('kpoints')
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
@@ -48,7 +48,7 @@ def fix_memory(resources, failed_calc, exit_status):
         #what = ['bands','g'] 
         pass
 
-    if kpoints/bands > 1:
+    if float(kpoints)/float(bands) > 0.5:
         what.append('kpoints')
 
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
@@ -72,7 +72,7 @@ def fix_memory(resources, failed_calc, exit_status):
 
 def fix_time(options, restart, max_walltime):
     options['max_wallclock_seconds'] = \
-                            int(options['max_wallclock_seconds']*1.3*restart)
+                            int(options['max_wallclock_seconds']*1.5*restart)
 
     if options['max_wallclock_seconds'] > max_walltime:
         options['max_wallclock_seconds'] = max_walltime

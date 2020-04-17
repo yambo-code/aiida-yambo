@@ -146,7 +146,7 @@ class YamboParser(Parser):
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
 
-        output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
+        output_params = {'warnings': [], 'errors': [], 'yambo_wrote_dbs': False, 'game_over': False,
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
@@ -175,7 +175,6 @@ class YamboParser(Parser):
                 parse_log(result, output_params)
             if result.type=='report':
                 parse_report(result, output_params)
-                output_params['yambo_wrote_dbs'] = yambo_wrote_dbs(output_params)
 
             if 'eel' in result.filename:
                 eels_array = self._aiida_array(result.data)
@@ -217,8 +216,12 @@ class YamboParser(Parser):
                         'Parser output format is invalid')
                 else:
                     pass
+        
+        yambo_wrote_dbs(output_params)
+
         params=Dict(dict=output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
+
 
 
         # we store  all the information from the ndb.* files rather than in separate files
