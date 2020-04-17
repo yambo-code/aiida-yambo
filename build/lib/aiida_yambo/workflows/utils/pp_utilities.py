@@ -27,10 +27,14 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
 
     return ef
 
-def collect_results(node_pk, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
+def collect_results(node_pk=None,dataframe=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
         
-        y = load_node(node_pk).outputs.story.get_list() 
-        p = pd.DataFrame(y[1:][:],columns = y[0][:]) 
+        if node_pk:
+            y = load_node(node_pk).outputs.story.get_list() 
+            p = pd.DataFrame(y[1:][:],columns = y[0][:]) 
+        else: 
+            p = dataframe
+
         rows = len(p) 
         cols = 0 
         len_val = 1 

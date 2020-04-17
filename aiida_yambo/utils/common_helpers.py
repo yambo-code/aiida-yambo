@@ -24,7 +24,7 @@ def find_parent(calc):
         parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
     return parent_calc
 
-def find_pw_parent(parent_calc, calc_type = 'nscf'):
+def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
 
     has_found_pw = False
     while (not has_found_pw):
@@ -32,12 +32,12 @@ def find_pw_parent(parent_calc, calc_type = 'nscf'):
             has_found_pw = False
             parent_calc = find_parent(parent_calc)
             if parent_calc.process_type=='aiida.calculations:quantumespresso.pw' and \
-                find_pw_type(parent_calc) == calc_type:
+                find_pw_type(parent_calc) in calc_type:
                 has_found_pw = True
             else:
                 parent_calc = find_parent(parent_calc)
         elif parent_calc.process_type=='aiida.calculations:quantumespresso.pw' and \
-            find_pw_type(parent_calc) == calc_type:
+            find_pw_type(parent_calc) in calc_type:
             has_found_pw = True
         else:
             parent_calc = find_parent(parent_calc)
@@ -47,7 +47,7 @@ def find_pw_parent(parent_calc, calc_type = 'nscf'):
 def get_distance_from_kmesh(calc):
     mesh = calc.inputs.kpoints.get_kpoints_mesh()[0]
     k = KpointsData()
-    k.set_cell(calc.inputs.structure.cell)
+    k.set_cell_from_structure(calc.inputs.structure) #these take trace of PBC...if set in the inputs.!!
     for i in range(1,100):
          k.set_kpoints_mesh_from_density(1/i)
          if k.get_kpoints_mesh()[0]==mesh:
@@ -195,7 +195,7 @@ def store_Dict(a_dict):
 
 def find_pw_info(calc):
 
-    pw_parent = find_pw_parent(calc)
+    pw_parent = find_pw_parent(calc, calc_type = ['nscf'])
     info = pw_parent.outputs.output_parameters.get_dict()   
     return info
 

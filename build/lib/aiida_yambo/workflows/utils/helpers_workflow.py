@@ -41,7 +41,7 @@ class workflow_manager:
         else:
             self.array_conv = np.column_stack((self.array_conv,quantities[:,:,1]))
 
-    def update_story_global(self, calc_manager, quantities):
+    def update_story_global(self, calc_manager, quantities, inputs):
 
         if self.first_calc:
             self.workflow_story = []
@@ -53,6 +53,12 @@ class workflow_manager:
                 self.global_step += 1
                 self.workflow_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
                             [self.values[i], quantities[0,i,2], quantities[:,i,1], True])
+        
+        if calc_manager.var == 'kpoints':
+            
+            last_ok_pk = int(self.workflow_story[-1][-3])
+            last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+            set_parent(inputs, load_node(last_ok_pk))
 
     def post_analysis_update(self,inputs, calc_manager, oversteps):
 
@@ -66,7 +72,7 @@ class workflow_manager:
         calc_manager.start_from_converged(inputs, last_ok_wfl)
 
         if calc_manager.var == 'kpoints':
-            set_parent(inputs, last_ok_wfl)
+            set_parent(inputs, load_node(last_ok_pk))
 
         final_result={'calculation_pk': last_ok_pk,\
                     'result_eV':self.workflow_story[-(oversteps+1)][-2],'success':self.workflow_story[-(oversteps+1)][-1]}

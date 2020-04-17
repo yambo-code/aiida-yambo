@@ -165,7 +165,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_manager.success, oversteps = \
                 post_processor.analysis_and_decision(self.ctx.workflow_manager.array_conv)
 
-        self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities)
+        self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs)
 
         if self.ctx.calc_manager.success:
             self.report('Success, updating the history... ')

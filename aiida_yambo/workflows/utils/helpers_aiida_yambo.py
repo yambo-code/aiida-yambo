@@ -41,7 +41,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             if self.var == 'kpoints':
 
-                k_distance = get_distance_from_kmesh(find_pw_parent(parent))
+                k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf']))
 
             for i in range(self.steps):
 
@@ -52,7 +52,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
                 if self.var == 'kpoints':
 
-                    k_distance = k_distance + self.delta*(first+i)
+                    k_distance = k_distance_old + self.delta*(first+i)
                     new_value = k_distance
 
                 elif isinstance(self.var,list): #general
@@ -92,15 +92,15 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             k_distance = new_values
 
             inp_to_update.scf.kpoints = KpointsData()
-            inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
+            inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
             inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
             inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
             try:
-                inp_to_update.parent_folder = find_pw_parent(inp_to_update.parent_folder.get_incoming().get_node_by_label('remote_folder'),\
-                                                            calc_type='scf').outputs.remote_folder  #I need to start from the scf calc
+                inp_to_update.parent_folder =  find_pw_parent(take_calc_from_remote(inp_to_update.parent_folder), calc_type=['scf']).outputs.remote_folder 
+                 #I need to start from the scf calc
             except:
-                pass
+                del inp_to_update.parent_folder #do all scf+nscf+y in case
 
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False)
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)
