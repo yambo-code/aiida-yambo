@@ -341,6 +341,8 @@ def main(options):
 
     return builder
 
+    return builder
+
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)

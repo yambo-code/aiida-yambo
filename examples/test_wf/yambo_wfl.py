@@ -288,7 +288,7 @@ def main(options):
     builder.scf.pw.code = load_node(options['pwcode_pk'])
     builder.nscf.pw.code = load_node(options['pwcode_pk'])
     builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.scf.pw.structure, pseudo_family = Str(options['pseudo_family'])
+                builder.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
     builder.nscf.pw.pseudos = builder.scf.pw.pseudos
 
     ##################yambo part of the builder
