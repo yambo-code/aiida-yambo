@@ -1,0 +1,16 @@
+aiida_core[atomic_tools,docs]>=1.0.0a2
+aiida-quantumespresso<4.0,>=3.0.0a6
+netcdf4
+h5py
+pytest
+
+[docs]
+Sphinx
+docutils
+sphinx_rtd_theme
+
+[pre-commit]
+pre-commit==1.11.0
+yapf==0.24.0
+prospector==0.12.11
+pylint==1.9.3

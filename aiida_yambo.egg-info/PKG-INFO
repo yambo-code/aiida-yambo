@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: aiida-yambo
+Version: 1.0.0
+Summary: YAMBO plugin and workflows for AiiDA
+Home-page: https://github.com/yambo-code/yambo-aiida
+Author: Miki Bonacci, Michael Atambo, Antimo Marrazzo, Prandini Gianluca
+Author-email: miki.bonacci@unimore.it
+License: MIT
+Description: UNKNOWN
+Keywords: yambo aiida workflows
+Platform: UNKNOWN
+Classifier: Programming Language :: Python
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Environment :: Plugins
+Classifier: Topic :: Scientific/Engineering :: Physics
+Provides-Extra: docs
+Provides-Extra: pre-commit

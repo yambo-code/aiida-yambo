@@ -16,12 +16,16 @@ from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 
-from yamboparser import *
-from yambopy.dbs.savedb import *
+try:
+    from yamboparser import *
+except: 
+    from aiida_yambo.parsers.ext_dep.yambofile import *
+    from aiida_yambo.parsers.ext_dep.yambofolder import *
 
-from aiida_yambo.calculations.gw import YamboCalculation
+from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.parsers.utils import *
+
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 from six.moves import range
@@ -84,7 +88,7 @@ class YamboParser(Parser):
             yambo_parent=True
         else:
             raise OutputParsingError(
-                "Input calculation must be a YamboCalculation")
+                "Input calculation must be a YamboCalculation, not {}".format(calculation.process_type))
 
         self._calc = calculation
         self.last_job_info = self._calc.get_last_job_info()
@@ -142,10 +146,11 @@ class YamboParser(Parser):
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
 
-        output_params = {'warnings': [], 'errors': [], 'yambo_wrote': False, 'game_over': False,
-        'p2y_completed': False, \
+        output_params = {'warnings': [], 'errors': [], 'yambo_wrote_dbs': False, 'game_over': False,
+        'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
-        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[]}
+        'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
+        'yambo_version':'4.5'}
         ndbqp = {}
         ndbhf = {}
 
@@ -187,7 +192,7 @@ class YamboParser(Parser):
             elif 'ndb.HF_and_locXC' == result.filename:
                 ndbhf = copy.deepcopy(result.data)
 
-            elif 'gw0' in input_params:
+            elif 'gw0___' in input_params:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
@@ -196,7 +201,7 @@ class YamboParser(Parser):
                     if type(arr) == ArrayData:  #
                         self.out(self._qp_array_linkname,arr)
 
-            elif 'life' in input_params:
+            elif 'life___' in input_params:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
@@ -211,8 +216,12 @@ class YamboParser(Parser):
                         'Parser output format is invalid')
                 else:
                     pass
+        
+        yambo_wrote_dbs(output_params)
+
         params=Dict(dict=output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
+
 
 
         # we store  all the information from the ndb.* files rather than in separate files
@@ -229,16 +238,20 @@ class YamboParser(Parser):
             success = True
         elif output_params['p2y_completed'] and initialise:
             success = True
-
-        if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
-         / float(output_params['requested_time'])) < 0.1:
-            return self.exit_codes.WALLTIME_ERROR
+            
 
         if success == False:
-            if output_params['para_error']:
+            if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
+                  / float(output_params['requested_time'])) < 0.25:
+                return self.exit_codes.WALLTIME_ERROR
+            elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
+            elif output_params['memory_error'] and 'X_par_allocation' in output_params['errors']:
+                return self.exit_codes.X_par_MEMORY_ERROR              
             elif output_params['memory_error']:
-                return self.exit_codes.MEMORY_ISSUE
+                return self.exit_codes.MEMORY_ERROR
+            elif output_params['time_error']:
+                return self.exit_codes.WALLTIME_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
 
