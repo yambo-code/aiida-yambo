@@ -48,12 +48,12 @@ def get_distance_from_kmesh(calc):
     mesh = calc.inputs.kpoints.get_kpoints_mesh()[0]
     k = KpointsData()
     k.set_cell_from_structure(calc.inputs.structure) #these take trace of PBC...if set in the inputs.!!
-    for i in range(1,100):
-         k.set_kpoints_mesh_from_density(1/i)
+    for i in range(4,400):
+         k.set_kpoints_mesh_from_density(1/(i*0.25))
          if k.get_kpoints_mesh()[0]==mesh:
-             print('ok, {} is the density'.format(i))
+             print('ok, {} is the density'.format(i*0.25))
              print(k.get_kpoints_mesh()[0],mesh)
-             return i
+             return i*0.25
 
 def find_pw_type(calc):
     type = calc.inputs.parameters.get_dict()['CONTROL']['calculation']

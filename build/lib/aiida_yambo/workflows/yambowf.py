@@ -113,7 +113,14 @@ class YamboWorkflow(WorkChain):
 
         self.report('performing a {} calculation'.format(self.ctx.calc_to_do))
 
-
+        try:
+            calc = self.ctx.calc
+            if not calc.is_finished_ok:
+                self.report("last calculation failed, exiting the workflow")
+                return self.exit_codes.ERROR_WORKCHAIN_FAILED
+        except:
+            pass
+            
         if self.ctx.calc_to_do == 'scf':
 
             self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')

@@ -150,39 +150,39 @@ def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
 
 ###### PLOT ######
 
-def plot_1D_convergence(pk,title='',xlabel='step',ylabel='eV',where=1,physical_quantity='gap',\
-              units={'NGsBlkXp':'Ry','kpoints':'density^-1'}, save = False):
+def plot_1D_convergence(ax, pk=None,lists=None, dataframe= None, title='',where=1,\
+              units={'NGsBlkXp':'(Ry)','kpoints':' (mesh)'}):
 
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
-
-    x = load_node(pk)
-    y = x.outputs.story.get_list()
-
+    
+    if pk:
+        x = load_node(pk)
+        y = x.outputs.story.get_list()
+    elif lists:
+        y = lists
+    else:
+        raise TypeError('You have to provide at pk or dataframe')      
+        
     for i in range(len(y)):
         string=''
         if isinstance(y[i][y[0].index('var')],list):
-            print(y[i][y[0].index('var')])
+            #print(y[i][y[0].index('var')])
             for k in y[i][y[0].index('var')]:
                 string += k+' & '
             string= string+'qwerty'
             string = string.replace('& qwerty','')
-            print(string)
+            #print(string)
             y[i][y[0].index('var')]=string
 
     tot = pd.DataFrame(y[1:],columns=y[0])
     conv = tot[tot['useful']==True]
-    print(conv,tot)
-    fig,ax = plt.subplots()
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.grid()
+    #print(conv,tot)
 
-    ax.set_title(title)
     ax.plot(conv['global_step'],np.array(conv['result_eV'].to_list())[:,range(where)],'-',\
             label='convergence path')
     for j in range(where):
         ax.plot(tot['global_step'],np.array(tot['result_eV'].to_list())[:,j],'*--',
-                color='black',label='full path - '+str(tot['where_in_words'].to_list()[0][j]))
+                color='black',label='full path')
 
     b=[]
 
@@ -193,11 +193,18 @@ def plot_1D_convergence(pk,title='',xlabel='step',ylabel='eV',where=1,physical_q
             except:
                 unit = ''
             color = colors[len(b)+where+1][0]
-            act = conv[conv['var']==str(i)]['value'].to_list()
-            print(act)
+            val = conv[conv['var']==str(i)]['value'].values[-1]
+            #print(act)
             for j in range(where):
                 if j == 0:
-                    label=str(i)+' - '+str(act[-1])+' '+str(unit)
+                    if i == 'kpoints':
+                        try:
+                            val = find_pw_parent(load_node(int(conv[conv['var']==str(i)]['calc_pk'].values[-1]))).inputs.kpoints.get_kpoints_mesh()[0]
+                            label=str(i)+' - '+str(val)+' '+str(unit)
+                        except:
+                            label=str(i)+' - '+str(val)+' '+str(unit)
+                    else:
+                        label=str(i)+' - '+str(val)+' '+str(unit)
                 else:
                     label = None
                 ax.plot(conv['global_step'],np.ma.masked_where(np.array(conv['var'].to_numpy()!=str(i)),\
@@ -205,12 +212,7 @@ def plot_1D_convergence(pk,title='',xlabel='step',ylabel='eV',where=1,physical_q
                         ,label=label)
             b.append(i)
 
-    plt.legend()
-    
-    if save:
-            fig.savefig(str(pk)+'conv.png')
-
-def plot_2D_convergence(xdata, ydata, zdata, labels = {'x_label':'bands','y_label':'Ry','z_label': 'eV'}, title='Gap', plot_type='3D', save = False):      
+def plot_2D_convergence(ax, xdata, ydata, zdata, parameters = {'x':'bands','y':'G-vecs (Ry)'}, plot_type='3D'):      
         
     #matplotlib.rcParams['legend.fontsize'] = 10
     if not isinstance(xdata, np.ndarray):
@@ -221,46 +223,17 @@ def plot_2D_convergence(xdata, ydata, zdata, labels = {'x_label':'bands','y_labe
         raise TypeError('zdata has to be numpy.ndarray')
     
     if plot_type=='3D':
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
 
         for i in np.unique(xdata):
             ind = np.where(xdata==i) 
             z = zdata[ind]
             x = xdata[ind]
             y = ydata[ind]
-            ax.plot(x, y, z, '-o',label= '{} {}'.format(int(i), labels['x_label']))
-    
-        ax.set_title(title)
-        ax.set_xlabel(labels['x_label'])
-        ax.set_ylabel(labels['y_label'])
-        ax.legend()
-        plt.show()
-        
-        if save:
-            fig.savefig(title+'3d.png')
+            ax.plot(x, y, z, '-o',label= '{} {}'.format(int(i), parameters['x']))
     
     elif plot_type=='2D':
-        fig, ax = plt.subplots()
+        
+        #here, you have to change the order to have the two diff vars...
         for i in np.unique(xdata):
             ind = np.where(xdata==i)    
-            plt.plot(ydata[ind],zdata[ind],'-o',label='{} {}'.format(int(i),labels['x_label']))
-        ax.set_title(title)
-        ax.set_xlabel(labels['y_label'])
-        ax.set_ylabel(labels['z_label'])
-        ax.legend()
-        plt.show()
-        if save:
-            fig.savefig(title+'2d_1.png')
-        
-        fig, ax = plt.subplots()
-        for i in np.unique(ydata):
-            ind = np.where(ydata==i)    
-            plt.plot(xdata[ind],zdata[ind],'-o',label='{} {}'.format(int(i),labels['y_label']))
-        ax.set_title(title)
-        ax.set_xlabel(labels['x_label'])
-        ax.set_ylabel(labels['z_label'])
-        ax.legend()
-        plt.show()
-        if save:
-            fig.savefig(title+'2d_2.png')
+            ax.plot(ydata[ind],zdata[ind],'-o',label='{} {}'.format(int(i),parameters['x']))
