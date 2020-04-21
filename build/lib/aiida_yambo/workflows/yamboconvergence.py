@@ -167,9 +167,12 @@ class YamboConvergence(WorkChain):
 
         self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs)
 
+        self.report('The history:')
+        self.report(self.ctx.workflow_manager.workflow_story)
+
+
         if self.ctx.calc_manager.success:
             self.report('Success, updating the history... ')
-            self.report(self.ctx.workflow_manager.workflow_story)
             self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
             self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
                         .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
@@ -210,6 +213,10 @@ class YamboConvergence(WorkChain):
         self.report('do we need a p2y??')
 
         self.report('detecting if we need a p2y starting calculation...')
+
+        if self.ctx.calc_manager.var == 'k-points':
+            self.report('no, as we converge k-points: a preliminary p2y is not useful.')
+            return False #it is better do scf multiple times than one nscf and then redo all the cycle..
 
         try:
             set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
