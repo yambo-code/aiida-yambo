@@ -24,7 +24,7 @@ else:
 ################################################################################
 ################################################################################
 
-class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
+class calc_manager_aiida_yambo: 
 
     def __init__(self, calc_info={}, wfl_settings={}):
         for key in calc_info.keys():
@@ -32,6 +32,9 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         for key in wfl_settings.keys():
             setattr(self, str(key), wfl_settings[key])
+        
+        self.iter  = 0
+        self.success = False
 
 ################################## update_parameters - create parameters space #####################################
     def parameters_space_creator(self, first_calc, parent, last_inputs = {}):
@@ -41,7 +44,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             if self.var == 'kpoints':
 
-                k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf']))
+                k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf','scf']))
 
             for i in range(self.steps):
 
@@ -102,8 +105,8 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             except:
                 del inp_to_update.parent_folder #do all scf+nscf+y in case
 
-            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False)
-            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
 
             value = k_distance
 
@@ -129,7 +132,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 ################################## parsers #####################################
     def take_quantities(self, start = 1):
 
-        backtrace = self.steps #*self.iter
+        backtrace = self.steps 
         where = self.where
         what = self.what
 

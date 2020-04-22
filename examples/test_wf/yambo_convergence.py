@@ -308,7 +308,7 @@ def main(options):
     builder.ywfl.yres.yambo.parameters = params_gw
     builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
     builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
-    builder.ywfl.yres.max_restarts = Int(5)
+    builder.ywfl.yres.max_iterations = Int(5)
 
     builder.ywfl.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
     builder.ywfl.yres.yambo.code = load_node(options['yambocode_pk'])
@@ -324,16 +324,16 @@ def main(options):
                                            'PRE_CALC': False,})
 
     #'what': 'single-levels','where':[(1,8),(1,9)]
-    var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 3, \
+    var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 3, \
                                  'conv_thr': 0.2, 'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
+                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
                                 'conv_thr': 0.2, 'conv_window': 2},
-                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 5, \
+                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 5, \
                                  'conv_thr': 0.1, 'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
+                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
                                  'conv_thr': 0.1, 'conv_window': 2},]
     '''
-                   {'var':'kpoints','delta': 1, 'steps': 2, 'max_restarts': 2, \
+                   {'var':'kpoints','delta': 1, 'steps': 2, 'max_iterations': 2, \
                                  'conv_thr': 0.1, 'conv_window': 2, 'what':'gap','where':[(1,1)],}]
     '''
 

@@ -27,8 +27,12 @@ class workflow_manager:
             #from helpers_yambopy import calc_manager_yambopy as calc_manager     #qe py?
             self.ideal_iter = copy.deepcopy(parameters_space)
             self.true_iter = copy.deepcopy(parameters_space)
-
+        
         self.type = wfl_settings['type']
+
+        self.global_step = 0
+        self.fully_success = False
+        self.first_calc = True
 
     def build_story_global(self, calc_manager, quantities):
 
@@ -54,11 +58,17 @@ class workflow_manager:
                 self.workflow_story.append([self.global_step]+list(calc_manager.__dict__.values())+\
                             [self.values[i], quantities[0,i,2], quantities[:,i,1], True])
         
+                  
+        last_ok_pk = int(self.workflow_story[-1][-3])
+        last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+        
         if calc_manager.var == 'kpoints':
-            
-            last_ok_pk = int(self.workflow_story[-1][-3])
-            last_ok_wfl = get_caller(last_ok_pk, depth = 1)
             set_parent(inputs, load_node(last_ok_pk))
+
+        final_result={'calculation_pk': last_ok_pk,\
+                'result_eV':self.workflow_story[-1][-2],'success':self.workflow_story[-1][-1]}
+
+        return final_result
 
     def post_analysis_update(self,inputs, calc_manager, oversteps):
 
