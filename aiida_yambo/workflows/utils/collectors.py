@@ -27,12 +27,14 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
 
     return ef
 
-def collect_results(node_pk=None,dataframe=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
+def collect_results(node_pk=None,lists=None,dataframe=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
         
         if node_pk:
             y = load_node(node_pk).outputs.story.get_list() 
             p = pd.DataFrame(y[1:][:],columns = y[0][:]) 
-        else: 
+        elif lists:
+            p = pd.DataFrame(lists[1:][:],columns = lists[0][:])
+        elif dataframe:
             p = dataframe
 
         rows = len(p) 
@@ -148,92 +150,29 @@ def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
     return k
 
 
-###### PLOT ######
+def get_timings(df):
 
-def plot_1D_convergence(ax, pk=None,lists=None, dataframe= None, title='',where=1,\
-              units={'NGsBlkXp':'(Ry)','kpoints':' (mesh)'}):
-
-    colors = list(matplotlib.colors.TABLEAU_COLORS.items())
-    
-    if pk:
-        x = load_node(pk)
-        y = x.outputs.story.get_list()
-    elif lists:
-        y = lists
-    else:
-        raise TypeError('You have to provide at pk or dataframe')      
+    timings = []
+    for calc_pk in df.calc_pk:
+        ywfl = load_node(int(calc_pk)).caller.caller
         
-    for i in range(len(y)):
-        string=''
-        if isinstance(y[i][y[0].index('var')],list):
-            #print(y[i][y[0].index('var')])
-            for k in y[i][y[0].index('var')]:
-                string += k+' & '
-            string= string+'qwerty'
-            string = string.replace('& qwerty','')
-            #print(string)
-            y[i][y[0].index('var')]=string
+        condition = df.calc_pk == calc_pk
+        time_gw=0
+        time_pw=0
+        for called in ywfl.called_descendants:
 
-    tot = pd.DataFrame(y[1:],columns=y[0])
-    conv = tot[tot['useful']==True]
-    #print(conv,tot)
+            pt=called.process_type
+            
+            if 'aiida.calculations' in pt and 'yambo' in pt:
 
-    ax.plot(conv['global_step'],np.array(conv['result_eV'].to_list())[:,range(where)],'-',\
-            label='convergence path')
-    for j in range(where):
-        ax.plot(tot['global_step'],np.array(tot['result_eV'].to_list())[:,j],'*--',
-                color='black',label='full path')
-
-    b=[]
-
-    for i in conv['var']:
-        if i not in b:
-            try:
-                unit = units[i]
-            except:
-                unit = ''
-            color = colors[len(b)+where+1][0]
-            val = conv[conv['var']==str(i)]['value'].values[-1]
-            #print(act)
-            for j in range(where):
-                if j == 0:
-                    if i == 'kpoints':
-                        try:
-                            val = find_pw_parent(load_node(int(conv[conv['var']==str(i)]['calc_pk'].values[-1]))).inputs.kpoints.get_kpoints_mesh()[0]
-                            label=str(i)+' - '+str(val)+' '+str(unit)
-                        except:
-                            label=str(i)+' - '+str(val)+' '+str(unit)
-                    else:
-                        label=str(i)+' - '+str(val)+' '+str(unit)
-                else:
-                    label = None
-                ax.plot(conv['global_step'],np.ma.masked_where(np.array(conv['var'].to_numpy()!=str(i)),\
-                            np.array(conv['result_eV'].to_list())[:,j]),'o-' \
-                        ,label=label)
-            b.append(i)
-
-def plot_2D_convergence(ax, xdata, ydata, zdata, parameters = {'x':'bands','y':'G-vecs (Ry)'}, plot_type='3D'):      
-        
-    #matplotlib.rcParams['legend.fontsize'] = 10
-    if not isinstance(xdata, np.ndarray):
-        raise TypeError('xdata has to be numpy.ndarray')
-    if not isinstance(ydata, np.ndarray):
-        raise TypeError('ydata has to be numpy.ndarray')
-    if not isinstance(zdata, np.ndarray):
-        raise TypeError('zdata has to be numpy.ndarray')
+                time_gw += load_node(int(called.pk)).outputs.output_parameters.get_dict()['last_time']
     
-    if plot_type=='3D':
-
-        for i in np.unique(xdata):
-            ind = np.where(xdata==i) 
-            z = zdata[ind]
-            x = xdata[ind]
-            y = ydata[ind]
-            ax.plot(x, y, z, '-o',label= '{} {}'.format(int(i), parameters['x']))
-    
-    elif plot_type=='2D':
-        
-        #here, you have to change the order to have the two diff vars...
-        for i in np.unique(xdata):
-            ind = np.where(xdata==i)    
-            ax.plot(ydata[ind],zdata[ind],'-o',label='{} {}'.format(int(i),parameters['x']))
+            elif 'aiida.calculations' in pt and 'pw' in pt:
+            
+                if df['var'][condition].values[0] == 'kpoints' or df['global_step'][condition].values[0] == 1:
+                    str_t = load_node(int(called.pk)).outputs.output_parameters.get_dict()['wall_time'].replace('h','h-').replace('m','m-').replace('s','l')
+                    time_pw += yambotiming_to_seconds(str_t)
+            
+        timings.append([df.global_step[condition].values[0],df['var'][condition].values[0],time_gw,time_pw])
+    df_t = pd.DataFrame(timings, columns =['step','var','time_gw','time_pw'])
+    return df_t

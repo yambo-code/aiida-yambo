@@ -9,7 +9,7 @@ import copy
 from aiida_yambo.utils.common_helpers import *
 ############################# AiiDA - independent ################################
 
-class workflow_manager:
+class convergence_workflow_manager:
 
     def __init__(self, parameters_space, wfl_settings):
 

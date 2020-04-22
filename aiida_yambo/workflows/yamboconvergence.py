@@ -76,7 +76,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints, self.inputs.kpoints
         
-        self.ctx.workflow_manager = workflow_manager(self.inputs.parameters_space, self.inputs.workflow_settings.get_dict())
+        self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space, self.inputs.workflow_settings.get_dict())
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), wfl_settings = self.inputs.workflow_settings.get_dict()) 
 
