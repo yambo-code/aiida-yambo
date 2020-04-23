@@ -309,7 +309,7 @@ def main(options):
     builder.yres.yambo.parameters = params_gw
     builder.yres.yambo.precode_parameters = Dict(dict={})
     builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
-    builder.yres.max_restarts = Int(5)
+    builder.yres.max_iterations = Int(5)
 
     builder.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
     builder.yres.yambo.code = load_node(options['yambocode_pk'])

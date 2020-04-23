@@ -1,4 +1,4 @@
-.. _sec.yambo_calc_plugin:
+.. _sec.p2y_calc_plugin:
 
 .. _my-ref-to-yambo-tutorial:
 

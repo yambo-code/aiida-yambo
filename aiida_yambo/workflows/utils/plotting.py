@@ -12,34 +12,42 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from aiida.orm import load_node
 from aiida_yambo.utils.common_helpers import*
+from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
+
 
 ###### PLOT ######
 
-def plot_1D_convergence(ax, pk=None,lists=None, dataframe= None, title='',where=1,\
+def plot_1D_convergence(ax, story, title='',where=1,\
               units={'NGsBlkXp':'(Ry)','kpoints':' (mesh)'}):
 
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
     
-    if pk:
-        x = load_node(pk)
-        y = x.outputs.story.get_list()
-    elif lists:
-        y = lists
+    if isinstance(story,WorkChainNode):
+        y = story.outputs.story.get_list() 
+    elif isinstance(story,int):
+        x = load_node(story)
+        y = x.outputs.story.get_list()      
+    elif isinstance(story,list):
+        y = story
+    elif 'DataFrame' in str(type(story)):
+        yy = list(story.keys())
+        y = story.values.tolist()
+        y.insert(0, yy)
     else:
-        raise TypeError('You have to provide at pk or dataframe')      
-        
+        raise TypeError('You have to provide: node, node_pk, output_list or dataframe')      
+    
     for i in range(len(y)):
         string=''
         if isinstance(y[i][y[0].index('var')],list):
             #print(y[i][y[0].index('var')])
             for k in y[i][y[0].index('var')]:
                 string += k+' & '
-            string= string+'qwerty'
-            string = string.replace('& qwerty','')
-            #print(string)
-            y[i][y[0].index('var')]=string
-
-    tot = pd.DataFrame(y[1:],columns=y[0])
+                string= string+'qwerty'
+                string = string.replace('& qwerty','')
+                #print(string)
+                y[i][y[0].index('var')]=string
+        tot = pd.DataFrame(y[1:],columns=y[0])  
+                
     conv = tot[tot['useful']==True]
     #print(conv,tot)
 
@@ -77,7 +85,7 @@ def plot_1D_convergence(ax, pk=None,lists=None, dataframe= None, title='',where=
                         ,label=label)
             b.append(i)
 
-def plot_2D_convergence(ax, dataframe=None, xdata=None, ydata=None, zdata=None, parameters = {'x':'bands','y':'G-vecs (Ry)'}, plot_type='3D'):      
+def plot_2D_convergence(ax, xdata=None, ydata=None, zdata=None, parameters = {'x':'bands','y':'G-vecs (Ry)'}, plot_type='3D'):      
 
     if not isinstance(xdata, np.ndarray):
         raise TypeError('xdata has to be numpy.ndarray')

@@ -18,7 +18,7 @@ from aiida_yambo.workflows.utils.helpers_yamborestart import *
 from aiida_yambo.utils.parallel_namelists import*
 
 
-class YamboRestartWf(BaseRestartWorkChain):
+class YamboRestart(BaseRestartWorkChain):
 
     """This module interacts directly with the yambo plugin to submit calculations
 
@@ -36,7 +36,7 @@ class YamboRestartWf(BaseRestartWorkChain):
     @classmethod
     def define(cls, spec):
 
-        super(YamboRestartWf, cls).define(spec)
+        super(YamboRestart, cls).define(spec)
         spec.expose_inputs(YamboCalculation, namespace='yambo', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
@@ -69,7 +69,7 @@ class YamboRestartWf(BaseRestartWorkChain):
     def setup(self):
         """setup of the calculation and run
         """
-        super(YamboRestartWf, self).setup()
+        super(YamboRestart, self).setup()
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'yambo')
 

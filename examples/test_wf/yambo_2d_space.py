@@ -308,7 +308,7 @@ def main(options):
     builder.ywfl.yres.yambo.parameters = params_gw
     builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
     builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
-    builder.ywfl.yres.max_restarts = Int(5)
+    builder.ywfl.yres.max_iterations = Int(5)
 
     builder.ywfl.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
     builder.ywfl.yres.yambo.code = load_node(options['yambocode_pk'])
@@ -327,14 +327,14 @@ def main(options):
             spaces.append([[1,j],[1,j],i])
 
     para_space = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[:3],'max_restarts': 0,},
+                    'space': spaces[:3],'max_iterations': 0,},
                 {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[3:6],'max_restarts': 0,},
+                    'space': spaces[3:6],'max_iterations': 0,},
                 {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[6:9],'max_restarts': 0,},
+                    'space': spaces[6:9],'max_iterations': 0,},
 
 
-    for i in range(len(para_space)):
+    for i in range(len(para_space)):YamboRestart
         print('{}-th variable will be {}'.format(i+1,para_space[i]['var']))
         print('{}-th values will be {}'.format(i+1,para_space[i]['space']))
     builder.parameters_space = List(list = para_space)  

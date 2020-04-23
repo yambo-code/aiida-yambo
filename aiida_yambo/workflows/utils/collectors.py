@@ -11,7 +11,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from aiida.orm import load_node
-from aiida_yambo.utils.common_helpers import*
+from aiida_yambo.utils.common_helpers import *
+from aiida_yambo.parsers.utils import *
+from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 
 def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
 
@@ -27,54 +29,62 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
 
     return ef
 
-def collect_results(node_pk=None,lists=None,dataframe=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
+def collect_results(story=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
         
-        if node_pk:
-            y = load_node(node_pk).outputs.story.get_list() 
-            p = pd.DataFrame(y[1:][:],columns = y[0][:]) 
-        elif lists:
-            p = pd.DataFrame(lists[1:][:],columns = lists[0][:])
-        elif dataframe:
-            p = dataframe
+    if isinstance(story,WorkChainNode):
+        y = story.outputs.story.get_list() 
+    elif isinstance(story,int):
+        x = load_node(story)
+        y = x.outputs.story.get_list()      
+    elif isinstance(story,list):
+        y = story
+    elif 'DataFrame' in str(type(story)):
+        yy = list(story.keys())
+        y = story.values.tolist()
+        y.insert(0, yy)
+    else:
+        raise TypeError('You have to provide: node, node_pk, output_list or dataframe')    
 
-        rows = len(p) 
-        cols = 0 
-        len_val = 1 
-        len_res = 1 
-        if last_c:
-            pass
-        else:
-            last_c = get_called_ok(node_pk,depth=3)
-        ef = take_fermi(last_c.pk)
-        print('Fermi Energy is {} eV'.format(ef))
+    p = pd.DataFrame(y[1:],columns=y[0])
 
-        if isinstance(p['value'].iloc[0],list): 
-            len_val = len(p['value'].iloc[0]) 
-            cols = cols + len(p['value'].iloc[0]) 
-        else: 
-            cols = cols+1 
-      
-        if isinstance(p['result_eV'].iloc[0],list): 
-            len_res = len(p['result_eV'].iloc[0]) 
-            cols = cols + len(p['result_eV'].iloc[0]) 
-        else: 
-            cols = cols+1    
+    rows = len(p) 
+    cols = 0 
+    len_val = 1 
+    len_res = 1 
+    if last_c:
+        pass
+    else:
+        last_c = get_called_ok(node_pk,depth=3)
+    ef = take_fermi(last_c.pk)
+    print('Fermi Energy is {} eV'.format(ef))
 
-        print('variables are {}'.format(p['var'].iloc[0]))    
+    if isinstance(p['value'].iloc[0],list): 
+        len_val = len(p['value'].iloc[0]) 
+        cols = cols + len(p['value'].iloc[0]) 
+    else: 
+        cols = cols+1 
+    
+    if isinstance(p['result_eV'].iloc[0],list): 
+        len_res = len(p['result_eV'].iloc[0]) 
+        cols = cols + len(p['result_eV'].iloc[0]) 
+    else: 
+        cols = cols+1    
 
-        k = np.zeros((rows,cols)) 
-        for i in range(rows): 
-            for j in range(len_val): 
-                if isinstance(p['value'].iloc[i][j],list): 
-                    k[i,j] = p['value'].iloc[i][j][-1]-p['value'].iloc[i][j][0]+1 
-                else: 
-                    k[i,j] = p['value'].iloc[i][j] 
-            for l in range(len_res):
-                if p['result_eV'].iloc[i][l] == 0:
-                    pass
-                else:
-                    k[i,l+len_val] = p['result_eV'].iloc[i][l]+ef
-        return k, p
+    print('variables are {}'.format(p['var'].iloc[0]))    
+
+    k = np.zeros((rows,cols)) 
+    for i in range(rows): 
+        for j in range(len_val): 
+            if isinstance(p['value'].iloc[i][j],list): 
+                k[i,j] = p['value'].iloc[i][j][-1]-p['value'].iloc[i][j][0]+1 
+            else: 
+                k[i,j] = p['value'].iloc[i][j] 
+        for l in range(len_res):
+            if p['result_eV'].iloc[i][l] == 0:
+                pass
+            else:
+                k[i,l+len_val] = p['result_eV'].iloc[i][l]+ef
+    return k, p
 
 
 def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
@@ -150,7 +160,23 @@ def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
     return k
 
 
-def get_timings(df):
+def get_timings(story):
+
+    if isinstance(story,WorkChainNode):
+        y = story.outputs.story.get_list() 
+    elif isinstance(story,int):
+        x = load_node(story)
+        y = x.outputs.story.get_list()      
+    elif isinstance(story,list):
+        y = story
+    elif 'DataFrame' in str(type(story)):
+        yy = list(story.keys())
+        y = story.values.tolist()
+        y.insert(0, yy)
+    else:
+        raise TypeError('You have to provide: node, node_pk, output_list or dataframe')    
+
+    df = pd.DataFrame(y[1:],columns=y[0])
 
     timings = []
     for calc_pk in df.calc_pk:

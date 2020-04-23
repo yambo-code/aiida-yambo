@@ -130,11 +130,14 @@ class calc_manager_aiida_yambo:
         return inp_to_update, value
 
 ################################## parsers #####################################
-    def take_quantities(self, start = 1):
+    def take_quantities(self, steps = 1, where = [], what = 'gap',backtrace=1):
 
-        backtrace = self.steps 
-        where = self.where
-        what = self.what
+        try:
+            backtrace = self.steps 
+            where = self.where
+            what = self.what
+        except:
+            pass
 
         print('looking for {} in k-points {}'.format(what,where))
 
@@ -142,7 +145,11 @@ class calc_manager_aiida_yambo:
 
         for j in range(len(where)):
             for i in range(1,backtrace+1):
-                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
+                try: #YamboConvergence
+                    yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
+                except: #YamboWorkflow,YamboRestart of YamboCalculation
+                    yambo_calc = load_node(self.wfl_pk)
+                    print('values provided are: [iteration, value in eV, workflow pk]')
                 if yambo_calc.is_finished_ok:
                     if what == 'gap':
                         _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
