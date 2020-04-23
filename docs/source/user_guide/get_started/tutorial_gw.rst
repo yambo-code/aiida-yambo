@@ -1,7 +1,5 @@
 .. _sec.yambo_calc_plugin:
 
-.. _my-ref-to-yambo-tutorial:
-
 G0W0 calculations
 =================
 

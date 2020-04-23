@@ -12,11 +12,13 @@ YAMBO Workflows
 .. automodule:: aiida_yambo.workflows.yamboconvergence
    :members:
 
+.. automodule:: aiida_yambo.workflows.yambowf
+   :members:
+
 .. automodule:: aiida_yambo.workflows.yamborestart
    :members:
 
-.. automodule:: aiida_yambo.workflows.yambowf
-   :members:
+
 
 
 

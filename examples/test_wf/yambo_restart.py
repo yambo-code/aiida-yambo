@@ -6,7 +6,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yamborestart import YamboRestartWf
+from aiida_yambo.workflows.yamborestart import YamboRestart
 import argparse
 
 def get_options():
@@ -36,7 +36,7 @@ def get_options():
     parser.add_argument(
         '--restarts',
         type=int,
-        dest='max_restarts',
+        dest='max_iterations',
         required=True,
         help='maximum number of restarts')
 
@@ -103,7 +103,7 @@ def get_options():
         'code_pk': args.code_pk,
         'precode_pk': args.precode_pk,
         'parent_pk': args.parent_pk,
-        'max_restarts': args.max_restarts,
+        'max_iterations': args.max_iterations,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
             "num_machines": args.num_machines,
@@ -183,7 +183,7 @@ def main(options):
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
-    builder.max_restarts = Int(options['max_restarts'])
+    builder.max_iterations = Int(options['max_iterations'])
 
     return builder
 

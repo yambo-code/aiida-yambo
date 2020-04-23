@@ -13,7 +13,7 @@ from aiida.engine import submit
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 
 from aiida_yambo.utils.common_helpers import *
-from aiida_yambo.workflows.yamborestart import YamboRestartWf
+from aiida_yambo.workflows.yamborestart import YamboRestart
 
 class YamboWorkflow(WorkChain):
 
@@ -35,7 +35,7 @@ class YamboWorkflow(WorkChain):
         spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
 
-        spec.expose_inputs(YamboRestartWf, namespace='yres', namespace_options={'required': True}, \
+        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
 
         spec.input("parent_folder", valid_type=RemoteData, required= False,\
@@ -51,7 +51,7 @@ class YamboWorkflow(WorkChain):
 
 ##################################################################################
 
-        spec.expose_outputs(YamboRestartWf)
+        spec.expose_outputs(YamboRestart)
 
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
                              message='The workchain failed with an unrecoverable error.')
@@ -144,14 +144,14 @@ class YamboWorkflow(WorkChain):
 
         elif self.ctx.calc_to_do == 'yambo':
 
-            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestartWf, 'yres')
+            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')
 
             try:
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.called[0].outputs.remote_folder
             except:
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
-            future = self.submit(YamboRestartWf, **self.ctx.yambo_inputs)
+            future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
             self.ctx.calc_to_do = 'the workflow is finished'
 
@@ -165,7 +165,7 @@ class YamboWorkflow(WorkChain):
         if calc.is_finished_ok:
             self.report("workflow completed successfully")
             
-            self.out_many(self.exposed_outputs(calc,YamboRestartWf))
+            self.out_many(self.exposed_outputs(calc,YamboRestart))
 
         else:
             self.report("workflow NOT completed successfully")

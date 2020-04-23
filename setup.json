@@ -11,7 +11,7 @@
         "Environment :: Plugins",
         "Topic :: Scientific/Engineering :: Physics"
     ],
-    "version": "1.0.0",
+    "version": "1.1.0",
     "extras_require": {
          "docs": [
             "Sphinx",
@@ -29,7 +29,7 @@
         "aiida_core[docs,atomic_tools]>=1.0.0a2",
         "aiida-quantumespresso>=3.0.0a6,<4.0",
        	"netcdf4",
-	"h5py",
+	    "h5py",
         "pytest"
         ],
     "keywords": "yambo aiida workflows",

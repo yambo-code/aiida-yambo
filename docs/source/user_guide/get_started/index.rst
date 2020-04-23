@@ -50,4 +50,3 @@ Plugin utilities & tips
 
    features
 
-

@@ -308,7 +308,7 @@ def main(options):
     builder.ywfl.yres.yambo.parameters = params_gw
     builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
     builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
-    builder.ywfl.yres.max_restarts = Int(5)
+    builder.ywfl.yres.max_iterations = Int(5)
 
     builder.ywfl.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
     builder.ywfl.yres.yambo.code = load_node(options['yambocode_pk'])
@@ -317,21 +317,18 @@ def main(options):
 
     builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
 
-    builder.workflow_settings = Dict(dict={'type':'2D_space',\
-                                        'what':'single-levels','where':[(1,8),(1,9)],\
-                                        'where_in_words':['Gamma'],'PRE_CALC':False})
-
-    spaces=[]
-    for j in range(1000,5000,1000):   #bands
-        for i in range(2,8,2):        #Ry
-            spaces.append([[1,j],[1,j],i])
-
-    para_space = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[:3],'max_restarts': 0,},
-                {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[3:6],'max_restarts': 0,},
-                {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[6:9],'max_restarts': 0,},
+    builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[(1,8,1,9)],
+                                           'where_in_words':['Gamma'],'PRE_CALC':False})
+    
+    #'what': 'single-levels','where':[(1,8),(1,9)]
+    para_space = [{'var':['BndsRnXp','GbndRnge'],
+                    'space': [[[1,10],[1,10]], \
+                              [[1,50],[1,75]], \
+                              [[1,75],[1,50]]], \
+                                 'max_restarts': 0,},
+                  {'var':['BndsRnXp','GbndRnge'],
+                    'space': [[[1,75],[1,75]]],
+                                 'max_restarts': 0,}]
 
 
     for i in range(len(para_space)):

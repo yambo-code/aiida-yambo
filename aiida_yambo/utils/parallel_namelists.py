@@ -20,7 +20,6 @@ namelists = {'4.5':{'DIP':'_','X':'_','SE':'_'},
             }
 
 
-
 def check_para_namelists(params, version):
     
     new_params = {}
