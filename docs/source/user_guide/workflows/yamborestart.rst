@@ -6,9 +6,9 @@ YamboRestart
 This is the basic workflow and will run a single yambo calculation, wrapping the YamboCalculation class.
 The adding values is a restart logic, with a tolerance for failed calculations due to
 
-- Time Exhaustion on the queue.
-- Parallization errors. 
-- Memory errors.
+- Time Exhaustion on the queue: run a new calculation with 50% more time and copying the partial results obtained in the failed one.
+- Parallization errors: use the built-in parallelizer to attempt a fixing.
+- Memory errors: reduce mpi(/2) and increase threads(*2) to attempt a better memory distribution. Redefine parallelism options with the parallelizer. It can increase resources only if mpi = 1.
 
 After each calculation, this workflow will check the exit status(provided by the parser) and, if the calculation is failed,
 try to fix some parameters in order to resubmit the calculation and obtain results. As inputs, we have to provide
@@ -17,7 +17,7 @@ The YamboRestart inherits the BaseRestartWorkchain class, as included in the aii
 mechanisms and provides a unified restart logic for all the AiiDA plugins.
 
 As in a YamboCalculation, you have to provide all the necessary inputs, paying attention to the 
-fact that now the builder has the attribute 'yambo' for the variables that refers to strictly YamboCalculation.
+fact that now the builder has the attribute 'yambo' for the variables that refers to YamboCalculation part of the workchain.
 The only exception is the 'parent_folder', that is provided as direct YamboRestart input.
 Other common YamboRestart inputs are:
 

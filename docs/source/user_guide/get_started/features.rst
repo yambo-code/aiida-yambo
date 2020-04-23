@@ -1,4 +1,4 @@
-.. _2-ref-to-yambo-tutorial:
+.. _tips:
 
 Settings of a YamboCalculation
 ------------------------------
@@ -8,18 +8,25 @@ by the plugin. To understand the possible actions, we need to explain how the pl
 
 The plugin currently supports, four type of logic to run a calculation:
 
-1) p2y from a NSCF: this will just run a p2y calculation to create the Yambo SAVE database, before to run, the nscf save folder is copied to the 
-                       new remote directory. It is triggered by using as parent calculation an NSCF run with the quantumespresso.pw plugin and by setting:
+1) p2y from a NSCF
+     this will just run a p2y calculation to create the Yambo SAVE database, before to run, the nscf save folder is copied to the 
+     new remote directory. It is triggered by using as parent calculation an NSCF run with the quantumespresso.pw plugin and by setting:
 
-::
+    ::
     
-    inputs['settings'] = ParameterData(dict={'INITIALISE': True})
+        inputs['settings'] = ParameterData(dict={'INITIALISE': True})
 
 
-2) yambo from a p2y: triggered simply by using as parent calculation a p2y run with the yambo plugin. This will, by default, create a link of the SAVE directory 
-contained in the p2y remote folder.
-3) p2y + yambo from a NSCF: triggered by using as parent calculation an NSCF calculation run with the quantumespresso.pw plugin
-4) yambo from a (previous) yambo: useful in particular for restarts, it is triggered by using as parent calculation a Yambo calculation run with the yambo plugin. 
+2) yambo from a p2y
+    triggered simply by using as parent calculation a p2y run with the yambo plugin. This will, by default, create a link of the SAVE directory 
+    contained in the p2y remote folder.
+
+3) p2y + yambo from a NSCF
+    triggered by using as parent calculation an NSCF calculation run with the quantumespresso.pw plugin
+
+4) yambo from a (previous) yambo
+    useful in particular for restarts, it is triggered by using as parent calculation a Yambo calculation run with the yambo plugin. 
+
 If you want also to link the output databases produced from the previous yambo calculation, you can set:
     
 ::
@@ -50,18 +57,24 @@ Primer on Yambo parallelizations
 
 The computational effort done during a Yambo calculation requires an extensive and wise use of parallelization schemes on various quantities
 that are computed during the simulation. There are two ways to find an automatic parallelization scheme in the AiiDA-yambo 
-plugin: to use predefined Yambo-core parallelization utilities or to use the parallelizer provided among the plugin. 
+plugin: to use predefined Yambo-core parallelization utilities or to use the parallelizer provided among the plugin. In any case, when yambo 
+sees a parallelization problem before to start the real calculation, tries to use it default scheme. If this fails, the failed calculation will 
+be corrected from the plugin built-in parallelizer. 
 
-**default yambo parallelization**: just put, in the parameters dictionary, the instruction 
+**default yambo parallelization**: 
+
+    just put, in the parameters dictionary, the instruction 
                 
-::
+    ::
 
-    PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced"/"memory"/"workload")
+        'PAR_def_mode': "balanced"       # [PARALLEL] Default distribution mode ("balanced"/"memory"/"workload")
 
-**yambo-aiida parallelizer**: you can choose the roles to be parallelized between bands or kpoints, or both; this may modify your resources by 
-                               fitting them to the dimensions of the simulation, but only changing mpi-openmpi balance or reducing the total 
-                               number of processors if they are too much (example: you may want parallelize 100 bands with 150 CPUs -> reduce CPUs 
-                               to 100)
+**yambo-aiida parallelizer**:  
+    
+    you can choose the roles to be parallelized between bands or kpoints, or both; this may modify your resources by 
+    fitting them to the dimensions of the simulation, but only changing mpi-openmpi balance or reducing the total 
+    number of processors if they are too much (example: you may want parallelize 100 bands with 150 CPUs -> reduce CPUs 
+    to 100). 
 
 To use the plugin parallelizer:
 
@@ -72,8 +85,9 @@ To use the plugin parallelizer:
     find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corrected=2, kpoints = 1, \
                         what = ['bands'], last_qp = 2)
 
-the input ``what`` is a list of what you want to parallelize:``bands,kpoints``. You have also to provide some useful information like the computational
-resources, the total number of bands that you have in the simulation, the occupied states, and so on. 
+the input ``what`` is a list of what you want to parallelize:``bands, kpoints, g``. You have also to provide some useful information like the computational
+resources, the total number of bands that you have in the simulation, the occupied states, and so on. The output will be two dictionaries, the first for the 
+parallelization part of the input parameters, the second one for the resources (nodes, mpi and threads). 
 
 Parsing results using built-in functions 
 ----------------------------------------
@@ -92,4 +106,5 @@ in this way:
     x.take_quantities(backtrace = 1,what='gap',where = [(1,4,1,5)]) 
     
 
-``what='single-levels' `` can be another options to parse qp corrections: in that case ``where=[(kv,bv),(kc,v)]``, where v is for valence and c is for conduction. 
+``what=single-levels`` can be another options to parse qp corrections: in that case ``where=[(kv,bv),(kc,v)]``, 
+where v is for valence and c is for conduction. 

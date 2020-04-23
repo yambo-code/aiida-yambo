@@ -20,4 +20,4 @@ Let's see the case of fixed-path automation, activated by setting ``"type": 2D_s
 
 The type is called '2D_space', but actually is possibile to change and arbitrary number of parameter at the time: the reason of the name is due to the fact that 
 typically this investigation are done to observe the interdependence between bands and G-vectors cutoff. 
-To see how to post process and plot results, we suggest to consult the dedicated section.
+To see how to post process and plot results, we suggest to consult the dedicated section :ref:`conv_pp_2d`.

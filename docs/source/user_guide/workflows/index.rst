@@ -9,7 +9,7 @@ This plugin provides several workflows for performing automated MBPT with `Yambo
 The following shows how to use the workflows provided by the  `aiida yambo` plugin.
 The hierarchy of the workflows can be represented from the following picture: 
 
-:: ./images/del.png 
+.. image:: ./images/del.png 
 
 Simple YamboRestart workchain
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -28,7 +28,8 @@ As you can see, we have to provide workflow_settings, which encode some workflow
 
     {'type':'1D_convergence','what':'gap','where':[(k_v,vbM,k_c,cbm)],'where_in_words':['Gamma']})
 
-The workflow submitted here looks for convergence on different parameters, searching each step a given parameter(1D). The quantity that tries
+The workflow submitted here looks for convergence on different parameters, searching each step a given parameter(1D). The iter is specified
+with the input list ``parameters_space``. This is a list of dictionaries, each one representing a given phase of the investigation. The quantity that tries
 to converge is the gap('what') between given bands evaluated at fixed k-points. It is possible to choose also and indirect gap(notice that,
 changing the k-point mesh, the k-points will change index: for now we have not a logic to trace the index-change). The other functionality of the converge workflow is to converge single levels
 ('gap'->'single-levels', [(k_v,vbM,k_c,cbm)]->[(k,b)]), useful in the study of molecules. It is possible also to search convergence simultaneously for
@@ -50,7 +51,7 @@ The data can be plotted using a function in :
 
 As you can see, the actual path of investigation is provided from inputs, but usually is always the same: bands and G-vectors cutoff (plus a final k-points
 convergence not seen here). The black stars represent overconverged results for each parameter-iteration. 
-To see more examples, go to post processing section. There, we can see real convergence on well known cases like 2D-hBN and rutile TiO2. 
+To see more examples, go to :ref:`conv_pp_1d`. There, we can see real convergence on 2D-hBN. 
 
 Outputs of a YamboConvergence calculation are two: a List with the collection of information on all the calculations, and a Dict with the description of
 the last converged calculations, from which you can collect the converged parameters. To give a human-readable meaning to the output List, you can, after converted

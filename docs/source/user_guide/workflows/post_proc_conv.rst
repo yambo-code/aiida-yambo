@@ -1,4 +1,4 @@
-.. _tut-ref-to-yambo-conv_pp:
+.. _conv_pp_1d:
 
 Plot results of YamboConvergence - '1D_convergence'
 ---------------------------------------------------
@@ -62,6 +62,9 @@ outcome:
 as expected, the most time consuming part is the final one: the k-points convergence. In the legend you can see the value of the parameters needed to obtain 
 the desired convergence. The only parameters displayed are the one who changes from the initial state. You can check it by hands exploring the inputs parameters 
 and k-point mesh of the last convergenced calculation of the YamboConvergence run.
+
+
+.. _conv_pp_2d:
 
 Plot results of YamboConvergence - fixed-path('2D_space')
 ---------------------------------------------------------

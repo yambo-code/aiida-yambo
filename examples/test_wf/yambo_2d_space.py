@@ -317,24 +317,21 @@ def main(options):
 
     builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
 
-    builder.workflow_settings = Dict(dict={'type':'2D_space',\
-                                        'what':'single-levels','where':[(1,8),(1,9)],\
-                                        'where_in_words':['Gamma'],'PRE_CALC':False})
-
-    spaces=[]
-    for j in range(1000,5000,1000):   #bands
-        for i in range(2,8,2):        #Ry
-            spaces.append([[1,j],[1,j],i])
-
-    para_space = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[:3],'max_iterations': 0,},
-                {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[3:6],'max_iterations': 0,},
-                {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                    'space': spaces[6:9],'max_iterations': 0,},
+    builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[(1,8,1,9)],
+                                           'where_in_words':['Gamma'],'PRE_CALC':False})
+    
+    #'what': 'single-levels','where':[(1,8),(1,9)]
+    para_space = [{'var':['BndsRnXp','GbndRnge'],
+                    'space': [[[1,10],[1,10]], \
+                              [[1,50],[1,75]], \
+                              [[1,75],[1,50]]], \
+                                 'max_restarts': 0,},
+                  {'var':['BndsRnXp','GbndRnge'],
+                    'space': [[[1,75],[1,75]]],
+                                 'max_restarts': 0,}]
 
 
-    for i in range(len(para_space)):YamboRestart
+    for i in range(len(para_space)):
         print('{}-th variable will be {}'.format(i+1,para_space[i]['var']))
         print('{}-th values will be {}'.format(i+1,para_space[i]['space']))
     builder.parameters_space = List(list = para_space)  
