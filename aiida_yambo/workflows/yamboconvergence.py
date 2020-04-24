@@ -62,7 +62,7 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        spec.output('story', valid_type = List, help='all calculations')
+        spec.output('story', valid_type = Dict, help='all calculations')
         spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
 
         spec.exit_code(300, 'UNDEFINED_STATE',
@@ -162,8 +162,8 @@ class YamboConvergence(WorkChain):
 
         self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs)
 
-        self.report('The history:')
-        self.report(self.ctx.workflow_manager.workflow_story)
+        #self.report('The history:')
+        #self.report(self.ctx.workflow_manager.workflow_story)
 
         if self.ctx.calc_manager.success:
 
@@ -172,7 +172,7 @@ class YamboConvergence(WorkChain):
             
             self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
                         .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
-                            self.ctx.workflow_manager.workflow_story[-(oversteps+1)][-2] ))
+                            self.ctx.workflow_manager.workflow_story[self.ctx.workflow_manager.workflow_story.useful == True].iloc[-1]['result_eV']))
 
             if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
                     self.ctx.workflow_manager.fully_success = True
@@ -187,7 +187,7 @@ class YamboConvergence(WorkChain):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
         
-        story = store_List(self.ctx.workflow_manager.workflow_story)
+        story = store_Dict(self.ctx.workflow_manager.workflow_story.to_dict())
         self.out('story', story)
         final_result = store_Dict(self.ctx.final_result)
         self.out('last_calculation',final_result)

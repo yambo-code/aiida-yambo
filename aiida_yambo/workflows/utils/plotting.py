@@ -23,18 +23,23 @@ def plot_1D_convergence(ax, story, title='',where=1,\
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
     
     if isinstance(story,WorkChainNode):
-        y = story.outputs.story.get_list() 
+        y = story.outputs.story.get_dict() 
+        story= pd.DataFrame(y)
     elif isinstance(story,int):
         x = load_node(story)
-        y = x.outputs.story.get_list()      
-    elif isinstance(story,list):
+        y = x.outputs.story.get_dict() 
+        story= pd.DataFrame(y)     
+    elif isinstance(story,dict):
         y = story
+        story= pd.DataFrame(y)
     elif 'DataFrame' in str(type(story)):
-        yy = list(story.keys())
-        y = story.values.tolist()
-        y.insert(0, yy)
+        pass
     else:
-        raise TypeError('You have to provide: node, node_pk, output_list or dataframe')      
+        raise TypeError('You have to provide: node, node_pk, output_dict or dataframe')      
+    
+    yy = list(story.keys())
+    y = story.values.tolist()
+    y.insert(0, yy)
     
     for i in range(len(y)):
         string=''

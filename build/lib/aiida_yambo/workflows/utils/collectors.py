@@ -29,34 +29,68 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
 
     return ef
 
-def collect_results(story=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
-        
+def collect_all_params(story, param_list=['BndsRnXp','GbndRnge','NGsBlkXp']):
+    
     if isinstance(story,WorkChainNode):
-        y = story.outputs.story.get_list() 
+        y = story.outputs.story.get_dict() 
+        df= pd.DataFrame(y)
     elif isinstance(story,int):
         x = load_node(story)
-        y = x.outputs.story.get_list()      
-    elif isinstance(story,list):
-        y = story
+        y = x.outputs.story.get_dict() 
+        df= pd.DataFrame(y)
+    elif isinstance(story,dict):
+        df= pd.DataFrame(story)
     elif 'DataFrame' in str(type(story)):
-        yy = list(story.keys())
-        y = story.values.tolist()
-        y.insert(0, yy)
+        df=story
     else:
-        raise TypeError('You have to provide: node, node_pk, output_list or dataframe')    
+        raise TypeError('You have to provide: node, node_pk, output_dict or dataframe')  
+    
+    list_for_df=[]
+    for calc in df['calc_pk']:
+        node = load_node(int(calc))
+        node_pw = find_pw_parent(node, calc_type=['nscf','scf'])
+        mesh = node_pw.inputs.kpoints.get_kpoints_mesh()[0]
+        distance_mesh = get_distance_from_kmesh(node_pw)
+        list_for_df.append([node.inputs.parameters.get_dict()[j] for j in param_list]+\
+              [mesh]+[distance_mesh]+df[df['calc_pk']==calc]['result_eV'].values.tolist()\
+                           +[df[df['calc_pk']==calc]['useful'].values])
+        df_c=pd.DataFrame(list_for_df,columns=param_list+['mesh','distance_mesh']+['result_eV','useful'])
+    
+    return df_c
 
+def collect_2D_results(story=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
+        
+    if isinstance(story,WorkChainNode):
+        y = story.outputs.story.get_dict() 
+        story=pd.DataFrame(y)
+    elif isinstance(story,int):
+        x = load_node(story)
+        y = x.outputs.story.get_dict() 
+        story=pd.DataFrame(y)    
+    elif isinstance(story,dict):
+        story=pd.DataFrame(story)
+    elif 'DataFrame' in str(type(story)):
+        pass
+    else:
+        raise TypeError('You have to provide: node, node_pk, output_dict or dataframe')    
+    
+    yy = list(story.keys())
+    y = story.values.tolist()
+    y.insert(0, yy)
+    
     p = pd.DataFrame(y[1:],columns=y[0])
 
     rows = len(p) 
     cols = 0 
     len_val = 1 
     len_res = 1 
+    
     if last_c:
-        pass
+        ef = take_fermi(last_c.pk)
+        print('Fermi Energy is {} eV'.format(ef))
     else:
-        last_c = get_called_ok(node_pk,depth=3)
-    ef = take_fermi(last_c.pk)
-    print('Fermi Energy is {} eV'.format(ef))
+        ef = 0 
+        print('setting Fermi Energy to zero eV, if you need Ef just provide last_c=<pk_calc> as input') 
 
     if isinstance(p['value'].iloc[0],list): 
         len_val = len(p['value'].iloc[0]) 
@@ -87,15 +121,12 @@ def collect_results(story=None, last_c=None):    #returns array (val_1,val_2....
     return k, p
 
 
-def parse_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
+def parse_2D_data(wfl_pk, folder_name='', title='run', last_c_ok_pk=None):
 
     if folder_name == '':
         folder_name = 'results_'+str(wfl_pk)
     print('the folder name will be: {}'.format(folder_name))
-    if last_c_ok_pk:
-            pass
-    else:
-            last_c_ok_pk = get_called_ok(wfl_pk,depth=3)
+    
     k, p = collect_results(wfl_pk, last_c=last_c_ok_pk)
     
     if not folder_name in os.listdir():

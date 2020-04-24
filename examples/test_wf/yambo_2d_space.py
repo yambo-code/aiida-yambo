@@ -321,14 +321,14 @@ def main(options):
                                            'where_in_words':['Gamma'],'PRE_CALC':False})
     
     #'what': 'single-levels','where':[(1,8),(1,9)]
-    para_space = [{'var':['BndsRnXp','GbndRnge'],
+    para_space = [{'var':['BndsRnXp','GbndRnge'],    
                     'space': [[[1,10],[1,10]], \
                               [[1,50],[1,75]], \
                               [[1,75],[1,50]]], \
-                                 'max_restarts': 0,},
+                                 'max_iterations': 1,},
                   {'var':['BndsRnXp','GbndRnge'],
                     'space': [[[1,75],[1,75]]],
-                                 'max_restarts': 0,}]
+                                 'max_iterations': 1,}]
 
 
     for i in range(len(para_space)):
@@ -343,3 +343,13 @@ if __name__ == "__main__":
     builder = main(options)
     running = submit(builder)
     print("Submitted YamboConvergence; with pk=<{}>".format(running.pk))
+
+
+'''
+another example of space can be:
+
+para_space = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
+                'space': [[[1, 50], [1, 50], 2], [[1, 50], [1, 50], 3]],'max_iterations': 1,},
+              {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
+                'space': [[[1, 55], [1, 55], 2], [[1, 55], [1, 55], 3]],'max_iterations': 1,},]
+'''
