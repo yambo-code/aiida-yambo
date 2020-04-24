@@ -154,9 +154,9 @@ def main(options):
         }
     params_gw = Dict(dict=params_gw)
 
-    ###### creation of the YamboCalculation ######
+    ###### creation of the YamboRestart ######
 
-    builder = YamboCalculation.get_builder()
+    builder = YamboRestart.get_builder()
     builder.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
     builder.yambo.metadata.options.resources = \
