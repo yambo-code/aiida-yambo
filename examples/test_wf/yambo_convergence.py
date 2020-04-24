@@ -7,7 +7,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida_yambo.workflows.yamboconvergence import YamboConvergence
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 import argparse
@@ -257,7 +257,7 @@ def main(options):
     params_gw = Dict(dict=params_gw)
 
 
-    builder = YamboWorkflow.get_builder()
+    builder = YamboConvergence.get_builder()
 
 
     ##################scf+nscf part of the builder
@@ -348,4 +348,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboCalculation; with pk=<{}>".format(running.pk))
+    print("Submitted YamboConvergence; with pk=<{}>".format(running.pk))
