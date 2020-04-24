@@ -53,11 +53,11 @@ As you can see, the actual path of investigation is provided from inputs, but us
 convergence not seen here). The black stars represent overconverged results for each parameter-iteration. 
 To see more examples, go to :ref:`conv_pp_1d`. There, we can see real convergence on 2D-hBN. 
 
-Outputs of a YamboConvergence calculation are two: a List with the collection of information on all the calculations, and a Dict with the description of
-the last converged calculations, from which you can collect the converged parameters. To give a human-readable meaning to the output List, you can, after converted
-in list (List is and AiiDA Data), build a pandas dataframe which has as columns the first line of the list:
+Outputs of a YamboConvergence calculation are two: a Dict with the collection of information on all the calculations, and a Dict with the description of
+the last converged calculations, from which you can easily collect the converged parameters. To give a human-readable meaning to the output Dict, you can, after converted
+in dict (Dict is and AiiDA Data), build a pandas dataframe:
 
 ::
     
     import pandas as pd
-    dataframe = pd.DataFrame(outlist[1:], columns = outlist[0])
+    dataframe = pd.DataFrame(outdict)

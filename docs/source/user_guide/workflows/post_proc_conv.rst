@@ -17,9 +17,11 @@ In the case of '1D_convergence' you can use:
     ax.set_xlim(1,40)
     ax.set_xlabel('step',fontsize=15)
     ax.set_ylabel('Gap @ $\Gamma$ (eV)',fontsize=15)
+
+    plot_1D_convergence(ax,story=YamboConvergence_node) #story can be also just pk,output dict or dataframe_from_out_dict--> you can combine worchain stories
+
     ax.legend(fontsize=15)
     
-    plot_1D_convergence(ax,story=YamboConvergence_node) #story can be also just pk, output list or dataframe_from_out_list--> you can combine worchain stories
 
 then, if you are studying monolayer hBN, you may obtain something like this: 
 
@@ -33,7 +35,7 @@ you may want also to take trace of timing of each step:
     from aiida_yambo.workflows.utils.plotting import *
     from aiida_yambo.workflows.utils.collectors import *
 
-    df_t = get_timings(story=YamboConvergence_node) #story can be also just pk, output list or dataframe_from_out_list--> you can combine worchain stories
+    df_t = get_timings(story=YamboConvergence_node) #story can be also just pk, output dict or dataframe_from_out_dict--> you can combine worchain stories
 
     fig, ax = plt.subplots(2,1,figsize=(10,7),gridspec_kw={
                             'height_ratios': [1,3],})
@@ -42,7 +44,9 @@ you may want also to take trace of timing of each step:
     ax[1].set_xlim(1,40)
     ax[1].set_xlabel('step',fontsize=15)
     ax[1].set_ylabel('Gap @ $\Gamma$ (eV)',fontsize=15)
-    plot_1D_convergence(ax[1],story=YamboConvergence_node) #story can be also just pk, output list or dataframe_from_out_list--> you can combine worchain stories
+
+    plot_1D_convergence(ax[1],story=YamboConvergence_node) #story can be also just pk,output dict or dataframe_from_out_dict--> you can combine worchain stories
+    
     ax[1].legend(fontsize=15)
     ax[0].grid()
     ax[0].plot(df_t.step,df_t.time_gw/3600, 'o-',label='G0W0 (tot= {} h)'.format(round(df_t.time_gw.sum()/3600,1)))
@@ -61,7 +65,8 @@ outcome:
 
 as expected, the most time consuming part is the final one: the k-points convergence. In the legend you can see the value of the parameters needed to obtain 
 the desired convergence. The only parameters displayed are the one who changes from the initial state. You can check it by hands exploring the inputs parameters 
-and k-point mesh of the last convergenced calculation of the YamboConvergence run.
+and k-point mesh of the last convergenced calculation of the YamboConvergence run, or by using the function ``collect_all_params`` provided in the collectors module
+in the workflows utilities.
 
 
 .. _conv_pp_2d:
@@ -71,7 +76,7 @@ Plot results of YamboConvergence - fixed-path('2D_space')
 
 If you are exploring a 2D space for convergences, you can use the ``plot_2D_convergence`` function provided in the workflows.plotting module. In this case, 
 you have to provide the three array that represent the result (z axis) and the two that represent the values of the parameter at each step. 
-This may see cumbersome to obtain from the output list of the YamboConvergence, but you can use some collector function provided from the workflows.collectors 
+This may see cumbersome to obtain from theoutput dict of the YamboConvergence, but you can use some collector function provided from the workflows.collectors 
 module. Let's see an example of the study on a SiH4 molecule:
 
 ::
@@ -79,7 +84,7 @@ module. Let's see an example of the study on a SiH4 molecule:
     from aiida_yambo.workflows.utils.collectors import *
     from aiida_yambo.workflows.utils.plotting import *
 
-    res_array, res_dataframe = collect_results(story=YamboConvergence_node) #...
+    res_array, res_dataframe = collect_2D_results(story=YamboConvergence_node) #...
     p = pd.DataFrame(res_array,columns=['bandsSE','bandsX','Ry','HOMO_energy(eV)']) #you need to know the parameters and what you observe as output
 
 to prepare the plotting data; then you can plot results in 2D: 
