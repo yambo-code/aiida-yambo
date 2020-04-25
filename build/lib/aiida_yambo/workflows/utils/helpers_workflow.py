@@ -85,7 +85,7 @@ class convergence_workflow_manager:
             set_parent(inputs, load_node(last_ok_pk))
 
         final_result={'calculation_pk': last_ok_pk,\
-                    'result_eV':self.workflow_story.iloc[-(oversteps+1)]['result_eV'],'success':bool(self.workflow_story.iloc[-(oversteps+1)]['useful'])}
+                    'result_eV':self.workflow_story[self.workflow_story.useful == True].iloc[-1]['result_eV'],'success':bool(self.workflow_story[self.workflow_story.useful == True].iloc[-1]['useful'])}
 
         self.workflow_story = self.workflow_story.replace({np.nan:None})
 
