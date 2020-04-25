@@ -1,26 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Plugin to create a Yambo input file.
+Plugin to create a Yambo input file and run a calculation with the yambo executable.
 """
 from __future__ import absolute_import
 import os
+import six
+
 from aiida.engine import CalcJob
-from aiida.common.exceptions import InputValidationError, ValidationError
+
+from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
+
 from aiida.common.datastructures import CalcInfo
 from aiida.common.datastructures import CalcJobState
-from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
-from aiida.common.exceptions import UniquenessError, InputValidationError
+from aiida.common.exceptions import UniquenessError, InputValidationError, ValidationError
 from aiida.common.utils import classproperty
+
+from aiida.orm import Code
 from aiida.orm.nodes import Dict
 from aiida.orm.nodes import RemoteData, BandsData, ArrayData
+
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import Code
+
 from aiida.common import AIIDA_LOGGER
 from aiida.common import LinkType
-import six
+
+from aiida_yambo.utils.common_helpers import * 
+
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
-__authors__ = " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
+__authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
+              " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
               " Antimo Marrazzo (antimo.marrazzo@epfl.ch)," \
               " Michael Atambo (michaelontita.atambo@unimore.it)."
 
@@ -78,18 +87,20 @@ class YamboCalculation(CalcJob):
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
 
-        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER',
+        spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
-        spec.exit_code(301, 'WALLTIME_ERROR',
+        spec.exit_code(501, 'WALLTIME_ERROR',
                 message='time exceeded the max walltime')
-        spec.exit_code(302, 'NO_SUCCESS',
+        spec.exit_code(502, 'NO_SUCCESS',
                 message='failed calculation for some reason: could be a low number of conduction bands')
-        spec.exit_code(303, 'PARSER_ANOMALY',
+        spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
-        spec.exit_code(304, 'PARA_ERROR',
+        spec.exit_code(504, 'PARA_ERROR',
                 message='parallelization error')
-        spec.exit_code(305, 'MEMORY_ISSUE',
-                message='memory issues')
+        spec.exit_code(505, 'MEMORY_ERROR',
+                message='general memory error')
+        spec.exit_code(506, 'X_par_MEMORY_ERROR',
+                message='x_par allocation memory error')
 
 
         #outputs definition:
@@ -116,9 +127,15 @@ class YamboCalculation(CalcJob):
                 required=False, help='returns the array for ndbQP')
         spec.output('array_ndb_HFlocXC', valid_type=ArrayData,
                 required=False, help='returns the array ndb for HFlocXC')
+        spec.output('system_info', valid_type=Dict,
+                required=False, help='returns some system information after a p2y')
+
 
 
     def prepare_for_submission(self, tempfolder):
+
+        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC',
+                         'ns.db1': 'ns.db1',}
 
         local_copy_list = []
         remote_copy_list = []
@@ -134,20 +151,20 @@ class YamboCalculation(CalcJob):
             if not isinstance(initialise, bool):
                 raise InputValidationError("INITIALISE must be " " a boolean")
 
-        parent_db = settings.pop('PARENT_DB', None)
-        if parent_db is not None:
-            if not isinstance(parent_db, bool):
-                raise InputValidationError("PARENT_DB must be " " a boolean")
+        copy_save = settings.pop('COPY_SAVE', None)
+        if copy_save is not None:
+            if not isinstance(copy_save, bool):
+                raise InputValidationError("COPY_SAVE must be " " a boolean")
 
-        hard_link = settings.pop('HARD_LINK', None)
-        if hard_link is not None:
-            if not isinstance(hard_link, bool):
-                raise InputValidationError("HARD_LINK must be " " a boolean")
-
-        hard_link_DB = settings.pop('HARD_LINK_DB', None)
-        if hard_link_DB is not None:
-            if not isinstance(hard_link_DB, bool):
-                raise InputValidationError("HARD_LINK_DB must be " " a boolean")
+        copy_dbs = settings.pop('COPY_DBS', None)
+        if copy_dbs is not None:
+            if not isinstance(copy_dbs, bool):
+                raise InputValidationError("COPY_DBS must be " " a boolean")
+        
+        restart_yambo = settings.pop('RESTART_YAMBO', None)
+        if restart_yambo is not None:
+            if not isinstance(restart_yambo, bool):
+                raise InputValidationError("RESTART_YAMBO must be " " a boolean")
 
         parameters = self.inputs.parameters
 
@@ -161,10 +178,7 @@ class YamboCalculation(CalcJob):
 
         preproc_code = self.inputs.preprocessing_code
 
-        try:
-            parent_calc = parent_calc_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
-        except:
-            parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
+        parent_calc = take_calc_from_remote(parent_calc_folder)
 
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
@@ -292,7 +306,7 @@ class YamboCalculation(CalcJob):
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
         if yambo_parent:
-            if hard_link:
+            if copy_save:
                 try:
                     remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
                 except:
@@ -303,12 +317,11 @@ class YamboCalculation(CalcJob):
                 except:
                     remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
 
-            if hard_link_DB:
+            if copy_dbs:
                     remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
-            if parent_db:
-                remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
+            if restart_yambo:
+                    remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/aiida.out/",'./aiida.out/'))
         else:
-            #remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/*",'.')) ##.format(parent_calc_folder._PREFIX)
             remote_copy_list.append(
                 (parent_calc_folder.computer.uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
@@ -334,10 +347,24 @@ class YamboCalculation(CalcJob):
         calcinfo.retrieve_list.append('r*')
         calcinfo.retrieve_list.append('l*')
         calcinfo.retrieve_list.append('o*')
-        calcinfo.retrieve_list.append('LOG/l-*_CPU_1')
-        extra_retrieved = settings.pop(
-            'ADDITIONAL_RETRIEVE_LIST',
-            ['aiida.out/ndb.QP', 'aiida.out/ndb.HF_and_locXC'])
+        calcinfo.retrieve_list.append('LOG/l*_CPU_1')
+        calcinfo.retrieve_list.append('LOG/l*_CPU_2')
+        calcinfo.retrieve_list.append('*stderr*') #standard errors
+        extra_retrieved = []
+
+        if initialise:
+            extra_retrieved.append('SAVE/'+_dbs_accepted['ns.db1'])
+
+        else:
+            for dbs in _dbs_accepted.keys():
+                db = boolean_dict.pop(dbs,False)
+                if db:
+                    extra_retrieved.append('aiida.out/'+_dbs_accepted[dbs])
+
+        additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
+        if additional:
+            extra_retrieved.append(additional)
+
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append(extra)
 
@@ -407,7 +434,7 @@ class YamboCalculation(CalcJob):
         return calcinfo
 
 ################################################################################
-    #the following functions are not used, so why are they here?
+    #the following functions are not used
     def _check_valid_parent(self, calc):
         """
         Check that calc is a valid parent for a YamboCalculation.

@@ -5,7 +5,7 @@ import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.engine import submit
-from aiida_yambo.calculations.gw import YamboCalculation
+from aiida_yambo.calculations.yambo import YamboCalculation
 import argparse
 
 def get_options():
@@ -122,9 +122,10 @@ def main(options):
     Dict = DataFactory('dict')
 
     params_gw = {
+            'HF_and_locXC': True,
+            'dipoles': True,
             'ppa': True,
             'gw0': True,
-            'HF_and_locXC': True,
             'em1d': True,
             'Chimod': 'hartree',
             #'EXXRLvcs': 40,
@@ -135,8 +136,10 @@ def main(options):
             'GbndRnge': [1, 10],
             'DysSolver': "n",
             'QPkrange': [[1, 1, 8, 9]],
-            'X_all_q_CPU': "1 1 1 1",
-            'X_all_q_ROLEs': "q k c v",
+            'DIP_CPU': "1 1 1",
+            'DIP_ROLEs': "k c v",
+            'X_CPU': "1 1 1 1",
+            'X_ROLEs': "q k c v",
             'SE_CPU': "1 1 1",
             'SE_ROLEs': "q qp b",
         }
@@ -164,7 +167,7 @@ def main(options):
     builder.parameters = params_gw
 
     builder.precode_parameters = Dict(dict={})
-    builder.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
+    builder.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
     builder.code = load_node(options['code_pk'])
     builder.preprocessing_code = load_node(options['precode_pk'])

@@ -7,7 +7,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida_yambo.workflows.yamboconvergence import YamboConvergence
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 import argparse
@@ -26,28 +26,28 @@ def get_options():
         '--parent',
         type=int,
         dest='parent_pk',
-        required=True,
+        required=False,
         help='The parent to use')
 
     parser.add_argument(
         '--yamboprecode',
         type=int,
         dest='yamboprecode_pk',
-        required=False,
+        required=True,
         help='The precode to use')
 
     parser.add_argument(
         '--pwcode',
         type=int,
         dest='pwcode_pk',
-        required=False,
+        required=True,
         help='The pw to use')
 
     parser.add_argument(
         '--pseudo',
         type=str,
         dest='pseudo_family',
-        required=False,
+        required=True,
         help='The pseudo_family')
 
     parser.add_argument(
@@ -233,28 +233,31 @@ def main(options):
 
 
     params_gw = {
+            'HF_and_locXC': True,
+            'dipoles': True,
             'ppa': True,
             'gw0': True,
-            'HF_and_locXC': True,
             'em1d': True,
             'Chimod': 'hartree',
             #'EXXRLvcs': 40,
             #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 60],
+            'BndsRnXp': [1, 10],
             'NGsBlkXp': 2,
             'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 60],
+            'GbndRnge': [1, 10],
             'DysSolver': "n",
             'QPkrange': [[1, 1, 8, 9]],
-            'X_all_q_CPU': "1 1 1 1",
-            'X_all_q_ROLEs': "q k c v",
+            'DIP_CPU': "1 1 1",
+            'DIP_ROLEs': "k c v",
+            'X_CPU': "1 1 1 1",
+            'X_ROLEs': "q k c v",
             'SE_CPU': "1 1 1",
             'SE_ROLEs': "q qp b",
         }
     params_gw = Dict(dict=params_gw)
 
 
-    builder = YamboWorkflow.get_builder()
+    builder = YamboConvergence.get_builder()
 
 
     ##################scf+nscf part of the builder
@@ -284,46 +287,53 @@ def main(options):
     builder.ywfl.scf.pw.code = load_node(options['pwcode_pk'])
     builder.ywfl.nscf.pw.code = load_node(options['pwcode_pk'])
     builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family'])
+                builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
     builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
 
     ##################yambo part of the builder
-    builder.ywfl.yres.gw.metadata.options.max_wallclock_seconds = \
+    builder.ywfl.yres.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.ywfl.yres.gw.metadata.options.resources = \
+    builder.ywfl.yres.yambo.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.ywfl.yres.gw.metadata.options.queue_name = options['queue_name']
+        builder.ywfl.yres.yambo.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.ywfl.yres.gw.metadata.options.qos = options['qos']
+        builder.ywfl.yres.yambo.metadata.options.qos = options['qos']
 
     if 'account' in options:
-        builder.ywfl.yres.gw.metadata.options.account = options['account']
+        builder.ywfl.yres.yambo.metadata.options.account = options['account']
 
-    builder.ywfl.yres.gw.parameters = params_gw
-    builder.ywfl.yres.gw.precode_parameters = Dict(dict={})
-    builder.ywfl.yres.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
-    builder.ywfl.yres.max_restarts = Int(5)
+    builder.ywfl.yres.yambo.parameters = params_gw
+    builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
+    builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.ywfl.yres.max_iterations = Int(5)
 
-    builder.ywfl.yres.gw.preprocessing_code = load_node(options['yamboprecode_pk'])
-    builder.ywfl.yres.gw.code = load_node(options['yambocode_pk'])
+    builder.ywfl.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
+    builder.ywfl.yres.yambo.code = load_node(options['yambocode_pk'])
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
-    builder.workflow_settings = Dict(dict={'type':'1D_convergence','what':'gap','where':[(1,8,1,9)],'where_in_words':['Gamma']})
+    builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
+
+    builder.workflow_settings = Dict(dict={'type':'1D_convergence',
+                                           'what':'gap',
+                                           'where':[(1,8,1,9)],
+                                           'k-point':['Gamma'],
+                                           'PRE_CALC': False,})
+
     #'what': 'single-levels','where':[(1,8),(1,9)]
-    var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 3, \
+    var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 3, \
                                  'conv_thr': 0.2, 'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
+                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
                                 'conv_thr': 0.2, 'conv_window': 2},
-                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_restarts': 5, \
+                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 5, \
                                  'conv_thr': 0.1, 'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_restarts': 3, \
+                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
                                  'conv_thr': 0.1, 'conv_window': 2},]
     '''
-                   {'var':'kpoints','delta': 1, 'steps': 2, 'max_restarts': 2, \
+                   {'var':'kpoints','delta': 1, 'steps': 2, 'max_iterations': 2, \
                                  'conv_thr': 0.1, 'conv_window': 2, 'what':'gap','where':[(1,1)],}]
     '''
 
@@ -331,8 +341,11 @@ def main(options):
         print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 
     builder.parameters_space = List(list = var_to_conv)
+
+    return builder
+    
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboCalculation; with pk=<{}>".format(running.pk))
+    print("Submitted YamboConvergence; with pk=<{}>".format(running.pk))

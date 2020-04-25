@@ -24,7 +24,7 @@ else:
 ################################################################################
 ################################################################################
 
-class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separated fro aiida and yambopy
+class calc_manager_aiida_yambo: 
 
     def __init__(self, calc_info={}, wfl_settings={}):
         for key in calc_info.keys():
@@ -32,6 +32,9 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         for key in wfl_settings.keys():
             setattr(self, str(key), wfl_settings[key])
+        
+        self.iter  = 0
+        self.success = False
 
 ################################## update_parameters - create parameters space #####################################
     def parameters_space_creator(self, first_calc, parent, last_inputs = {}):
@@ -41,7 +44,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
             if self.var == 'kpoints':
 
-                k_distance = get_distance_from_kmesh(find_pw_parent(parent))
+                k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf','scf']))
 
             for i in range(self.steps):
 
@@ -52,7 +55,7 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
                 if self.var == 'kpoints':
 
-                    k_distance = k_distance + self.delta*(first+i)
+                    k_distance = k_distance_old + self.delta*(first+i)
                     new_value = k_distance
 
                 elif isinstance(self.var,list): #general
@@ -92,45 +95,49 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
             k_distance = new_values
 
             inp_to_update.scf.kpoints = KpointsData()
-            inp_to_update.scf.kpoints.set_cell(inp_to_update.scf.pw.structure.cell)
+            inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
             inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
             inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
             try:
-                inp_to_update.parent_folder = find_pw_parent(inp_to_update.parent_folder.get_incoming().get_node_by_label('remote_folder'),\
-                                                            calc_type='scf').outputs.remote_folder  #I need to start from the scf calc
+                inp_to_update.parent_folder =  find_pw_parent(take_calc_from_remote(inp_to_update.parent_folder), calc_type=['scf']).outputs.remote_folder 
+                 #I need to start from the scf calc
             except:
-                pass
+                del inp_to_update.parent_folder #do all scf+nscf+y in case
 
-            inp_to_update.yres.gw.settings = update_dict(inp_to_update.yres.gw.settings, 'HARD_LINK', False)
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
 
             value = k_distance
 
         elif isinstance(variables,list): #general
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
+            new_params = inp_to_update.yres.yambo.parameters.get_dict()
             for i in variables:
                 new_params[i] = new_values[variables.index(i)]
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
 
             value = new_values
 
         elif isinstance(variables,str): #general
-            new_params = inp_to_update.yres.gw.parameters.get_dict()
+            new_params = inp_to_update.yres.yambo.parameters.get_dict()
             new_params[variables] = new_values
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
 
             value = new_values
 
         return inp_to_update, value
 
 ################################## parsers #####################################
-    def take_quantities(self, start = 1):
+    def take_quantities(self, steps = 1, where = [], what = 'gap',backtrace=1):
 
-        backtrace = self.steps #*self.iter
-        where = self.where
-        what = self.what
+        try:
+            backtrace = self.steps 
+            where = self.where
+            what = self.what
+        except:
+            pass
 
         print('looking for {} in k-points {}'.format(what,where))
 
@@ -138,19 +145,24 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
 
         for j in range(len(where)):
             for i in range(1,backtrace+1):
-                yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
-                if what == 'gap':
-                    _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
-                    _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)
-                    quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[_vb].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real)-
-                                (yambo_calc.outputs.array_ndb.get_array('Eo')[_cb].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real))
+                try: #YamboConvergence
+                    yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
+                except: #YamboWorkflow,YamboRestart of YamboCalculation
+                    yambo_calc = load_node(self.wfl_pk)
+                    print('values provided are: [iteration, value in eV, workflow pk]')
+                if yambo_calc.is_finished_ok:
+                    if what == 'gap':
+                        _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
+                        _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)
+                        quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[_vb].real+
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real)-
+                                    (yambo_calc.outputs.array_ndb.get_array('Eo')[_cb].real+
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real))
 
-                if what == 'single-levels':
-                    _level=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
-                    quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real
+                    if what == 'single-levels':
+                        _level=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
+                        quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
+                                    yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real
 
                 quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
                 quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
@@ -159,4 +171,4 @@ class calc_manager_aiida_yambo: #the interface class to AiiDA... could be separa
         return quantities
 
     def start_from_converged(self, inputs, node):
-         inputs.yres.gw.parameters = node.get_builder_restart().yres.gw['parameters']
+         inputs.yres.yambo.parameters = node.get_builder_restart().yres.yambo['parameters']

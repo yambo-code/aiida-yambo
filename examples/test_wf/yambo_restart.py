@@ -6,7 +6,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yamborestart import YamboRestartWf
+from aiida_yambo.workflows.yamborestart import YamboRestart
 import argparse
 
 def get_options():
@@ -36,7 +36,7 @@ def get_options():
     parser.add_argument(
         '--restarts',
         type=int,
-        dest='max_restarts',
+        dest='max_iterations',
         required=True,
         help='maximum number of restarts')
 
@@ -103,7 +103,7 @@ def get_options():
         'code_pk': args.code_pk,
         'precode_pk': args.precode_pk,
         'parent_pk': args.parent_pk,
-        'max_restarts': args.max_restarts,
+        'max_iterations': args.max_iterations,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
             "num_machines": args.num_machines,
@@ -131,9 +131,10 @@ def main(options):
     Dict = DataFactory('dict')
 
     params_gw = {
+            'HF_and_locXC': True,
+            'dipoles': True,
             'ppa': True,
             'gw0': True,
-            'HF_and_locXC': True,
             'em1d': True,
             'Chimod': 'hartree',
             #'EXXRLvcs': 40,
@@ -144,43 +145,45 @@ def main(options):
             'GbndRnge': [1, 10],
             'DysSolver': "n",
             'QPkrange': [[1, 1, 8, 9]],
-            'X_all_q_CPU': "1 1 1 1",
-            'X_all_q_ROLEs': "q k c v",
+            'DIP_CPU': "1 1 1",
+            'DIP_ROLEs': "k c v",
+            'X_CPU': "1 1 1 1",
+            'X_ROLEs': "q k c v",
             'SE_CPU': "1 1 1",
             'SE_ROLEs': "q qp b",
         }
     params_gw = Dict(dict=params_gw)
 
-    ###### creation of the YamboCalculation ######
+    ###### creation of the YamboRestart ######
 
-    builder = YamboCalculation.get_builder()
-    builder.gw.metadata.options.max_wallclock_seconds = \
+    builder = YamboRestart.get_builder()
+    builder.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.gw.metadata.options.resources = \
+    builder.yambo.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.gw.metadata.options.queue_name = options['queue_name']
+        builder.yambo.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.gw.metadata.options.qos = options['qos']
+        builder.yambo.metadata.options.qos = options['qos']
 
     if 'account' in options:
         builder.metadata.options.account = options['account']
         
-    builder.gw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+    builder.yambo.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
 
-    builder.gw.parameters = params_gw
+    builder.yambo.parameters = params_gw
 
-    builder.gw.precode_parameters = Dict(dict={})
-    builder.gw.settings = Dict(dict={'INITIALISE': False, 'PARENT_DB': False})
+    builder.yambo.precode_parameters = Dict(dict={})
+    builder.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
-    builder.gw.code = load_node(options['code_pk'])
-    builder.gw.preprocessing_code = load_node(options['precode_pk'])
+    builder.yambo.code = load_node(options['code_pk'])
+    builder.yambo.preprocessing_code = load_node(options['precode_pk'])
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
-    builder.max_restarts = Int(options['max_restarts'])
+    builder.max_iterations = Int(options['max_iterations'])
 
     return builder
 
@@ -189,4 +192,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboCalculation; with pk=<{}>".format(running.pk))
+    print("Submitted YamboRestart workchain; with pk=<{}>".format(running.pk))

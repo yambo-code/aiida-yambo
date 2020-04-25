@@ -26,7 +26,7 @@ Welcome to documentation of the AiiDA-Yambo package!
 
 The package is available at http://github.com/yambo-code/yambo-aiida/
 
-If you use this package for your research, please cite the following work:
+If you use this package for your research, please cite the following works:
 
 * G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari,
   and B. Kozinsky, *AiiDA: automated interactive infrastructure and database

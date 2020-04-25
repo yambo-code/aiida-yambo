@@ -6,3 +6,4 @@ Modules provided with aiida-yambo (API reference)
 
     calculations
     workflows
+    parser
