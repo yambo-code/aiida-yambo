@@ -52,6 +52,7 @@ The data can be plotted using a function in :
 As you can see, the actual path of investigation is provided from inputs, but usually is always the same: bands and G-vectors cutoff (plus a final k-points
 convergence not seen here). The black stars represent overconverged results for each parameter-iteration. 
 To see more examples, go to :ref:`conv_pp_1d`. There, we can see real convergence on 2D-hBN. 
+Please note that you have to set also builder.p2y and builder.pre_calc inputs, needed if p2y (parent is not yambo) and/or PRE_CALC (see workflow_settings) are needed.
 
 Outputs of a YamboConvergence calculation are two: a Dict with the collection of information on all the calculations, and a Dict with the description of
 the last converged calculations, from which you can easily collect the converged parameters. To give a human-readable meaning to the output Dict, you can, after converted
