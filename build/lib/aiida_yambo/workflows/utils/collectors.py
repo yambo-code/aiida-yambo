@@ -26,6 +26,9 @@ def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calcu
         if '[X]Fermi Level' in line:
             print('The Fermi level is {}'.format(line.split()[3]))
             ef = float(line.split()[3])
+        if '[X] Fermi Level' in line:
+            print('The Fermi level is {}'.format(line.split()[4]))
+            ef = float(line.split()[4])
 
     return ef
 
@@ -58,7 +61,7 @@ def collect_all_params(story, param_list=['BndsRnXp','GbndRnge','NGsBlkXp']):
     
     return df_c
 
-def collect_2D_results(story=None, last_c=None):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
+def collect_2D_results(story=None, last_c=None, ef = 0):    #returns array (val_1,val_2....,result_eV_1,...) and pandas DF to be further analyzed 
         
     if isinstance(story,WorkChainNode):
         y = story.outputs.story.get_dict() 
@@ -89,7 +92,6 @@ def collect_2D_results(story=None, last_c=None):    #returns array (val_1,val_2.
         ef = take_fermi(last_c.pk)
         print('Fermi Energy is {} eV'.format(ef))
     else:
-        ef = 0 
         print('setting Fermi Energy to zero eV, if you need Ef just provide last_c=<pk_calc> as input') 
 
     if isinstance(p['value'].iloc[0],list): 

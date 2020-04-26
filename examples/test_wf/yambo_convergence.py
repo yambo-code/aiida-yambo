@@ -315,6 +315,7 @@ def main(options):
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
+    builder.p2y = builder.ywfl
     builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
 
     builder.workflow_settings = Dict(dict={'type':'1D_convergence',

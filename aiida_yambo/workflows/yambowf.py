@@ -113,6 +113,7 @@ class YamboWorkflow(WorkChain):
 
         self.report('performing a {} calculation'.format(self.ctx.calc_to_do))
 
+        
         try:
             calc = self.ctx.calc
             if not calc.is_finished_ok:

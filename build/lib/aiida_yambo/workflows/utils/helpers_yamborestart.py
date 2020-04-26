@@ -47,14 +47,15 @@ def fix_memory(resources, failed_calc, exit_status):
     else:
         what = ['bands','g'] 
         pass
+        
+    bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
+    occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
     if float(kpoints)/float(bands) > 0.5:
         what.append('kpoints')
 
-    bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
-    occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
-    if resources['num_mpiprocs_per_machine']==1: #there should be a limit
+    if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu']: #there should be a limit
         resources['num_machines'] = int(1.5*resources['num_machines'])
         resources['num_machines'] += resources['num_machines']%2
         resources['num_mpiprocs_per_machine'] *= 2
