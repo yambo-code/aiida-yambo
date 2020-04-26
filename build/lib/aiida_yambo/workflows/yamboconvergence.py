@@ -31,7 +31,10 @@ class YamboConvergence(WorkChain):
 
         spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
                             exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
-        
+
+        spec.expose_inputs(YamboWorkflow, namespace='p2y', namespace_options={'required': True}, \
+                            exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
+
         spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': False}, \
                     exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
@@ -75,6 +78,12 @@ class YamboConvergence(WorkChain):
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints, self.inputs.kpoints
+
+        self.ctx.p2y_inputs = self.exposed_inputs(YamboWorkflow, 'p2y')
+        self.ctx.p2y_inputs.scf.kpoints, self.ctx.p2y_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints
+
+        self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
+        self.ctx.precalc_inputs.scf.kpoints, self.ctx.precalc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints
         
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space, self.inputs.workflow_settings.get_dict())
 
@@ -206,8 +215,10 @@ class YamboConvergence(WorkChain):
         self.report('detecting if we need a p2y starting calculation...')
 
         try:
+            set_parent(self.ctx.p2y_inputs, self.inputs.parent_folder)
+            set_parent(self.ctx.precalc_inputs, self.inputs.parent_folder)
             set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
-            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)
+            parent_calc = take_calc_from_remote(self.ctx.p2y_inputs.parent_folder)
             if parent_calc.process_type=='aiida.calculations:yambo.yambo':
                 self.report('no, yambo parent')
                 return False
@@ -222,10 +233,10 @@ class YamboConvergence(WorkChain):
         self.report('doing the p2y')
         calc = {}
         self.report('no valid parent folder, so we will create it')
-        self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', True)
-        calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.calc_inputs) #################run
+        self.ctx.p2y_inputs.yres.yambo.settings = update_dict(self.ctx.p2y_inputs.yres.yambo.settings, 'INITIALISE', True)
+        calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.p2y_inputs) #################run
         self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
-        self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', False)
+        self.ctx.p2y_inputs.yres.yambo.settings = update_dict(self.ctx.p2y_inputs.yres.yambo.settings, 'INITIALISE', False)
         self.ctx.p2y = calc['p2y']
         return ToContext(calc)
 

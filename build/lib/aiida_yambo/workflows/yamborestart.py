@@ -124,8 +124,9 @@ class YamboRestart(BaseRestartWorkChain):
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out 
-                                  
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO', True) # to link the dbs in aiida.out 
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
+        
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
                                                 seconds and link outputs'\
                                                 .format(int(self.ctx.inputs.metadata.options['max_wallclock_seconds'])))
@@ -149,6 +150,8 @@ class YamboRestart(BaseRestartWorkChain):
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
+
 
 
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
@@ -175,6 +178,7 @@ class YamboRestart(BaseRestartWorkChain):
 
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
-                   
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
+
         self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance')
         return ProcessHandlerReport(True)
