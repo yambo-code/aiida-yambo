@@ -52,8 +52,9 @@ def parse_log(log, output_params):
     else:
         #Game over...
         game_over = re.compile('Game')
+        game_over_2 = re.compile('Clock:')
         for line in log.lines:
-            if game_over.findall(line):
+            if game_over.findall(line) or game_over_2.findall(line):
                 output_params['game_over'] = True
 
         #timing sections...
@@ -132,9 +133,10 @@ def parse_report(report, output_params):
     else:
         #Game over...
         game_over = re.compile('Game')
+        game_over_2 = re.compile('Clock:')
         gpu_support = re.compile('CUDA')
         for line in report.lines:
-            if game_over.findall(line):
+            if game_over.findall(line) or game_over_2.findall(line):
                 output_params['game_over'] = True
         
             if gpu_support.findall(line):
