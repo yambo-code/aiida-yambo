@@ -244,16 +244,19 @@ class YamboFile(object):
                 else: #  data line B=x Eo = y ..
                     data_lines = [ i for i in spliter.split(line) if i.strip()]
                     for qp_data in data_lines:
-                        bindex, dft_energy, qp_energy, qp_correction, z_factor, \
-                        non_local_xc, local_xc, selfenergy_c = [float (i) for i in extract.match(qp_data).groups()]
-                        kp_results['bindex'].append(bindex)
-                        kp_results['dft_energy'].append(dft_energy)
-                        kp_results['qp_energy'].append(qp_energy)
-                        kp_results['qp_correction'].append(qp_correction)
-                        kp_results['z_factor'].append(z_factor)
-                        kp_results['non_local_xc'].append(non_local_xc)
-                        kp_results['local_xc'].append(local_xc)
-                        kp_results['selfenergy_c'].append(selfenergy_c)
+                        try:
+                            bindex, dft_energy, qp_energy, qp_correction, z_factor, \
+                            non_local_xc, local_xc, selfenergy_c = [float (i) for i in extract.match(qp_data).groups()]
+                            kp_results['bindex'].append(bindex)
+                            kp_results['dft_energy'].append(dft_energy)
+                            kp_results['qp_energy'].append(qp_energy)
+                            kp_results['qp_correction'].append(qp_correction)
+                            kp_results['z_factor'].append(z_factor)
+                            kp_results['non_local_xc'].append(non_local_xc)
+                            kp_results['local_xc'].append(local_xc)
+                            kp_results['selfenergy_c'].append(selfenergy_c)
+                        except:
+                            pass
             qp_results[kp_index] = kp_results
         self.data = qp_results
 

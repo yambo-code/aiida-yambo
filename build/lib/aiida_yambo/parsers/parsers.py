@@ -150,7 +150,7 @@ class YamboParser(Parser):
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'4.5'}
+        'yambo_version':'4.5', 'Fermi(eV)':0}
         ndbqp = {}
         ndbhf = {}
 
@@ -242,7 +242,9 @@ class YamboParser(Parser):
 
         if success == False:
             if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
-                  / float(output_params['requested_time'])) < 0.25:
+                  / float(output_params['requested_time'])) < 0.25: 
+                return self.exit_codes.WALLTIME_ERROR
+            elif 'time_most_prob' in output_params['errors']:
                 return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
