@@ -26,7 +26,7 @@ def check_para_namelists(params, version):
 
     for key in params.keys():
         for level in namelists[version].keys():
-            if level in key and 'CPU' in key:
+            if level in key and '_CPU' in key:
                 if level+namelists[version][level]+'CPU' == key:
                     pass
                 else:

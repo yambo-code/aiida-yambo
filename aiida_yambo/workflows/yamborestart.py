@@ -149,6 +149,7 @@ class YamboRestart(BaseRestartWorkChain):
 
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
+            self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
 
@@ -169,6 +170,7 @@ class YamboRestart(BaseRestartWorkChain):
         new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+
             
         new_para = check_para_namelists(new_para, self.inputs.code_version.value)
         if new_para:
@@ -177,6 +179,7 @@ class YamboRestart(BaseRestartWorkChain):
 
 
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
+            self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
 

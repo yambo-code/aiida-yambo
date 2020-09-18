@@ -7,6 +7,18 @@ import numpy
 import copy
 import glob, os, re
 
+def take_fermi_parser(file):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
+
+    for line in file:
+        if '[X]Fermi Level' in line:
+            print('The Fermi level is {}'.format(line.split()[3]))
+            ef = float(line.split()[3])
+        if '[X] Fermi Level' in line:
+            print('The Fermi level is {}'.format(line.split()[4]))
+            ef = float(line.split()[4])
+
+    return ef
+
 def yambotiming_to_seconds(yt):
     t = 0
     th = 0
@@ -40,8 +52,9 @@ def parse_log(log, output_params):
     else:
         #Game over...
         game_over = re.compile('Game')
+        game_over_2 = re.compile('Clock:')
         for line in log.lines:
-            if game_over.findall(line):
+            if game_over.findall(line) or game_over_2.findall(line):
                 output_params['game_over'] = True
 
         #timing sections...
@@ -73,6 +86,7 @@ def parse_log(log, output_params):
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
         impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
+        time_probably = re.compile('Alloc Xo%blc_d')
         X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
         reading_explosion_of_memory = re.compile('Reading')
         for line in log.lines:
@@ -85,20 +99,33 @@ def parse_log(log, output_params):
                 output_params['errors'].append('memory_general')
             elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
                 output_params['para_error'] = True
-        if  reading_explosion_of_memory.findall(log.lines[-1]):
-            output_params['memory_error'] = True
-            output_params['errors'].append('memory_general')
-        if  X_par_mem.findall(log.lines[-1]):
-            output_params['memory_error'] = True
-            output_params['errors'].append('X_par_allocation')
+            elif time_probably.findall(line):
+                output_params['errors'].append('time_most_prob')
+        try:
+            if  reading_explosion_of_memory.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
+        except:
+            pass
+        try:
+            if  X_par_mem.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('X_par_allocation')
+        except:
+            pass
         # if  alloc2_error.findall(log.lines[-1]):
         #    output_params['memory_error'] = True
         #    output_params['errors'].append('memory_general')
-
+        
             
     return output_params
 
 def parse_report(report, output_params):
+    
+    try:
+        output_params['Fermi(eV)'] = take_fermi_parser(report.lines)
+    except:
+        pass
 
     if 'setup' in report.filename:
         pass
@@ -106,9 +133,10 @@ def parse_report(report, output_params):
     else:
         #Game over...
         game_over = re.compile('Game')
+        game_over_2 = re.compile('Clock:')
         gpu_support = re.compile('CUDA')
         for line in report.lines:
-            if game_over.findall(line):
+            if game_over.findall(line) or game_over_2.findall(line):
                 output_params['game_over'] = True
         
             if gpu_support.findall(line):
@@ -120,11 +148,12 @@ def parse_scheduler_stderr(stderr, output_params):
     m2 = re.compile('segmentation')
     m3 = re.compile('dumped')
     t1 = re.compile('walltime')
+    t2 = re.compile('time')
     for line in stderr.lines:
         if m1.findall(line) or m2.findall(line) or m3.findall(line):
             output_params['memory_error'] = True
             output_params['errors'].append('memory_general') 
-        elif t1.findall(line):
+        elif t1.findall(line) or t2.findall(line):
             output_params['time_error'] = True
 
 def yambo_wrote_dbs(output_params):

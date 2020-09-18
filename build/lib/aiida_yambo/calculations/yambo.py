@@ -134,8 +134,7 @@ class YamboCalculation(CalcJob):
 
     def prepare_for_submission(self, tempfolder):
 
-        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC',
-                         'ns.db1': 'ns.db1',}
+        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC',}
 
         local_copy_list = []
         remote_copy_list = []
@@ -353,8 +352,8 @@ class YamboCalculation(CalcJob):
         extra_retrieved = []
 
         if initialise:
-            extra_retrieved.append('SAVE/'+_dbs_accepted['ns.db1'])
-
+        #    extra_retrieved.append('SAVE/'+_dbs_accepted['ns.db1'])
+            pass
         else:
             for dbs in _dbs_accepted.keys():
                 db = boolean_dict.pop(dbs,False)

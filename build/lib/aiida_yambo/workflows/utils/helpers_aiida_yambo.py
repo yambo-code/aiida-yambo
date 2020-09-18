@@ -149,7 +149,7 @@ class calc_manager_aiida_yambo:
                     yambo_calc = load_node(self.wfl_pk).caller.called[backtrace-i].called[0].called[0]
                 except: #YamboWorkflow,YamboRestart of YamboCalculation
                     yambo_calc = load_node(self.wfl_pk)
-                    print('values provided are: [iteration,value in eV,workflow pk]')
+                    print('values provided are: [iteration, value in eV, workflow pk]')
                 if yambo_calc.is_finished_ok:
                     if what == 'gap':
                         _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
@@ -171,4 +171,4 @@ class calc_manager_aiida_yambo:
         return quantities
 
     def start_from_converged(self, inputs, node):
-         inputs.yres.yambo.parameters = node.get_builder_restart().yres.yambo['parameters']
+         inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']

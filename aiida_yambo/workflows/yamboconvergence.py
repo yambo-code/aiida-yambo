@@ -238,6 +238,9 @@ class YamboConvergence(WorkChain):
         self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
         self.ctx.p2y_inputs.yres.yambo.settings = update_dict(self.ctx.p2y_inputs.yres.yambo.settings, 'INITIALISE', False)
         self.ctx.p2y = calc['p2y']
+        self.report('setting label "p2y _on YC"')
+        load_node(calc['p2y'].pk).label = 'p2y _on YC'
+
         return ToContext(calc)
 
     def prepare_calculations(self):
@@ -266,6 +269,9 @@ class YamboConvergence(WorkChain):
         calc['PRE_CALC'] = self.submit(YamboWorkflow, **self.ctx.precalc_inputs) #################run
         self.report('Submitted preliminary YamboWorkflow, pk = {}'.format(calc['PRE_CALC'].pk))
         self.ctx.PRE = calc['PRE_CALC']
+        self.report('setting label "precalc _on YC"')
+        load_node(calc['PRE_CALC'].pk).label = 'precalc _on YC'
+
         return ToContext(calc)
 
     def post_processing(self):
