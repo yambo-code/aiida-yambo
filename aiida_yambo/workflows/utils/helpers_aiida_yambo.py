@@ -171,4 +171,4 @@ class calc_manager_aiida_yambo:
         return quantities
 
     def start_from_converged(self, inputs, node):
-         inputs.yres.yambo.parameters = node.get_builder_restart().yres.yambo['parameters']
+         inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yres.yambo['parameters']
