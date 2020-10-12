@@ -77,7 +77,8 @@ def parse_log(log, output_params):
             except:
                 last_time = 0
                 output_params['last_time'] = 0
-
+        #warnings
+        warning = re.compile('\[WARNING\]')      
         #memstats...
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
         memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
@@ -90,7 +91,9 @@ def parse_log(log, output_params):
         X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
         reading_explosion_of_memory = re.compile('Reading')
         for line in log.lines:
-            if memory.match(line):
+            if warning.match(line):
+                output_params['warnings'].append(warning.match(line).string)
+            elif memory.match(line):
                 output_params['memstats'].append(memory.match(line).string)
             elif memory_old.match(line):
                     output_params['memstats'].append(memory_old.match(line).string)

@@ -65,7 +65,7 @@ class convergence_workflow_manager:
         if calc_manager.var == 'kpoints':
             set_parent(inputs, load_node(last_ok_pk))
 
-        final_result={'calculation_pk': last_ok_pk,\
+        final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
                 'result_eV':self.workflow_story.iloc[-1]['result_eV'],'success':self.workflow_story.iloc[-1]['useful']}
 
         return final_result
@@ -84,7 +84,7 @@ class convergence_workflow_manager:
         if calc_manager.var == 'kpoints':
             set_parent(inputs, load_node(last_ok_pk))
 
-        final_result={'calculation_pk': last_ok_pk,\
+        final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
                     'result_eV':self.workflow_story[self.workflow_story.useful == True].iloc[-1]['result_eV'],'success':bool(self.workflow_story[self.workflow_story.useful == True].iloc[-1]['useful'])}
 
         self.workflow_story = self.workflow_story.replace({np.nan:None})

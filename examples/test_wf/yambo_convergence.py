@@ -17,8 +17,8 @@ def get_options():
     parser = argparse.ArgumentParser(description='YAMBO calculation.')
     parser.add_argument(
         '--yambocode',
-        type=int,
-        dest='yambocode_pk',
+        type=str,
+        dest='yambocode_id',
         required=True,
         help='The yambo(main code) codename to use')
 
@@ -31,15 +31,15 @@ def get_options():
 
     parser.add_argument(
         '--yamboprecode',
-        type=int,
-        dest='yamboprecode_pk',
+        type=str,
+        dest='yamboprecode_id',
         required=True,
         help='The precode to use')
 
     parser.add_argument(
         '--pwcode',
-        type=int,
-        dest='pwcode_pk',
+        type=str,
+        dest='pwcode_id',
         required=True,
         help='The pw to use')
 
@@ -55,7 +55,7 @@ def get_options():
         type=int,
         dest='max_wallclock_seconds',
         required=False,
-        default=30*60,
+        default=24*60*60,
         help='max wallclock in seconds')
 
     parser.add_argument(
@@ -110,9 +110,9 @@ def get_options():
 
     ###### setting the machine options ######
     options = {
-        'yambocode_pk': args.yambocode_pk,
-        'yamboprecode_pk': args.yamboprecode_pk,
-        'pwcode_pk': args.pwcode_pk,
+        'yambocode_id': args.yambocode_id,
+        'yamboprecode_id': args.yamboprecode_id,
+        'pwcode_id': args.pwcode_id,
         'pseudo_family': args.pseudo_family,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
@@ -120,7 +120,7 @@ def get_options():
             "num_mpiprocs_per_machine": args.num_mpiprocs_per_machine,
             "num_cores_per_mpiproc": args.num_cores_per_mpiproc,
         },
-        'custom_scheduler_commands': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
+        'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
     if args.parent_pk:
@@ -278,14 +278,14 @@ def main(options):
     if 'account' in options:
         builder.ywfl.scf.pw.metadata.options.account = options['account']
 
-    builder.ywfl.scf.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+    builder.ywfl.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
     builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
     builder.ywfl.nscf.pw.parameters = parameter_nscf
     builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 
-    builder.ywfl.scf.pw.code = load_node(options['pwcode_pk'])
-    builder.ywfl.nscf.pw.code = load_node(options['pwcode_pk'])
+    builder.ywfl.scf.pw.code = load_code(options['pwcode_id'])
+    builder.ywfl.nscf.pw.code = load_code(options['pwcode_id'])
     builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
     builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
@@ -310,10 +310,12 @@ def main(options):
     builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
     builder.ywfl.yres.max_iterations = Int(5)
 
-    builder.ywfl.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
-    builder.ywfl.yres.yambo.code = load_node(options['yambocode_pk'])
-
-    builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+    builder.ywfl.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
+    builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
+    try:
+        builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+    except:
+        pass
 
     builder.p2y = builder.ywfl
     builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
@@ -321,7 +323,6 @@ def main(options):
     builder.workflow_settings = Dict(dict={'type':'1D_convergence',
                                            'what':'gap',
                                            'where':[(1,8,1,9)],
-                                           'k-point':['Gamma'],
                                            'PRE_CALC': False,})
 
     #'what': 'single-levels','where':[(1,8),(1,9)]
@@ -329,14 +330,13 @@ def main(options):
                                  'conv_thr': 0.2, 'conv_window': 2},
                    {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
                                 'conv_thr': 0.2, 'conv_window': 2},
-                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 5, \
-                                 'conv_thr': 0.1, 'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
-                                 'conv_thr': 0.1, 'conv_window': 2},]
-    '''
+                  # {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 5, \
+                  #               'conv_thr': 0.1, 'conv_window': 2},
+                   #{'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
+                    #             'conv_thr': 0.1, 'conv_window': 2},]
                    {'var':'kpoints','delta': 1, 'steps': 2, 'max_iterations': 2, \
-                                 'conv_thr': 0.1, 'conv_window': 2, 'what':'gap','where':[(1,1)],}]
-    '''
+                                 'conv_thr': 0.1, 'conv_window': 2}]
+
 
     for i in range(len(var_to_conv)):
         print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
@@ -349,4 +349,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboConvergence; with pk=<{}>".format(running.pk))
+    print("Submitted YamboConvergence; with pk=< {} >".format(running.pk))

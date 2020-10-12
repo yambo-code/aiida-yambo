@@ -65,11 +65,17 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        spec.output('story', valid_type = Dict, help='all calculations')
+        spec.output('history', valid_type = Dict, help='all calculations')
         spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
+        spec.output('last_calculation_remote_folder', valid_type = RemoteData, required = False, \
+                                                      help='final remote folder')
 
         spec.exit_code(300, 'UNDEFINED_STATE',
                              message='The workchain is in an undefined state.')
+        spec.exit_code(301, 'P2Y_FAILED',
+                             message='The workchain failed the p2y step.')  
+        spec.exit_code(302, 'PRECALC_FAILED',
+                             message='The workchain failed the precalc step.')                                      
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
 
@@ -197,9 +203,10 @@ class YamboConvergence(WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
         
         story = store_Dict(self.ctx.workflow_manager.workflow_story.to_dict())
-        self.out('story', story)
+        self.out('history', story)
         final_result = store_Dict(self.ctx.final_result)
         self.out('last_calculation',final_result)
+
 
         if not self.ctx.calc_manager.success:
             self.report('Convergence not reached')
@@ -207,6 +214,9 @@ class YamboConvergence(WorkChain):
         elif self.ctx.calc_manager.success == 'undefined':
             self.report('Undefined state')
             return self.exit_codes.UNDEFINED_STATE
+
+        remote_folder = load_node(final_result['calculation_uuid']).outputs.remote_folder
+        self.out('last_calculation_remote_folder',remote_folder)
 
 ###############################starting p2y#####################
     def p2y_needed(self):
@@ -244,6 +254,10 @@ class YamboConvergence(WorkChain):
         return ToContext(calc)
 
     def prepare_calculations(self):
+        if not self.ctx.p2y.is_finished_ok:
+            self.report('the p2y calc was not succesful, exiting...')
+            return self.exit_codes.P2Y_FAILED
+
         self.report('setting the p2y calc as parent')
         set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.remote_folder)
 
@@ -275,6 +289,10 @@ class YamboConvergence(WorkChain):
         return ToContext(calc)
 
     def post_processing(self):
+        if not self.ctx.PRE.is_finished_ok:
+            self.report('the precalc was not succesful, exiting...')
+            return self.exit_codes.PRECALC_FAILED
+        
         self.report('setting the preliminary calc as parent and its db as starting one')
         set_parent(self.ctx.calc_inputs, self.ctx.PRE.outputs.remote_folder)
 

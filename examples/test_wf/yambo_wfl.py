@@ -17,8 +17,8 @@ def get_options():
     parser = argparse.ArgumentParser(description='YAMBO calculation.')
     parser.add_argument(
         '--yambocode',
-        type=int,
-        dest='yambocode_pk',
+        type=str,
+        dest='yambocode_id',
         required=True,
         help='The yambo(main code) codename to use')
 
@@ -31,15 +31,15 @@ def get_options():
 
     parser.add_argument(
         '--yamboprecode',
-        type=int,
-        dest='yamboprecode_pk',
+        type=str,
+        dest='yamboprecode_id',
         required=True,
         help='The precode to use')
 
     parser.add_argument(
         '--pwcode',
-        type=int,
-        dest='pwcode_pk',
+        type=str,
+        dest='pwcode_id',
         required=True,
         help='The pw to use')
 
@@ -55,7 +55,7 @@ def get_options():
         type=int,
         dest='max_wallclock_seconds',
         required=False,
-        default=30*60,
+        default=24*60*60,
         help='max wallclock in seconds')
 
     parser.add_argument(
@@ -110,9 +110,9 @@ def get_options():
 
     ###### setting the machine options ######
     options = {
-        'yambocode_pk': args.yambocode_pk,
-        'yamboprecode_pk': args.yamboprecode_pk,
-        'pwcode_pk': args.pwcode_pk,
+        'yambocode_id': args.yambocode_id,
+        'yamboprecode_id': args.yamboprecode_id,
+        'pwcode_id': args.pwcode_id,
         'pseudo_family': args.pseudo_family,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
@@ -120,7 +120,7 @@ def get_options():
             "num_mpiprocs_per_machine": args.num_mpiprocs_per_machine,
             "num_cores_per_mpiproc": args.num_cores_per_mpiproc,
         },
-        'custom_scheduler_commands': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
+        'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
     if args.parent_pk:
@@ -278,15 +278,15 @@ def main(options):
     if 'account' in options:
         builder.scf.pw.metadata.options.account = options['account']
 
-    builder.scf.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+    builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
     builder.nscf.pw.structure = builder.scf.pw.structure
     builder.nscf.pw.parameters = parameter_nscf
     builder.nscf.kpoints = builder.scf.kpoints
     builder.nscf.pw.metadata = builder.scf.pw.metadata
 
-    builder.scf.pw.code = load_node(options['pwcode_pk'])
-    builder.nscf.pw.code = load_node(options['pwcode_pk'])
+    builder.scf.pw.code = load_code(options['pwcode_id'])
+    builder.nscf.pw.code = load_code(options['pwcode_id'])
     builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
     builder.nscf.pw.pseudos = builder.scf.pw.pseudos
@@ -311,10 +311,12 @@ def main(options):
     builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
     builder.yres.max_iterations = Int(5)
 
-    builder.yres.yambo.preprocessing_code = load_node(options['yamboprecode_pk'])
-    builder.yres.yambo.code = load_node(options['yambocode_pk'])
-
-    builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+    builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
+    builder.yres.yambo.code = load_code(options['yambocode_id'])
+    try:
+        builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+    except:
+        pass
 
     return builder
 
@@ -322,4 +324,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboWorkflow workchain; with pk=<{}>".format(running.pk))
+    print("Submitted YamboWorkflow workchain; with pk=< {} >".format(running.pk))

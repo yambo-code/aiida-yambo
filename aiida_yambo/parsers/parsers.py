@@ -209,13 +209,6 @@ class YamboParser(Parser):
                         self.out(self._alpha_array_linkname+'_bands',arr)
                     elif type(arr) == ArrayData:
                         self.out(self._alpha_array_linkname + '_arr', arr)
-
-            else:
-                if not initialise:
-                    output_params['warnings'].extend(
-                        'Parser output format is invalid')
-                else:
-                    pass
         
         yambo_wrote_dbs(output_params)
 
