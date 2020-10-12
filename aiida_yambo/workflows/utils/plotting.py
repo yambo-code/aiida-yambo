@@ -17,28 +17,28 @@ from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 
 ###### PLOT ######
 
-def plot_1D_convergence(ax, story, title='',where=1,\
+def plot_1D_convergence(ax, history, title='',where=1,\
               units={'NGsBlkXp':'(Ry)','kpoints':' (mesh)'}):
 
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
     
-    if isinstance(story,WorkChainNode):
-        y = story.outputs.story.get_dict() 
-        story= pd.DataFrame(y)
-    elif isinstance(story,int):
-        x = load_node(story)
-        y = x.outputs.story.get_dict() 
-        story= pd.DataFrame(y)     
-    elif isinstance(story,dict):
-        y = story
-        story= pd.DataFrame(y)
-    elif 'DataFrame' in str(type(story)):
+    if isinstance(history,WorkChainNode):
+        y = history.outputs.history.get_dict() 
+        history= pd.DataFrame(y)
+    elif isinstance(history,int) or isinstance(history,str):
+        x = load_node(history)
+        y = x.outputs.history.get_dict() 
+        history= pd.DataFrame(y)     
+    elif isinstance(history,dict):
+        y = history
+        history= pd.DataFrame(y)
+    elif 'DataFrame' in str(type(history)):
         pass
     else:
         raise TypeError('You have to provide: node, node_pk, output_dict or dataframe')      
     
-    yy = list(story.keys())
-    y = story.values.tolist()
+    yy = list(history.keys())
+    y = history.values.tolist()
     y.insert(0, yy)
     
     for i in range(len(y)):

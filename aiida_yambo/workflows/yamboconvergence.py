@@ -65,8 +65,10 @@ class YamboConvergence(WorkChain):
 
 ##################################################################################
 
-        spec.output('story', valid_type = Dict, help='all calculations')
+        spec.output('history', valid_type = Dict, help='all calculations')
         spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
+        spec.output('last_calculation_remote_folder', valid_type = RemoteData, required = False, \
+                                                      help='final remote folder')
 
         spec.exit_code(300, 'UNDEFINED_STATE',
                              message='The workchain is in an undefined state.')
@@ -197,9 +199,10 @@ class YamboConvergence(WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
         
         story = store_Dict(self.ctx.workflow_manager.workflow_story.to_dict())
-        self.out('story', story)
+        self.out('history', story)
         final_result = store_Dict(self.ctx.final_result)
         self.out('last_calculation',final_result)
+
 
         if not self.ctx.calc_manager.success:
             self.report('Convergence not reached')
@@ -207,6 +210,9 @@ class YamboConvergence(WorkChain):
         elif self.ctx.calc_manager.success == 'undefined':
             self.report('Undefined state')
             return self.exit_codes.UNDEFINED_STATE
+
+        remote_folder = load_node(final_result['calculation_uuid']).outputs.remote_folder
+        self.out('last_calculation_remote_folder',remote_folder)
 
 ###############################starting p2y#####################
     def p2y_needed(self):
