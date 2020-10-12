@@ -10,20 +10,13 @@ import argparse
 
 def get_options():
 
-    parser = argparse.ArgumentParser(description='SCF calculation.')
+    parser = argparse.ArgumentParser(description='YAMBO calculation.')
     parser.add_argument(
-        '--code',
-        type=int,
-        dest='code_pk',
+        '--yambocode',
+        type=str,
+        dest='yambocode_id',
         required=True,
-        help='The yambo codename to use')
-
-    parser.add_argument(
-        '--precode',
-        type=int,
-        dest='precode_pk',
-        required=True,
-        help='The p2y codename to use')
+        help='The yambo(main code) codename to use')
 
     parser.add_argument(
         '--parent',
@@ -31,13 +24,20 @@ def get_options():
         dest='parent_pk',
         required=True,
         help='The parent to use')
+        
+    parser.add_argument(
+        '--yamboprecode',
+        type=str,
+        dest='yamboprecode_id',
+        required=True,
+        help='The precode to use')
 
     parser.add_argument(
         '--time',
         type=int,
         dest='max_wallclock_seconds',
         required=False,
-        default=30*60,
+        default=24*60*60,
         help='max wallclock in seconds')
 
     parser.add_argument(
@@ -92,17 +92,19 @@ def get_options():
 
     ###### setting the machine options ######
     options = {
-        'code_pk': args.code_pk,
-        'precode_pk': args.precode_pk,
-        'parent_pk': args.parent_pk,
+        'yambocode_id': args.yambocode_id,
+        'yamboprecode_id': args.yamboprecode_id,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
             "num_machines": args.num_machines,
             "num_mpiprocs_per_machine": args.num_mpiprocs_per_machine,
             "num_cores_per_mpiproc": args.num_cores_per_mpiproc,
         },
-        'custom_scheduler_commands': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
+        'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
+
+    if args.parent_pk:
+        options['parent_pk']=args.parent_pk
 
     if args.queue_name:
         options['queue_name']=args.queue_name
@@ -162,15 +164,15 @@ def main(options):
     if 'account' in options:
         builder.metadata.options.account = options['account']
 
-    builder.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+    builder.metadata.options.prepend_text = options['prepend_text']
 
     builder.parameters = params_gw
 
     builder.precode_parameters = Dict(dict={})
     builder.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
-    builder.code = load_node(options['code_pk'])
-    builder.preprocessing_code = load_node(options['precode_pk'])
+    builder.code = load_code(options['yambocode_id'])
+    builder.preprocessing_code = load_code(options['yamboprecode_id'])
 
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
@@ -182,4 +184,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboCalculation; with pk=<{}>".format(running.pk))
+    print("Submitted YamboCalculation; with pk=< {} >".format(running.pk))

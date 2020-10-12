@@ -15,8 +15,8 @@ def get_options():
     parser = argparse.ArgumentParser(description='SCF calculation.')
     parser.add_argument(
         '--code',
-        type=int,
-        dest='code_pk',
+        type=str,
+        dest='code_id',
         required=True,
         help='The pw codename to use')
 
@@ -87,7 +87,7 @@ def get_options():
 
     ###### setting the machine options ######
     options = {
-        'code_pk': args.code_pk,
+        'code_id': args.code_id,
         'pseudo_family': args.pseudo_family,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
@@ -181,9 +181,9 @@ def main(options):
     if 'account' in options:
         builder.metadata.options.account = options['account']
 
-    builder.pw.metadata.options.custom_scheduler_commands = options['custom_scheduler_commands']
+    builder.pw.metadata.options.prepend_text = options['prepend_text']
 
-    builder.pw.code = load_node(options['code_pk'])
+    builder.pw.code = load_code(options['code_id'])
     builder.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.pw.structure, pseudo_family = Str(options['pseudo_family']))
 
