@@ -16,11 +16,8 @@ from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 
-try:
-    from yamboparser import *
-except: 
-    from aiida_yambo.parsers.ext_dep.yambofile import *
-    from aiida_yambo.parsers.ext_dep.yambofolder import *
+from aiida_yambo.parsers.ext_dep.yambofile import *
+from aiida_yambo.parsers.ext_dep.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
@@ -163,7 +160,7 @@ class YamboParser(Parser):
 
         for file in os.listdir(out_folder._repository._repo_folder.abspath):
             if 'stderr' in file:
-                with open(file,'r') as stderrZZ:
+                with open(file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
 
         for result in results.yambofiles:
