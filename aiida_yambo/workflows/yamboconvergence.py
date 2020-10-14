@@ -159,8 +159,6 @@ class YamboConvergence(WorkChain):
             calc[str(parameters_space.index(parameter))] = future
             self.ctx.calc_manager['wfl_pk'] = future.pk
 
-        self.report(self.ctx)
-
         return ToContext(calc)
 
 
@@ -189,8 +187,6 @@ class YamboConvergence(WorkChain):
             self.report('Success, updating the history... ')
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
                  self.ctx.calc_manager, oversteps, workflow_dict=self.ctx.workflow_manager)
-            
-            self.report(self.ctx.final_result)
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \

@@ -14,5 +14,5 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Environment :: Plugins
 Classifier: Topic :: Scientific/Engineering :: Physics
 Classifier: Framework :: AiiDA
-Provides-Extra: pre-commit
 Provides-Extra: docs
+Provides-Extra: pre-commit
