@@ -163,7 +163,7 @@ class YamboParser(Parser):
 
         for file in os.listdir(out_folder._repository._repo_folder.abspath):
             if 'stderr' in file:
-                with open(file,'r') as stderrZZ:
+                with open(file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
 
         for result in results.yambofiles:
