@@ -76,6 +76,6 @@ def fix_time(options, restart, max_walltime):
                             int(options['max_wallclock_seconds']*1.5*restart)
 
     if options['max_wallclock_seconds'] > max_walltime:
-        options['max_wallclock_seconds'] = max_walltime
+        options['max_wallclock_seconds'] = int(max_walltime)
 
     return options
