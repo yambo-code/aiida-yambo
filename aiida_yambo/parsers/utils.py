@@ -49,7 +49,7 @@ def parse_log(log, output_params):
     elif 'setup' in log.filename:
         pass
     
-    else:
+    elif output_params['timing'] == []:
         #Game over...
         game_over = re.compile('Game')
         game_over_2 = re.compile('Clock:')
