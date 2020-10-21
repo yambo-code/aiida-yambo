@@ -93,6 +93,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
                     
     last_ok_pk = int(workflow_dict['workflow_story'].iloc[-1]['calc_pk'])
     last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+    start_from_converged(inputs, last_ok_wfl)
     
     if calc_manager['var'] == 'kpoints':
         set_parent(inputs, load_node(last_ok_pk))

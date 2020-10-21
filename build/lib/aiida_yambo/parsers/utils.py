@@ -49,7 +49,7 @@ def parse_log(log, output_params):
     elif 'setup' in log.filename:
         pass
     
-    elif output_params['timing'] == []:
+    else:
         #Game over...
         game_over = re.compile('Game')
         game_over_2 = re.compile('Clock:')
@@ -60,11 +60,12 @@ def parse_log(log, output_params):
         #timing sections...
         timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
         timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
-        for line in log.lines:
-            if timing.match(line):
-                output_params['timing'].append(timing.match(line).string)
-            elif timing_old.match(line):
-                output_params['timing'].append(timing_old.match(line).string)
+        if output_params['timing'] == []:
+            for line in log.lines:
+                if timing.match(line):
+                    output_params['timing'].append(timing.match(line).string)
+                elif timing_old.match(line):
+                    output_params['timing'].append(timing_old.match(line).string)
 
         time = re.compile('<([0-9hms-]+)>')
         try:

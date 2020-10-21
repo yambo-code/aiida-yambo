@@ -170,3 +170,5 @@ def take_quantities(calc_dict, steps = 1, where = [], what = 'gap',backtrace=1):
 
 def start_from_converged(inputs, node):
     inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']
+    inputs.yres.yambo.metadata.options.resources = node.called[0].called[0].get_options()['resources']
+    inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[0].called[0].get_options()['max_wallclock_seconds']

@@ -209,7 +209,13 @@ class YamboParser(Parser):
         
         yambo_wrote_dbs(output_params)
 
-        params=Dict(dict=output_params)
+        if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
+                  / float(output_params['requested_time'])) < 0.25: 
+
+                  output_params['time_error'] = True 
+
+        params=Dict(dict=output_params) 
+
         self.out(self._parameter_linkname,params)  # output_parameters
 
 
@@ -228,11 +234,11 @@ class YamboParser(Parser):
             success = True
         elif output_params['p2y_completed'] and initialise:
             success = True
-            
+
+
 
         if success == False:
-            if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
-                  / float(output_params['requested_time'])) < 0.25: 
+            if output_params['time_error']: 
                 return self.exit_codes.WALLTIME_ERROR
             elif 'time_most_prob' in output_params['errors']:
                 return self.exit_codes.WALLTIME_ERROR
@@ -242,8 +248,6 @@ class YamboParser(Parser):
                 return self.exit_codes.X_par_MEMORY_ERROR              
             elif output_params['memory_error']:
                 return self.exit_codes.MEMORY_ERROR
-            elif output_params['time_error']:
-                return self.exit_codes.WALLTIME_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
 
