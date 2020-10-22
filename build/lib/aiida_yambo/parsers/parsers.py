@@ -16,11 +16,8 @@ from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 
-try:
-    from yamboparser import *
-except: 
-    from aiida_yambo.parsers.ext_dep.yambofile import *
-    from aiida_yambo.parsers.ext_dep.yambofolder import *
+from aiida_yambo.parsers.ext_dep.yambofile import *
+from aiida_yambo.parsers.ext_dep.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
@@ -163,7 +160,7 @@ class YamboParser(Parser):
 
         for file in os.listdir(out_folder._repository._repo_folder.abspath):
             if 'stderr' in file:
-                with open(file,'r') as stderrZZ:
+                with open(file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
 
         for result in results.yambofiles:
@@ -212,11 +209,6 @@ class YamboParser(Parser):
         
         yambo_wrote_dbs(output_params)
 
-        params=Dict(dict=output_params)
-        self.out(self._parameter_linkname,params)  # output_parameters
-
-
-
         # we store  all the information from the ndb.* files rather than in separate files
         # if possible, else we default to separate files.
         if ndbqp and ndbhf:  #
@@ -231,13 +223,21 @@ class YamboParser(Parser):
             success = True
         elif output_params['p2y_completed'] and initialise:
             success = True
-            
+        
+        #last check on time
+        delta_time = (float(output_params['requested_time'])-float(output_params['last_time'])) \
+                  / float(output_params['requested_time'])
+        
+        if success == False:
+            if delta_time > -2 and delta_time < 0.1:
+                    output_params['time_error']=True
+
+        params=Dict(dict=output_params)
+        self.out(self._parameter_linkname,params)  # output_parameters
 
         if success == False:
-            if abs((float(output_params['last_time'])-float(output_params['requested_time'])) \
-                  / float(output_params['requested_time'])) < 0.25: 
-                return self.exit_codes.WALLTIME_ERROR
-            elif 'time_most_prob' in output_params['errors']:
+
+            if 'time_most_prob' in output_params['errors']:
                 return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR

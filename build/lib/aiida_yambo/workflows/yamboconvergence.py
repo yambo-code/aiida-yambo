@@ -12,6 +12,7 @@ from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida_yambo.workflows.utils.helpers_aiida_yambo import *
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
 from aiida_yambo.workflows.utils.helpers_workflow import *
 from aiida_yambo.utils.common_helpers import *
@@ -93,71 +94,70 @@ class YamboConvergence(WorkChain):
         
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space, self.inputs.workflow_settings.get_dict())
 
-        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), wfl_settings = self.inputs.workflow_settings.get_dict()) 
+        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), wfl_settings = self.inputs.workflow_settings.get_dict()) 
 
-        self.ctx.final_result = []      
+        self.ctx.final_result = {}     
 
         self.report('Workflow on {}'.format(self.inputs.workflow_settings.get_dict()['type']))
-        self.report("workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager.var))
+        self.report("workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager['var']))
 
     def has_to_continue(self):
-
+        
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.workflow_manager.fully_success:
+        if self.ctx.workflow_manager['fully_success']:
             self.report('Workflow finished')
             return False
 
-        elif not self.ctx.calc_manager.success and \
-                    self.ctx.calc_manager.iter >= self.ctx.calc_manager.max_iterations:
-            self.report('Workflow failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager.var))
+        elif not self.ctx.calc_manager['success'] and \
+                    self.ctx.calc_manager['iter'] >= self.ctx.calc_manager['max_iterations']:
+            self.report('Workflow failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager['var']))
 
             return False
 
-        elif self.ctx.calc_manager.success:
+        elif self.ctx.calc_manager['success']:
             #update variable to conv
-            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager.true_iter.pop(), wfl_settings = self.inputs.workflow_settings.get_dict())
-            self.report('Next parameters: {}'.format(self.ctx.calc_manager.var))
+            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), wfl_settings = self.inputs.workflow_settings.get_dict())
+            self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
             
             return True
       
-        elif not self.ctx.calc_manager.success:
-            self.report('Still iteration on {}'.format(self.ctx.calc_manager.var))
+        elif not self.ctx.calc_manager['success']:
+            self.report('Still iteration on {}'.format(self.ctx.calc_manager['var']))
             
             return True
        
         else:
-            self.report('Undefined state on {}, so we exit'.format(self.ctx.calc_manager.var))
-            self.ctx.calc_manager.success = 'undefined'
+            self.report('Undefined state on {}, so we exit'.format(self.ctx.calc_manager['var']))
+            self.ctx.calc_manager['success'] = 'undefined'
             
             return False
 
 
     def next_step(self):
         """This function will submit the next step"""
-        self.ctx.calc_manager.iter +=1
+        self.ctx.calc_manager['iter'] +=1
         
         #loop on the given steps of given variables
         calc = {}
-        self.ctx.workflow_manager.values = []
-        parameters_space = self.ctx.calc_manager.parameters_space_creator(self.ctx.workflow_manager.first_calc, \
+        self.ctx.workflow_manager['values'] = []
+        parameters_space = parameters_space_creator(self.ctx.calc_manager, self.ctx.workflow_manager['first_calc'], \
                             take_calc_from_remote(self.ctx.calc_inputs.parent_folder), \
                             self.ctx.calc_inputs.yres.yambo.parameters.get_dict())
         self.report('parameter space will be {}'.format(parameters_space))
-        self.ctx.calc_manager.steps = len(parameters_space)
+        self.ctx.calc_manager['steps'] = len(parameters_space)
         for parameter in parameters_space:
             self.report(parameter)
             self.ctx.calc_inputs, value = \
-                        self.ctx.calc_manager.updater(self.ctx.calc_inputs, parameter)
+                        updater(self.ctx.calc_manager, self.ctx.calc_inputs, parameter)
 
-            self.ctx.workflow_manager.values.append(value)
-            self.report('Preparing iteration number {} on {}: {}'.format((self.ctx.calc_manager.iter-1)* \
-                        self.ctx.calc_manager.steps \
+            self.ctx.workflow_manager['values'].append(value)
+            self.report('Preparing iteration number {} on {}: {}'.format((self.ctx.calc_manager['iter']-1)* \
+                        self.ctx.calc_manager['steps'] \
                         + parameters_space.index(parameter)+1,parameter[0],value))
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(parameters_space.index(parameter))] = future
-            self.ctx.calc_manager.wfl_pk = future.pk
-
+            self.ctx.calc_manager['wfl_pk'] = future.pk
 
         return ToContext(calc)
 
@@ -167,51 +167,55 @@ class YamboConvergence(WorkChain):
         self.report('Data analysis, we will try to parse some result and decide what next')
         post_processor = the_evaluator(self.ctx.calc_manager) 
 
-        quantities = self.ctx.calc_manager.take_quantities()
-        self.ctx.workflow_manager.build_story_global(self.ctx.calc_manager, quantities)
-        
-        self.report('results: {}'.format(self.ctx.workflow_manager.array_conv))
-        
-        self.ctx.calc_manager.success, oversteps = \
-                post_processor.analysis_and_decision(self.ctx.workflow_manager.array_conv)
+        quantities = take_quantities(self.ctx.calc_manager)
 
-        self.ctx.workflow_manager.update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs)
+        build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
+        
+        self.report('results: {}'.format(np.array(self.ctx.workflow_manager['array_conv'])))
+        
+        self.ctx.calc_manager['success'], oversteps = \
+                post_processor.analysis_and_decision(self.ctx.workflow_manager['array_conv'])
+
+        self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
+                         workflow_dict=self.ctx.workflow_manager)
 
         #self.report('The history:')
-        #self.report(self.ctx.workflow_manager.workflow_story)
+        #self.report(self.ctx.workflow_manager['workflow_story'])
 
-        if self.ctx.calc_manager.success:
+        if self.ctx.calc_manager['success']:
 
             self.report('Success, updating the history... ')
-            self.ctx.final_result = self.ctx.workflow_manager.post_analysis_update(self.ctx.calc_inputs, self.ctx.calc_manager, oversteps)
-            
-            self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
-                        .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter,\
-                            self.ctx.workflow_manager.workflow_story[self.ctx.workflow_manager.workflow_story.useful == True].iloc[-1]['result_eV']))
+            self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
+                 self.ctx.calc_manager, oversteps, workflow_dict=self.ctx.workflow_manager)
 
-            if self.ctx.workflow_manager.true_iter == [] : #variables to be converged are finished
-                    self.ctx.workflow_manager.fully_success = True
+            df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
+            self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
+                        .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter'],\
+                            df_story[df_story['useful'] == True].iloc[-1]['result_eV']))
+
+            if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
+                    self.ctx.workflow_manager['fully_success'] = True
 
         else:
             self.report('Success on {} not reached yet in {} calculations' \
-                        .format(self.ctx.calc_manager.var, self.ctx.calc_manager.steps*self.ctx.calc_manager.iter))
+                        .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
 
-        self.ctx.workflow_manager.first_calc = False
+        self.ctx.workflow_manager['first_calc'] = False
 
     def report_wf(self):
 
-        self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager.fully_success)))
+        self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         
-        story = store_Dict(self.ctx.workflow_manager.workflow_story.to_dict())
+        story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
         final_result = store_Dict(self.ctx.final_result)
         self.out('last_calculation',final_result)
 
 
-        if not self.ctx.calc_manager.success:
+        if not self.ctx.calc_manager['success']:
             self.report('Convergence not reached')
             return self.exit_codes.CONVERGENCE_NOT_REACHED
-        elif self.ctx.calc_manager.success == 'undefined':
+        elif self.ctx.calc_manager['success'] == 'undefined':
             self.report('Undefined state')
             return self.exit_codes.UNDEFINED_STATE
 

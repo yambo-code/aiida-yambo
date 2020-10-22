@@ -124,22 +124,22 @@ class YamboWorkflow(WorkChain):
             
         if self.ctx.calc_to_do == 'scf':
 
-            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
+            self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
 
-            future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
+            future = self.submit(PwBaseWorkChain, **self.ctx.scf_inputs)
 
             self.ctx.calc_to_do = 'nscf'
 
         elif self.ctx.calc_to_do == 'nscf':
 
-            self.ctx.pw_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
+            self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
             try:
-                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
+                self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
             except:
-                self.ctx.pw_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
+                self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
 
-            future = self.submit(PwBaseWorkChain, **self.ctx.pw_inputs)
+            future = self.submit(PwBaseWorkChain, **self.ctx.nscf_inputs)
 
             self.ctx.calc_to_do = 'yambo'
 
