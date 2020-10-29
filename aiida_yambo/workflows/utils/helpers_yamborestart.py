@@ -56,10 +56,16 @@ def fix_memory(resources, failed_calc, exit_status):
 
 
     if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu']: #there should be a limit
-        resources['num_machines'] = int(1.5*resources['num_machines'])
-        resources['num_machines'] += resources['num_machines']%2
-        resources['num_mpiprocs_per_machine'] *= 2
-        resources['num_cores_per_mpiproc'] /= 2
+        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
+                                                        resources['num_cores_per_mpiproc'], bands, \
+                                                        occupied, qp, kpoints,\
+                                                        what, last_qp, namelist = {})
+    
+    
+    #    resources['num_machines'] = int(1.5*resources['num_machines'])
+    #    resources['num_machines'] += resources['num_machines']%2
+    #    resources['num_mpiprocs_per_machine'] *= 2
+    #    resources['num_cores_per_mpiproc'] /= 2
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
         new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine']/2, \
