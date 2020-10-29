@@ -173,7 +173,7 @@ class YamboConvergence(WorkChain):
         
         self.report('results: {}'.format(np.array(self.ctx.workflow_manager['array_conv'])))
         
-        self.ctx.calc_manager['success'], oversteps = \
+        self.ctx.calc_manager['success'], oversteps, none_encountered = \
                 post_processor.analysis_and_decision(self.ctx.workflow_manager['array_conv'])
 
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
@@ -195,11 +195,19 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
+        
+        elif none_encountered:
+            self.report('Some calculations failed, updating the history and exiting... ')
+            
+            self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
+                 self.ctx.calc_manager, oversteps, workflow_dict=self.ctx.workflow_manager)
+                 self.ctx.calc_manager['iter'] = self.ctx.calc_manager['max_iterations'] #exiting the workflow
 
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
 
+        
         self.ctx.workflow_manager['first_calc'] = False
 
     def report_wf(self):

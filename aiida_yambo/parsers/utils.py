@@ -161,7 +161,7 @@ def parse_scheduler_stderr(stderr, output_params):
             output_params['time_error'] = True
 
 def yambo_wrote_dbs(output_params):
-    if len(output_params['timing']) > 3:
+    if len(output_params['timing']) > 6:
         output_params['yambo_wrote_dbs'] = True
     else:
         output_params['yambo_wrote_dbs'] = False

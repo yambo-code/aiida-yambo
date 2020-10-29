@@ -143,6 +143,16 @@ class the_evaluator:
             self.tol = self.infos['conv_thr']
             converged = True
             oversteps = 0
+            none_encountered = False
+
+            for j in range(1,len(quantities[0,:])+1):
+                if not isinstance(quantities[0,-j],np.float):
+                    converged = False
+                    oversteps +=1
+                    none_encountered = True
+            
+            if none_encountered = True:
+                return converged, oversteps, none_encountered
 
             for i in range(2,len(quantities[0,:])+1): #check it
                 if np.max(abs(quantities[:,-1]-quantities[:,-i])) < self.tol: #backcheck
@@ -153,7 +163,7 @@ class the_evaluator:
             if oversteps < self.window-1:
                 converged = False
 
-            return converged, oversteps
+            return converged, oversteps, none_encountered
 
         if self.infos['type'] == '2D_space':
             '''documentation...'''
