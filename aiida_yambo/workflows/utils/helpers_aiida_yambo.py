@@ -43,6 +43,11 @@ def parameters_space_creator(calc_dict, first_calc, parent, last_inputs = {}):
         if calc_dict['var'] == 'kpoints':
 
             k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf','scf']))
+            k_mesh_old = find_pw_parent(parent, calc_type=['nscf','scf']).inputs.kpoints.get_kpoints_mesh()
+        
+        elif not isinstance(calc_dict['var'],list):
+            
+            calc_dict['var'] = calc_dict['var'].split(',')
 
         for i in range(calc_dict['steps']):
 
@@ -51,26 +56,39 @@ def parameters_space_creator(calc_dict, first_calc, parent, last_inputs = {}):
             else:
                 first = 1
 
-            if calc_dict['var'] == 'kpoints':
+            if calc_dict['var'] == 'kpoints' and k_distance_old:
+                if isinstance(calc_dict['delta'],list):
+                    calc_dict['delta'] = calc_dict['delta'][0]
 
                 k_distance = k_distance_old + calc_dict['delta']*(first+i)
                 new_value = k_distance
+                            
+            elif calc_dict['var'] == 'kpoints' and not k_distance_old:
+                if not isinstance(calc_dict['delta'],list):
+                    calc_dict['delta'] = 3*[calc_dict['delta']]
+                for k in range(i+first):
+                    k_mesh_0 = [sum(x) for x in zip(k_mesh_old[0], calc_dict['delta'])]
+                    k_mesh_1 = k_mesh_old[1]
+                    k_mesh = (k_mesh_0,k_mesh_1)
+                new_value = k_mesh
 
             elif isinstance(calc_dict['var'],list): #general
                 new_value = []
                 for j in calc_dict['var']:
-                    ind = 0
                     new_params = last_inputs[j]
-                    for steps in range(i):
-                        new_params = [sum(x) for x in zip(new_params, calc_dict['delta'][calc_dict['var'].index(j)])]
-                    if first == 1:
-                        new_params = [sum(x) for x in zip(new_params, calc_dict['delta'][calc_dict['var'].index(j)])]
+                    
+                    for steps in range(i+first):
+                        if isinstance(calc_dict['delta'][calc_dict['var'].index(j)],list):
+                            new_params = [sum(x) for x in zip(new_params, calc_dict['delta'][calc_dict['var'].index(j)])]                            
+                        elif not isinstance(calc_dict['delta'][calc_dict['var'].index(j)],list) and not isinstance(new_params,list):
+                            new_params = new_params + calc_dict['delta'][calc_dict['var'].index(j)]
+                        elif isinstance(new_params,list):
+                            for k in range(len(new_params)):
+                                new_params = [sum(x) for x in zip(new_params, calc_dict['delta'])]
+                        else:
+                            new_params = new_params + calc_dict['delta']
+                        
                     new_value.append(new_params)
-
-            elif isinstance(calc_dict['var'],str): #general
-                new_params = last_inputs[calc_dict['var']]
-                new_params = new_params + calc_dict['delta']*(first+i)
-                new_value = new_params
 
             space.append((calc_dict['var'],new_value))
 
@@ -90,11 +108,14 @@ def updater(calc_dict, inp_to_update, parameters):
     new_values = parameters[1]
 
     if variables == 'kpoints':
-        k_distance = new_values
+        k_quantity = new_values
 
         inp_to_update.scf.kpoints = KpointsData()
         inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
-        inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
+        if isinstance(k_quantity,tuple):
+            inp_to_update.scf.kpoints.set_kpoints_mesh(k_quantity[0],k_quantity[1]) 
+        else:
+            inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
         inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
         try:
@@ -106,7 +127,7 @@ def updater(calc_dict, inp_to_update, parameters):
         inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
         inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
 
-        value = k_distance
+        value = k_quantity
 
     elif isinstance(variables,list): #general
         new_params = inp_to_update.yres.yambo.parameters.get_dict()
@@ -119,7 +140,10 @@ def updater(calc_dict, inp_to_update, parameters):
 
     elif isinstance(variables,str): #general
         new_params = inp_to_update.yres.yambo.parameters.get_dict()
-        new_params[variables] = new_values
+        if isinstance(new_values,list):
+            new_params[variables] = new_values[0]
+        else:
+            new_params[variables] = new_values
 
         inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
 
