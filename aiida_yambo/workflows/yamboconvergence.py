@@ -76,7 +76,9 @@ class YamboConvergence(WorkChain):
         spec.exit_code(301, 'P2Y_FAILED',
                              message='The workchain failed the p2y step.')  
         spec.exit_code(302, 'PRECALC_FAILED',
-                             message='The workchain failed the precalc step.')                                      
+                             message='The workchain failed the precalc step.')    
+        spec.exit_code(303, 'CALCs_FAILED',
+                             message='The workchain failed some calculations.')                                 
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
 
@@ -109,8 +111,14 @@ class YamboConvergence(WorkChain):
             return False
 
         elif not self.ctx.calc_manager['success'] and \
-                    self.ctx.calc_manager['iter'] >= self.ctx.calc_manager['max_iterations']:
+                    self.ctx.calc_manager['iter'] == self.ctx.calc_manager['max_iterations']:
             self.report('Workflow failed due to max restarts exceeded for variable {}'.format(self.ctx.calc_manager['var']))
+
+            return False
+        
+        elif not self.ctx.calc_manager['success'] and \
+                    self.ctx.calc_manager['iter'] > self.ctx.calc_manager['max_iterations']:
+            self.report('Workflow failed due to some failed calculation in the investigation of {}'.format(self.ctx.calc_manager['var']))
 
             return False
 
@@ -173,7 +181,7 @@ class YamboConvergence(WorkChain):
         
         self.report('results: {}'.format(np.array(self.ctx.workflow_manager['array_conv'])))
         
-        self.ctx.calc_manager['success'], oversteps, none_encountered = \
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered = \
                 post_processor.analysis_and_decision(self.ctx.workflow_manager['array_conv'])
 
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
@@ -186,7 +194,7 @@ class YamboConvergence(WorkChain):
 
             self.report('Success, updating the history... ')
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, workflow_dict=self.ctx.workflow_manager)
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
@@ -196,12 +204,12 @@ class YamboConvergence(WorkChain):
             if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
         
-        elif none_encountered:
+        elif self.ctx.none_encountered:
             self.report('Some calculations failed, updating the history and exiting... ')
             
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, workflow_dict=self.ctx.workflow_manager)
-                 self.ctx.calc_manager['iter'] = self.ctx.calc_manager['max_iterations'] #exiting the workflow
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+            self.ctx.calc_manager['iter'] = self.ctx.calc_manager['max_iterations']+1 #exiting the workflow
 
         else:
             self.report('Success on {} not reached yet in {} calculations' \
@@ -219,16 +227,21 @@ class YamboConvergence(WorkChain):
         final_result = store_Dict(self.ctx.final_result)
         self.out('last_calculation',final_result)
 
+        try:
+            remote_folder = load_node(final_result['calculation_uuid']).outputs.remote_folder
+            self.out('last_calculation_remote_folder',remote_folder)
+        except:
+            pass
 
-        if not self.ctx.calc_manager['success']:
+        if not self.ctx.calc_manager['success'] and self.ctx.none_encountered:
+            self.report('Some calculation failed, so we stopped the workflow')
+            return self.exit_codes.CALCs_FAILED
+        elif not self.ctx.calc_manager['success']:
             self.report('Convergence not reached')
             return self.exit_codes.CONVERGENCE_NOT_REACHED
         elif self.ctx.calc_manager['success'] == 'undefined':
             self.report('Undefined state')
-            return self.exit_codes.UNDEFINED_STATE
-
-        remote_folder = load_node(final_result['calculation_uuid']).outputs.remote_folder
-        self.out('last_calculation_remote_folder',remote_folder)
+            return self.exit_codes.UNDEFINED_STATE     
 
 ###############################starting p2y#####################
     def p2y_needed(self):

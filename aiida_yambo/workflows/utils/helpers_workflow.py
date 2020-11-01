@@ -81,14 +81,14 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
     final_result = {}
     if workflow_dict['global_step'] == 0 :
         workflow_dict['workflow_story'] = pd.DataFrame(columns = ['global_step']+list(calc_manager.keys())+\
-                        ['value', 'calc_pk','result_eV','useful'])
+                        ['value', 'calc_pk','result_eV','useful','failed'])
 
     for i in range(calc_manager['steps']):
             workflow_dict['global_step'] += 1
             workflow_story_list = [workflow_dict['global_step']]+list(calc_manager.values())+\
-                        [workflow_dict['values'][i], quantities[0,i,2], quantities[:,i,1].tolist(), True]
+                        [workflow_dict['values'][i], quantities[0,i,2], quantities[:,i,1].tolist(), True, False]
             workflow_df = pd.DataFrame([workflow_story_list],columns = ['global_step']+list(calc_manager.keys())+\
-                    ['value', 'calc_pk','result_eV','useful'])
+                    ['value', 'calc_pk','result_eV','useful','failed'])
             workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
                     
     last_ok_pk = int(workflow_dict['workflow_story'].iloc[-1]['calc_pk'])
@@ -105,17 +105,19 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
     return final_result
 
 @conversion_wrapper
-def post_analysis_update(inputs, calc_manager, oversteps, workflow_dict = {}):
+def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}):
     
     final_result = {}
     for i in range(oversteps):
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
+        if none_encountered:
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
 
     last_ok_pk = int(workflow_dict['workflow_story'][workflow_dict['workflow_story']['useful'] == True].iloc[-1]['calc_pk'])
     last_ok_wfl = get_caller(last_ok_pk, depth = 1)
     start_from_converged(inputs, last_ok_wfl)
-            
-    if calc_manager['var'] == 'kpoints':
+        
+    if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density' :
         set_parent(inputs, load_node(last_ok_pk))
     
     final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
@@ -146,12 +148,12 @@ class the_evaluator:
             none_encountered = False
 
             for j in range(1,len(quantities[0,:])+1):
-                if not isinstance(quantities[0,-j],np.float):
+                if quantities[0,-j] == False:
                     converged = False
                     oversteps +=1
                     none_encountered = True
             
-            if none_encountered = True:
+            if none_encountered:
                 return converged, oversteps, none_encountered
 
             for i in range(2,len(quantities[0,:])+1): #check it

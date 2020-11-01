@@ -41,7 +41,8 @@ class YamboRestart(BaseRestartWorkChain):
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
         spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
-        spec.input("max_number_of_nodes", valid_type=Int, default=lambda: Int(0))
+        spec.input("max_number_of_nodes", valid_type=Int, default=lambda: Int(0),
+                    help = 'max number of nodes for restarts; if 0, it does not increase the number of nodes')
         spec.input("code_version", valid_type=Str, default=lambda: Str('4.5'))
 
 
