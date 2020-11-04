@@ -90,10 +90,15 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
             workflow_df = pd.DataFrame([workflow_story_list],columns = ['global_step']+list(calc_manager.keys())+\
                     ['value', 'calc_pk','result_eV','useful','failed'])
             workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
-                    
-    last_ok_pk = int(workflow_dict['workflow_story'].iloc[-1]['calc_pk'])
-    last_ok_wfl = get_caller(last_ok_pk, depth = 1)
-    start_from_converged(inputs, last_ok_wfl)
+
+    for i in range(1,len(workflow_dict['workflow_story'])+1):
+        try:                
+            last_ok_pk = int(workflow_dict['workflow_story'].iloc[-i]['calc_pk'])
+            last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+            start_from_converged(inputs, last_ok_wfl)
+            break
+        except:
+            pass
     
     if calc_manager['var'] == 'kpoints':
         set_parent(inputs, load_node(last_ok_pk))
