@@ -5,3 +5,6 @@ gw/.git
 parser/.git
 yambo.egg-info
 *SOURCES.txt
+dist
+build
+
