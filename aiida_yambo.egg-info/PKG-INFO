@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: aiida-yambo
-Version: 1.2.0
+Version: 1.3.0
 Summary: YAMBO plugin and workflows for AiiDA
 Home-page: https://github.com/yambo-code/yambo-aiida
 Author: Miki Bonacci, Michael Atambo, Antimo Marrazzo, Prandini Gianluca

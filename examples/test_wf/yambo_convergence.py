@@ -326,16 +326,16 @@ def main(options):
                                            'PRE_CALC': False,})
 
     #'what': 'single-levels','where':[(1,8),(1,9)]
-    var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 3, \
-                                 'conv_thr': 0.2, 'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
-                                'conv_thr': 0.2, 'conv_window': 2},
-                  # {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 2, 'max_iterations': 5, \
-                  #               'conv_thr': 0.1, 'conv_window': 2},
-                   #{'var':'NGsBlkXp','delta': 1, 'steps': 2, 'max_iterations': 3, \
-                    #             'conv_thr': 0.1, 'conv_window': 2},]
-                   {'var':'kpoints','delta': 1, 'steps': 2, 'max_iterations': 2, \
-                                 'conv_thr': 0.1, 'conv_window': 2}]
+    var_to_conv = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],'delta': [[0,100],[0,100],2], 'steps': 3, 'max_iterations': 2, \
+                                 'conv_thr': 0.05,},
+                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,100],[0,100]], 'steps': 3, 'max_iterations': 2, \
+                                 'conv_thr': 0.02,},
+                   {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 2, \
+                                'conv_thr': 0.02,},
+                   {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],'delta': [[0,150],[0,150],2], 'steps': 3, 'max_iterations': 2, \
+                                 'conv_thr': 0.02,},
+                   {'var':'kpoint_mesh','delta': [2,2,0], 'max_iterations': 2, \
+                                 'conv_thr': 0.1,},]
 
 
     for i in range(len(var_to_conv)):
