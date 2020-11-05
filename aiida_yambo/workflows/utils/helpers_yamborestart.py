@@ -40,7 +40,7 @@ def fix_parallelism(resources, failed_calc):
     
     return new_parallelism, new_resources
 
-def fix_memory(resources, failed_calc, exit_status):
+def fix_memory(resources, failed_calc, exit_status, max_nodes):
 
     if exit_status == 505:
         what = ['bands']
@@ -54,10 +54,14 @@ def fix_memory(resources, failed_calc, exit_status):
     if float(kpoints)/float(bands) > 0.5:
         what.append('kpoints')
 
-
     if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu']: #there should be a limit
-        resources['num_machines'] = int(1.5*resources['num_machines'])
-        resources['num_machines'] += resources['num_machines']%2
+        
+        new_nodes = int(1.5*resources['num_machines'])
+        new_nodes += new_nodes%2
+        
+        if new_nodes <= max_nodes:
+            resources['num_machines'] = new_nodes
+        
         resources['num_mpiprocs_per_machine'] *= 2
         resources['num_cores_per_mpiproc'] /= 2
 

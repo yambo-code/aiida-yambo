@@ -26,11 +26,17 @@ else:
 
 #class calc_manager_aiida_yambo: 
 def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
+    
     calc_dict = {}
     calc_dict.update(calc_info)
     calc_dict.update(wfl_settings)
     calc_dict['iter']  = 0
     calc_dict['success'] = False
+    calc_dict['conv_thr'] = calc_dict.pop('conv_thr',0.1)
+    calc_dict['max_iterations'] = calc_dict.pop('max_iterations',3)
+    calc_dict['steps'] = calc_dict.pop('steps',3)
+    calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])
+    calc_dict['offset'] = calc_dict.pop('offset',0)
     
     return calc_dict
 
@@ -39,10 +45,17 @@ def parameters_space_creator(calc_dict, first_calc, parent, last_inputs = {}):
     space = []
 
     if calc_dict['type'] == '1D_convergence':
-
-        if calc_dict['var'] == 'kpoints':
+        
+        k_distance_old = None
+        
+        if calc_dict['var'] == 'kpoint_mesh' or calc_dict['var'] == 'kpoint_density':
 
             k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf','scf']))
+            k_mesh_old = find_pw_parent(parent, calc_type=['nscf','scf']).inputs.kpoints.get_kpoints_mesh()
+        
+        elif not isinstance(calc_dict['var'],list):
+            
+            calc_dict['var'] = calc_dict['var'].split(',')
 
         for i in range(calc_dict['steps']):
 
@@ -51,26 +64,46 @@ def parameters_space_creator(calc_dict, first_calc, parent, last_inputs = {}):
             else:
                 first = 1
 
-            if calc_dict['var'] == 'kpoints':
+            if calc_dict['var'] == 'kpoint_density' and k_distance_old:
+                if isinstance(calc_dict['delta'],list):
+                    calc_dict['delta'] = calc_dict['delta'][0]
 
                 k_distance = k_distance_old + calc_dict['delta']*(first+i)
                 new_value = k_distance
+                            
+            elif (calc_dict['var'] == 'kpoint_mesh') or (calc_dict['var'] == 'kpoint_density' and not k_distance_old):
+                if not isinstance(calc_dict['delta'],list):
+                    calc_dict['delta'] = 3*[calc_dict['delta']]
+                k_mesh_0 = k_mesh_old[0]
+                k_mesh_1 = k_mesh_old[1]
+                #for k in range(i+first):
+                k_mesh_0 = [sum(x) for x in zip(k_mesh_0, [l*(first+i) for l in calc_dict['delta']])]
+                k_mesh_1 = k_mesh_old[1]
+                k_mesh = (k_mesh_0,k_mesh_1)
+                new_value = k_mesh
 
             elif isinstance(calc_dict['var'],list): #general
                 new_value = []
                 for j in calc_dict['var']:
-                    ind = 0
                     new_params = last_inputs[j]
-                    for steps in range(i):
-                        new_params = [sum(x) for x in zip(new_params, calc_dict['delta'][calc_dict['var'].index(j)])]
-                    if first == 1:
-                        new_params = [sum(x) for x in zip(new_params, calc_dict['delta'][calc_dict['var'].index(j)])]
-                    new_value.append(new_params)
+                    
+                    #for steps in range(i+first):
+                    if isinstance(calc_dict['delta'],int):
+                        new_params = new_params + calc_dict['delta']*(i+first)
 
-            elif isinstance(calc_dict['var'],str): #general
-                new_params = last_inputs[calc_dict['var']]
-                new_params = new_params + calc_dict['delta']*(first+i)
-                new_value = new_params
+                    elif isinstance(calc_dict['delta'][calc_dict['var'].index(j)],list):
+                        new_params = [sum(x) for x in zip(new_params, [l*(i+first) for l in calc_dict['delta'][calc_dict['var'].index(j)]])]  
+
+                    elif not isinstance(calc_dict['delta'][calc_dict['var'].index(j)],list) and not isinstance(new_params,list):
+                        new_params = new_params + calc_dict['delta'][calc_dict['var'].index(j)]*(i+first)
+
+                    elif isinstance(new_params,list):
+                        for k in range(len(new_params)):
+                            new_params = [sum(x) for x in zip(new_params, [l*(i+first) for l in calc_dict['delta']])]
+                    else:
+                        new_params = new_params + calc_dict['delta']*(i+first)
+            
+                    new_value.append(new_params)
 
             space.append((calc_dict['var'],new_value))
 
@@ -89,12 +122,15 @@ def updater(calc_dict, inp_to_update, parameters):
     variables = parameters[0]
     new_values = parameters[1]
 
-    if variables == 'kpoints':
-        k_distance = new_values
+    if variables == 'kpoint_mesh' or variables == 'kpoint_density':
+        k_quantity = new_values
 
         inp_to_update.scf.kpoints = KpointsData()
         inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
-        inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_distance, force_parity=True)
+        if isinstance(k_quantity,tuple):
+            inp_to_update.scf.kpoints.set_kpoints_mesh(k_quantity[0],k_quantity[1]) 
+        else:
+            inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
         inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
         try:
@@ -106,7 +142,7 @@ def updater(calc_dict, inp_to_update, parameters):
         inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
         inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
 
-        value = k_distance
+        value = k_quantity
 
     elif isinstance(variables,list): #general
         new_params = inp_to_update.yres.yambo.parameters.get_dict()
@@ -119,7 +155,10 @@ def updater(calc_dict, inp_to_update, parameters):
 
     elif isinstance(variables,str): #general
         new_params = inp_to_update.yres.yambo.parameters.get_dict()
-        new_params[variables] = new_values
+        if isinstance(new_values,list):
+            new_params[variables] = new_values[0]
+        else:
+            new_params[variables] = new_values
 
         inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
 
@@ -162,13 +201,16 @@ def take_quantities(calc_dict, steps = 1, where = [], what = 'gap',backtrace=1):
                     quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
                                 yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real
 
-            quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
+                quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114
+            else:
+                quantities[j,i-1,1] = False
+                
             quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
             quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
 
     return quantities
 
-def start_from_converged(inputs, node):
+def start_from_converged(inputs, node,):
     inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']
     inputs.yres.yambo.metadata.options.resources = node.called[0].called[0].get_options()['resources']
     inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[0].called[0].get_options()['max_wallclock_seconds']

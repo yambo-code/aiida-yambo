@@ -41,6 +41,8 @@ class YamboRestart(BaseRestartWorkChain):
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
         spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
+        spec.input("max_number_of_nodes", valid_type=Int, default=lambda: Int(0),
+                    help = 'max number of nodes for restarts; if 0, it does not increase the number of nodes')
         spec.input("code_version", valid_type=Str, default=lambda: Str('4.5'))
 
 
@@ -167,7 +169,8 @@ class YamboRestart(BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
-        new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status)
+        new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
+                                                self.inputs.max_number_of_nodes)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
 
