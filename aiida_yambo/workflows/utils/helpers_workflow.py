@@ -105,7 +105,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
 
     final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
             'result_eV':workflow_dict['workflow_story'].iloc[-1]['result_eV'],\
-                'success':workflow_dict['workflow_story'].iloc[-1]['useful']}
+                'success':bool(workflow_dict['workflow_story'].iloc[-1]['useful'])}
         
     return final_result
 
