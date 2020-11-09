@@ -36,7 +36,7 @@ class YamboConvergence(WorkChain):
         spec.expose_inputs(YamboWorkflow, namespace='p2y', namespace_options={'required': True}, \
                             exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
-        spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': False}, \
+        spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': True}, \
                     exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
         spec.input('kpoints', valid_type=KpointsData, required = True)
@@ -77,7 +77,7 @@ class YamboConvergence(WorkChain):
                              message='The workchain failed the p2y step.')  
         spec.exit_code(302, 'PRECALC_FAILED',
                              message='The workchain failed the precalc step.')    
-        spec.exit_code(303, 'CALCs_FAILED',
+        spec.exit_code(303, 'CALCS_FAILED',
                              message='The workchain failed some calculations.')                                 
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
@@ -214,6 +214,11 @@ class YamboConvergence(WorkChain):
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
+                        
+            self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+
+            
 
         
         self.ctx.workflow_manager['first_calc'] = False

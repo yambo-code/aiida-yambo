@@ -100,7 +100,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
         except:
             pass
     
-    if calc_manager['var'] == 'kpoints':
+    if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
         set_parent(inputs, load_node(last_ok_pk))
 
     final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
