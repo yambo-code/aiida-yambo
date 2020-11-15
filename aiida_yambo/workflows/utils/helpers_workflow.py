@@ -91,14 +91,16 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
                     ['value', 'calc_pk','result_eV','useful','failed'])
             workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
 
+    
     for i in range(1,len(workflow_dict['workflow_story'])+1):
         try:                
             last_ok_pk = int(workflow_dict['workflow_story'].iloc[-i]['calc_pk'])
             last_ok_wfl = get_caller(last_ok_pk, depth = 1)
-            start_from_converged(inputs, last_ok_wfl)
+            #start_from_converged(inputs, last_ok_wfl)
             break
         except:
             pass
+    
     
     if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
         set_parent(inputs, load_node(last_ok_pk))
@@ -118,7 +120,7 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
         if none_encountered:
             workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
 
-    last_ok_pk = int(workflow_dict['workflow_story'][workflow_dict['workflow_story']['useful'] == True].iloc[-1]['calc_pk'])
+    last_ok_pk = int(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['calc_pk'])
     last_ok_wfl = get_caller(last_ok_pk, depth = 1)
     start_from_converged(inputs, last_ok_wfl)
         
@@ -126,8 +128,8 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
         set_parent(inputs, load_node(last_ok_pk))
     
     final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
-                'result_eV':workflow_dict['workflow_story'][workflow_dict['workflow_story']['useful'] == True].iloc[-1]['result_eV'],\
-                    'success':bool(workflow_dict['workflow_story'][workflow_dict['workflow_story']['useful'] == True].iloc[-1]['useful'])}
+                'result_eV':workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['result_eV'],\
+                    'success':bool(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['useful'])}
 
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
 
@@ -150,27 +152,24 @@ class the_evaluator:
             self.tol = self.infos['conv_thr']
             converged = True
             oversteps = 0
+            oversteps_1 = 0
             none_encountered = False
 
             for j in range(1,len(quantities[0,:])+1):
                 if quantities[0,-j] == False:
-                    converged = False
                     oversteps +=1
                     none_encountered = True
-            
-            if none_encountered:
-                return converged, oversteps, none_encountered
 
-            for i in range(2,len(quantities[0,:])+1): #check it
-                if np.max(abs(quantities[:,-1]-quantities[:,-i])) < self.tol: #backcheck
-                    oversteps = i-1
+            for i in range(oversteps + 2,len(quantities[0,:])+1): #check it
+                if np.max(abs(quantities[:,-(1+oversteps)]-quantities[:,-i])) < self.tol: #backcheck
+                    oversteps_1 = i-1
                 else:
-                    print(abs(quantities[:,-1]-quantities[:,-i]),quantities[:,-i])
+                    print(abs(quantities[:,-(1+oversteps)]-quantities[:,-i]),quantities[:,-i])
                     break
-            if oversteps < self.window-1:
+            if oversteps_1 < self.window-1:
                 converged = False
 
-            return converged, oversteps, none_encountered
+            return converged, oversteps_1, none_encountered
 
         if self.infos['type'] == '2D_space':
             '''documentation...'''
