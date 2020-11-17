@@ -50,7 +50,7 @@ def plot_1D_convergence(ax, history, title='',where=1,\
                 string= string+'qwerty'
                 string = string.replace('& qwerty','')
                 #print(string)
-                y[i][y[0].index('var')]=string
+                y[i][y[0].index('var')]=string[:-1]
         tot = pd.DataFrame(y[1:],columns=y[0])  
     
     try:

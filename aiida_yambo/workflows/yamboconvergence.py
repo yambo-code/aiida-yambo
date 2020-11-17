@@ -220,9 +220,6 @@ class YamboConvergence(WorkChain):
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
                         
-            self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
-      
         self.ctx.workflow_manager['first_calc'] = False
 
     def report_wf(self):
