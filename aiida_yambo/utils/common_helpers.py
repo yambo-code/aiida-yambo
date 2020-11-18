@@ -199,13 +199,13 @@ def find_pw_info(calc):
     info = pw_parent.outputs.output_parameters.get_dict()   
     return info
 
-def find_gw_info(calc):
+def find_gw_info(inputs):
 
-    parameters = calc.inputs.parameters.get_dict()
+    parameters = inputs.parameters.get_dict()
     
     ## bands ##
-    BndsRnXp = parameters.pop('BndsRnXp')
-    GbndRnge = parameters.pop('GbndRnge')
+    BndsRnXp = parameters.pop('BndsRnXp',0)
+    GbndRnge = parameters.pop('GbndRnge',0)
     X_b = 1 + BndsRnXp[1] - BndsRnXp[0]
     SE_b = 1 + GbndRnge[1] - GbndRnge[0]
     if X_b and SE_b:

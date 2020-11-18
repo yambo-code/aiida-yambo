@@ -38,7 +38,7 @@ def parallelize_SE_bands(mpi, bands, qp, ratio = 2):
     
     return int(b), int(qp)
     
-def parallelize_kpoints(mpi, mpi_per_node, kpoints):
+def parallelize_kpoints(mpi, mpi_per_node, kpoints, ratio = 2):
 
     if mpi > kpoints:
         mpi = find_commensurate(kpoints, mpi_per_node)
@@ -107,8 +107,8 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
     if 'bands' in what and not 'kpoints' in what and not 'g' in what:
         mpi, c, v = parallelize_DIP_X_bands(mpi, mpi_per_node, bands, occupied, ratio = 2)
         b, qp = parallelize_SE_bands(mpi, c*v, qp_corrected, ratio = 2)
-    elif 'kpoints' in what and not 'bands' in what and not 'g' in what:
-        mpi, k = parallelize_kpoints(mpi, mpi_per_node, kpoints, ratio = 2)
+    #elif 'kpoints' in what and not 'bands' in what and not 'g' in what:
+    #   mpi, k = parallelize_kpoints(mpi, mpi_per_node, kpoints, ratio = 2)
     elif 'bands' in what and 'g' in what and not 'kpoints' in what:
         g = 20
         ratio = 3
