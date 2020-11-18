@@ -3,7 +3,7 @@
 wf/.git
 gw/.git
 parser/.git
-yambo.egg-info
+*yambo.egg-info
 *SOURCES.txt
 dist
 build

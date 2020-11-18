@@ -36,7 +36,7 @@ class YamboConvergence(WorkChain):
         spec.expose_inputs(YamboWorkflow, namespace='p2y', namespace_options={'required': True}, \
                             exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
-        spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': False}, \
+        spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': True}, \
                     exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
 
         spec.input('kpoints', valid_type=KpointsData, required = True)
@@ -70,6 +70,7 @@ class YamboConvergence(WorkChain):
         spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
         spec.output('last_calculation_remote_folder', valid_type = RemoteData, required = False, \
                                                       help='final remote folder')
+        spec.output('remaining_iter', valid_type = List,  required = False, help='remaining convergence iter')       
 
         spec.exit_code(300, 'UNDEFINED_STATE',
                              message='The workchain is in an undefined state.')
@@ -77,7 +78,7 @@ class YamboConvergence(WorkChain):
                              message='The workchain failed the p2y step.')  
         spec.exit_code(302, 'PRECALC_FAILED',
                              message='The workchain failed the precalc step.')    
-        spec.exit_code(303, 'CALCs_FAILED',
+        spec.exit_code(303, 'CALCS_FAILED',
                              message='The workchain failed some calculations.')                                 
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
@@ -94,6 +95,9 @@ class YamboConvergence(WorkChain):
         self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
         self.ctx.precalc_inputs.scf.kpoints, self.ctx.precalc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints
         
+        self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
+        self.ctx.remaining_iter.reverse()
+
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space, self.inputs.workflow_settings.get_dict())
 
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), wfl_settings = self.inputs.workflow_settings.get_dict()) 
@@ -124,6 +128,7 @@ class YamboConvergence(WorkChain):
 
         elif self.ctx.calc_manager['success']:
             #update variable to conv
+            self.ctx.remaining_iter.pop()
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), wfl_settings = self.inputs.workflow_settings.get_dict())
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
             
@@ -214,8 +219,7 @@ class YamboConvergence(WorkChain):
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
-
-        
+                        
         self.ctx.workflow_manager['first_calc'] = False
 
     def report_wf(self):
@@ -234,12 +238,18 @@ class YamboConvergence(WorkChain):
             pass
 
         if not self.ctx.calc_manager['success'] and self.ctx.none_encountered:
+            remaining_iter = store_List(self.ctx.remaining_iter)
+            self.out('remaining_iter', remaining_iter)
             self.report('Some calculation failed, so we stopped the workflow')
-            return self.exit_codes.CALCs_FAILED
+            return self.exit_codes.CALCS_FAILED
         elif not self.ctx.calc_manager['success']:
+            remaining_iter = store_List(self.ctx.remaining_iter)
+            self.out('remaining_iter', remaining_iter)
             self.report('Convergence not reached')
             return self.exit_codes.CONVERGENCE_NOT_REACHED
         elif self.ctx.calc_manager['success'] == 'undefined':
+            remaining_iter = store_List(self.ctx.remaining_iter)
+            self.out('remaining_iter', remaining_iter)
             self.report('Undefined state')
             return self.exit_codes.UNDEFINED_STATE     
 

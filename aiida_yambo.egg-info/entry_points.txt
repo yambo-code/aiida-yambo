@@ -7,3 +7,8 @@ yambo.yambo = aiida_yambo.calculations.yambo:YamboCalculation
 [aiida.parsers]
 yambo.yambo = aiida_yambo.parsers.parsers:YamboParser
 
+[aiida.workflows]
+yambo.yamboconvergence = aiida_yambo.workflows.yamboconvergence:YamboConvergence
+yambo.yamborestart = aiida_yambo.workflows.yamborestart:YamboRestart
+yambo.yambowf = aiida_yambo.workflows.yambowf:YamboWorkflow
+
