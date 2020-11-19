@@ -102,9 +102,10 @@ class YamboConvergence(WorkChain):
 
         if hasattr(self.inputs, "parallelism_instructions"):
             self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
+            self.report('para instr: {}'.format(self.ctx.workflow_manager['parallelism_instructions']))
         else:
             self.ctx.workflow_manager['parallelism_instructions'] = {}  
-
+        
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
                                             wfl_settings = self.inputs.workflow_settings.get_dict(),) 
 

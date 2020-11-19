@@ -27,6 +27,8 @@ else:
 
 def set_parallelism(instructions, inputs):
 
+    new_parallelism, new_resources = False, False
+
     resources = inputs.yres.yambo.metadata.options.resources
     structure = inputs.structure.get_ase()
     mesh = inputs.kpoints.get_kpoints_mesh()[0]
@@ -45,6 +47,11 @@ def set_parallelism(instructions, inputs):
         yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['GbndRnge'][-1]
     else:
         yambo_bandsSc = 0
+    
+    if 'NGsBlkXp' in inputs.yres.yambo.parameters.get_dict().keys():
+        yambo_cutG = inputs.yres.yambo.parameters.get_dict()['NGsBlkXp']
+    else:
+        yambo_cutG = 0
 
     bands = max(yambo_bandsX,yambo_bandsSc)
 
@@ -57,21 +64,41 @@ def set_parallelism(instructions, inputs):
     
     elif instructions['semi-automatic'] and ('gw0' or 'HF_and_locXC' in runlevels):
         #parallel set for boundaries of params
+        #also, specification of the number of nodes
         new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
                                                         resources['num_cores_per_mpiproc'], bands, \
                                                         occupied, qp, kpoints,\
                                                         last_qp, namelist = {})
     
-    elif instructions['explicit']:
+    elif instructions['manual']:
         #parallel set for each set of params
-        new_parallelism = instructions['explicit']['parallelism']
-        new_resources = instructions['explicit']['resources']
+        #specification of all the parameters and resources
+        # 
+        #main parameters...
+        for i in instructions['manual'].keys():
+            instructions['manual'][i]['BndsRnXp'] = instructions['manual'][i].pop('BndsRnXp', [0,0])
+            instructions['manual'][i]['GbndRnge'] = instructions['manual'][i].pop('GbndRnge', [0,0])
+            instructions['manual'][i]['NGsBlkXp'] = instructions['manual'][i].pop('NGsBlkXp', [0,0])
+            instructions['manual'][i]['kpoints'] = instructions['manual'][i].pop('kpoints', [0,0])
+
+            X = ((yambo_bandsX >= min(instructions['manual'][i]['BndsRnXp'])) and (yambo_bandsX <= max(instructions['manual'][i]['BndsRnXp']))) or instructions['manual'][i]['BndsRnXp'] == [0,0]
+            Sc = ((yambo_bandsSc >= min(instructions['manual'][i]['GbndRnge'])) and (yambo_bandsX <= max(instructions['manual'][i]['GbndRnge']))) or instructions['manual'][i]['GbndRnge'] == [0,0]
+            G = ((yambo_cutG >= min(instructions['manual'][i]['NGsBlkXp'])) and (yambo_cutG <= max(instructions['manual'][i]['NGsBlkXp']))) or instructions['manual'][i]['NGsBlkXp'] == [0,0]
+            K = ((kpoints >= min(instructions['manual'][i]['kpoints'])) and (kpoints <= max(instructions['manual'][i]['kpoints']))) or instructions['manual'][i]['kpoints'] == [0,0]
+            if X and Sc and G and K:
+                new_parallelism = instructions['manual'][i]['parallelism']
+                new_resources = instructions['manual'][i]['resources']
+            else: 
+                pass
+
+        #new_parallelism = instructions['manual']['parallelism']
+        #new_resources = instructions['manual']['resources']
     
     elif instructions['function']:
         pass
 
     else:
-        return {}, {}
+        return False, False
 
     return new_parallelism, new_resources
 
@@ -132,8 +159,13 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions, valu
     if parallelism_instructions != {}:
         new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
-        inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
-        inp_to_update.yres.yambo.metadata.options.resources = new_res
+        if new_para and new_res:
+            inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
+            inp_to_update.yres.yambo.metadata.options.resources = new_res
+            try:
+                inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
+            except:
+                pass
 
     return inp_to_update, values_dict
 

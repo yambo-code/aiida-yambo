@@ -18,7 +18,7 @@ from aiida_yambo.workflows.utils.helpers_yamborestart import *
 from aiida_yambo.utils.parallel_namelists import *
 from aiida_yambo.utils.common_helpers import *
 
-class YamboRestart_2(BaseRestartWorkChain):
+class YamboRestart(BaseRestartWorkChain):
 
     """This module interacts directly with the yambo plugin to submit calculations
 
@@ -36,7 +36,7 @@ class YamboRestart_2(BaseRestartWorkChain):
     @classmethod
     def define(cls, spec):
 
-        super(YamboRestart_2, cls).define(spec)
+        super(YamboRestart, cls).define(spec)
         spec.expose_inputs(YamboCalculation, namespace='yambo', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
@@ -73,7 +73,7 @@ class YamboRestart_2(BaseRestartWorkChain):
     def setup(self):
         """setup of the calculation and run
         """
-        super(YamboRestart_2, self).setup()
+        super(YamboRestart, self).setup()
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'yambo')
 
@@ -133,7 +133,7 @@ class YamboRestart_2(BaseRestartWorkChain):
         we increase the simulation time and copy the database already created.
         """
         
-        self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.iteration, self.inputs.max_walltime)
+        self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options, self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
@@ -153,6 +153,7 @@ class YamboRestart_2(BaseRestartWorkChain):
         """
         new_para, new_resources  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
+        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
 
         new_para = check_para_namelists(new_para, self.inputs.code_version.value)
@@ -183,6 +184,7 @@ class YamboRestart_2(BaseRestartWorkChain):
         new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
                                                 self.inputs.max_number_of_nodes)
         self.ctx.inputs.metadata.options.resources = new_resources
+        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
 
             
