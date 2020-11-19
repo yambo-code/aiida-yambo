@@ -13,7 +13,8 @@ try:
     from aiida_yambo.utils.common_helpers import *
 except:
     pass
-
+from aiida_yambo.utils.parallelism_finder import *
+from aiida_yambo.utils.defaults.create_defaults import *
 #we try to use netcdf
 try:
     from netCDF4 import Dataset
@@ -23,6 +24,57 @@ else:
     _has_netcdf = True
 ################################################################################
 ################################################################################
+
+def set_parallelism(instructions, inputs):
+
+    resources = inputs.yres.yambo.metadata.options.resources
+    structure = inputs.structure.get_ase()
+    mesh = inputs.kpoints.get_kpoints_mesh()[0]
+    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
+
+    occupied, ecut = periodical(structure)
+
+    bands, qp, last_qp, runlevels = find_gw_info(inputs.yres.yambo)
+
+    if 'BndsRnXp' in inputs.yres.yambo.parameters.get_dict().keys():
+        yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['BndsRnXp'][-1]
+    else:
+        yambo_bandsX = 0 
+    
+    if 'GbndRnge' in inputs.yres.yambo.parameters.get_dict().keys():
+        yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['GbndRnge'][-1]
+    else:
+        yambo_bandsSc = 0
+
+    bands = max(yambo_bandsX,yambo_bandsSc)
+
+    if instructions['automatic'] and ('gw0' or 'HF_and_locXC' in runlevels):
+        #standard
+        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
+                                                        resources['num_cores_per_mpiproc'], bands, \
+                                                        occupied, qp, kpoints,\
+                                                        last_qp, namelist = {})
+    
+    elif instructions['semi-automatic'] and ('gw0' or 'HF_and_locXC' in runlevels):
+        #parallel set for boundaries of params
+        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
+                                                        resources['num_cores_per_mpiproc'], bands, \
+                                                        occupied, qp, kpoints,\
+                                                        last_qp, namelist = {})
+    
+    elif instructions['explicit']:
+        #parallel set for each set of params
+        new_parallelism = instructions['explicit']['parallelism']
+        new_resources = instructions['explicit']['resources']
+    
+    elif instructions['function']:
+        pass
+
+    else:
+        return {}, {}
+
+    return new_parallelism, new_resources
+
 
 #class calc_manager_aiida_yambo: 
 def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
@@ -36,135 +88,54 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     calc_dict['max_iterations'] = calc_dict.pop('max_iterations',3)
     calc_dict['steps'] = calc_dict.pop('steps',3)
     calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])
-    calc_dict['offset'] = calc_dict.pop('offset',0)
+    
+    if calc_dict['type'] != '1D_convergence': 
+        calc_dict['steps'] = len(calc_dict['space'])
     
     return calc_dict
 
 ################################## update_parameters - create parameters space #####################################
-def parameters_space_creator(calc_dict, first_calc, parent, last_inputs = {}):
-    space = []
+def updater(calc_dict, inp_to_update, parameters, parallelism_instructions, values_dict = {}):
 
-    if calc_dict['type'] == '1D_convergence':
-        
-        k_distance_old = None
-        
-        if calc_dict['var'] == 'kpoint_mesh' or calc_dict['var'] == 'kpoint_density':
+    if not isinstance(calc_dict['var'],list):
+        calc_dict['var'] = [calc_dict['var']]
 
-            k_distance_old = get_distance_from_kmesh(find_pw_parent(parent, calc_type=['nscf','scf']))
-            k_mesh_old = find_pw_parent(parent, calc_type=['nscf','scf']).inputs.kpoints.get_kpoints_mesh()
-        
-        elif not isinstance(calc_dict['var'],list):
-            
-            calc_dict['var'] = calc_dict['var'].split(',')
-
-        for i in range(calc_dict['steps']):
-
-            if first_calc:
-                first = 0
+    input_dict = inp_to_update.yres.yambo.parameters.get_dict()
+    
+    for var in calc_dict['var']:
+        if var == 'kpoint_mesh' or var == 'kpoint_density':
+            k_quantity = parameters[var].pop(0)
+            k_quantity_shift = inp_to_update.scf.kpoints.get_kpoints_mesh()[1]
+            inp_to_update.scf.kpoints = KpointsData()
+            inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
+            if isinstance(k_quantity,tuple):
+                inp_to_update.scf.kpoints.set_kpoints_mesh(k_quantity,k_quantity_shift) 
             else:
-                first = 1
+                inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
+            inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
 
-            if calc_dict['var'] == 'kpoint_density' and k_distance_old:
-                if isinstance(calc_dict['delta'],list):
-                    calc_dict['delta'] = calc_dict['delta'][0]
+            try:
+                inp_to_update.parent_folder =  find_pw_parent(take_calc_from_remote(inp_to_update.parent_folder), calc_type=['scf']).outputs.remote_folder 
+                #I need to start from the scf calc
+            except:
+                del inp_to_update.parent_folder #do all scf+nscf+y in case
 
-                k_distance = k_distance_old + calc_dict['delta']*(first+i)
-                new_value = k_distance
-                            
-            elif (calc_dict['var'] == 'kpoint_mesh') or (calc_dict['var'] == 'kpoint_density' and not k_distance_old):
-                if not isinstance(calc_dict['delta'],list):
-                    calc_dict['delta'] = 3*[calc_dict['delta']]
-                k_mesh_0 = k_mesh_old[0]
-                k_mesh_1 = k_mesh_old[1]
-                #for k in range(i+first):
-                k_mesh_0 = [sum(x) for x in zip(k_mesh_0, [l*(first+i) for l in calc_dict['delta']])]
-                k_mesh_1 = k_mesh_old[1]
-                k_mesh = (k_mesh_0,k_mesh_1)
-                new_value = k_mesh
-
-            elif isinstance(calc_dict['var'],list): #general
-                new_value = []
-                for j in calc_dict['var']:
-                    new_params = last_inputs[j]
-                    
-                    #for steps in range(i+first):
-                    if isinstance(calc_dict['delta'],int):
-                        new_params = new_params + calc_dict['delta']*(i+first)
-
-                    elif isinstance(calc_dict['delta'][calc_dict['var'].index(j)],list):
-                        new_params = [sum(x) for x in zip(new_params, [l*(i+first) for l in calc_dict['delta'][calc_dict['var'].index(j)]])]  
-
-                    elif not isinstance(calc_dict['delta'][calc_dict['var'].index(j)],list) and not isinstance(new_params,list):
-                        new_params = new_params + calc_dict['delta'][calc_dict['var'].index(j)]*(i+first)
-
-                    elif isinstance(new_params,list):
-                        for k in range(len(new_params)):
-                            new_params = [sum(x) for x in zip(new_params, [l*(i+first) for l in calc_dict['delta']])]
-                    else:
-                        new_params = new_params + calc_dict['delta']*(i+first)
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
+            inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
+            values_dict[var]=k_quantity
+        else:
             
-                    new_value.append(new_params)
+            input_dict[var] = parameters[var].pop(0)
+            inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
+            values_dict[var]=input_dict[var]
+    
+    if parallelism_instructions != {}:
+        new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
-            space.append((calc_dict['var'],new_value))
+        inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
+        inp_to_update.yres.yambo.metadata.options.resources = new_res
 
-        return space
-
-    elif calc_dict['type'] == '2D_space': #pass as input the space; actually, it's n-dimensional
-
-        calc_dict['delta'] = 0
-        for step in calc_dict['space']:
-            space.append([calc_dict['var'],step])
-
-        return space
-
-def updater(calc_dict, inp_to_update, parameters):
-
-    variables = parameters[0]
-    new_values = parameters[1]
-
-    if variables == 'kpoint_mesh' or variables == 'kpoint_density':
-        k_quantity = new_values
-
-        inp_to_update.scf.kpoints = KpointsData()
-        inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
-        if isinstance(k_quantity,tuple):
-            inp_to_update.scf.kpoints.set_kpoints_mesh(k_quantity[0],k_quantity[1]) 
-        else:
-            inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
-        inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
-
-        try:
-            inp_to_update.parent_folder =  find_pw_parent(take_calc_from_remote(inp_to_update.parent_folder), calc_type=['scf']).outputs.remote_folder 
-            #I need to start from the scf calc
-        except:
-            del inp_to_update.parent_folder #do all scf+nscf+y in case
-
-        inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
-        inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
-
-        value = k_quantity
-
-    elif isinstance(variables,list): #general
-        new_params = inp_to_update.yres.yambo.parameters.get_dict()
-        for i in variables:
-            new_params[i] = new_values[variables.index(i)]
-
-        inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
-
-        value = new_values
-
-    elif isinstance(variables,str): #general
-        new_params = inp_to_update.yres.yambo.parameters.get_dict()
-        if isinstance(new_values,list):
-            new_params[variables] = new_values[0]
-        else:
-            new_params[variables] = new_values
-
-        inp_to_update.yres.yambo.parameters = Dict(dict=new_params)
-
-        value = new_values
-
-    return inp_to_update, value
+    return inp_to_update, values_dict
 
 ################################## parsers #####################################
 def take_quantities(calc_dict, steps = 1, where = [], what = 'gap',backtrace=1):

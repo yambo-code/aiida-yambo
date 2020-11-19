@@ -15,10 +15,10 @@ from aiida.engine.processes.workchains.utils import ProcessHandlerReport, proces
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.workflows.utils.helpers_yamborestart import *
-from aiida_yambo.utils.parallel_namelists import*
+from aiida_yambo.utils.parallel_namelists import *
+from aiida_yambo.utils.common_helpers import *
 
-
-class YamboRestart(BaseRestartWorkChain):
+class YamboRestart_2(BaseRestartWorkChain):
 
     """This module interacts directly with the yambo plugin to submit calculations
 
@@ -36,7 +36,7 @@ class YamboRestart(BaseRestartWorkChain):
     @classmethod
     def define(cls, spec):
 
-        super(YamboRestart, cls).define(spec)
+        super(YamboRestart_2, cls).define(spec)
         spec.expose_inputs(YamboCalculation, namespace='yambo', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
         spec.input("parent_folder", valid_type=RemoteData, required=True)
@@ -67,11 +67,13 @@ class YamboRestart(BaseRestartWorkChain):
         
         spec.exit_code(300, 'ERROR_UNRECOVERABLE_FAILURE',
             message='The calculation failed with an unrecoverable error.')
+        spec.exit_code(301, 'LOW_NUMBER_OF_NSCF_BANDS',
+            message='not enough bands in the Nscf dft step - nbnd - .')
 
     def setup(self):
         """setup of the calculation and run
         """
-        super(YamboRestart, self).setup()
+        super(YamboRestart_2, self).setup()
         # setup #
         self.ctx.inputs = self.exposed_inputs(YamboCalculation, 'yambo')
 
@@ -84,6 +86,15 @@ class YamboRestart(BaseRestartWorkChain):
         if new_para:
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
             self.report('adjusting parallelism namelist... please check yambo documentation')
+        
+        nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder))
+        yambo_bandsX = self.ctx.inputs.parameters.get_dict().pop('BndsRnXp',[0])[-1]
+        yambo_bandsSc = self.ctx.inputs.parameters.get_dict().pop('GbndRnge',[0])[-1]
+
+        if nscf_parent.inputs.parameters.get_dict()['SYSTEM']['nbnd'] < max(yambo_bandsX,yambo_bandsSc):
+            self.report('You must run an nscf with nbnd at least =  {}'.format(max(yambo_bandsX,yambo_bandsSc)))
+            return self.exit_codes.LOW_NUMBER_OF_NSCF_BANDS
+
 
     def validate_resources(self):
         """validation of machines... completeness and with respect para options

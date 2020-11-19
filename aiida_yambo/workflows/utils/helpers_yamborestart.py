@@ -23,36 +23,23 @@ PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced
 ################################################################################
 def fix_parallelism(resources, failed_calc):
 
-    what = ['bands']
-    bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
+    bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
-
-    if float(kpoints)/float(bands) > 0.5:
-        what.append('kpoints')
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
         new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
                                                         resources['num_cores_per_mpiproc'], bands, \
                                                         occupied, qp, kpoints,\
-                                                        what, last_qp, namelist = {})
+                                                        last_qp, namelist = {})
     elif 'bse' in runlevels:
         pass
     
     return new_parallelism, new_resources
 
 def fix_memory(resources, failed_calc, exit_status, max_nodes):
-
-    if exit_status == 505:
-        what = ['bands']
-    else:
-        what = ['bands','g'] 
-        pass
         
-    bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
+    bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
-
-    if float(kpoints)/float(bands) > 0.5:
-        what.append('kpoints')
 
     if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu']: #there should be a limit
         
@@ -69,7 +56,7 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes):
         new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine']/2, \
                                                         resources['num_cores_per_mpiproc']*2, bands, \
                                                         occupied, qp, kpoints,\
-                                                        what, last_qp, namelist = {})
+                                                        last_qp, namelist = {})
     elif 'bse' in runlevels:
         pass
     

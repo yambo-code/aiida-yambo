@@ -3,23 +3,27 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import RemoteData
-from aiida.orm import Dict
+from aiida.orm import RemoteData,StructureData,KpointsData
+from aiida.orm import Dict,Str,Code
 
 from aiida.engine import WorkChain, while_, append_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
+
+from aiida_yambo.workflows.utils.defaults.create_defaults import *
 
 class YamboWorkflow(WorkChain):
 
     """This workflow will perform yambo calculation on the top of scf+nscf or from scratch,
         using also the PwBaseWorkChain.
     """
+    pw_exclude = ['parent_folder', 'pw.parameters','pw.pseudos','pw.code','pw.structure', 'kpoints']
 
     @classmethod
     def define(cls, spec):
@@ -29,21 +33,38 @@ class YamboWorkflow(WorkChain):
 
         super(YamboWorkflow, cls).define(spec)
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, \
+        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, 
+                            exclude = ['parent_folder', 'pw.parameters','pw.pseudos','pw.code','pw.structure', 'kpoints'])
+
+        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, 
+                            exclude = ['parent_folder', 'pw.parameters','pw.pseudos','pw.code','pw.structure', 'kpoints'])
+
+        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': True}, 
                             exclude = ['parent_folder'])
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, \
-                            exclude = ['parent_folder'])
-
-        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': True}, \
-                            exclude = ['parent_folder'])
-
-        spec.input("parent_folder", valid_type=RemoteData, required= False,\
+        spec.input("parent_folder", valid_type=RemoteData, required= False,
                     help = 'scf, nscf or yambo remote folder')
+        
+
+        spec.input('scf_parameters', valid_type=Dict, required= False,
+                    help = 'scf params')
+        spec.input('nscf_parameters', valid_type=Dict, required= False,
+                    help = 'nscf params')
+        
+
+        spec.input('structure', valid_type=StructureData, required= True,
+                    help = 'structure')
+        spec.input('kpoints', valid_type=KpointsData, required= True,
+                    help = 'kpoints')
+        spec.input('pseudo_family', valid_type=Str, required= True,
+                    help = 'pseudo family')
+        spec.input('pw_code', valid_type=Code, required= True,
+                    help = 'code for pw part')
 
 ##################################### OUTLINE ####################################
 
-        spec.outline(cls.start_workflow,
+        spec.outline(cls.validate_parameters,
+                    cls.start_workflow,
                     while_(cls.can_continue)(
                            cls.perform_next,
                     ),
@@ -55,7 +76,62 @@ class YamboWorkflow(WorkChain):
 
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
                              message='The workchain failed with an unrecoverable error.')
+    
+    def validate_parameters(self):
 
+        if hasattr(self.inputs,'scf'):
+            self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
+        else:
+            self.ctx.scf_inputs = PwBaseWorkChain.get_builder()
+
+        if hasattr(self.inputs,'nscf'):
+            self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
+        else:
+            self.ctx.nscf_inputs = PwBaseWorkChain.get_builder()
+
+        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')
+        
+        self.ctx.scf_inputs.pw.structure = self.inputs.structure
+        self.ctx.nscf_inputs.pw.structure = self.inputs.structure
+
+        self.ctx.scf_inputs.kpoints = self.inputs.kpoints
+        self.ctx.nscf_inputs.kpoints = self.inputs.kpoints
+
+        self.ctx.scf_inputs.pw.pseudos = validate_and_prepare_pseudos_inputs(
+                self.ctx.scf_inputs.pw.structure, pseudo_family = self.inputs.pseudo_family)
+        self.ctx.nscf_inputs.pw.pseudos = self.ctx.scf_inputs.pw.pseudos
+
+        self.ctx.scf_inputs.pw.code = self.inputs.pw_code
+        self.ctx.nscf_inputs.pw.code = self.inputs.pw_code
+        
+        yambo_bandsX = self.ctx.yambo_inputs.yambo.parameters.get_dict().pop('BndsRnXp',[0])[-1]
+        yambo_bandsSc = self.ctx.yambo_inputs.yambo.parameters.get_dict().pop('GbndRnge',[0])[-1]
+        self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
+        self.report('GW bands are: {} '.format(self.ctx.gwbands))
+        scf_params, nscf_params = create_quantumespresso_inputs(self.ctx.scf_inputs.pw.structure, bands_gw = self.ctx.gwbands)
+
+
+        if hasattr(self.inputs,'scf_parameters'):
+            self.report('scf inputs found')  
+            self.ctx.scf_inputs.pw.parameters =  self.inputs.scf_parameters
+        else:
+            self.report('scf inputs not found, setting defaults')
+            self.ctx.scf_inputs.pw.parameters =  Dict(dict=scf_params)
+        
+        self.ctx.redo_nscf = False
+        if hasattr(self.inputs,'nscf_parameters'):
+            self.report('nscf inputs found')  
+            self.ctx.nscf_inputs.pw.parameters =  self.inputs.nscf_parameters
+            if self.ctx.nscf_inputs.pw.parameters['SYSTEM']['nbnd'] < self.ctx.gwbands:
+                self.ctx.redo_nscf = True
+                self.report('setting nbnd of the nscf calculation to b = {}'.format(self.ctx.gwbands))
+                self.ctx.nscf_inputs.pw.parameters['SYSTEM']['nbnd'] = self.ctx.gwbands
+            
+        else:
+            self.report('nscf inputs not found, setting defaults')
+            self.ctx.nscf_inputs.pw.parameters =  Dict(dict=nscf_params)
+        
+        
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
 
@@ -72,12 +148,26 @@ class YamboWorkflow(WorkChain):
                 if parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'scf' or parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'relax' or \
                 parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'vc-relax':
                     self.ctx.calc_to_do = 'nscf'
+                    self.ctx.redo_nscf = False
 
                 elif parent.inputs.parameters.get_dict()['CONTROL']['calculation'] == 'nscf':
-                    self.ctx.calc_to_do = 'yambo'
+                    if self.ctx.redo_nscf or parent.inputs.parameters.get_dict()['SYSTEM']['nbnd'] < self.ctx.gwbands:
+                        parent = find_pw_parent(parent, calc_type = ['scf'])
+                        self.report('Recomputing NSCF step, not enough bands. Starting from scf at pk < {} >'.format(parent.pk))
+                        self.ctx.calc_to_do = 'nscf'
+                        self.ctx.redo_nscf = False
+                    else:
+                        self.ctx.calc_to_do = 'yambo'
 
             elif parent.process_type=='aiida.calculations:yambo.yambo':
-                self.ctx.calc_to_do = 'yambo'
+                    nbnd = find_pw_parent(parent, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
+                    if self.ctx.redo_nscf or nbnd < self.ctx.gwbands:
+                        parent = find_pw_parent(parent, calc_type = ['scf'])
+                        self.report('Recomputing NSCF step, not enough bands. Starting from scf at pk < {} >'.format(parent.pk))
+                        self.ctx.calc_to_do = 'nscf'
+                        self.ctx.redo_nscf = False
+                    else:
+                        self.ctx.calc_to_do = 'yambo'
 
             else:
                 self.ctx.previous_pw = False
@@ -124,15 +214,11 @@ class YamboWorkflow(WorkChain):
             
         if self.ctx.calc_to_do == 'scf':
 
-            self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
-
             future = self.submit(PwBaseWorkChain, **self.ctx.scf_inputs)
 
             self.ctx.calc_to_do = 'nscf'
 
         elif self.ctx.calc_to_do == 'nscf':
-
-            self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
             try:
                 self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
@@ -144,8 +230,6 @@ class YamboWorkflow(WorkChain):
             self.ctx.calc_to_do = 'yambo'
 
         elif self.ctx.calc_to_do == 'yambo':
-
-            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')
 
             try:
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.called[0].outputs.remote_folder

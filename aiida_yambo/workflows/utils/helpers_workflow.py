@@ -6,6 +6,7 @@ from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
+from ase import Atoms
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import *
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
 from aiida_yambo.utils.common_helpers import *
@@ -37,28 +38,99 @@ def conversion_wrapper(func):
 
     return wrapper
 
-def convergence_workflow_manager(parameters_space, wfl_settings):
+def collect_inputs(inputs, kpoints, ideal_iter):
+    
+    starting_inputs = {}
+    for i in ideal_iter:
+        #print(i)
+        l = i['var']
+        delta=i['delta']
+        if not isinstance(i['var'],list):
+            l=[i['var']]
+        if not isinstance(i['delta'],list) or 'mesh' in i['var']:
+            delta=[i['delta']]
+        for var in l:
+            #print(var)
+            if var not in starting_inputs.keys():
+                if 'mesh' in var:
+                    starting_inputs[var] = kpoints.get_kpoints_mesh()[0]
+                else:
+                    starting_inputs[var] = inputs[var]
+
+    return starting_inputs
+
+def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
+    
+    space={}
+    first = 0 
+    for i in workflow_dict:
+        #print(i)
+        l = i['var']
+        delta=i['delta']
+        if not isinstance(i['var'],list):
+            l=[i['var']]
+        if not isinstance(i['delta'],list) or 'mesh' in i['var']:
+            delta=[i['delta']]
+        for var in l:
+            #print(var)
+            
+            if var not in space.keys():
+                space[var] = []
+            else:
+                starting_inputs[var]=space[var][-1]
+            if wfl_type == '1D_convergence':
+                for r in range(1,i['steps']*i['max_iterations']+1):
+                    if isinstance(delta[l.index(var)],int):
+                        new_val = starting_inputs[var]+delta[l.index(var)]*(r+first-1)
+                    elif isinstance(delta[l.index(var)],list): 
+                        new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
+                    
+                    space[var].append(new_val)
+                    #print(new_val)
+            else:
+                for r in range(len(i['space'])):
+                    new_val = i['space'][r][l.index(var)]
+                
+                    space[var].append(new_val)
+        first = 1
+
+    #print('Dimensions:')
+    #print('bands_max: ',space['BndsRnXp'][-1][-1])
+    #print('G_max: ',space['NGsBlkXp'][-1],' Ry')
+    #m = space['kpoint_mesh'][-1]
+    #print('kpts_max: ',m[0]*m[1]*m[2])
+
+    return space
+
+
+def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints):
+
     workflow_dict = {}
-    try:
-        #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
-        ps = parameters_space.get_list()
-        ps.reverse()
-        workflow_dict['ideal_iter'] = copy.deepcopy(ps)
-        workflow_dict['true_iter'] = copy.deepcopy(ps)
-        workflow_dict['type'] = 'AiiDA_calculation'
-        #from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
-    except:
-        #this is not an AiiDA calculation
-        workflow_dict['type'] = 'not_AiiDA_calculation'
-        #from helpers_yambopy import calc_manager_yambopy as calc_manager     #qe py?
-        workflow_dict['ideal_iter'] = copy.deepcopy(parameters_space)
-        workflow_dict['true_iter'] = copy.deepcopy(parameters_space)
+    new_l = []
+
+    for i in parameters_space.get_list():
+        new_conv = copy.deepcopy(i)
+        new_conv['max_iterations'] = i.pop('max_iterations', 3)
+        new_conv['delta'] = i.pop('delta', 5)
+        new_conv['steps'] = i.pop('steps', 3)
+        new_conv['conv_thr'] = i.pop('conv_thr', 0.05)
+        new_l.append(new_conv)
+    
+
+    #AiiDA calculation --> this is the only AiiDA dependence of the class...the rest is abstract
+    ps = copy.deepcopy(new_l)
+    ps.reverse()
+    workflow_dict['ideal_iter'] = copy.deepcopy(ps)
+    workflow_dict['true_iter'] = copy.deepcopy(ps)
+    workflow_dict['type'] = 'AiiDA_calculation'
     
     workflow_dict['type'] = wfl_settings['type']
 
     workflow_dict['global_step'] = 0
     workflow_dict['fully_success'] = False
-    workflow_dict['first_calc'] = True
+
+    workflow_dict['starting_inputs'] = collect_inputs(inputs, kpoints, new_l)
+    workflow_dict['parameter_space'] = create_space(workflow_dict['starting_inputs'], new_l, workflow_dict['type'])
 
     return workflow_dict
 
@@ -175,4 +247,13 @@ class the_evaluator:
             return True, 0, 0
 
 
-################################################################################
+###############################  parallelism  ####################################
+
+def build_parallelism_instructions(instructions):
+
+    instructions['automatic'] = instructions.pop('automatic', False)
+    instructions['semi-automatic'] = instructions.pop('semi-automatic', False)
+    instructions['manual'] = instructions.pop('manual', False)
+    instructions['function'] = instructions.pop('function', False)
+
+    return instructions
