@@ -23,7 +23,7 @@ PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced
 ################################################################################
 def fix_parallelism(resources, failed_calc):
 
-    bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
+    bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
@@ -38,7 +38,7 @@ def fix_parallelism(resources, failed_calc):
 
 def fix_memory(resources, failed_calc, exit_status, max_nodes):
         
-    bands, qp, last_qp, runlevels = find_gw_info(failed_calc)
+    bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
     occupied, kpoints = take_filled_states(failed_calc.pk), take_number_kpts(failed_calc.pk)
 
     if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu']: #there should be a limit

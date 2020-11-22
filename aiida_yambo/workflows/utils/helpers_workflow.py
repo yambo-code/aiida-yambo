@@ -190,19 +190,25 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     for i in range(none_encountered): 
             workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
 
-    last_ok_pk = int(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['calc_pk'])
-    last_ok_wfl = get_caller(last_ok_pk, depth = 1)
-    start_from_converged(inputs, last_ok_wfl)
-        
+    try:
+        last_ok_pk = int(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['calc_pk'])
+        last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+        start_from_converged(inputs, last_ok_wfl)
+    except:
+        last_ok_pk, last_ok_wfl=0, 0
+
     if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
         set_parent(inputs, load_node(last_ok_pk))
     
-    final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
+    try:
+        final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
                 'result_eV':workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['result_eV'],\
                     'success':bool(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['useful'])}
 
-    workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
-
+        workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
+    except:
+        final_result={}
+        
     return final_result
 
 ################################################################################

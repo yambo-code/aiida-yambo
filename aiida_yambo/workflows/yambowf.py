@@ -34,28 +34,26 @@ class YamboWorkflow(WorkChain):
         super(YamboWorkflow, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, 
-                            exclude = ['parent_folder', 'pw.parameters','pw.pseudos','pw.code','pw.structure', 'kpoints'])
+                            exclude = ['parent_folder', 'pw.parameters', 'pw.pseudos','pw.code','pw.structure'])
 
         spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, 
-                            exclude = ['parent_folder', 'pw.parameters','pw.pseudos','pw.code','pw.structure', 'kpoints'])
+                            exclude = ['parent_folder', 'pw.parameters', 'pw.pseudos','pw.code','pw.structure'])
 
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': True}, 
                             exclude = ['parent_folder'])
 
         spec.input("parent_folder", valid_type=RemoteData, required= False,
                     help = 'scf, nscf or yambo remote folder')
-        
 
-        spec.input('scf_parameters', valid_type=Dict, required= False,
+        #DFT inputs, not required
+        spec.input('scf_parameters', valid_type=Dict, required = False,
                     help = 'scf params')
-        spec.input('nscf_parameters', valid_type=Dict, required= False,
-                    help = 'nscf params')
-        
+        spec.input('nscf_parameters', valid_type=Dict, required = False,
+                    help = 'nscf params')  
 
+        #Both scf and nscf DFT inputs, required   
         spec.input('structure', valid_type=StructureData, required= True,
                     help = 'structure')
-        spec.input('kpoints', valid_type=KpointsData, required= True,
-                    help = 'kpoints')
         spec.input('pseudo_family', valid_type=Str, required= True,
                     help = 'pseudo family')
         spec.input('pw_code', valid_type=Code, required= True,
@@ -79,23 +77,14 @@ class YamboWorkflow(WorkChain):
     
     def validate_parameters(self):
 
-        if hasattr(self.inputs,'scf'):
-            self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
-        else:
-            self.ctx.scf_inputs = PwBaseWorkChain.get_builder()
 
-        if hasattr(self.inputs,'nscf'):
-            self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
-        else:
-            self.ctx.nscf_inputs = PwBaseWorkChain.get_builder()
+        self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
+        self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
         self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')
         
         self.ctx.scf_inputs.pw.structure = self.inputs.structure
         self.ctx.nscf_inputs.pw.structure = self.inputs.structure
-
-        self.ctx.scf_inputs.kpoints = self.inputs.kpoints
-        self.ctx.nscf_inputs.kpoints = self.inputs.kpoints
 
         self.ctx.scf_inputs.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 self.ctx.scf_inputs.pw.structure, pseudo_family = self.inputs.pseudo_family)
@@ -116,19 +105,23 @@ class YamboWorkflow(WorkChain):
             self.ctx.scf_inputs.pw.parameters =  self.inputs.scf_parameters
         else:
             self.report('scf inputs not found, setting defaults')
+            scf_params['SYSTEM']['nbnd'] = int(scf_params['SYSTEM']['nbnd'])
             self.ctx.scf_inputs.pw.parameters =  Dict(dict=scf_params)
         
         self.ctx.redo_nscf = False
         if hasattr(self.inputs,'nscf_parameters'):
             self.report('nscf inputs found')  
             self.ctx.nscf_inputs.pw.parameters =  self.inputs.nscf_parameters
-            if self.ctx.nscf_inputs.pw.parameters['SYSTEM']['nbnd'] < self.ctx.gwbands:
+            if self.ctx.nscf_inputs.pw.parameters.get_dict()['SYSTEM']['nbnd'] < self.ctx.gwbands:
                 self.ctx.redo_nscf = True
                 self.report('setting nbnd of the nscf calculation to b = {}'.format(self.ctx.gwbands))
-                self.ctx.nscf_inputs.pw.parameters['SYSTEM']['nbnd'] = self.ctx.gwbands
+                nscf_params = self.ctx.nscf_inputs.pw.parameters.get_dict()
+                nscf_params['SYSTEM']['nbnd'] = int(self.ctx.gwbands)
+                self.ctx.nscf_inputs.pw.parameters = Dict(dict=nscf_params)
             
         else:
             self.report('nscf inputs not found, setting defaults')
+            nscf_params['SYSTEM']['nbnd'] = int(nscf_params['SYSTEM']['nbnd'])
             self.ctx.nscf_inputs.pw.parameters =  Dict(dict=nscf_params)
         
         

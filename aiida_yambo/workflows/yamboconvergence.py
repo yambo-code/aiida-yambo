@@ -30,11 +30,7 @@ class YamboConvergence(WorkChain):
         """
         super(YamboConvergence, cls).define(spec)
 
-        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
-                            exclude = ('kpoints','parent_folder'))
-        
-        spec.input('kpoints', valid_type=KpointsData, required = True)
-        spec.input('parent_folder', valid_type=RemoteData, required = False)
+        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True})
 
         spec.input('precalc_inputs', valid_type=Dict, required = False)
 
@@ -78,15 +74,13 @@ class YamboConvergence(WorkChain):
         """Initialize the workflow"""
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-        self.ctx.calc_inputs.kpoints = self.inputs.kpoints
-        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
 
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space,
                                                                 self.inputs.workflow_settings.get_dict()  ,
                                                                 self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
-                                                                self.inputs.kpoints,
+                                                                self.ctx.calc_inputs.nscf.kpoints,
                                                                 )
 
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
@@ -102,7 +96,7 @@ class YamboConvergence(WorkChain):
 
         if hasattr(self.inputs, "parallelism_instructions"):
             self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
-            self.report('para instr: {}'.format(self.ctx.workflow_manager['parallelism_instructions']))
+            #self.report('para instr: {}'.format(self.ctx.workflow_manager['parallelism_instructions']))
         else:
             self.ctx.workflow_manager['parallelism_instructions'] = {}  
         
@@ -113,7 +107,7 @@ class YamboConvergence(WorkChain):
 
         self.report('Workflow on {}'.format(self.inputs.workflow_settings.get_dict()['type']))
         
-        self.report('Space of parameters: {}'.format(self.ctx.workflow_manager['parameter_space']))
+        #self.report('Space of parameters: {}'.format(self.ctx.workflow_manager['parameter_space']))
         
         self.report("Workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager['var']))
 
@@ -173,7 +167,7 @@ class YamboConvergence(WorkChain):
                                                 self.ctx.workflow_manager['parallelism_instructions'])
             self.ctx.workflow_manager['values'].append(value)
             self.report('New parameters are: {}'.format(value))
-            self.report('Preparing iteration number {} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
+            self.report('Preparing iteration #{} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
                         value))
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
@@ -266,7 +260,7 @@ class YamboConvergence(WorkChain):
 
         self.report('detecting if we need a starting calculation...')
         
-        if 'kpoint' in self.ctx.calc_manager['var']:
+        if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
             self.report('Not needed, we start with k-points')
             return False
         
@@ -274,7 +268,7 @@ class YamboConvergence(WorkChain):
             self.report('Yes, we will do a preliminary calculation')
 
         try:
-            set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
+            #set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
             parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)
             nbnd = find_pw_parent(parent_calc, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
             if nbnd < self.ctx.bands:
@@ -298,6 +292,7 @@ class YamboConvergence(WorkChain):
     def do_pre(self):
         self.ctx.pre_inputs = self.ctx.calc_inputs
         self.ctx.old_inputs = self.ctx.calc_inputs
+        
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
             self.ctx.pre_inputs.yres.yambo.parameters = self.precalc_inputs

@@ -31,7 +31,7 @@ def set_parallelism(instructions, inputs):
 
     resources = inputs.yres.yambo.metadata.options.resources
     structure = inputs.structure.get_ase()
-    mesh = inputs.kpoints.get_kpoints_mesh()[0]
+    mesh = inputs.nscf.kpoints.get_kpoints_mesh()[0]
     kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
 
     occupied, ecut = periodical(structure)
@@ -122,8 +122,10 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     return calc_dict
 
 ################################## update_parameters - create parameters space #####################################
-def updater(calc_dict, inp_to_update, parameters, parallelism_instructions, values_dict = {}):
+def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
 
+    values_dict = {}
+    
     if not isinstance(calc_dict['var'],list):
         calc_dict['var'] = [calc_dict['var']]
 
@@ -132,20 +134,19 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions, valu
     for var in calc_dict['var']:
         if var == 'kpoint_mesh' or var == 'kpoint_density':
             k_quantity = parameters[var].pop(0)
-            k_quantity_shift = inp_to_update.scf.kpoints.get_kpoints_mesh()[1]
-            inp_to_update.scf.kpoints = KpointsData()
-            inp_to_update.scf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
-            if isinstance(k_quantity,tuple):
-                inp_to_update.scf.kpoints.set_kpoints_mesh(k_quantity,k_quantity_shift) 
+            k_quantity_shift = inp_to_update.nscf.kpoints.get_kpoints_mesh()[1]
+            inp_to_update.nscf.kpoints = KpointsData()
+            inp_to_update.nscf.kpoints.set_cell_from_structure(inp_to_update.structure) #to count the PBC...
+            if isinstance(k_quantity,tuple) or isinstance(k_quantity,list):
+                inp_to_update.nscf.kpoints.set_kpoints_mesh(k_quantity,k_quantity_shift) 
             else:
-                inp_to_update.scf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
-            inp_to_update.nscf.kpoints = inp_to_update.scf.kpoints
+                inp_to_update.nscf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
 
             try:
                 inp_to_update.parent_folder =  find_pw_parent(take_calc_from_remote(inp_to_update.parent_folder), calc_type=['scf']).outputs.remote_folder 
                 #I need to start from the scf calc
             except:
-                del inp_to_update.parent_folder #do all scf+nscf+y in case
+                if hasattr(inp_to_update, 'parent_folder'): del inp_to_update.parent_folder #do all scf+nscf+y in case
 
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
