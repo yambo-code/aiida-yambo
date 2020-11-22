@@ -77,6 +77,8 @@ def plot_1D_convergence(ax, history, title='',where=1,\
                 unit = ''
             color = colors[len(b)+where+1][0]
             val = conv[conv['var']==str(i)]['value'].values[-1]
+            if isinstance(val,dict):
+                val = list(val.values())
             #print(act)
             for j in range(where):
                 if j == 0:

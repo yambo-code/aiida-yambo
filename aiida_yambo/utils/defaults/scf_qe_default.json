@@ -1,0 +1,1 @@
+{"SYSTEM": {"nbnd": 20, "ecutwfc": 60.0, "force_symmorphic": true}, "CONTROL": {"verbosity": "high", "wf_collect": true, "calculation": "scf"}, "ELECTRONS": {"conv_thr": 1e-08, "mixing_beta": 0.7, "mixing_mode": "plain", "diago_full_acc": true, "diago_thr_init": 5e-06}}

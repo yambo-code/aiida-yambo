@@ -15,8 +15,8 @@ from aiida.engine.processes.workchains.utils import ProcessHandlerReport, proces
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.workflows.utils.helpers_yamborestart import *
-from aiida_yambo.utils.parallel_namelists import*
-
+from aiida_yambo.utils.parallel_namelists import *
+from aiida_yambo.utils.common_helpers import *
 
 class YamboRestart(BaseRestartWorkChain):
 
@@ -67,6 +67,8 @@ class YamboRestart(BaseRestartWorkChain):
         
         spec.exit_code(300, 'ERROR_UNRECOVERABLE_FAILURE',
             message='The calculation failed with an unrecoverable error.')
+        spec.exit_code(301, 'LOW_NUMBER_OF_NSCF_BANDS',
+            message='not enough bands in the Nscf dft step - nbnd - .')
 
     def setup(self):
         """setup of the calculation and run
@@ -84,6 +86,15 @@ class YamboRestart(BaseRestartWorkChain):
         if new_para:
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
             self.report('adjusting parallelism namelist... please check yambo documentation')
+        
+        nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder))
+        yambo_bandsX = self.ctx.inputs.parameters.get_dict().pop('BndsRnXp',[0])[-1]
+        yambo_bandsSc = self.ctx.inputs.parameters.get_dict().pop('GbndRnge',[0])[-1]
+
+        if nscf_parent.inputs.parameters.get_dict()['SYSTEM']['nbnd'] < max(yambo_bandsX,yambo_bandsSc):
+            self.report('You must run an nscf with nbnd at least =  {}'.format(max(yambo_bandsX,yambo_bandsSc)))
+            return self.exit_codes.LOW_NUMBER_OF_NSCF_BANDS
+
 
     def validate_resources(self):
         """validation of machines... completeness and with respect para options
@@ -122,7 +133,7 @@ class YamboRestart(BaseRestartWorkChain):
         we increase the simulation time and copy the database already created.
         """
         
-        self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options,self.ctx.iteration, self.inputs.max_walltime)
+        self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options, self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
@@ -142,6 +153,7 @@ class YamboRestart(BaseRestartWorkChain):
         """
         new_para, new_resources  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
+        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
 
         new_para = check_para_namelists(new_para, self.inputs.code_version.value)
@@ -172,6 +184,7 @@ class YamboRestart(BaseRestartWorkChain):
         new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
                                                 self.inputs.max_number_of_nodes)
         self.ctx.inputs.metadata.options.resources = new_resources
+        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
 
             

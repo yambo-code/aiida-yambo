@@ -30,34 +30,23 @@ class YamboConvergence(WorkChain):
         """
         super(YamboConvergence, cls).define(spec)
 
-        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True}, \
-                            exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
+        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True})
 
-        spec.expose_inputs(YamboWorkflow, namespace='p2y', namespace_options={'required': True}, \
-                            exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
-
-        spec.expose_inputs(YamboWorkflow, namespace='precalc', namespace_options={'required': True}, \
-                    exclude = ('scf.kpoints', 'nscf.kpoints','parent_folder'))
-
-        spec.input('kpoints', valid_type=KpointsData, required = True)
-        spec.input('parent_folder', valid_type=RemoteData, required = False)
+        spec.input('precalc_inputs', valid_type=Dict, required = False)
 
         spec.input("parameters_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max iterations')
         spec.input("workflow_settings", valid_type=Dict, required=True, \
                     help = 'settings for the workflow: type, quantity to be examinated...')
+        spec.input("parallelism_instructions", valid_type=Dict, required=False, \
+                    help = 'indications for the parallelism to be used wrt values of the parameters.')
 
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
-                    if_(cls.p2y_needed)(
-                    cls.do_p2y,
-                    cls.prepare_calculations,
-                    ),
-                    if_(cls.precalc_needed)(
-                    cls.do_precalc,
-                    cls.post_processing,
-                    ),
+                    if_(cls.pre_needed)(
+                    cls.do_pre,
+                    cls.prepare_calculations),
                     while_(cls.has_to_continue)(
                     cls.next_step,
                     cls.data_analysis),
@@ -73,12 +62,10 @@ class YamboConvergence(WorkChain):
         spec.output('remaining_iter', valid_type = List,  required = False, help='remaining convergence iter')       
 
         spec.exit_code(300, 'UNDEFINED_STATE',
-                             message='The workchain is in an undefined state.')
-        spec.exit_code(301, 'P2Y_FAILED',
-                             message='The workchain failed the p2y step.')  
-        spec.exit_code(302, 'PRECALC_FAILED',
+                             message='The workchain is in an undefined state.') 
+        spec.exit_code(301, 'PRECALC_FAILED',
                              message='The workchain failed the precalc step.')    
-        spec.exit_code(303, 'CALCS_FAILED',
+        spec.exit_code(302, 'CALCS_FAILED',
                              message='The workchain failed some calculations.')                                 
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
@@ -87,25 +74,42 @@ class YamboConvergence(WorkChain):
         """Initialize the workflow"""
 
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-        self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints = self.inputs.kpoints, self.inputs.kpoints
-
-        self.ctx.p2y_inputs = self.exposed_inputs(YamboWorkflow, 'p2y')
-        self.ctx.p2y_inputs.scf.kpoints, self.ctx.p2y_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints
-
-        self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
-        self.ctx.precalc_inputs.scf.kpoints, self.ctx.precalc_inputs.nscf.kpoints = self.ctx.calc_inputs.scf.kpoints, self.ctx.calc_inputs.nscf.kpoints
-        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
 
-        self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space, self.inputs.workflow_settings.get_dict())
+        self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space,
+                                                                self.inputs.workflow_settings.get_dict()  ,
+                                                                self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
+                                                                self.ctx.calc_inputs.nscf.kpoints,
+                                                                )
 
-        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), wfl_settings = self.inputs.workflow_settings.get_dict()) 
+        if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
+            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][-1][-1]
+        else:
+            yambo_bandsX = 0 
+        if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys():
+            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][-1][-1]
+        else:
+            yambo_bandsSc = 0
+
+        self.ctx.bands = max(yambo_bandsX,yambo_bandsSc)
+
+        if hasattr(self.inputs, "parallelism_instructions"):
+            self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
+            #self.report('para instr: {}'.format(self.ctx.workflow_manager['parallelism_instructions']))
+        else:
+            self.ctx.workflow_manager['parallelism_instructions'] = {}  
+        
+        self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
+                                            wfl_settings = self.inputs.workflow_settings.get_dict(),) 
 
         self.ctx.final_result = {}     
 
         self.report('Workflow on {}'.format(self.inputs.workflow_settings.get_dict()['type']))
-        self.report("workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager['var']))
+        
+        #self.report('Space of parameters: {}'.format(self.ctx.workflow_manager['parameter_space']))
+        
+        self.report("Workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager['var']))
 
     def has_to_continue(self):
         
@@ -129,7 +133,9 @@ class YamboConvergence(WorkChain):
         elif self.ctx.calc_manager['success']:
             #update variable to conv
             self.ctx.remaining_iter.pop()
-            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), wfl_settings = self.inputs.workflow_settings.get_dict())
+            self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
+                                            wfl_settings = self.inputs.workflow_settings.get_dict(),)
+
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
             
             return True
@@ -153,23 +159,19 @@ class YamboConvergence(WorkChain):
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager['values'] = []
-        parameters_space = parameters_space_creator(self.ctx.calc_manager, self.ctx.workflow_manager['first_calc'], \
-                            take_calc_from_remote(self.ctx.calc_inputs.parent_folder), \
-                            self.ctx.calc_inputs.yres.yambo.parameters.get_dict())
-        self.report('parameter space will be {}'.format(parameters_space))
-        self.ctx.calc_manager['steps'] = len(parameters_space)
-        for parameter in parameters_space:
-            self.report(parameter)
-            self.ctx.calc_inputs, value = \
-                        updater(self.ctx.calc_manager, self.ctx.calc_inputs, parameter)
-
+        for i in range(self.ctx.calc_manager['steps']):
+            #self.report(parameter)
+            self.ctx.calc_inputs, value = updater(self.ctx.calc_manager, 
+                                                self.ctx.calc_inputs, 
+                                                self.ctx.workflow_manager['parameter_space'], 
+                                                self.ctx.workflow_manager['parallelism_instructions'])
             self.ctx.workflow_manager['values'].append(value)
-            self.report('Preparing iteration number {} on {}: {}'.format((self.ctx.calc_manager['iter']-1)* \
-                        self.ctx.calc_manager['steps'] \
-                        + parameters_space.index(parameter)+1,parameter[0],value))
+            self.report('New parameters are: {}'.format(value))
+            self.report('Preparing iteration #{} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
+                        value))
 
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
-            calc[str(parameters_space.index(parameter))] = future
+            calc[str(i+1)] = future
             self.ctx.calc_manager['wfl_pk'] = future.pk
 
         return ToContext(calc)
@@ -253,86 +255,77 @@ class YamboConvergence(WorkChain):
             self.report('Undefined state')
             return self.exit_codes.UNDEFINED_STATE     
 
-###############################starting p2y#####################
-    def p2y_needed(self):
-        self.report('do we need a p2y??')
+############################### preliminary calculation #####################
+    def pre_needed(self):
 
-        self.report('detecting if we need a p2y starting calculation...')
+        self.report('detecting if we need a starting calculation...')
+        
+        if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
+            self.report('Not needed, we start with k-points')
+            return False
+        
+        if hasattr(self.inputs, 'precalc_inputs'):
+            self.report('Yes, we will do a preliminary calculation')
 
         try:
-            set_parent(self.ctx.p2y_inputs, self.inputs.parent_folder)
-            set_parent(self.ctx.precalc_inputs, self.inputs.parent_folder)
-            set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
-            parent_calc = take_calc_from_remote(self.ctx.p2y_inputs.parent_folder)
-            if parent_calc.process_type=='aiida.calculations:yambo.yambo':
-                self.report('no, yambo parent')
-                return False
+            #set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
+            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)
+            nbnd = find_pw_parent(parent_calc, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
+            if nbnd < self.ctx.bands:
+                self.report('yes, no yambo parent, we have also to recompute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.bands))
+                set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
+                return True
+            elif parent_calc.process_type=='aiida.calculations:yambo.yambo':
+                self.report('not required, yambo parent')            
             else:
                 self.report('yes, no yambo parent')
                 return True
         except:
-            self.report('no available parent folder, so we start from scratch')
-            return True
+            try:
+                set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
+                self.report('yes, no yambo parent, setting parent scf')
+                return True
+            except:
+                self.report('no available parent folder, so we start from scratch')
+                return True
 
-    def do_p2y(self):
-        self.report('doing the p2y')
+    def do_pre(self):
+        self.ctx.pre_inputs = self.ctx.calc_inputs
+        self.ctx.old_inputs = self.ctx.calc_inputs
+        
+        if hasattr(self.inputs, 'precalc_inputs'):
+            self.ctx.calculation_type='pre_yambo'
+            self.ctx.pre_inputs.yres.yambo.parameters = self.precalc_inputs
+        else:
+            self.ctx.calculation_type='p2y'
+            self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.bands],[1,self.ctx.bands]])
+            #self.report(self.ctx.pre_inputs.yres.yambo.parameters.get_dict())
+            self.ctx.pre_inputs.yres.yambo.settings = update_dict(self.ctx.pre_inputs.yres.yambo.settings, 'INITIALISE', True)
+
+        self.report('doing the calculation: {}'.format(self.ctx.calculation_type))
         calc = {}
-        self.report('no valid parent folder, so we will create it')
-        self.ctx.p2y_inputs.yres.yambo.settings = update_dict(self.ctx.p2y_inputs.yres.yambo.settings, 'INITIALISE', True)
-        calc['p2y'] = self.submit(YamboWorkflow, **self.ctx.p2y_inputs) #################run
-        self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc['p2y'].pk))
-        self.ctx.p2y_inputs.yres.yambo.settings = update_dict(self.ctx.p2y_inputs.yres.yambo.settings, 'INITIALISE', False)
-        self.ctx.p2y = calc['p2y']
-        self.report('setting label "p2y _on YC"')
-        load_node(calc['p2y'].pk).label = 'p2y _on YC'
+        calc[self.ctx.calculation_type] = self.submit(YamboWorkflow, **self.ctx.pre_inputs) #################run
+        self.ctx.PRE = calc[self.ctx.calculation_type]
+        self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc[self.ctx.calculation_type].pk))
+
+        self.ctx.calc_inputs = self.ctx.old_inputs
+
+        load_node(calc[self.ctx.calculation_type].pk).label = self.ctx.calculation_type
+
+        if hasattr(self.inputs, 'precalc_inputs'):
+            self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'COPY_DBS', True)
+        else:
+            self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', False)
 
         return ToContext(calc)
 
     def prepare_calculations(self):
-        if not self.ctx.p2y.is_finished_ok:
-            self.report('the p2y calc was not succesful, exiting...')
-            return self.exit_codes.P2Y_FAILED
-
-        self.report('setting the p2y calc as parent')
-        set_parent(self.ctx.calc_inputs, self.ctx.p2y.outputs.remote_folder)
-
-############################### starting precalculation ####################
-
-
-    def precalc_needed(self):
-        self.report('do we need a preliminary calculation ??')
-        self.report('detecting if we need a preliminary calculation...')
-        needed = self.inputs.workflow_settings.get_dict().pop('PRE_CALC')
-        self.report(needed)
-        if needed:
-            return True
-        else:
-            return False
-
-
-    def do_precalc(self):
-        self.report('doing the preliminary calculation')
-        calc = {}
-        self.ctx.precalc_inputs = self.exposed_inputs(YamboWorkflow, 'precalc')
-        set_parent(self.ctx.precalc_inputs, self.ctx.calc_inputs.parent_folder)
-        calc['PRE_CALC'] = self.submit(YamboWorkflow, **self.ctx.precalc_inputs) #################run
-        self.report('Submitted preliminary YamboWorkflow, pk = {}'.format(calc['PRE_CALC'].pk))
-        self.ctx.PRE = calc['PRE_CALC']
-        self.report('setting label "precalc _on YC"')
-        load_node(calc['PRE_CALC'].pk).label = 'precalc _on YC'
-
-        return ToContext(calc)
-
-    def post_processing(self):
         if not self.ctx.PRE.is_finished_ok:
-            self.report('the precalc was not succesful, exiting...')
+            self.report('the pre calc was not succesful, exiting...')
             return self.exit_codes.PRECALC_FAILED
-        
-        self.report('setting the preliminary calc as parent and its db as starting one')
+
+        self.report('setting the pre calc as parent')
         set_parent(self.ctx.calc_inputs, self.ctx.PRE.outputs.remote_folder)
-
-        self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'COPY_DBS', True)
-
 
 
 if __name__ == "__main__":
