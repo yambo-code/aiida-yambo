@@ -17,6 +17,7 @@ from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
 
 from aiida_yambo.workflows.utils.defaults.create_defaults import *
+from aiida_yambo.workflows.utils.helpers_yambowf import *
 
 class YamboWorkflow(WorkChain):
 
@@ -42,6 +43,9 @@ class YamboWorkflow(WorkChain):
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': True}, 
                             exclude = ['parent_folder'])
 
+        spec.input("additional_parsing", valid_type=List, required= False,
+                    help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1]...')
+        
         spec.input("parent_folder", valid_type=RemoteData, required= False,
                     help = 'scf, nscf or yambo remote folder')
 
@@ -72,17 +76,20 @@ class YamboWorkflow(WorkChain):
 
         spec.expose_outputs(YamboRestart)
 
+        spec.output('output_ywfl_parameters', valid_type = Dict, required = False)
+        spec.output('nscf_mapping', valid_type = Dict, required = False)
+
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
                              message='The workchain failed with an unrecoverable error.')
     
     def validate_parameters(self):
 
+        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')        
 
+        #quantumespresso common inputs
         self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
         self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
 
-        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')
-        
         self.ctx.scf_inputs.pw.structure = self.inputs.structure
         self.ctx.nscf_inputs.pw.structure = self.inputs.structure
 
@@ -93,37 +100,14 @@ class YamboWorkflow(WorkChain):
         self.ctx.scf_inputs.pw.code = self.inputs.pw_code
         self.ctx.nscf_inputs.pw.code = self.inputs.pw_code
         
-        yambo_bandsX = self.ctx.yambo_inputs.yambo.parameters.get_dict().pop('BndsRnXp',[0])[-1]
-        yambo_bandsSc = self.ctx.yambo_inputs.yambo.parameters.get_dict().pop('GbndRnge',[0])[-1]
-        self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
-        self.report('GW bands are: {} '.format(self.ctx.gwbands))
-        scf_params, nscf_params = create_quantumespresso_inputs(self.ctx.scf_inputs.pw.structure, bands_gw = self.ctx.gwbands)
-
-
-        if hasattr(self.inputs,'scf_parameters'):
-            self.report('scf inputs found')  
-            self.ctx.scf_inputs.pw.parameters =  self.inputs.scf_parameters
-        else:
-            self.report('scf inputs not found, setting defaults')
-            scf_params['SYSTEM']['nbnd'] = int(scf_params['SYSTEM']['nbnd'])
-            self.ctx.scf_inputs.pw.parameters =  Dict(dict=scf_params)
-        
-        self.ctx.redo_nscf = False
-        if hasattr(self.inputs,'nscf_parameters'):
-            self.report('nscf inputs found')  
-            self.ctx.nscf_inputs.pw.parameters =  self.inputs.nscf_parameters
-            if self.ctx.nscf_inputs.pw.parameters.get_dict()['SYSTEM']['nbnd'] < self.ctx.gwbands:
-                self.ctx.redo_nscf = True
-                self.report('setting nbnd of the nscf calculation to b = {}'.format(self.ctx.gwbands))
-                nscf_params = self.ctx.nscf_inputs.pw.parameters.get_dict()
-                nscf_params['SYSTEM']['nbnd'] = int(self.ctx.gwbands)
-                self.ctx.nscf_inputs.pw.parameters = Dict(dict=nscf_params)
-            
-        else:
-            self.report('nscf inputs not found, setting defaults')
-            nscf_params['SYSTEM']['nbnd'] = int(nscf_params['SYSTEM']['nbnd'])
-            self.ctx.nscf_inputs.pw.parameters =  Dict(dict=nscf_params)
-        
+        #quantumespresso input parameters
+        scf_params, nscf_params, redo_nscf, gwbands, messages = quantumespresso_input_validator(self.inputs,)
+        self.ctx.scf_inputs.pw.parameters = scf_params
+        self.ctx.nscf_inputs.pw.parameters = nscf_params
+        self.ctx.redo_nscf = redo_nscf
+        self.ctx.gwbands = gwbands
+        for i in messages:
+            self.report(i)
         
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
@@ -193,10 +177,7 @@ class YamboWorkflow(WorkChain):
 
         The next step will be a yambo calculation if the provided inputs are a previous yambo/p2y run
         Will be a PW scf/nscf if the inputs do not provide the NSCF or previous yambo parent calculations"""
-
-        self.report('performing a {} calculation'.format(self.ctx.calc_to_do))
-
-        
+  
         try:
             calc = self.ctx.calc
             if not calc.is_finished_ok:
@@ -204,7 +185,9 @@ class YamboWorkflow(WorkChain):
                 return self.exit_codes.ERROR_WORKCHAIN_FAILED
         except:
             pass
-            
+
+        self.report('performing a {} calculation'.format(self.ctx.calc_to_do))
+
         if self.ctx.calc_to_do == 'scf':
 
             future = self.submit(PwBaseWorkChain, **self.ctx.scf_inputs)
@@ -229,6 +212,11 @@ class YamboWorkflow(WorkChain):
             except:
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
+            if hasattr(self.inputs, 'additional_parsing'):
+                self.report('updating yambo parameters to parse more results')
+                self.ctx.mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
+                self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
+
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
             self.ctx.calc_to_do = 'the workflow is finished'
@@ -241,9 +229,14 @@ class YamboWorkflow(WorkChain):
 
         calc = self.ctx.calc
         if calc.is_finished_ok:
-            self.report("workflow completed successfully")
-            
+            if hasattr(self.inputs, 'additional_parsing'):
+                self.report('parsing additional quantities')
+                parsed = additional_parsed(calc, self.inputs.additional_parsing, self.ctx.mapping)
+                self.out('nscf_mapping', store_Dict(self.ctx.mapping))
+                self.out('output_ywfl_parameters', store_Dict(parsed))
+
             self.out_many(self.exposed_outputs(calc,YamboRestart))
+            self.report("workflow completed successfully")
 
         else:
             self.report("workflow NOT completed successfully")

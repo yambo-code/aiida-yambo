@@ -124,7 +124,9 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['true_iter'] = copy.deepcopy(ps)
     workflow_dict['type'] = 'AiiDA_calculation'
     
-    workflow_dict['type'] = wfl_settings['type']
+    copy_wfl_sett = copy.deepcopy(wfl_settings)
+    workflow_dict['type'] = copy_wfl_sett.pop('type','1D_convergence')
+    workflow_dict['what'] = copy_wfl_sett.pop('what','gap_eV')
 
     workflow_dict['global_step'] = 0
     workflow_dict['fully_success'] = False
@@ -153,29 +155,29 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict = {}):
     final_result = {}
     if workflow_dict['global_step'] == 0 :
         workflow_dict['workflow_story'] = pd.DataFrame(columns = ['global_step']+list(calc_manager.keys())+\
-                        ['value', 'calc_pk','result_eV','useful','failed'])
+                        ['value', 'calc_uuid','result_eV','useful','failed'])
 
     for i in range(calc_manager['steps']):
             workflow_dict['global_step'] += 1
             workflow_story_list = [workflow_dict['global_step']]+list(calc_manager.values())+\
-                        [workflow_dict['values'][i], quantities[0,i,2], quantities[:,i,1].tolist(), True, False]
+                        [workflow_dict['values'][i], load_node(int(quantities[0,i,2])).uuid, quantities[:,i,1].tolist(), True, False]
             workflow_df = pd.DataFrame([workflow_story_list],columns = ['global_step']+list(calc_manager.keys())+\
-                    ['value', 'calc_pk','result_eV','useful','failed'])
+                    ['value', 'calc_uuid','result_eV','useful','failed'])
             workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
 
     
     for i in range(1,len(workflow_dict['workflow_story'])+1):
         try:                
-            last_ok_pk = int(workflow_dict['workflow_story'].iloc[-i]['calc_pk'])
-            last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+            last_ok_uuid = workflow_dict['workflow_story'].iloc[-i]['calc_uuid']
+            last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
             start_from_converged(inputs, last_ok_wfl)
             if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
-                set_parent(inputs, load_node(last_ok_pk))
+                set_parent(inputs, load_node(last_ok_uuid))
             break
         except:
             pass
 
-    final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
+    final_result={'calculation_uuid': load_node(last_ok_uuid).uuid,\
             'result_eV':workflow_dict['workflow_story'].iloc[-1]['result_eV'],\
                 'success':bool(workflow_dict['workflow_story'].iloc[-1]['useful'])}
         
@@ -191,17 +193,17 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
             workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
 
     try:
-        last_ok_pk = int(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['calc_pk'])
-        last_ok_wfl = get_caller(last_ok_pk, depth = 1)
+        last_ok_uuid = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['calc_uuid']
+        last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
         start_from_converged(inputs, last_ok_wfl)
     except:
-        last_ok_pk, last_ok_wfl=0, 0
+        last_ok_uuid, last_ok_wfl='', 0
 
     if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
-        set_parent(inputs, load_node(last_ok_pk))
+        set_parent(inputs, load_node(last_ok_uuid))
     
     try:
-        final_result={'calculation_uuid': load_node(last_ok_pk).uuid,\
+        final_result={'calculation_uuid': load_node(last_ok_uuid).uuid,\
                 'result_eV':workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['result_eV'],\
                     'success':bool(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['useful'])}
 

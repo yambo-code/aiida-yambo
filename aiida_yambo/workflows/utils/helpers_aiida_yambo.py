@@ -171,46 +171,31 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
     return inp_to_update, values_dict
 
 ################################## parsers #####################################
-def take_quantities(calc_dict, steps = 1, where = [], what = 'gap',backtrace=1):
+def take_quantities(calc_dict, steps = 1, what = ['gap'],backtrace=1):
 
     try:
         backtrace = calc_dict['steps'] 
-        where = calc_dict['where']
         what = calc_dict['what']
     except:
         pass
 
-    print('looking for {} in k-points {}'.format(what,where))
+    print('looking for {} in k-points {}'.format(what,what))
 
-    quantities = np.zeros((len(where),backtrace,3))
+    quantities = np.zeros((len(what),backtrace,3))
 
-    for j in range(len(where)):
+    for j in range(len(what)):
         for i in range(1,backtrace+1):
             try: #YamboConvergence
-                yambo_calc = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i].called[0].called[0]
+                ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
             except: #YamboWorkflow,YamboRestart of YamboCalculation
-                yambo_calc = load_node(calc_dict['wfl_pk'])
+                ywf_node = load_node(calc_dict['wfl_pk'])
                 print('values provided are: [iteration, value in eV, workflow pk]')
-            if yambo_calc.is_finished_ok:
-                if what == 'gap':
-                    _vb=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
-                    _cb=find_table_ind(where[j][3], where[j][2],yambo_calc.outputs.array_ndb)
-                    quantities[j,i-1,1] = abs((yambo_calc.outputs.array_ndb.get_array('Eo')[_vb].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real)-
-                                (yambo_calc.outputs.array_ndb.get_array('Eo')[_cb].real+
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real))
-
-                if what == 'single-levels':
-                    _level=find_table_ind(where[j][1], where[j][0],yambo_calc.outputs.array_ndb)
-                    quantities[j,i-1,1] = yambo_calc.outputs.array_ndb.get_array('Eo')[_level].real+ \
-                                yambo_calc.outputs.array_ndb.get_array('E_minus_Eo')[_level].real
-
-                quantities[j,i-1,1] = quantities[j,i-1,1]*27.2114 #conversion to eV
+            if ywf_node.is_finished_ok:
+                quantities[j,i-1,1] = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
             else:
-                quantities[j,i-1,1] = False
-                
+                quantities[j,i-1,1] = False                
             quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
-            quantities[j,i-1,2] = int(yambo_calc.pk) #CalcJobNode.pk responsible of the calculation
+            quantities[j,i-1,2] = int(ywf_node.pk) #CalcJobNode.uuid responsible of the calculation
 
     return quantities
 
