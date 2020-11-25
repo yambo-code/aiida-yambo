@@ -31,7 +31,7 @@ def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
 def fact(n):
     l = []
     r = []
-    for i in range(1,n+1):
+    for i in range(1,int(n+1)):
         if n%i == 0:
         #print(i)
             l.append(i)
@@ -99,8 +99,8 @@ def parallelize_SE_bands(mpi, mpi_per_node, bands, qp_corrected, g_vecs):
     if mpi > bands*qp_corrected:
         mpi = bands*qp_corrected
     
-    if qp_corrected == 2:
-        b, qp = mpi/2, qp_corrected 
+    if qp_corrected % 2 == 0 and mpi > 1:
+        b, qp = mpi/2, 2 
     else:
         b, qp = find_para(mpi,bands,qp_corrected)
     
@@ -128,15 +128,21 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
              last_qp = occupied+1 
         bands = last_qp*qp_corrected
     
-    
-    mpi, k, c, v = parallelize_DIP(mpi, mpi_per_node, bands, occupied, kpoints, g_vecs)
-    mpi, k, c, v, g, q = parallelize_X_matrix(mpi, mpi_per_node, bands, occupied, kpoints)
-    mpi, qp, b, g, q = parallelize_SE_bands(mpi, mpi_per_node, bands, qp_corrected, g_vecs)
+    for i in range(10):
+        mpi1, k, c, v = parallelize_DIP(mpi, mpi_per_node, bands, occupied, kpoints, g_vecs)
+        mpi2, k, c, v, g, q = parallelize_X_matrix(mpi1, mpi_per_node, bands, occupied, kpoints)
+        mpi3, qp, b, g, q = parallelize_SE_bands(mpi2, mpi_per_node, bands, qp_corrected, g_vecs)
+        if mpi1 == mpi2 and mpi2 == mpi3:
+            break
+
+    for i in [mpi, k, c, v, g, q, qp, b]:
+        if i == 0 :
+            i = 1
 
     mpi_DIP = {'k':k,'c':c,'v':v}
     mpi_X = {'q':q,'k':k,'g':g,'c':c,'v':v}
     mpi_SE = {'q':q,'qp':qp,'b':b,'g':g}
-
+    
     parallelism = {}
 
     parallelism['X_CPU'] = ''

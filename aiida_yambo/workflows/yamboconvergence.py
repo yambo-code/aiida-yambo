@@ -16,6 +16,7 @@ from aiida_yambo.workflows.utils.helpers_aiida_yambo import *
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
 from aiida_yambo.workflows.utils.helpers_workflow import *
 from aiida_yambo.utils.common_helpers import *
+from aiida_yambo.workflows.utils.helpers_yambowf import *
 
 class YamboConvergence(WorkChain):
 
@@ -54,11 +55,8 @@ class YamboConvergence(WorkChain):
                     )
 
 ##################################################################################
-
+        spec.expose_outputs(YamboWorkflow) #the last calculation
         spec.output('history', valid_type = Dict, help='all calculations')
-        spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
-        spec.output('last_calculation_remote_folder', valid_type = RemoteData, required = False, \
-                                                      help='final remote folder')
         spec.output('remaining_iter', valid_type = List,  required = False, help='remaining convergence iter')       
 
         spec.exit_code(300, 'UNDEFINED_STATE',
@@ -83,16 +81,7 @@ class YamboConvergence(WorkChain):
                                                                 self.ctx.calc_inputs.nscf.kpoints,
                                                                 )
 
-        if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][-1][-1]
-        else:
-            yambo_bandsX = 0 
-        if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][-1][-1]
-        else:
-            yambo_bandsSc = 0
-
-        self.ctx.bands = max(yambo_bandsX,yambo_bandsSc)
+        self.ctx.calc_inputs.additional_parsing = List(list=self.inputs.workflow_settings.get_dict()['what'])
 
         if hasattr(self.inputs, "parallelism_instructions"):
             self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
@@ -105,7 +94,8 @@ class YamboConvergence(WorkChain):
 
         self.ctx.final_result = {}     
 
-        self.report('Workflow on {}'.format(self.inputs.workflow_settings.get_dict()['type']))
+        self.report('Workflow type: {}; looking for convergence of {}'.format(self.inputs.workflow_settings.get_dict()['type'], self.inputs.workflow_settings.get_dict()['what']))
+
         
         #self.report('Space of parameters: {}'.format(self.ctx.workflow_manager['parameter_space']))
         
@@ -180,19 +170,19 @@ class YamboConvergence(WorkChain):
     def data_analysis(self):
 
         self.report('Data analysis, we will try to parse some result and decide what next')
-        post_processor = the_evaluator(self.ctx.calc_manager) 
 
-        quantities = take_quantities(self.ctx.calc_manager)
-
-        build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
-        
-        self.report('results: {}'.format(np.array(self.ctx.workflow_manager['array_conv'])))
-        
-        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered = \
-                post_processor.analysis_and_decision(self.ctx.workflow_manager['array_conv'])
-
+        quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
+        #build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
+
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes = \
+                analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
+
+        self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
+        
+        #self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
+        #                 workflow_dict=self.ctx.workflow_manager)
 
         #self.report('The history:')
         #self.report(self.ctx.workflow_manager['workflow_story'])
@@ -206,7 +196,7 @@ class YamboConvergence(WorkChain):
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter'],\
-                            df_story[df_story['useful'] == True].iloc[-1]['result_eV']))
+                            df_story[df_story['useful'] == True].loc[:,self.ctx.workflow_manager['what']].values[-1:]))
 
             if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
@@ -227,18 +217,14 @@ class YamboConvergence(WorkChain):
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
-        
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        final_result = store_Dict(self.ctx.final_result)
-        self.out('last_calculation',final_result)
-
         try:
-            remote_folder = load_node(final_result['calculation_uuid']).outputs.remote_folder
-            self.out('last_calculation_remote_folder',remote_folder)
+            calc = load_node(self.ctx.final_result['uuid'])
+            self.out_many(self.exposed_outputs(calc,YamboWorkflow))
         except:
-            pass
-
+            self.report('no YamboWorkflows available to expose outputs')
+        
         if not self.ctx.calc_manager['success'] and self.ctx.none_encountered:
             remaining_iter = store_List(self.ctx.remaining_iter)
             self.out('remaining_iter', remaining_iter)
@@ -260,6 +246,17 @@ class YamboConvergence(WorkChain):
 
         self.report('detecting if we need a starting calculation...')
         
+        if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
+            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][-1][-1]
+        else:
+            yambo_bandsX = 0 
+        if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys():
+            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][-1][-1]
+        else:
+            yambo_bandsSc = 0
+
+        self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
+
         if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
             self.report('Not needed, we start with k-points')
             return False
@@ -268,11 +265,14 @@ class YamboConvergence(WorkChain):
             self.report('Yes, we will do a preliminary calculation')
 
         try:
-            #set_parent(self.ctx.calc_inputs, self.inputs.parent_folder)
-            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)
-            nbnd = find_pw_parent(parent_calc, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
-            if nbnd < self.ctx.bands:
-                self.report('yes, no yambo parent, we have also to recompute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.bands))
+            scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.inputs.ywfl)
+            set_parent(self.ctx.calc_inputs, self.inputs.ywfl.parent_folder)
+            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)        
+            
+            nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
+        
+            if nbnd < self.ctx.gwbands:
+                self.report('we have to compute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.gwbands))
                 set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
                 return True
             elif parent_calc.process_type=='aiida.calculations:yambo.yambo':
@@ -290,15 +290,16 @@ class YamboConvergence(WorkChain):
                 return True
 
     def do_pre(self):
-        self.ctx.pre_inputs = self.ctx.calc_inputs
-        self.ctx.old_inputs = self.ctx.calc_inputs
-        
+        self.ctx.pre_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+        if hasattr(self.ctx.pre_inputs, 'additional_parsing'):
+            delattr(self.ctx.pre_inputs, 'additional_parsing')
+
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
             self.ctx.pre_inputs.yres.yambo.parameters = self.precalc_inputs
         else:
             self.ctx.calculation_type='p2y'
-            self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.bands],[1,self.ctx.bands]])
+            self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.gwbands],[1,self.ctx.gwbands]])
             #self.report(self.ctx.pre_inputs.yres.yambo.parameters.get_dict())
             self.ctx.pre_inputs.yres.yambo.settings = update_dict(self.ctx.pre_inputs.yres.yambo.settings, 'INITIALISE', True)
 
@@ -307,8 +308,6 @@ class YamboConvergence(WorkChain):
         calc[self.ctx.calculation_type] = self.submit(YamboWorkflow, **self.ctx.pre_inputs) #################run
         self.ctx.PRE = calc[self.ctx.calculation_type]
         self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc[self.ctx.calculation_type].pk))
-
-        self.ctx.calc_inputs = self.ctx.old_inputs
 
         load_node(calc[self.ctx.calculation_type].pk).label = self.ctx.calculation_type
 

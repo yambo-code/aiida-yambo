@@ -182,7 +182,6 @@ def take_number_kpts(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last
             kpts = int(line.split()[2])
             return kpts
     
-
 def store_List(a_list):
     the_List = List(list=a_list)
     the_List.store()
@@ -233,4 +232,30 @@ def find_gw_info(inputs):
             runlevels.append(i)
     
     return bands, qp, last_qp, runlevels
+
+def gap_mapping_from_nscf(nscf_pk,):
+    
+    nscf = load_node(nscf_pk)
+    bands = nscf.outputs.output_band.get_array('bands')
+    occ = nscf.outputs.output_band.get_array('occupations')
+    valence = len(occ[0][occ[0]>0]) #band index of the valence. 
+    conduction = valence + 1 
+    ind_val = bands[:,valence-1].argmax()
+    ind_cond = bands[:,conduction-1].argmin()
+
+    if ind_val+1 != ind_cond+1:
+        gap_type = 'indirect'
+    else:
+        gap_type = 'direct'
+
+    mapping = {
+    'valence': valence,
+    'nscf_gap_eV':round(abs(min(bands[:,conduction-1])-max(bands[:,valence-1])),3),
+    'homo_k': ind_val+1,
+    'lumo_k':ind_cond+1,
+    'gap_type':gap_type,
+    'mapping_gap_qp':[ind_val+1,ind_cond+1,valence,valence+1], #the qp to be computed
+           }
+    
+    return mapping
         

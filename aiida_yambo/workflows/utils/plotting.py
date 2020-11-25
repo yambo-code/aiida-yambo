@@ -17,8 +17,8 @@ from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 
 ###### PLOT ######
 
-def plot_1D_convergence(ax, history, title='',where=1,\
-              units={'NGsBlkXp':'(Ry)','kpoints':' (mesh)'}):
+def plot_1D_convergence(ax, history, title='',where=['gap_at_Gamma_eV'],\
+              units={'NGsBlkXp':'(Ry)','kpointsmesh':' (mesh)'}):
 
     colors = list(matplotlib.colors.TABLEAU_COLORS.items())
     
@@ -42,16 +42,17 @@ def plot_1D_convergence(ax, history, title='',where=1,\
     y.insert(0, yy)
     
     for i in range(len(y)):
+        break
         string=''
-        if isinstance(y[i][y[0].index('var')],list):
+        if isinstance(y[i][y[0].index('parameters_studied')],list):
             #print(y[i][y[0].index('var')])
-            for k in y[i][y[0].index('var')]:
+            for k in y[i][y[0].index('parameters_studied')]:
                 string += k+' & '
                 string= string+'qwerty'
                 string = string.replace('& qwerty','')
                 #print(string)
-                y[i][y[0].index('var')]=string[:-1]
-        tot = pd.DataFrame(y[1:],columns=y[0])  
+                y[i][y[0].index('parameters_studied')]=string[:-1]
+    tot = pd.DataFrame(y[1:],columns=y[0])  
     
     try:
         tot = tot[tot['failed']==False]    
@@ -60,41 +61,45 @@ def plot_1D_convergence(ax, history, title='',where=1,\
     
     conv = tot[tot['useful']==True]
     #print(conv,tot)
-
-    ax.plot(conv['global_step'],np.array(conv['result_eV'].to_list())[:,range(where)],'-',\
-            label='convergence path')
-    for j in range(where):
-        ax.plot(tot['global_step'],np.array(tot['result_eV'].to_list())[:,j],'*--',
+    for j in range(len(where)):
+        ax.plot(tot['global_step'],np.array(tot.loc[:,where[j]].values[:]),'*--',
                 color='black',label='full path')
+    ax.plot(conv['global_step'],conv.loc[:,where].values[:],'-',\
+            label='convergence path')
+
 
     b=[]
 
-    for i in conv['var']:
+    for i in conv['parameters_studied']:
         if i not in b:
+            unit=''
             try:
-                unit = units[i]
+                for iy in i:
+                    print(i)
+                    unit += units[iy]
             except:
                 unit = ''
-            color = colors[len(b)+where+1][0]
-            val = conv[conv['var']==str(i)]['value'].values[-1]
+            color = colors[len(b)+1][0]
+            print(color)
+            val = conv[i].values[-1][0]
             if isinstance(val,dict):
                 val = list(val.values())
             #print(act)
-            for j in range(where):
+            for j in range(len(where)):
                 if j == 0:
-                    if i == 'kpoints':
-                        try:
-                            val = find_pw_parent(load_node(int(conv[conv['var']==str(i)]['calc_pk'].values[-1]))).inputs.kpoints.get_kpoints_mesh()[0]
-                            label=str(i)+' - '+str(val)+' '+str(unit)
-                        except:
-                            label=str(i)+' - '+str(val)+' '+str(unit)
-                    else:
-                        label=str(i)+' - '+str(val)+' '+str(unit)
+                    label=str(i)+' - '+str(val)+' '+str(unit)
                 else:
                     label = None
-                ax.plot(conv['global_step'],np.ma.masked_where(np.array(conv['var'].to_numpy()!=str(i)),\
-                            np.array(conv['result_eV'].to_list())[:,j]),'o-' \
-                        ,label=label)
+                mask = []
+                for l in conv['parameters_studied'].values[:]:
+                    if l == i:
+                        mask.append(True)
+                    else:
+                        mask.append(False)
+                        
+                ax.plot(conv['global_step'],\
+                        np.ma.masked_where(np.array(mask),conv.loc[:,where[j]].values[:]),
+                        'o-',label=label, color=color)
             b.append(i)
 
 def plot_2D_convergence(ax, xdata=None, ydata=None, zdata=None, parameters = {'x':'bands','y':'G-vecs (Ry)'}, plot_type='3D'):      
