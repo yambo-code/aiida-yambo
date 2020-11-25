@@ -16,7 +16,7 @@ from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pse
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
 
-from aiida_yambo.workflows.utils.defaults.create_defaults import *
+from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
 
 class YamboWorkflow(WorkChain):
