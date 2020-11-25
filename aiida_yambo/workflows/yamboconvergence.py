@@ -291,17 +291,16 @@ class YamboConvergence(WorkChain):
 
     def do_pre(self):
         self.ctx.pre_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
-        if hasattr(self.ctx.pre_inputs, 'additional_parsing'):
-            delattr(self.ctx.pre_inputs, 'additional_parsing')
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
-            self.ctx.pre_inputs.yres.yambo.parameters = self.precalc_inputs
         else:
             self.ctx.calculation_type='p2y'
             self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.gwbands],[1,self.ctx.gwbands]])
             #self.report(self.ctx.pre_inputs.yres.yambo.parameters.get_dict())
             self.ctx.pre_inputs.yres.yambo.settings = update_dict(self.ctx.pre_inputs.yres.yambo.settings, 'INITIALISE', True)
+            if hasattr(self.ctx.pre_inputs, 'additional_parsing'):
+                delattr(self.ctx.pre_inputs, 'additional_parsing')
 
         self.report('doing the calculation: {}'.format(self.ctx.calculation_type))
         calc = {}
