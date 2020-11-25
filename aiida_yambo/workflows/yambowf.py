@@ -75,7 +75,7 @@ class YamboWorkflow(WorkChain):
 ##################################################################################
 
         spec.expose_outputs(YamboRestart)
-
+        
         spec.output('output_ywfl_parameters', valid_type = Dict, required = False)
         spec.output('nscf_mapping', valid_type = Dict, required = False)
 

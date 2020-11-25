@@ -157,7 +157,7 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
             values_dict[var]=input_dict[var]
     
-    if parallelism_instructions != {}:
+    if len(parallelism_instructions.keys()) >= 1:
         new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
         if new_para and new_res:
@@ -171,31 +171,40 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
     return inp_to_update, values_dict
 
 ################################## parsers #####################################
-def take_quantities(calc_dict, steps = 1, what = ['gap'],backtrace=1):
+def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backtrace=1):
 
-    try:
-        backtrace = calc_dict['steps'] 
-        what = calc_dict['what']
-    except:
-        pass
+    parameter_names = list(workflow_dict['parameter_space'].keys())
+    
+    backtrace = calc_dict['steps'] 
+    what = workflow_dict['what']
 
-    print('looking for {} in k-points {}'.format(what,what))
-
-    quantities = np.zeros((len(what),backtrace,3))
-
-    for j in range(len(what)):
-        for i in range(1,backtrace+1):
-            try: #YamboConvergence
-                ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
-            except: #YamboWorkflow,YamboRestart of YamboCalculation
-                ywf_node = load_node(calc_dict['wfl_pk'])
-                print('values provided are: [iteration, value in eV, workflow pk]')
-            if ywf_node.is_finished_ok:
-                quantities[j,i-1,1] = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
+    #quantities = np.zeros((len(what),backtrace,3))
+    #quantities = pd.DataFrame([], columns = parameter_names + what + ['uuid'])
+    l_iter = []
+    for i in range(1,backtrace+1):
+        l_calc = []
+        try: #YamboConvergence
+            ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
+        except: #YamboWorkflow,YamboRestart of YamboCalculation
+            ywf_node = load_node(calc_dict['wfl_pk'])
+        for n in parameter_names:
+            if 'mesh' in n:
+                value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
             else:
-                quantities[j,i-1,1] = False                
-            quantities[j,i-1,0] = i  #number of the iteration times to be used in a fit
-            quantities[j,i-1,2] = int(ywf_node.pk) #CalcJobNode.uuid responsible of the calculation
+                value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+            l_calc.append(value)
+        for j in range(len(what)):        
+            if ywf_node.is_finished_ok:
+                quantity = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
+                l_calc.append(quantity)
+            else:
+                quantity = False
+                l_calc.append(quantity)           
+            
+        l_calc.append(ywf_node.uuid) #CalcJobNode.pk responsible of the calculation
+        l_iter.append(l_calc)
+    
+    quantities = pd.DataFrame(l_iter, columns = parameter_names + what + ['uuid'])
 
     return quantities
 

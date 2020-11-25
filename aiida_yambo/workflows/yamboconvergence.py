@@ -55,11 +55,8 @@ class YamboConvergence(WorkChain):
                     )
 
 ##################################################################################
-
+        spec.expose_outputs(YamboWorkflow) #the last calculation
         spec.output('history', valid_type = Dict, help='all calculations')
-        spec.output('last_calculation', valid_type = Dict, help='final useful calculation')
-        spec.output('last_calculation_remote_folder', valid_type = RemoteData, required = False, \
-                                                      help='final remote folder')
         spec.output('remaining_iter', valid_type = List,  required = False, help='remaining convergence iter')       
 
         spec.exit_code(300, 'UNDEFINED_STATE',
@@ -173,19 +170,19 @@ class YamboConvergence(WorkChain):
     def data_analysis(self):
 
         self.report('Data analysis, we will try to parse some result and decide what next')
-        post_processor = the_evaluator(self.ctx.calc_manager) 
 
-        quantities = take_quantities(self.ctx.calc_manager)
-
-        build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
-        
-        self.report('results: {}'.format(np.array(self.ctx.workflow_manager['array_conv'])))
-        
-        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered = \
-                post_processor.analysis_and_decision(self.ctx.workflow_manager['array_conv'])
-
+        quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
+        #build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
+
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes = \
+                analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
+
+        self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
+        
+        #self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
+        #                 workflow_dict=self.ctx.workflow_manager)
 
         #self.report('The history:')
         #self.report(self.ctx.workflow_manager['workflow_story'])
@@ -199,7 +196,7 @@ class YamboConvergence(WorkChain):
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter'],\
-                            df_story[df_story['useful'] == True].iloc[-1]['result_eV']))
+                            df_story[df_story['useful'] == True].loc[:,self.ctx.workflow_manager['what']].values[-1:]))
 
             if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
@@ -220,18 +217,14 @@ class YamboConvergence(WorkChain):
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
-        
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        final_result = store_Dict(self.ctx.final_result)
-        self.out('last_calculation',final_result)
-
         try:
-            remote_folder = load_node(final_result['calculation_uuid']).outputs.remote_folder
-            self.out('last_calculation_remote_folder',remote_folder)
+            calc = load_node(self.ctx.final_result['uuid'])
+            self.out_many(self.exposed_outputs(calc,YamboWorkflow))
         except:
-            pass
-
+            self.report('no YamboWorkflows available to expose outputs')
+        
         if not self.ctx.calc_manager['success'] and self.ctx.none_encountered:
             remaining_iter = store_List(self.ctx.remaining_iter)
             self.out('remaining_iter', remaining_iter)

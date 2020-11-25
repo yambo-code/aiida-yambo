@@ -64,7 +64,7 @@ class YamboRestart(BaseRestartWorkChain):
 ###################################################################################
 
         spec.expose_outputs(YamboCalculation)
-        
+
         spec.exit_code(300, 'ERROR_UNRECOVERABLE_FAILURE',
             message='The calculation failed with an unrecoverable error.')
         spec.exit_code(301, 'LOW_NUMBER_OF_NSCF_BANDS',

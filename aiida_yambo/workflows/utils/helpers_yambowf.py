@@ -146,8 +146,34 @@ def add_corrections(workchain_inputs, additional_parsing_List):
     
         if name == 'gap_at_Gamma_eV':
             new_params['QPkrange'].append([1, 1, val, val+1])
+        
+        if len(name.split(','))==2:
+            what = name.split(',') 
+            quant = what[1].split('_')  #k1_b1_k2_b2
+            if len(quant) == 2:
+                new_params['QPkrange'].append([int(quant[0]),int(quant[0]),int(quant[1]),int(quant[1])])
+            elif len(quant) == 4: #[k1,b1,k2,b2]
+                new_params['QPkrange'].append([int(quant[0]),int(quant[0]),int(quant[1]),int(quant[1])])
+                new_params['QPkrange'].append([int(quant[2]),int(quant[2]),int(quant[3]),int(quant[3])])
+        
+        if isinstance(name,tuple) or isinstance(name,list): # ('kpoint_x, band_y', [y,y,x,x]), not working for YamboConvergence
+            if len(name[1]) == 2:
+                new_params['QPkrange'].append([name[1][0],name[1][0],name[1][1],name[1][1]])
+            elif len(name[1]) == 4: #[k1,b1,k2,b2]
+                new_params['QPkrange'].append([name[1][0],name[1][0],name[1][1],name[1][1]])
+                new_params['QPkrange'].append([name[1][2],name[1][2],name[1][3],name[1][3]])
 
     return mapping, Dict(dict=new_params)
+
+def parse_qp_level(calc, band, k):
+
+    _vb=find_table_ind(band, k, calc.outputs.array_ndb)
+    level_dft = calc.outputs.array_ndb.get_array('Eo')[_vb].real
+    level_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real
+
+    level_gw = (level_dft + level_corr)*27.2114
+
+    return level_gw
 
 def additional_parsed(calc, additional_parsing_List, mapping):
     
@@ -161,18 +187,8 @@ def additional_parsed(calc, additional_parsing_List, mapping):
     for what in parsing_List:
         if what=='gap_eV':
     
-            _vb=find_table_ind(val, homo_k, calc.outputs.array_ndb)
-            _cb=find_table_ind(val+1, lumo_k, calc.outputs.array_ndb)
-            print(_vb,_cb)
-            homo_dft = calc.outputs.array_ndb.get_array('Eo')[_vb].real
-            homo_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real
-
-            homo_gw = (homo_dft + homo_corr)*27.2114
-
-            lumo_dft = calc.outputs.array_ndb.get_array('Eo')[_cb].real
-            lumo_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real
-
-            lumo_gw = (lumo_dft + lumo_corr)*27.2114
+            homo_gw = parse_qp_level(calc, val, homo_k)
+            lumo_gw = parse_qp_level(calc, val+1, lumo_k)
 
             print('homo: ', homo_gw)
             print('lumo: ', lumo_gw)
@@ -183,39 +199,21 @@ def additional_parsed(calc, additional_parsing_List, mapping):
             parsed_dict['lumo_level_eV'] =  lumo_gw
 
         if what=='homo_level_eV':
-    
-            _vb=find_table_ind(val, homo_k, calc.outputs.array_ndb)
-            homo_dft = calc.outputs.array_ndb.get_array('Eo')[_vb].real
-            homo_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real
 
-            homo_gw = (homo_dft + homo_corr)*27.2114
+            homo_gw = parse_qp_level(calc, val, homo_k)
 
             parsed_dict['homo_level_eV'] =  homo_gw
 
         if what=='lumo_level_eV':
-    
-            _cb=find_table_ind(val+1, lumo_k, calc.outputs.array_ndb)
-            lumo_dft = calc.outputs.array_ndb.get_array('Eo')[_cb].real
-            lumo_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real
 
-            lumo_gw = (lumo_dft + lumo_corr)*27.2114
+            lumo_gw = parse_qp_level(calc, val+1, lumo_k)
 
             parsed_dict['lumo_level_eV'] =  lumo_gw
         
         if what=='gap_at_Gamma_eV':
-    
-            _vb=find_table_ind(val, 1, calc.outputs.array_ndb)
-            _cb=find_table_ind(val+1, 1, calc.outputs.array_ndb)
-            print(_vb,_cb)
-            homo_dft = calc.outputs.array_ndb.get_array('Eo')[_vb].real
-            homo_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real
 
-            homo_gw = (homo_dft + homo_corr)*27.2114
-
-            lumo_dft = calc.outputs.array_ndb.get_array('Eo')[_cb].real
-            lumo_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_cb].real
-
-            lumo_gw = (lumo_dft + lumo_corr)*27.2114
+            homo_gw = parse_qp_level(calc, val, 1)
+            lumo_gw = parse_qp_level(calc, val+1, 1)
 
             print('homo: ', homo_gw)
             print('lumo: ', lumo_gw)
@@ -224,6 +222,28 @@ def additional_parsed(calc, additional_parsing_List, mapping):
             parsed_dict['gap_at_Gamma_eV'] =  abs(lumo_gw-homo_gw)
             parsed_dict['homo_level_at_Gamma_eV'] =  homo_gw
             parsed_dict['lumo_level_at_Gamma_eV'] =  lumo_gw
-    
+        
+        if len(what.split(','))==2:
+            whats = what.split(',') 
+            quant = whats[1].split('_')  #k1_b1_k2_b2
+            if len(quant) == 2:
+                level = parse_qp_level(calc, int(quant[1]), int(quant[0]))
+                parsed_dict[what] =  level
+            elif len(quant) == 4: #[k1,b1,k2,b2]
+                level_1 = parse_qp_level(calc, int(quant[1]), int(quant[0]))
+                level_2 = parse_qp_level(calc, int(quant[3]), int(quant[2]))
+                level_diff = abs(level_2-level_1)
+                parsed_dict[what] =  level_diff
 
+        if isinstance(what,tuple) or isinstance(what,list):
+            if len(what[1])==2:
+                level = parse_qp_level(calc, what[1][1], what[1][0])
+                parsed_dict[what[0]] =  level
+
+            elif len(what[1])==4:
+                level_1 = parse_qp_level(calc, what[1][1], what[1][0])
+                level_2 = parse_qp_level(calc, what[1][3], what[1][2])
+                level_diff = abs(level_2-level_1)
+                parsed_dict[what[0]] =  level_diff
+            
     return parsed_dict
