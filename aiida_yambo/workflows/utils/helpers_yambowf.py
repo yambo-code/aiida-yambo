@@ -16,7 +16,7 @@ try:
 except:
     pass
 
-from aiida_yambo.workflows.utils.defaults.create_defaults import *
+from aiida_yambo.utils.defaults.create_defaults import *
 
 def quantumespresso_input_validator(workchain_inputs,):
     
