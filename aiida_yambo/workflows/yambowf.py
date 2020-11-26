@@ -214,7 +214,7 @@ class YamboWorkflow(WorkChain):
 
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('updating yambo parameters to parse more results')
-                self.ctx.mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
@@ -231,8 +231,9 @@ class YamboWorkflow(WorkChain):
         if calc.is_finished_ok:
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('parsing additional quantities')
-                parsed = additional_parsed(calc, self.inputs.additional_parsing, self.ctx.mapping)
-                self.out('nscf_mapping', store_Dict(self.ctx.mapping))
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
+                parsed = additional_parsed(calc, self.inputs.additional_parsing, mapping)
+                self.out('nscf_mapping', store_Dict(mapping))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
             self.out_many(self.exposed_outputs(calc,YamboRestart))
