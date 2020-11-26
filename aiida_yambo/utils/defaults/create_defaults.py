@@ -33,7 +33,7 @@ def periodical(structure):
         Z_val += periodic_table[i]['valence']
         Ecut.append(periodic_table[i]['Ecut_Ry']['normal'])
 
-    return Z_val, max(Ecut)
+    return int(1+Z_val/2), max(Ecut)
 
 def create_quantumespresso_inputs(structure, bands_gw=None, spin_orbit=False, what = ['scf','nscf']):
     
