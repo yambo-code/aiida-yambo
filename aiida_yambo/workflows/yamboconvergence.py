@@ -294,6 +294,7 @@ class YamboConvergence(WorkChain):
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
+            self.ctx.pre_inputs.yres.yambo.parameters = self.inputs.precalc_inputs
         else:
             self.ctx.calculation_type='p2y'
             self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.gwbands],[1,self.ctx.gwbands]])
