@@ -233,8 +233,8 @@ def analysis_and_decision(calc_dict, workflow_dict):
         oversteps_1 = 0
         none_encountered = 0
 
-        for j in range(1,len(quantities[0,:])+1):
-            if quantities[-j,0].all() == False:
+        for j in range(1,len(quantities[:,0])+1):
+            if quantities[-j,0] == False:
                 none_encountered +=1
 
         for i in range(none_encountered + 2, len(quantities[:,0])+1): #check it
