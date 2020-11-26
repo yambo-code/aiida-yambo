@@ -307,7 +307,7 @@ class YamboConvergence(WorkChain):
         calc = {}
         calc[self.ctx.calculation_type] = self.submit(YamboWorkflow, **self.ctx.pre_inputs) #################run
         self.ctx.PRE = calc[self.ctx.calculation_type]
-        self.report('Submitted YamboWorkflow up to p2y, pk = {}'.format(calc[self.ctx.calculation_type].pk))
+        self.report('Submitted YamboWorkflow up to {}, pk = {}'.format(self.ctx.calculation_type,calc[self.ctx.calculation_type].pk))
 
         load_node(calc[self.ctx.calculation_type].pk).label = self.ctx.calculation_type
 
