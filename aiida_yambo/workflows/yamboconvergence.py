@@ -71,7 +71,7 @@ class YamboConvergence(WorkChain):
     def start_workflow(self):
         """Initialize the workflow"""
 
-        self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+        self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
 
@@ -263,7 +263,7 @@ class YamboConvergence(WorkChain):
         
         if hasattr(self.inputs, 'precalc_inputs'):
             self.report('Yes, we will do a preliminary calculation')
-
+        
         try:
             scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.inputs.ywfl)
             set_parent(self.ctx.calc_inputs, self.inputs.ywfl.parent_folder)
@@ -275,8 +275,12 @@ class YamboConvergence(WorkChain):
                 self.report('we have to compute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.gwbands))
                 set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
                 return True
-            elif parent_calc.process_type=='aiida.calculations:yambo.yambo':
-                self.report('not required, yambo parent')            
+            elif parent_calc.process_type=='aiida.calculations:yambo.yambo' and not hasattr(self.inputs, 'precalc_inputs'):
+                self.report('not required, yambo parent and no precalc requested')   
+                return False         
+            elif hasattr(self.inputs, 'precalc_inputs'):
+                self.report('yes, precalc requested in the inputs')
+                return True
             else:
                 self.report('yes, no yambo parent')
                 return True
@@ -291,10 +295,12 @@ class YamboConvergence(WorkChain):
 
     def do_pre(self):
         self.ctx.pre_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+        self.ctx.pre_inputs.yres.clean_workdir = Bool(False)
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
             self.ctx.pre_inputs.yres.yambo.parameters = self.inputs.precalc_inputs
+            self.ctx.pre_inputs.additional_parsing = List(list=self.inputs.workflow_settings.get_dict()['what'])
         else:
             self.ctx.calculation_type='p2y'
             self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.gwbands],[1,self.ctx.gwbands]])
@@ -313,7 +319,6 @@ class YamboConvergence(WorkChain):
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'COPY_DBS', True)
-            self.ctx.calc_inputs.yres.clean_workdir = Bool(False)
         else:
             self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', False)
 
