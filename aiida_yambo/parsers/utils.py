@@ -38,7 +38,7 @@ def yambotiming_to_seconds(yt):
         return yt
 
 
-def parse_log(log, output_params):
+def parse_log(log, output_params, timing = None):
 
     if 'p2y' in log.filename:    #just p2y...
         p2y_completed = re.compile('P2Y completed')
@@ -67,7 +67,18 @@ def parse_log(log, output_params):
                 elif timing_old.match(line):
                     output_params['timing'].append(timing_old.match(line).string)
 
+        if timing:
+            output_params['timing'].append('verbose_output:')
+            t_verbose = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[TIMING\])')
+            t_verbose_old = re.compile('^\s+?<([0-9a-z-]+)> (\[TIMING\]) ')
+            for line in log.lines:
+                if t_verbose.match(line):
+                    output_params['timing'].append(t_verbose.match(line).string)
+                elif t_verbose_old.match(line):
+                    output_params['timing'].append(t_verbose_old.match(line).string)
+
         time = re.compile('<([0-9hms-]+)>')
+        
         try:
             last_time = time.findall(log.lines[-1])[-1]
             output_params['last_time'] = yambotiming_to_seconds(last_time)

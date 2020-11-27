@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import List, Dict
+from aiida.orm import List, Dict, Str,UpfData
 from aiida.engine import submit
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
@@ -161,7 +161,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
+    kpoints.set_kpoints_mesh([2,2,1])
 
     ###### setting the scf parameters ######
 
@@ -173,7 +173,7 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 60.,
             'force_symmorphic': True,
             'nbnd': 20
         },
@@ -195,9 +195,9 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 60.,
             'force_symmorphic': True,
-            'nbnd': 500
+            'nbnd': 50
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
@@ -211,27 +211,6 @@ def main(options):
 
     parameter_nscf = Dict(dict=params_nscf)
 
-    KpointsData = DataFactory('array.kpoints')
-    kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
-
-    alat = 2.4955987320 # Angstrom
-    the_cell = [[1.000000*alat,   0.000000,   0.000000],
-                [-0.500000*alat,  0.866025*alat,   0.000000],
-                [0.000000,   0.000000,  6.4436359260]]
-
-    atoms = Atoms('BNNB', [(1.2477994910, 0.7204172280, 0.0000000000),
-    (-0.0000001250, 1.4408346720, 0.0000000000),
-    (1.2477994910, 0.7204172280, 3.2218179630),
-    (-0.0000001250,1.4408346720, 3.2218179630)],
-    cell = [1,1,1])
-    atoms.set_cell(the_cell, scale_atoms=False)
-    atoms.set_pbc([True,True,True])
-
-    StructureData = DataFactory('structure')
-    structure = StructureData(ase=atoms)
-
-
     params_gw = {
             'HF_and_locXC': True,
             'dipoles': True,
@@ -241,12 +220,12 @@ def main(options):
             'Chimod': 'hartree',
             #'EXXRLvcs': 40,
             #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 10],
+            'BndsRnXp': [1, 30],
             'NGsBlkXp': 2,
             'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 10],
+            'GbndRnge': [1, 30],
             'DysSolver': "n",
-            'QPkrange': [[1, 1, 8, 9]],
+            'QPkrange': [[1, 1, 7, 7]],
             'DIP_CPU': "1 1 1",
             'DIP_ROLEs': "k c v",
             'X_CPU': "1 1 1 1",
@@ -261,9 +240,10 @@ def main(options):
 
 
     ##################scf+nscf part of the builder
-    builder.scf.pw.structure = structure
-    builder.scf.pw.parameters = parameter_scf
+    builder.structure = structure
+    #builder.scf_parameters = parameter_scf
     builder.scf.kpoints = kpoints
+    builder.nscf.kpoints = kpoints
     builder.scf.pw.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
     builder.scf.pw.metadata.options.resources = \
@@ -280,16 +260,15 @@ def main(options):
 
     builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
-    builder.nscf.pw.structure = builder.scf.pw.structure
-    builder.nscf.pw.parameters = parameter_nscf
-    builder.nscf.kpoints = builder.scf.kpoints
+    #builder.structure = builder.structure
+    #builder.nscf_parameters = parameter_nscf
+    #builder.nscf.kpoints = builder.scf.kpoints
     builder.nscf.pw.metadata = builder.scf.pw.metadata
 
-    builder.scf.pw.code = load_code(options['pwcode_id'])
-    builder.nscf.pw.code = load_code(options['pwcode_id'])
+    builder.pw_code = load_code(options['pwcode_id'])
+    #builder.nscf.pw.code = load_code(options['pwcode_id'])
     builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
-    builder.nscf.pw.pseudos = builder.scf.pw.pseudos
+                builder.structure, pseudo_family = Str(options['pseudo_family']))
 
     ##################yambo part of the builder
     builder.yres.yambo.metadata.options.max_wallclock_seconds = \
@@ -308,8 +287,10 @@ def main(options):
 
     builder.yres.yambo.parameters = params_gw
     builder.yres.yambo.precode_parameters = Dict(dict={})
-    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
     builder.yres.max_iterations = Int(5)
+
+    builder.additional_parsing = List(list=['gap_eV'])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])

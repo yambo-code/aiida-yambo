@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import RemoteData,StructureData,KpointsData
+from aiida.orm import RemoteData,StructureData,KpointsData,UpfData
 from aiida.orm import Dict,Str,Code
 
 from aiida.engine import WorkChain, while_, append_
@@ -18,6 +18,9 @@ from aiida_yambo.workflows.yamborestart import YamboRestart
 
 from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
+from aiida.plugins import DataFactory
+LegacyUpfData = DataFactory('upf')
+
 
 class YamboWorkflow(WorkChain):
 
@@ -35,7 +38,7 @@ class YamboWorkflow(WorkChain):
         super(YamboWorkflow, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, 
-                            exclude = ['parent_folder', 'pw.parameters', 'pw.pseudos','pw.code','pw.structure'])
+                            exclude = ['parent_folder', 'pw.parameters', 'pw.code','pw.structure'])
 
         spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, 
                             exclude = ['parent_folder', 'pw.parameters', 'pw.pseudos','pw.code','pw.structure'])
@@ -58,8 +61,6 @@ class YamboWorkflow(WorkChain):
         #Both scf and nscf DFT inputs, required   
         spec.input('structure', valid_type=StructureData, required= True,
                     help = 'structure')
-        spec.input('pseudo_family', valid_type=Str, required= True,
-                    help = 'pseudo family')
         spec.input('pw_code', valid_type=Code, required= True,
                     help = 'code for pw part')
 
@@ -93,8 +94,7 @@ class YamboWorkflow(WorkChain):
         self.ctx.scf_inputs.pw.structure = self.inputs.structure
         self.ctx.nscf_inputs.pw.structure = self.inputs.structure
 
-        self.ctx.scf_inputs.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                self.ctx.scf_inputs.pw.structure, pseudo_family = self.inputs.pseudo_family)
+        #self.ctx.scf_inputs.pw.pseudos = self.inputs.pseudos
         self.ctx.nscf_inputs.pw.pseudos = self.ctx.scf_inputs.pw.pseudos
 
         self.ctx.scf_inputs.pw.code = self.inputs.pw_code

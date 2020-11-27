@@ -164,7 +164,12 @@ class YamboCalculation(CalcJob):
         if restart_yambo is not None:
             if not isinstance(restart_yambo, bool):
                 raise InputValidationError("RESTART_YAMBO must be " " a boolean")
-
+        
+        verbose_timing = settings.pop('T_VERBOSE', None)
+        if verbose_timing is not None:
+            if not isinstance(verbose_timing, bool):
+                raise InputValidationError("T_VERBOSE must be " " a boolean")
+            
         parameters = self.inputs.parameters
 
         if not initialise:
@@ -347,7 +352,7 @@ class YamboCalculation(CalcJob):
         calcinfo.retrieve_list.append('l*')
         calcinfo.retrieve_list.append('o*')
         calcinfo.retrieve_list.append('LOG/l*_CPU_1')
-        calcinfo.retrieve_list.append('LOG/l*_CPU_2')
+        #calcinfo.retrieve_list.append('LOG/l*_CPU_2')
         calcinfo.retrieve_list.append('*stderr*') #standard errors
         extra_retrieved = []
 

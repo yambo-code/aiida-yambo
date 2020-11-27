@@ -5,7 +5,7 @@ import itertools
 import traceback
 
 #if aiida_calcs:
-from aiida.orm import Dict, Str, KpointsData, RemoteData, List, load_node
+from aiida.orm import Dict, Str, Bool, KpointsData, RemoteData, List, load_node
 
 from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
@@ -313,6 +313,7 @@ class YamboConvergence(WorkChain):
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'COPY_DBS', True)
+            self.ctx.calc_inputs.yres.clean_workdir = Bool(False)
         else:
             self.ctx.calc_inputs.yres.yambo.settings = update_dict(self.ctx.calc_inputs.yres.yambo.settings, 'INITIALISE', False)
 

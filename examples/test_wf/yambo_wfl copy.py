@@ -7,7 +7,7 @@ import os
 from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
-from aiida_yambo.workflows.yamboconvergence import YamboConvergence
+from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 import argparse
@@ -161,7 +161,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
+    kpoints.set_kpoints_mesh([2,2,1])
 
     ###### setting the scf parameters ######
 
@@ -173,7 +173,7 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 60.,
             'force_symmorphic': True,
             'nbnd': 20
         },
@@ -195,9 +195,9 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 60.,
             'force_symmorphic': True,
-            'nbnd': 500
+            'nbnd': 50
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
@@ -213,7 +213,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
+    kpoints.set_kpoints_mesh([2,2,1])
 
     alat = 2.4955987320 # Angstrom
     the_cell = [[1.000000*alat,   0.000000,   0.000000],
@@ -241,12 +241,12 @@ def main(options):
             'Chimod': 'hartree',
             #'EXXRLvcs': 40,
             #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 10],
+            'BndsRnXp': [1, 30],
             'NGsBlkXp': 2,
             'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 10],
+            'GbndRnge': [1, 30],
             'DysSolver': "n",
-            'QPkrange': [[1, 1, 8, 9]],
+            'QPkrange': [[1, 2, 8, 9]],
             'DIP_CPU': "1 1 1",
             'DIP_ROLEs': "k c v",
             'X_CPU': "1 1 1 1",
@@ -257,96 +257,72 @@ def main(options):
     params_gw = Dict(dict=params_gw)
 
 
-    builder = YamboConvergence.get_builder()
+    builder = YamboWorkflow.get_builder()
 
 
     ##################scf+nscf part of the builder
-    builder.ywfl.scf.pw.structure = structure
-    builder.ywfl.scf.pw.parameters = parameter_scf
-    builder.kpoints = kpoints
-    builder.ywfl.scf.pw.metadata.options.max_wallclock_seconds = \
+    builder.structure = structure
+    #builder.scf.pw.parameters = parameter_scf
+    builder.scf.kpoints = kpoints
+    builder.nscf.kpoints = kpoints
+    builder.scf.pw.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.ywfl.scf.pw.metadata.options.resources = \
+    builder.scf.pw.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.ywfl.scf.pw.metadata.options.queue_name = options['queue_name']
+        builder.scf.pw.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.ywfl.scf.pw.metadata.options.qos = options['qos']
+        builder.scf.pw.metadata.options.qos = options['qos']
 
     if 'account' in options:
-        builder.ywfl.scf.pw.metadata.options.account = options['account']
+        builder.scf.pw.metadata.options.account = options['account']
 
-    builder.ywfl.scf.pw.metadata.options.prepend_text = options['prepend_text']
+    builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
-    builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
-    builder.ywfl.nscf.pw.parameters = parameter_nscf
-    builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
+    #builder.structure = builder.structure
+    builder.nscf_parameters = parameter_nscf
+    #builder.nscf.kpoints = builder.scf.kpoints
+    builder.nscf.pw.metadata = builder.scf.pw.metadata
 
-    builder.ywfl.scf.pw.code = load_code(options['pwcode_id'])
-    builder.ywfl.nscf.pw.code = load_code(options['pwcode_id'])
-    builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
-    builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
-
+    builder.pw_code = load_code(options['pwcode_id'])
+    #builder.nscf.pw.code = load_code(options['pwcode_id'])
+    builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
+                builder.structure, pseudo_family = Str(options['pseudo_family']))
     ##################yambo part of the builder
-    builder.ywfl.yres.yambo.metadata.options.max_wallclock_seconds = \
+    builder.yres.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.ywfl.yres.yambo.metadata.options.resources = \
+    builder.yres.yambo.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.ywfl.yres.yambo.metadata.options.queue_name = options['queue_name']
+        builder.yres.yambo.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.ywfl.yres.yambo.metadata.options.qos = options['qos']
+        builder.yres.yambo.metadata.options.qos = options['qos']
 
     if 'account' in options:
-        builder.ywfl.yres.yambo.metadata.options.account = options['account']
+        builder.yres.yambo.metadata.options.account = options['account']
 
-    builder.ywfl.yres.yambo.parameters = params_gw
-    builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
-    builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
-    builder.ywfl.yres.max_iterations = Int(5)
+    builder.yres.yambo.parameters = params_gw
+    builder.yres.yambo.precode_parameters = Dict(dict={})
+    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.yres.max_iterations = Int(5)
 
-    builder.ywfl.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
-    builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
+    builder.additional_parsing = List(list=['gap_eV',('livello_a_caso',[1,14]),('gap_a_caso',[2,11,1,6])])
+
+    builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
+    builder.yres.yambo.code = load_code(options['yambocode_id'])
     try:
         builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
     except:
         pass
 
-    builder.p2y = builder.ywfl
-    builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
-
-    builder.workflow_settings = Dict(dict={'type':'1D_convergence',
-                                           'what':'gap',
-                                           'where':[(1,8,1,9)],
-                                           'PRE_CALC': False,})
-
-    #'what': 'single-levels','where':[(1,8),(1,9)]
-    var_to_conv = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],'delta': [[0,100],[0,100],2], 'steps': 3, 'max_iterations': 2, \
-                                 'conv_thr': 0.05,},
-                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,100],[0,100]], 'steps': 3, 'max_iterations': 2, \
-                                 'conv_thr': 0.02,},
-                   {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 2, \
-                                'conv_thr': 0.02,},
-                   {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],'delta': [[0,150],[0,150],2], 'steps': 3, 'max_iterations': 2, \
-                                 'conv_thr': 0.02,},
-                   {'var':'kpoint_mesh','delta': [2,2,0], 'max_iterations': 2, \
-                                 'conv_thr': 0.1,},]
-
-
-    for i in range(len(var_to_conv)):
-        print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
-
-    builder.parameters_space = List(list = var_to_conv)
-
     return builder
-    
+
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboConvergence; with pk=< {} >".format(running.pk))
+    print("Submitted YamboWorkflow workchain; with pk=< {} >".format(running.pk))
