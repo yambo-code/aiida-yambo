@@ -38,7 +38,7 @@ def yambotiming_to_seconds(yt):
         return yt
 
 
-def parse_log(log, output_params, timing = None):
+def parse_log(log, output_params, timing):
 
     if 'p2y' in log.filename:    #just p2y...
         p2y_completed = re.compile('P2Y completed')

@@ -123,7 +123,7 @@ class YamboParser(Parser):
             settings_dict = {}
 
         initialise = settings_dict.pop('INITIALISE', None)
-        verbose_timing = settings_dict.pop('T_VERBOSE', None)
+        verbose_timing = settings_dict.pop('T_VERBOSE', False)
             
         # select the folder object
         try:
