@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import RemoteData,StructureData,KpointsData
+from aiida.orm import RemoteData,StructureData,KpointsData,UpfData
 from aiida.orm import Dict,Str,Code
 
 from aiida.engine import WorkChain, while_, append_
@@ -58,8 +58,8 @@ class YamboWorkflow(WorkChain):
         #Both scf and nscf DFT inputs, required   
         spec.input('structure', valid_type=StructureData, required= True,
                     help = 'structure')
-        spec.input('pseudo_family', valid_type=Str, required= True,
-                    help = 'pseudo family')
+        spec.input('pseudos', valid_type=UpfData, required= True,
+                    help = 'pseudos for pw part')
         spec.input('pw_code', valid_type=Code, required= True,
                     help = 'code for pw part')
 
@@ -93,8 +93,7 @@ class YamboWorkflow(WorkChain):
         self.ctx.scf_inputs.pw.structure = self.inputs.structure
         self.ctx.nscf_inputs.pw.structure = self.inputs.structure
 
-        self.ctx.scf_inputs.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                self.ctx.scf_inputs.pw.structure, pseudo_family = self.inputs.pseudo_family)
+        self.ctx.scf_inputs.pw.pseudos = self.inputs.pseudos
         self.ctx.nscf_inputs.pw.pseudos = self.ctx.scf_inputs.pw.pseudos
 
         self.ctx.scf_inputs.pw.code = self.inputs.pw_code

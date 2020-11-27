@@ -123,7 +123,8 @@ class YamboParser(Parser):
             settings_dict = {}
 
         initialise = settings_dict.pop('INITIALISE', None)
-
+        verbose_timing = settings_dict.pop('T_VERBOSE', None)
+            
         # select the folder object
         try:
             out_folder = self.retrieved
@@ -169,7 +170,7 @@ class YamboParser(Parser):
 
             #This should be automatic in yambopy...
             if result.type=='log':
-                parse_log(result, output_params)
+                parse_log(result, output_params, timing = verbose_timing)
             if result.type=='report':
                 parse_report(result, output_params)
 
