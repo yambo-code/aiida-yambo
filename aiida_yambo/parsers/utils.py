@@ -38,7 +38,7 @@ def yambotiming_to_seconds(yt):
         return yt
 
 
-def parse_log(log, output_params, timing = None):
+def parse_log(log, output_params, timing):
 
     if 'p2y' in log.filename:    #just p2y...
         p2y_completed = re.compile('P2Y completed')
@@ -160,7 +160,7 @@ def parse_report(report, output_params):
 def parse_scheduler_stderr(stderr, output_params):
 
     m1 = re.compile('out of memory')
-    m2 = re.compile('segmentation')
+    m2 = re.compile('Segmentation')
     m3 = re.compile('dumped')
     t1 = re.compile('walltime')
     t2 = re.compile('time')
