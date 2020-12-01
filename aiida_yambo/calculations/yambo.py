@@ -92,7 +92,7 @@ class YamboCalculation(CalcJob):
         spec.exit_code(501, 'WALLTIME_ERROR',
                 message='time exceeded the max walltime')
         spec.exit_code(502, 'NO_SUCCESS',
-                message='failed calculation for some reason: could be a low number of conduction bands')
+                message='failed calculation for unknown reason')
         spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
         spec.exit_code(504, 'PARA_ERROR',

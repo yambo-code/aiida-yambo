@@ -160,7 +160,7 @@ def parse_report(report, output_params):
 def parse_scheduler_stderr(stderr, output_params):
 
     m1 = re.compile('out of memory')
-    m2 = re.compile('segmentation')
+    m2 = re.compile('Segmentation')
     m3 = re.compile('dumped')
     t1 = re.compile('walltime')
     t2 = re.compile('time')
