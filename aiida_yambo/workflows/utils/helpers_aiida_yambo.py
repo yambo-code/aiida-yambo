@@ -37,6 +37,11 @@ def set_parallelism(instructions, inputs):
     occupied, ecut = periodical(structure)
 
     bands, qp, last_qp, runlevels = find_gw_info(inputs.yres.yambo)
+    
+    instructions['automatic'] = instructions.pop('automatic',None)
+    instructions['semi-automatic'] = instructions.pop('semi-automatic',None)
+    instructions['manual'] = instructions.pop('manual',None)
+    instructions['function'] = instructions.pop('function',None)
 
     if 'BndsRnXp' in inputs.yres.yambo.parameters.get_dict().keys():
         yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['BndsRnXp'][-1]
@@ -76,15 +81,15 @@ def set_parallelism(instructions, inputs):
         # 
         #main parameters...
         for i in instructions['manual'].keys():
-            instructions['manual'][i]['BndsRnXp'] = instructions['manual'][i].pop('BndsRnXp', [0,0])
-            instructions['manual'][i]['GbndRnge'] = instructions['manual'][i].pop('GbndRnge', [0,0])
-            instructions['manual'][i]['NGsBlkXp'] = instructions['manual'][i].pop('NGsBlkXp', [0,0])
-            instructions['manual'][i]['kpoints'] = instructions['manual'][i].pop('kpoints', [0,0])
+            BndsRnXp_hint = instructions['manual'][i].pop('BndsRnXp', [0])
+            GbndRnge_hint = instructions['manual'][i].pop('GbndRnge', [0])
+            NGsBlkXp_hint = instructions['manual'][i].pop('NGsBlkXp', [0])
+            kpoints_hint = instructions['manual'][i].pop('kpoints', [0])
 
-            X = ((yambo_bandsX >= min(instructions['manual'][i]['BndsRnXp'])) and (yambo_bandsX <= max(instructions['manual'][i]['BndsRnXp']))) or instructions['manual'][i]['BndsRnXp'] == [0,0]
-            Sc = ((yambo_bandsSc >= min(instructions['manual'][i]['GbndRnge'])) and (yambo_bandsX <= max(instructions['manual'][i]['GbndRnge']))) or instructions['manual'][i]['GbndRnge'] == [0,0]
-            G = ((yambo_cutG >= min(instructions['manual'][i]['NGsBlkXp'])) and (yambo_cutG <= max(instructions['manual'][i]['NGsBlkXp']))) or instructions['manual'][i]['NGsBlkXp'] == [0,0]
-            K = ((kpoints >= min(instructions['manual'][i]['kpoints'])) and (kpoints <= max(instructions['manual'][i]['kpoints']))) or instructions['manual'][i]['kpoints'] == [0,0]
+            X = (yambo_bandsX >= min(BndsRnXp_hint) and yambo_bandsX <= max(BndsRnXp_hint)) or len(BndsRnXp_hint)==1 
+            Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
+            G = (yambo_cutG >= min(NGsBlkXp_hint) and yambo_cutG <= max(NGsBlkXp_hint)) or len(NGsBlkXp_hint)==1 
+            K = (kpoints >= min(kpoints_hint) and kpoints <= max(kpoints_hint)) or len(kpoints_hint)==1 
             if X and Sc and G and K:
                 new_parallelism = instructions['manual'][i]['parallelism']
                 new_resources = instructions['manual'][i]['resources']
@@ -157,10 +162,10 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
             values_dict[var]=input_dict[var]
     
-    if len(parallelism_instructions.keys()) >= 1:
-        new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
+    #if len(parallelism_instructions.keys()) >= 1:
+    new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
-        if new_para and new_res:
+    if new_para and new_res:
             inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
             inp_to_update.yres.yambo.metadata.options.resources = new_res
             try:
@@ -188,11 +193,15 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
         except: #YamboWorkflow,YamboRestart of YamboCalculation
             ywf_node = load_node(calc_dict['wfl_pk'])
         for n in parameter_names:
-            if 'mesh' in n:
-                value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
-            else:
-                value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+            try:
+                if 'mesh' in n:
+                    value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
+                else:
+                    value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+            except:
+                value = 0
             l_calc.append(value)
+            
         for j in range(len(what)):        
             if ywf_node.is_finished_ok:
                 quantity = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
