@@ -188,11 +188,15 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
         except: #YamboWorkflow,YamboRestart of YamboCalculation
             ywf_node = load_node(calc_dict['wfl_pk'])
         for n in parameter_names:
-            if 'mesh' in n:
-                value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
-            else:
-                value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+            try:
+                if 'mesh' in n:
+                    value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
+                else:
+                    value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+            except:
+                value = 0
             l_calc.append(value)
+            
         for j in range(len(what)):        
             if ywf_node.is_finished_ok:
                 quantity = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
