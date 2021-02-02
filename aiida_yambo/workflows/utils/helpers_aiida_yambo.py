@@ -166,12 +166,12 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
     new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
     if new_para and new_res:
-            inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
-            inp_to_update.yres.yambo.metadata.options.resources = new_res
-            try:
-                inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
-            except:
-                pass
+        inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
+        inp_to_update.yres.yambo.metadata.options.resources = new_res
+        try:
+            inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
+        except:
+            pass
 
     return inp_to_update, values_dict
 
