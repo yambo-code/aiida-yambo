@@ -19,7 +19,7 @@ click-completion==0.5.2
 click-config-file==0.5.0
 click-spinner==0.1.8
 configobj==5.0.6
-cryptography==3.2
+cryptography==3.3.2
 cycler==0.10.0
 Cython==0.29.15
 decorator==4.4.1
