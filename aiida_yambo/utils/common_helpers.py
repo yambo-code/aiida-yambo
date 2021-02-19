@@ -239,7 +239,7 @@ def gap_mapping_from_nscf(nscf_pk,):
     bands = nscf.outputs.output_band.get_array('bands')
     occ = nscf.outputs.output_band.get_array('occupations')
     valence = len(occ[0][occ[0]>0.01]) #band index of the valence. 
-    #valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
+    valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
     if valence%2 !=0:
         valence = int(valence+0.5) #metal
     else:
