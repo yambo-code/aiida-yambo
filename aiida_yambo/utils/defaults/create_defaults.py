@@ -49,7 +49,7 @@ def create_quantumespresso_inputs(structure, bands_gw=None, spin_orbit=False, wh
     if not bands_gw:
         bands_gw = Z_valence*10
         
-    scf['SYSTEM']['nbnd'] = int(Z_valence + 10)
+    scf['SYSTEM']['nbnd'] = int(Z_valence + 20)
     nscf['SYSTEM']['nbnd'] = int(bands_gw)
     
     scf['SYSTEM']['ecutwfc'] = Ecut

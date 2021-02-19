@@ -170,14 +170,14 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
     for i in range(1,len(workflow_dict['workflow_story'])+1):
         try:                
             last_ok_uuid = workflow_dict['workflow_story'].iloc[-i]['uuid']
-            last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
-            start_from_converged(inputs, last_ok_wfl)
+            #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+            start_from_converged(inputs, last_ok_uuid)
             if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
                 set_parent(inputs, load_node(last_ok_uuid))
             break
         except:
             last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
-            last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+            #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
     
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
 
@@ -194,15 +194,19 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     for i in range(none_encountered): 
             workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
 
-    try:
+    #try:
+    if len(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)]) > 0:
         last_ok_uuid = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['uuid']
-        last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
-        start_from_converged(inputs, last_ok_wfl)
+        #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+        start_from_converged(inputs, last_ok_uuid)
+    
         if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
             set_parent(inputs, load_node(last_ok_uuid))
-    except:
-        last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
-        last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+    else: 
+        final_result={}
+    #except:
+    #    last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
+    #    last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
 
     
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})

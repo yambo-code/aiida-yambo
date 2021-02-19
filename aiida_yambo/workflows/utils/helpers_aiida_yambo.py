@@ -188,10 +188,10 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
     l_iter = []
     for i in range(1,backtrace+1):
         l_calc = []
-        try: #YamboConvergence
-            ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
-        except: #YamboWorkflow,YamboRestart of YamboCalculation
-            ywf_node = load_node(calc_dict['wfl_pk'])
+        #try: #YamboConvergence
+        ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
+        #except: #YamboWorkflow,YamboRestart of YamboCalculation
+        #    ywf_node = load_node(calc_dict['wfl_pk'])
         for n in parameter_names:
             try:
                 if 'mesh' in n:
@@ -217,7 +217,8 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
 
     return quantities
 
-def start_from_converged(inputs, node,):
+def start_from_converged(inputs, node_uuid,):
+    node = load_node(node_uuid)
     inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']
     inputs.yres.yambo.metadata.options.resources = node.called[0].called[0].get_options()['resources']
     inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[0].called[0].get_options()['max_wallclock_seconds']
