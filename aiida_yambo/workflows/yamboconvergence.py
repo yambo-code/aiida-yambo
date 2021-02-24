@@ -159,7 +159,7 @@ class YamboConvergence(WorkChain):
             self.report('New parameters are: {}'.format(value))
             self.report('Preparing iteration #{} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
                         value))
-
+            self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step'])
             future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             calc[str(i+1)] = future
             self.ctx.calc_manager['wfl_pk'] = future.pk
@@ -311,6 +311,7 @@ class YamboConvergence(WorkChain):
 
         self.report('doing the calculation: {}'.format(self.ctx.calculation_type))
         calc = {}
+        self.ctx.pre_inputs.metadata.call_link_label = self.ctx.calculation_type
         calc[self.ctx.calculation_type] = self.submit(YamboWorkflow, **self.ctx.pre_inputs) #################run
         self.ctx.PRE = calc[self.ctx.calculation_type]
         self.report('Submitted YamboWorkflow up to {}, pk = {}'.format(self.ctx.calculation_type,calc[self.ctx.calculation_type].pk))

@@ -190,6 +190,7 @@ class YamboWorkflow(WorkChain):
 
         if self.ctx.calc_to_do == 'scf':
 
+            self.ctx.scf_inputs.metadata.call_link_label = 'scf'
             future = self.submit(PwBaseWorkChain, **self.ctx.scf_inputs)
 
             self.ctx.calc_to_do = 'nscf'
@@ -200,7 +201,8 @@ class YamboWorkflow(WorkChain):
                 self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
             except:
                 self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
-
+            
+            self.ctx.nscf_inputs.metadata.call_link_label = 'nscf'  
             future = self.submit(PwBaseWorkChain, **self.ctx.nscf_inputs)
 
             self.ctx.calc_to_do = 'yambo'
@@ -217,6 +219,7 @@ class YamboWorkflow(WorkChain):
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
+            self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
             self.ctx.calc_to_do = 'the workflow is finished'
