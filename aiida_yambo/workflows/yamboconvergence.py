@@ -11,12 +11,14 @@ from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
-from aiida_yambo.workflows.yambowf import YamboWorkflow
+from aiida.plugins import WorkflowFactory
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import *
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
 from aiida_yambo.workflows.utils.helpers_workflow import *
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
+
+YamboWorkflow = WorkflowFactory('yambo.yambo.yambowf')
 
 class YamboConvergence(WorkChain):
 
@@ -145,24 +147,28 @@ class YamboConvergence(WorkChain):
     def next_step(self):
         """This function will submit the next step"""
         self.ctx.calc_manager['iter'] +=1
-        
+                
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager['values'] = []
         for i in range(self.ctx.calc_manager['steps']):
             #self.report(parameter)
-            self.ctx.calc_inputs, value = updater(self.ctx.calc_manager, 
+            self.ctx.calc_inputs, value, already_done = updater(self.ctx.calc_manager, 
                                                 self.ctx.calc_inputs, 
-                                                self.ctx.workflow_manager['parameter_space'], 
-                                                self.ctx.workflow_manager['parallelism_instructions'])
+                                                self.ctx.workflow_manager)
             self.ctx.workflow_manager['values'].append(value)
             self.report('New parameters are: {}'.format(value))
             self.report('Preparing iteration #{} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
                         value))
-            self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step'])
-            future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
+            if not already_done:
+                self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step']+i)
+                future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
+            else:
+                self.report('Calculation already done: {}'.format(already_done))
+
             calc[str(i+1)] = future
             self.ctx.calc_manager['wfl_pk'] = future.pk
+            self.ctx.workflow_manager['to_be_parsed'] = [future.pk] + self.ctx.workflow_manager['to_be_parsed']
 
         return ToContext(calc)
 

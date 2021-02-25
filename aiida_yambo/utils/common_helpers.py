@@ -263,4 +263,29 @@ def gap_mapping_from_nscf(nscf_pk,):
            }
     
     return mapping
-        
+
+def check_identical_calculation(YamboWorkflow_inputs, 
+                                YamboWorkflow_list,
+                                what=['BndsRnXp','GbndRnge','NGsBlkXp']):
+
+    already_done = False
+    k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
+    params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
+    for k in ['k_mesh','k_mesh_density']:
+        try:
+            what.remove(k)
+        except:
+            pass
+
+    for old in YamboWorkflow_list:
+        same_k = (k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()).all()
+        old_params = load_node(old).inputs.yres.yambo.parameters.get_dict()
+        for p in what:
+            if params_to_calc[p] == old_params[p] and same_k:
+                already_done = old
+            else:
+                already_done = False
+                break
+
+    return already_done       
+    

@@ -42,9 +42,9 @@
             "yambo.yambo = aiida_yambo.parsers.parsers:YamboParser"
         ],
         "aiida.workflows": [
-            "yambo.yamboconvergence = aiida_yambo.workflows.yamboconvergence:YamboConvergence",
-            "yambo.yambowf = aiida_yambo.workflows.yambowf:YamboWorkflow",
-            "yambo.yamborestart = aiida_yambo.workflows.yamborestart:YamboRestart"
+            "yambo.yambo.yamboconvergence = aiida_yambo.workflows.yamboconvergence:YamboConvergence",
+            "yambo.yambo.yambowf = aiida_yambo.workflows.yambowf:YamboWorkflow",
+            "yambo.yambo.yamborestart = aiida_yambo.workflows.yamborestart:YamboRestart"
         ],
         "aiida.data":[]
     }

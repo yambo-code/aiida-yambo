@@ -25,10 +25,10 @@ else:
 ################################################################################
 ################################################################################
 
-def set_parallelism(instructions, inputs):
+def set_parallelism(instructions_, inputs):
 
     new_parallelism, new_resources = False, False
-
+    instructions = copy.deepcopy(instructions_)
     resources = inputs.yres.yambo.metadata.options.resources
     structure = inputs.structure.get_ase()
     mesh = inputs.nscf.kpoints.get_kpoints_mesh()[0]
@@ -93,9 +93,10 @@ def set_parallelism(instructions, inputs):
             if X and Sc and G and K:
                 new_parallelism = instructions['manual'][i]['parallelism']
                 new_resources = instructions['manual'][i]['resources']
+                break
             else: 
                 pass
-
+        
         #new_parallelism = instructions['manual']['parallelism']
         #new_resources = instructions['manual']['resources']
     
@@ -127,19 +128,24 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     return calc_dict
 
 ################################## update_parameters - create parameters space #####################################
-def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
-
-    values_dict = {}
+def updater(calc_dict, inp_to_update, workflow_dict):
     
+    already_done = False
+    values_dict = {}
+    parameters = workflow_dict['parameter_space']
+    parallelism_instructions = workflow_dict['parallelism_instructions']
+
     if not isinstance(calc_dict['var'],list):
         calc_dict['var'] = [calc_dict['var']]
 
     input_dict = inp_to_update.yres.yambo.parameters.get_dict()
     
     for var in calc_dict['var']:
+        
         if var == 'kpoint_mesh' or var == 'kpoint_density':
             k_quantity = parameters[var].pop(0)
             k_quantity_shift = inp_to_update.nscf.kpoints.get_kpoints_mesh()[1]
+
             inp_to_update.nscf.kpoints = KpointsData()
             inp_to_update.nscf.kpoints.set_cell_from_structure(inp_to_update.structure) #to count the PBC...
             if isinstance(k_quantity,tuple) or isinstance(k_quantity,list):
@@ -157,11 +163,11 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
             values_dict[var]=k_quantity
         else:
-            
+
             input_dict[var] = parameters[var].pop(0)
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
             values_dict[var]=input_dict[var]
-    
+
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
@@ -172,8 +178,11 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
             inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
         except:
             pass
+    
+    already_done = check_identical_calculation(inp_to_update, 
+                                               workflow_dict['to_be_parsed'])
 
-    return inp_to_update, values_dict
+    return inp_to_update, values_dict, already_done
 
 ################################## parsers #####################################
 def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backtrace=1):
@@ -189,7 +198,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
     for i in range(1,backtrace+1):
         l_calc = []
         #try: #YamboConvergence
-        ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
+        ywf_node = load_node(workflow_dict['to_be_parsed'][backtrace-i]) #load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
         #except: #YamboWorkflow,YamboRestart of YamboCalculation
         #    ywf_node = load_node(calc_dict['wfl_pk'])
         for n in parameter_names:
