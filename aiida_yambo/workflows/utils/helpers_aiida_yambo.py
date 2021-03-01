@@ -128,11 +128,10 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     return calc_dict
 
 ################################## update_parameters - create parameters space #####################################
-def updater(calc_dict, inp_to_update, workflow_dict):
+def updater(calc_dict, inp_to_update, parameters, workflow_dict):
     
     already_done = False
     values_dict = {}
-    parameters = workflow_dict['parameter_space']
     parallelism_instructions = workflow_dict['parallelism_instructions']
 
     if not isinstance(calc_dict['var'],list):
@@ -206,7 +205,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
                 if 'mesh' in n:
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
                 else:
-                    value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+                    value = ywf_node.inputs.yres__yambo__parameters.get_dict()[n]
             except:
                 value = 0
             l_calc.append(value)

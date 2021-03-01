@@ -95,7 +95,7 @@ def parse_log(log, output_params, timing):
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
         memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
         alloc1_error = re.compile('\[ERROR\]Allocation')
-        #alloc2_error = re.compile('\[MEMORY\] Alloc')
+        alloc2_error = re.compile('\[MEMORY\] Alloc')
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
         impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
@@ -122,16 +122,20 @@ def parse_log(log, output_params, timing):
                 output_params['errors'].append('memory_general')
         except:
             pass
+        
+        try:
+            if  alloc2_error.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
+        except:
+            pass
+        
         try:
             if  X_par_mem.findall(log.lines[-1]):
                 output_params['memory_error'] = True
                 output_params['errors'].append('X_par_allocation')
         except:
             pass
-        # if  alloc2_error.findall(log.lines[-1]):
-        #    output_params['memory_error'] = True
-        #    output_params['errors'].append('memory_general')
-        
             
     return output_params
 

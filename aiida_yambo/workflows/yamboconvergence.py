@@ -43,6 +43,8 @@ class YamboConvergence(WorkChain):
                     help = 'settings for the workflow: type, quantity to be examinated...')
         spec.input("parallelism_instructions", valid_type=Dict, required=False, \
                     help = 'indications for the parallelism to be used wrt values of the parameters.')
+        spec.input("older_yamboworfklows", valid_type=List, required=False, \
+                    help = 'indications for older YamboWorkflows to be used.')
 
 ##################################### OUTLINE ####################################
 
@@ -76,7 +78,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
-
+              
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space,
                                                                 self.inputs.workflow_settings.get_dict()  ,
                                                                 self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
@@ -84,7 +86,12 @@ class YamboConvergence(WorkChain):
                                                                 )
 
         self.ctx.calc_inputs.additional_parsing = List(list=self.inputs.workflow_settings.get_dict()['what'])
-
+        
+        if hasattr(self.inputs, "older_yamboworfklows"):
+            self.ctx.workflow_manager['to_be_parsed'] = self.inputs.older_yamboworfklows.get_list()
+        else:
+            self.ctx.workflow_manager['to_be_parsed']=[]
+        
         if hasattr(self.inputs, "parallelism_instructions"):
             self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
             #self.report('para instr: {}'.format(self.ctx.workflow_manager['parallelism_instructions']))
@@ -151,10 +158,12 @@ class YamboConvergence(WorkChain):
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager['values'] = []
+        if self.ctx.calc_manager['iter'] == 1: self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
         for i in range(self.ctx.calc_manager['steps']):
             #self.report(parameter)
             self.ctx.calc_inputs, value, already_done = updater(self.ctx.calc_manager, 
-                                                self.ctx.calc_inputs, 
+                                                self.ctx.calc_inputs,
+                                                self.ctx.params_space, 
                                                 self.ctx.workflow_manager)
             self.ctx.workflow_manager['values'].append(value)
             self.report('New parameters are: {}'.format(value))
@@ -165,6 +174,7 @@ class YamboConvergence(WorkChain):
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             else:
                 self.report('Calculation already done: {}'.format(already_done))
+                future = load_node(already_done)
 
             calc[str(i+1)] = future
             self.ctx.calc_manager['wfl_pk'] = future.pk

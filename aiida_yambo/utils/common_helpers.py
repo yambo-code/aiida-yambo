@@ -266,26 +266,45 @@ def gap_mapping_from_nscf(nscf_pk,):
 
 def check_identical_calculation(YamboWorkflow_inputs, 
                                 YamboWorkflow_list,
-                                what=['BndsRnXp','GbndRnge','NGsBlkXp']):
+                                what=['BndsRnXp','GbndRnge','NGsBlkXp',],
+                                full = True,
+                                exclude = ['CPU','ROLEs','QPkrange']):
 
     already_done = False
     k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
     params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
-    for k in ['k_mesh','k_mesh_density']:
+    for k in ['kpoint_mesh','k_mesh_density']:
         try:
             what.remove(k)
         except:
             pass
-
+        
+    if full: 
+        what = copy.deepcopy(list(params_to_calc.keys()))
+        what_2 = copy.deepcopy(what)
+        print(what)
+        for e in exclude:
+            print(e)
+            for p in what_2:
+                if e in p: 
+                    what.remove(p)
+                    print(p)
+        print(what)            
     for old in YamboWorkflow_list:
-        same_k = (k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()).all()
-        old_params = load_node(old).inputs.yres.yambo.parameters.get_dict()
-        for p in what:
-            if params_to_calc[p] == old_params[p] and same_k:
-                already_done = old
-            else:
-                already_done = False
-                break
+        try:
+            if load_node(old).is_finished_ok:
+                same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
+                old_params = load_node(old).inputs.yres__yambo__parameters.get_dict()
+                for p in what:
+                    print(p,params_to_calc[p],old_params[p])
+                    if params_to_calc[p] == old_params[p] and same_k:
+                        already_done = old
+                    else:
+                        already_done = False
+                        break
+            if already_done: break
+        except:
+            already_done = False
 
-    return already_done       
+    return already_done     
     
