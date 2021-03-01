@@ -164,12 +164,13 @@ def parse_report(report, output_params):
 def parse_scheduler_stderr(stderr, output_params):
 
     m1 = re.compile('out of memory')
+    m1_1 = re.compile('out-of-memory')
     m2 = re.compile('Segmentation')
     m3 = re.compile('dumped')
     t1 = re.compile('walltime')
     t2 = re.compile('time')
     for line in stderr.lines:
-        if m1.findall(line) or m2.findall(line) or m3.findall(line):
+        if m1.findall(line) or m1_1.findall(line) or m2.findall(line) or m3.findall(line):
             output_params['memory_error'] = True
             output_params['errors'].append('memory_general') 
         elif t1.findall(line) or t2.findall(line):
