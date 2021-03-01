@@ -1,110 +1,72 @@
-def find_commensurate(max, ratio):
+def find_commensurate(a,b):
+    for j in range(a,0,-1):
+        if a%b==0:
+            return a
+        else:
+            a -= 1
 
-    comm = 1
-    for value in range(ratio,max+1):
-        if value%ratio == 0 :
-            comm = value
-    return comm
+def balance(tasks,a,b,rec=0):
+        r = a/b
+        #if r > 1: r=1/r
+        t = int(tasks*r)
+        if t == 0: t = 1
+        for i in range(t,0,-1):
+            if tasks%i == 0:
+                t = i
+                break
+        k  = tasks//t
 
-def balance_tasks(mpi, a, b, ratio = 2):
+        if rec > 0: a, b=a*2, b*2
+        
+        if t > a:
+            rec +=1
+            t,k = balance(t,a/2,b,rec)   
+        elif k > b:
+            rec +=1
+            t,k = balance(t,a,b/2,rec) 
+        return t,k
+
+def distribute(tasks=10, what='DIP', **ROLEs):
+    ROLEs_DIP = {'k','c','v'}
+    ROLEs_X = {'k','c','v','g','q'}
+    ROLEs_SE = {'q','qp','b','g'}
+    #for role in ROLEs.keys():
+    #    print(role,ROLEs[role],ROLEs[role]%tasks,ROLEs[role]//tasks)
     
-    r = ratio
-    c = mpi
-    d = 1
-    if a/b < 0.5:
-        pass
-    elif a/b > 0.5:
-        pass
-
-    return int(c),int(d) 
-
-def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
-
-    nodes = mpi_new/mpi_per_node
-    
-    resources = {'num_machines': int(nodes),
-                 'num_mpiprocs_per_machine': int(mpi_per_node),
-                 'num_cores_per_mpiproc': int(threads)}
-
-    return resources
-
-def fact(n):
-    l = []
-    r = []
-    for i in range(1,int(n+1)):
-        if n%i == 0:
-        #print(i)
-            l.append(i)
-            r.append(i/n)
-    return l, r
-
-def find_para(mpi,b,k):
-    l,r = fact(mpi)
-    if b == 1: b = 0
-    if k == 1: k = 0
-    if b == 0 and k == 0:
-        return 1, 1
-    p = b/(b+k)
-    pp = p**1.5
-    print(pp)
-    print(l)
-    print(r)
-    g = [abs(rr-pp) for rr in r]
-    print(g.index(min(g)))
-    print('b={}, k={}'.format(l[g.index(min(g))],mpi/l[g.index(min(g))]))
-    return int(l[g.index(min(g))]), int(mpi/l[g.index(min(g))])
-
-def parallelize_DIP(mpi, mpi_per_node, bands, occupied, kpoints, g_vecs):
-    
-    if mpi > bands*kpoints:
-        mpi = bands*kpoints
-
-    if bands/kpoints < 0.6:
-        b, k = find_para(mpi,bands,kpoints)
-    else:
-        b, k = find_para(mpi,bands,1)
-
-    if (bands-occupied)/occupied > 0.6:
-        c, v = find_para(b,bands-occupied,occupied)
-    else:
-        c, v = find_para(b,bands-occupied,1)
-    
-    return int(mpi), int(k), int(c), int(v)
-
-def parallelize_X_matrix(mpi, mpi_per_node, bands, occupied, kpoints):
-
-    g = 1
-    q = 1
-
-    if mpi > bands*kpoints:
-        mpi = bands*kpoints
-
-    if bands/kpoints < 0.6:
-        b, k = find_para(mpi,bands,kpoints)
-    else:
-        b, k = find_para(mpi,bands,1)
-
-    if (bands-occupied)/occupied > 0.6:
-        c, v = find_para(b,bands-occupied,occupied)
-    else:
-        c, v = find_para(b,bands-occupied,1)
-    
-    return int(mpi), int(k), int(c), int(v), int(g), int(q)
-
-def parallelize_SE_bands(mpi, mpi_per_node, bands, qp_corrected, g_vecs):
-
-    q = 1
-    g = 1
-
-    if mpi > bands*qp_corrected:
-        mpi = bands*qp_corrected
-    
-    if qp_corrected % 2 == 0 and mpi > 1:
-        b, qp = mpi/2, 2 
-    else:
-        b, qp = find_para(mpi,bands,qp_corrected)
-    
-    return int(mpi), int(qp), int(b), int(g), int(q)
+    if what=='DIP':
+        if tasks > ROLEs['c']*ROLEs['k']*ROLEs['v']: 
+            print('set')
+            tasks = ROLEs['c']*ROLEs['k']*ROLEs['v']
+        b,k = balance(tasks=tasks,a=ROLEs['c']+ROLEs['v'],b=ROLEs['k'])
+        c,v = balance(tasks=b,a=ROLEs['c'],b=ROLEs['v'])
+        print('mpi k c v')
+        return k*c*v,k,c,v
+        
+    elif what == 'X':
+        if tasks > ROLEs['c']*ROLEs['k']*ROLEs['v']*ROLEs['g']*ROLEs['q']: 
+            tasks = ROLEs['c']*ROLEs['k']*ROLEs['v']*ROLEs['g']*ROLEs['q']
+        b,k = balance(tasks=tasks,a=ROLEs['c']+ROLEs['v'],b=ROLEs['k'])
+        c,v = balance(tasks=b,a=ROLEs['c'],b=ROLEs['v'])
+        if ROLEs['g']> 1: 
+            c,g = balance(tasks=c,a=ROLEs['c'],b=ROLEs['g'])
+        else:
+            g = 1
+        q = 1
+        print('mpi q k g c v')
+        return q*k*g*c*v,q,k,g,c,v
+        
+    elif what == 'SE':       
+        if tasks > ROLEs['q']*ROLEs['qp']*ROLEs['b']*ROLEs['g']: 
+            tasks = ROLEs['q']*ROLEs['qp']*ROLEs['b']*ROLEs['g']
+        b,qp = balance(tasks=tasks,a=ROLEs['b'],b=ROLEs['qp'])
+        print(b,qp)
+        if ROLEs['g']> 1: 
+            b,g = balance(tasks=b,a=ROLEs['b'],b=ROLEs['g'])
+        else:
+            g = 1
+        q = 1
+        print('mpi q qp b g')
+        return q*qp*b*g,q,qp,b,g
 
 def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corrected=2, kpoints = 1, \
                         last_qp = 2, namelist = {}):
@@ -129,11 +91,17 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
         bands = last_qp*qp_corrected
     
     for i in range(10):
-        mpi1, k, c, v = parallelize_DIP(mpi, mpi_per_node, bands, occupied, kpoints, g_vecs)
-        mpi2, k, c, v, g, q = parallelize_X_matrix(mpi1, mpi_per_node, bands, occupied, kpoints)
-        mpi3, qp, b, g, q = parallelize_SE_bands(mpi2, mpi_per_node, bands, qp_corrected, g_vecs)
+        mpi1, k_dip, c_dip, v_dip = distribute(tasks=mpi, what='DIP', c=bands-occupied, v=occupied, k=kpoints, g=g_vecs)
+        mpi2, k_X, c_X, v_X, g_X, q_X = distribute(tasks=mpi1, what='X', c=bands-occupied, v=occupied, k=kpoints, g=g_vecs,q=q)
+        mpi3, qp_SE, b_SE, g_SE, q_SE = distribute(tasks=mpi1, what='SE', b=bands, qp=qp, g=g_vecs,q=q)
         if mpi1 == mpi2 and mpi2 == mpi3:
-            break
+            if mpi1%mpi_per_node==0:
+                break
+            else:
+                mpi=find_commensurate(mpi1,mpi_per_node)
+                    
+        else:
+            mpi = mpi3
 
     for i in [mpi, k, c, v, g, q, qp, b]:
         if i == 0 :
