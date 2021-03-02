@@ -178,10 +178,16 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
         except:
             pass
     
-    already_done = check_identical_calculation(inp_to_update, 
+    already_done, parent_nscf = check_identical_calculation(inp_to_update, 
                                                workflow_dict['to_be_parsed'])
+    
+    if parent_nscf:
+        try:
+            inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+        except:
+            pass
 
-    return inp_to_update, values_dict, already_done
+    return inp_to_update, values_dict, already_done, parent_nscf
 
 ################################## parsers #####################################
 def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backtrace=1):

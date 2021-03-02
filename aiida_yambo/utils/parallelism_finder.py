@@ -1,3 +1,13 @@
+def reorganize_resources(mpi_new, nodes, mpi_per_node, threads):
+
+    nodes = mpi_new/mpi_per_node
+    
+    resources = {'num_machines': int(nodes),
+                 'num_mpiprocs_per_machine': int(mpi_per_node),
+                 'num_cores_per_mpiproc': int(threads)}
+
+    return resources
+
 def find_commensurate(a,b):
     for j in range(a,0,-1):
         if a%b==0:
@@ -96,10 +106,10 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
         mpi3, qp_SE, b_SE, g_SE, q_SE = distribute(tasks=mpi1, what='SE', b=bands, qp=qp, g=g_vecs,q=q)
         if mpi1 == mpi2 and mpi2 == mpi3:
             if mpi1%mpi_per_node==0:
+                mpi = mpi1
                 break
             else:
-                mpi=find_commensurate(mpi1,mpi_per_node)
-                    
+                mpi=find_commensurate(mpi1,mpi_per_node)  
         else:
             mpi = mpi3
 

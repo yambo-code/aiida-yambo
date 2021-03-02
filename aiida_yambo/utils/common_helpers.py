@@ -271,8 +271,13 @@ def check_identical_calculation(YamboWorkflow_inputs,
                                 exclude = ['CPU','ROLEs','QPkrange']):
 
     already_done = False
-    k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
-    params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
+    parent_nscf = False
+    try:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
+    except:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf__kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()        
     for k in ['kpoint_mesh','k_mesh_density']:
         try:
             what.remove(k)
@@ -282,21 +287,22 @@ def check_identical_calculation(YamboWorkflow_inputs,
     if full: 
         what = copy.deepcopy(list(params_to_calc.keys()))
         what_2 = copy.deepcopy(what)
-        print(what)
+        #print(what)
         for e in exclude:
-            print(e)
+            #print(e)
             for p in what_2:
                 if e in p: 
                     what.remove(p)
-                    print(p)
-        print(what)            
+                    #print(p)
+        #print(what)            
+    
     for old in YamboWorkflow_list:
         try:
             if load_node(old).is_finished_ok:
                 same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
                 old_params = load_node(old).inputs.yres__yambo__parameters.get_dict()
                 for p in what:
-                    print(p,params_to_calc[p],old_params[p])
+                    #print(p,params_to_calc[p],old_params[p])
                     if params_to_calc[p] == old_params[p] and same_k:
                         already_done = old
                     else:
@@ -305,6 +311,18 @@ def check_identical_calculation(YamboWorkflow_inputs,
             if already_done: break
         except:
             already_done = False
+    
+    for old in YamboWorkflow_list:
+        try:
+            if  not already_done and not load_node(old).is_finished_ok:
+                print(old)
+                parent_nscf_try = find_pw_parent(load_node(old).called[0], calc_type=['nscf'])
+                same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
+                if same_k and parent_nscf_try.is_finished_ok: 
+                    parent_nscf = parent_nscf_try.pk
+            if parent_nscf: break       
+        except:
+            parent_nscf = False
 
-    return already_done     
+    return already_done, parent_nscf      
     
