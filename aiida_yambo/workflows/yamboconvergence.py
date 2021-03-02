@@ -161,7 +161,7 @@ class YamboConvergence(WorkChain):
         if self.ctx.calc_manager['iter'] == 1: self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
         for i in range(self.ctx.calc_manager['steps']):
             #self.report(parameter)
-            self.ctx.calc_inputs, value, already_done = updater(self.ctx.calc_manager, 
+            self.ctx.calc_inputs, value, already_done, parent_nscf = updater(self.ctx.calc_manager, 
                                                 self.ctx.calc_inputs,
                                                 self.ctx.params_space, 
                                                 self.ctx.workflow_manager)
@@ -171,6 +171,8 @@ class YamboConvergence(WorkChain):
                         value))
             if not already_done:
                 self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step']+i)
+                if parent_nscf:
+                    self.report('Recovering NSCF parent: {}'.format(parent_nscf))
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             else:
                 self.report('Calculation already done: {}'.format(already_done))
