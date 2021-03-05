@@ -152,7 +152,7 @@ class YamboParser(Parser):
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'4.5', 'Fermi(eV)':0,'ns.db1_path':parent_save_path}
+        'yambo_version':'4.5', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
         ndbqp = {}
         ndbhf = {}
 

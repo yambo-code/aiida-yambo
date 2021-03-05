@@ -308,6 +308,7 @@ def check_identical_calculation(YamboWorkflow_inputs,
                     else:
                         already_done = False
                         break
+
             if already_done: break
         except:
             already_done = False
@@ -318,6 +319,14 @@ def check_identical_calculation(YamboWorkflow_inputs,
                 print(old)
                 parent_nscf_try = find_pw_parent(load_node(old).called[0], calc_type=['nscf'])
                 same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
+                try:
+                    y = load_node(old).outputs.retrieved._repository._repo_folder.abspath+'/path/'
+                    if 'ns.db1' in  os.listdir(y) and same_k:
+                        parent_nscf = old
+                        
+                except:
+                    pass
+                if parent_nscf: break
                 if same_k and parent_nscf_try.is_finished_ok: 
                     parent_nscf = parent_nscf_try.pk
             if parent_nscf: break       

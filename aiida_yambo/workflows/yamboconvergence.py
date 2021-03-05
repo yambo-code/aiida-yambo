@@ -173,7 +173,7 @@ class YamboConvergence(WorkChain):
             if not already_done:
                 self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step']+i)
                 if parent_nscf:
-                    self.report('Recovering NSCF parent: {}'.format(parent_nscf))
+                    self.report('Recovering NSCF/P2Y parent: {}'.format(parent_nscf))
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             else:
                 self.report('Calculation already done: {}'.format(already_done))

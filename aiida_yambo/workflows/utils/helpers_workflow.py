@@ -197,7 +197,8 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'failed']=True
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'useful']=False
     if len(none_encountered) > 0:
         for i in range(calc_manager['steps']*calc_manager['iter']-len(none_encountered)):
             for j in calc_manager['var']:
