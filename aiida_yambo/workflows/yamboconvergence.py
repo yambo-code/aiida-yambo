@@ -49,10 +49,10 @@ class YamboConvergence(WorkChain):
 ##################################### OUTLINE ####################################
 
         spec.outline(cls.start_workflow,
+                    while_(cls.has_to_continue)(
                     if_(cls.pre_needed)(
                     cls.do_pre,
                     cls.prepare_calculations),
-                    while_(cls.has_to_continue)(
                     cls.next_step,
                     cls.data_analysis),
                     cls.report_wf,
@@ -78,14 +78,15 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
-              
+        self.ctx.workflow_settings = self.inputs.workflow_settings.get_dict()
+        self.ctx.max_bands = self.ctx.workflow_settings.pop('max_bands', 0)
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space,
-                                                                self.inputs.workflow_settings.get_dict()  ,
+                                                                self.ctx.workflow_settings,
                                                                 self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
                                                                 self.ctx.calc_inputs.nscf.kpoints,
                                                                 )
 
-        self.ctx.calc_inputs.additional_parsing = List(list=self.inputs.workflow_settings.get_dict()['what'])
+        self.ctx.calc_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
         
         if hasattr(self.inputs, "older_yamboworfklows"):
             self.ctx.workflow_manager['to_be_parsed'] = self.inputs.older_yamboworfklows.get_list()
@@ -99,11 +100,11 @@ class YamboConvergence(WorkChain):
             self.ctx.workflow_manager['parallelism_instructions'] = {}  
         
         self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
-                                            wfl_settings = self.inputs.workflow_settings.get_dict(),) 
+                                            wfl_settings = self.ctx.workflow_settings,) 
 
         self.ctx.final_result = {}     
 
-        self.report('Workflow type: {}; looking for convergence of {}'.format(self.inputs.workflow_settings.get_dict()['type'], self.inputs.workflow_settings.get_dict()['what']))
+        self.report('Workflow type: {}; looking for convergence of {}'.format(self.ctx.workflow_settings['type'], self.ctx.workflow_settings['what']))
 
         
         #self.report('Space of parameters: {}'.format(self.ctx.workflow_manager['parameter_space']))
@@ -133,7 +134,7 @@ class YamboConvergence(WorkChain):
             #update variable to conv
             self.ctx.remaining_iter.pop()
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
-                                            wfl_settings = self.inputs.workflow_settings.get_dict(),)
+                                            wfl_settings = self.ctx.workflow_settings,)
 
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
             
@@ -212,7 +213,7 @@ class YamboConvergence(WorkChain):
                  self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
-            self.report('Success of '+self.inputs.workflow_settings.get_dict()['type']+' on {} reached in {} calculations, the result is {}' \
+            self.report('Success of '+self.ctx.workflow_settings['type']+' on {} reached in {} calculations, the result is {}' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter'],\
                             df_story[df_story['useful'] == True].loc[:,self.ctx.workflow_manager['what']].values[-1:]))
 
@@ -274,6 +275,9 @@ class YamboConvergence(WorkChain):
             yambo_bandsSc = 0
 
         self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
+        if self.ctx.gwbands > 0 and self.ctx.max_bands > 0:
+            self.ctx.gwbands = min(self.ctx.gwbands, self.ctx.max_bands)
+
 
         if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
             self.report('Not needed, we start with k-points')
@@ -318,7 +322,7 @@ class YamboConvergence(WorkChain):
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
             self.ctx.pre_inputs.yres.yambo.parameters = self.inputs.precalc_inputs
-            self.ctx.pre_inputs.additional_parsing = List(list=self.inputs.workflow_settings.get_dict()['what'])
+            self.ctx.pre_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
         else:
             self.ctx.calculation_type='p2y'
             self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.gwbands],[1,self.ctx.gwbands]])

@@ -143,14 +143,26 @@ class YamboParser(Parser):
 
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
+        try:
+            parent_save_path = self._calc.inputs.parent_folder.outputs.output_parameters.get_dict().pop('ns.db1_path','')
+        except:
+            parent_save_path = '.'
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote_dbs': False, 'game_over': False,
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'4.5', 'Fermi(eV)':0}
+        'yambo_version':'4.5', 'Fermi(eV)':0,'ns.db1_path':parent_save_path}
         ndbqp = {}
         ndbhf = {}
+
+        for file in os.listdir(out_folder._repository._repo_folder.abspath):
+            if 'stderr' in file:
+                with open(file,'r') as stderr:
+                    parse_scheduler_stderr(stderr, output_params)
+        
+        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath):
+            output_params['ns.db1_path'] = out_folder._repository._repo_folder.abspath
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
@@ -158,11 +170,6 @@ class YamboParser(Parser):
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-
-        for file in os.listdir(out_folder._repository._repo_folder.abspath):
-            if 'stderr' in file:
-                with open(file,'r') as stderr:
-                    parse_scheduler_stderr(stderr, output_params)
 
         for result in results.yambofiles:
             if results is None:

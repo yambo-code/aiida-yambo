@@ -93,6 +93,9 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
     b = 1
     qp = 1
     g_vecs = 1
+    k_dip, c_dip, v_dip = 1 , 1 , 1
+    k_X, c_X, v_X, g_X, q_X = 1 , 1 , 1 , 1, 1
+    qp_SE, b_SE, g_SE, q_SE =1 , 1 , 1 , 1
 
     if 'HF_issue' in []:
         if last_qp <= occupied:
@@ -117,9 +120,9 @@ def find_parallelism_qp(nodes, mpi_per_node, threads, bands, occupied=2, qp_corr
         if i == 0 :
             i = 1
 
-    mpi_DIP = {'k':k,'c':c,'v':v}
-    mpi_X = {'q':q,'k':k,'g':g,'c':c,'v':v}
-    mpi_SE = {'q':q,'qp':qp,'b':b,'g':g}
+    mpi_DIP = {'k':k_dip,'c':c_dip,'v':v_dip}
+    mpi_X = {'q':q_X,'k':k_X,'g':g_X,'c':c_X,'v':v_X}
+    mpi_SE = {'q':q_SE,'qp':qp_SE,'b':b_SE,'g':g_SE}
     
     parallelism = {}
 

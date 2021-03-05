@@ -39,7 +39,7 @@ def fix_parallelism(resources, failed_calc):
     
     return new_parallelism, new_resources
 
-def fix_memory(resources, failed_calc, exit_status, max_nodes):
+def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
         
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
     nscf = find_pw_parent(failed_calc,calc_type=['nscf']) 
@@ -47,13 +47,15 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes):
     mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
     kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
 
-    if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu']: #there should be a limit
+    if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu'] or iteration > 1: #there should be a limit
         
-        new_nodes = int(1.5*resources['num_machines'])
-        new_nodes += new_nodes%2
+        new_nodes = int(2*resources['num_machines'])
+        #new_nodes += new_nodes%2
         
         if new_nodes <= max_nodes:
             resources['num_machines'] = new_nodes
+        else:
+            resources['num_machines'] = max_nodes
         
         resources['num_mpiprocs_per_machine'] *= 2
         resources['num_cores_per_mpiproc'] /= 2
