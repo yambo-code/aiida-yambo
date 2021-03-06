@@ -36,7 +36,7 @@ __version__ = "0.4.1"
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
               " Antimo Marrazzo (antimo.marrazzo@epfl.ch)," \
-              " Michael Atambo (michaelontita.atambo@unimore.it)",
+              " Michael Atambo (michaelontita.atambo@unimore.it)", \
               " and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
 
