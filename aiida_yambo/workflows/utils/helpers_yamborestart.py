@@ -27,7 +27,7 @@ def fix_parallelism(resources, failed_calc):
     nscf = find_pw_parent(failed_calc,calc_type=['nscf']) 
     occupied = gap_mapping_from_nscf(nscf.pk,)['valence']
     mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
-    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
+    kpoints = gap_mapping_from_nscf(nscf.pk,)['number_of_kpoints']
 
     if 'gw0' or 'HF_and_locXC' in runlevels:
         new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
@@ -45,7 +45,7 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
     nscf = find_pw_parent(failed_calc,calc_type=['nscf']) 
     occupied = gap_mapping_from_nscf(nscf.pk,)['valence']
     mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
-    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
+    kpoints = gap_mapping_from_nscf(nscf.pk,)['number_of_kpoints']
 
     if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu'] or iteration > 1: #there should be a limit
         

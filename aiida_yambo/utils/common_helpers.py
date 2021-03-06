@@ -238,6 +238,7 @@ def gap_mapping_from_nscf(nscf_pk,):
     nscf = load_node(nscf_pk)
     bands = nscf.outputs.output_band.get_array('bands')
     occ = nscf.outputs.output_band.get_array('occupations')
+    n_kpoints = nscf.outputs.output_parameters.get_dict()['number_of_k_points']
     valence = len(occ[0][occ[0]>0.01]) #band index of the valence. 
     valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
     if valence%2 !=0:
@@ -255,6 +256,7 @@ def gap_mapping_from_nscf(nscf_pk,):
 
     mapping = {
     'valence': valence,
+    'number_of_kpoints':n_kpoints,
     'nscf_gap_eV':round(abs(min(bands[:,conduction-1])-max(bands[:,valence-1])),3),
     'homo_k': ind_val+1,
     'lumo_k':ind_cond+1,

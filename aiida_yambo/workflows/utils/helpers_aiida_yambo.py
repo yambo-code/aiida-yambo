@@ -32,7 +32,7 @@ def set_parallelism(instructions_, inputs):
     resources = inputs.yres.yambo.metadata.options.resources
     structure = inputs.structure.get_ase()
     mesh = inputs.nscf.kpoints.get_kpoints_mesh()[0]
-    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
+    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fi
 
     occupied, ecut = periodical(structure)
 

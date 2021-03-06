@@ -33,7 +33,11 @@ import netCDF4
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.4.1"
-__authors__ = "Michael Atambo, Antimo Marrazzo, Gianluca Prandini and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
+__authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
+              " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
+              " Antimo Marrazzo (antimo.marrazzo@epfl.ch)," \
+              " Michael Atambo (michaelontita.atambo@unimore.it)",
+              " and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
 
 class YamboParser(Parser):
@@ -152,7 +156,7 @@ class YamboParser(Parser):
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'4.5', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
+        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
         ndbqp = {}
         ndbhf = {}
 

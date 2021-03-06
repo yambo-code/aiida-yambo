@@ -67,7 +67,7 @@ class YamboCalculation(CalcJob):
 #     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /
 #    /   /      Y88b /          Y888b 888__/    `88_-~
 #
-#             AIIDA input plugin.  YAMBO 4.x compatible
+#             AIIDA input plugin.  YAMBO >4.0 compatible
 #               http://www.yambo-code.org
 #
 """
