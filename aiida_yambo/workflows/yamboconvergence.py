@@ -40,7 +40,7 @@ class YamboConvergence(WorkChain):
         spec.input("parameters_space", valid_type=List, required=True, \
                     help = 'variables to converge, range, steps, and max iterations')
         spec.input("workflow_settings", valid_type=Dict, required=True, \
-                    help = 'settings for the workflow: type, quantity to be examinated...')
+                    help = 'settings for the workflow: type, quantity to be examinated...') #there should be a default
         spec.input("parallelism_instructions", valid_type=Dict, required=False, \
                     help = 'indications for the parallelism to be used wrt values of the parameters.')
         spec.input("older_yamboworfklows", valid_type=List, required=False, \
@@ -79,7 +79,7 @@ class YamboConvergence(WorkChain):
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
         self.ctx.workflow_settings = self.inputs.workflow_settings.get_dict()
-        self.ctx.max_bands = self.ctx.workflow_settings.pop('max_bands', 0)
+        self.ctx.how_bands = self.ctx.workflow_settings.pop('bands_nscf_update', 0)
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space,
                                                                 self.ctx.workflow_settings,
                                                                 self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
@@ -265,17 +265,22 @@ class YamboConvergence(WorkChain):
 
         self.report('detecting if we need a starting calculation...')
         
+        if self.ctx.how_bands == 'step-by-step':
+            space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
+        elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
+            space_index = 0
+
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][-1][-1]
+            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]
         else:
             yambo_bandsX = 0 
         if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][-1][-1]
+            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge']space_index[-1][-1]
         else:
             yambo_bandsSc = 0
 
         self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
-        if self.ctx.gwbands > 0 and self.ctx.max_bands > 0:
+        if self.ctx.gwbands > 0 and isinstance(self.ctx.how_bands, int):
             self.ctx.gwbands = min(self.ctx.gwbands, self.ctx.max_bands)
 
 
