@@ -275,7 +275,7 @@ class YamboConvergence(WorkChain):
         else:
             yambo_bandsX = 0 
         if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge']space_index[-1][-1]
+            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][space_index-1][-1]
         else:
             yambo_bandsSc = 0
 
