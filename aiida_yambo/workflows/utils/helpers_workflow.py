@@ -160,7 +160,13 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 
     for i in range(calc_manager['steps']):
             workflow_dict['global_step'] += 1
-            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[calc_manager['var']]+\
+            if isinstance(calc_manager['var'],list):
+                separator = ', '
+                var_names = separator.join(calc_manager['var'])
+            else:
+                var_names = calc_manager['var']
+
+            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
 
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\

@@ -265,9 +265,24 @@ class YamboConvergence(WorkChain):
 
         self.report('detecting if we need a starting calculation...')
         
-        if self.ctx.how_bands == 'step-by-step':
+        if self.ctx.how_bands == 'single-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
+            space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
+            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+        elif self.ctx.how_bands == 'single-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
+            space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
+            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+
+        elif self.ctx.how_bands == 'full-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
+            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+        elif self.ctx.how_bands == 'full-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
+            space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
+            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+
         elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
+            space_index = 0
+        
+        else:
             space_index = 0
 
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
@@ -281,7 +296,7 @@ class YamboConvergence(WorkChain):
 
         self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
         if self.ctx.gwbands > 0 and isinstance(self.ctx.how_bands, int):
-            self.ctx.gwbands = min(self.ctx.gwbands, self.ctx.max_bands)
+            self.ctx.gwbands = min(self.ctx.gwbands, self.ctx.how_bands)
 
 
         if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
