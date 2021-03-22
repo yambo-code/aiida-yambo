@@ -178,8 +178,8 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
         except:
             pass
     
-    already_done, parent_nscf = check_identical_calculation(inp_to_update, 
-                                               workflow_dict['to_be_parsed'])
+    already_done, parent_nscf = search_in_group(inp_to_update, 
+                                               workflow_dict['group'])
     
     if parent_nscf:
         try:
@@ -202,10 +202,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
     l_iter = []
     for i in range(1,backtrace+1):
         l_calc = []
-        #try: #YamboConvergence
-        ywf_node = load_node(workflow_dict['to_be_parsed'][backtrace-i]) #load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
-        #except: #YamboWorkflow,YamboRestart of YamboCalculation
-        #    ywf_node = load_node(calc_dict['wfl_pk'])
+        ywf_node = load_node(workflow_dict['wfl_pk'][backtrace-i])
         for n in parameter_names:
             try:
                 if 'mesh' in n:

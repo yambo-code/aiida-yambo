@@ -134,7 +134,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['starting_inputs'] = collect_inputs(inputs, kpoints, new_l)
     workflow_dict['parameter_space'] = create_space(workflow_dict['starting_inputs'], new_l, workflow_dict['type'])
     workflow_dict['to_be_parsed'] = []
-    
+    workflow_dict['wfl_pk'] = []
     return workflow_dict
 
 @conversion_wrapper

@@ -4,8 +4,10 @@ import sys
 import itertools
 import traceback
 
+from time import time
+
 #if aiida_calcs:
-from aiida.orm import Dict, Str, Bool, KpointsData, RemoteData, List, load_node
+from aiida.orm import Dict, Str, Bool, KpointsData, RemoteData, List, load_node, Group, load_group
 
 from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
@@ -43,8 +45,8 @@ class YamboConvergence(WorkChain):
                     help = 'settings for the workflow: type, quantity to be examinated...') #there should be a default
         spec.input("parallelism_instructions", valid_type=Dict, required=False, \
                     help = 'indications for the parallelism to be used wrt values of the parameters.')
-        spec.input("older_yamboworfklows", valid_type=List, required=False, \
-                    help = 'indications for older YamboWorkflows to be used.')
+        spec.input("group_label", valid_type=Str, required=False, \
+                    help = 'group of calculations already done for this system.')
 
 ##################################### OUTLINE ####################################
 
@@ -87,11 +89,17 @@ class YamboConvergence(WorkChain):
                                                                 )
 
         self.ctx.calc_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
-        
-        if hasattr(self.inputs, "older_yamboworfklows"):
-            self.ctx.workflow_manager['to_be_parsed'] = self.inputs.older_yamboworfklows.get_list()
+
+        if hasattr(self.inputs, "group_label"):
+            self.ctx.workflow_manager['group'] = load_group(self.inputs.group_label.value)
+            self.report('group: {}'.format(self.inputs.group_label.value))
         else:
-            self.ctx.workflow_manager['to_be_parsed']=[]
+            try:
+                self.ctx.workflow_manager['group'] = load_group("convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
+            except:
+                self.ctx.workflow_manager['group'] = Group(label="convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
+                self.report('creating group: {}'.format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
+            if not self.ctx.workflow_manager['group'].is_stored: self.ctx.workflow_manager['group'].store()
         
         if hasattr(self.inputs, "parallelism_instructions"):
             self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
@@ -180,8 +188,8 @@ class YamboConvergence(WorkChain):
                 future = load_node(already_done)
 
             calc[str(i+1)] = future
-            self.ctx.calc_manager['wfl_pk'] = future.pk
-            self.ctx.workflow_manager['to_be_parsed'] = [future.pk] + self.ctx.workflow_manager['to_be_parsed']
+            self.ctx.workflow_manager['wfl_pk'] = [future.pk] + self.ctx.workflow_manager['wfl_pk']  
+            self.ctx.workflow_manager['group'].add_nodes(future) 
 
         return ToContext(calc)
 
@@ -243,7 +251,7 @@ class YamboConvergence(WorkChain):
             self.out_many(self.exposed_outputs(calc,YamboWorkflow))
         except:
             self.report('no YamboWorkflows available to expose outputs')
-        
+
         if not self.ctx.calc_manager['success'] and self.ctx.none_encountered:
             remaining_iter = store_List(self.ctx.remaining_iter)
             self.out('remaining_iter', remaining_iter)
@@ -258,7 +266,8 @@ class YamboConvergence(WorkChain):
             remaining_iter = store_List(self.ctx.remaining_iter)
             self.out('remaining_iter', remaining_iter)
             self.report('Undefined state')
-            return self.exit_codes.UNDEFINED_STATE     
+            return self.exit_codes.UNDEFINED_STATE    
+
 
 ############################### preliminary calculation #####################
     def pre_needed(self):

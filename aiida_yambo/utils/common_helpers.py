@@ -9,7 +9,7 @@ import copy
 import os
 
 try:
-    from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData
+    from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData, Group
     from aiida.plugins import CalculationFactory, DataFactory
     from aiida.engine import calcfunction 
 except:
@@ -335,5 +335,97 @@ def check_identical_calculation(YamboWorkflow_inputs,
         except:
             parent_nscf = False
 
-    return already_done, parent_nscf      
+    return already_done, parent_nscf 
+
+def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what):
+    already_done = False
+    try:
+        if node.is_finished_ok:
+            same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
+            old_params = node.inputs.yres__yambo__parameters.get_dict()
+            for p in what:
+                #print(p,params_to_calc[p],old_params[p])
+                if params_to_calc[p] == old_params[p] and same_k:
+                    already_done = node.pk
+                else:
+                    already_done = False
+                    break 
+    
+    except:
+        pass
+    
+    return already_done
+
+def check_same_nscf(node, k_mesh_to_calc, already_done):
+    parent_nscf = False
+    try:
+        if  not already_done and not node.is_finished_ok:
+            print(old)
+            parent_nscf_try = find_pw_parent(load_node(old).called[0], calc_type=['nscf'])
+            same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
+            try:
+                y = load_node(old).outputs.retrieved._repository._repo_folder.abspath+'/path/'
+                if 'ns.db1' in  os.listdir(y) and same_k:
+                    parent_nscf = old                    
+            except:
+                pass
+            if same_k and parent_nscf_try.is_finished_ok: 
+                parent_nscf = parent_nscf_try.pk     
+   
+    except:
+        pass
+    
+    return parent_nscf   
+
+def search_in_group(YamboWorkflow_inputs, 
+                                YamboWorkflow_group,
+                                what=['BndsRnXp','GbndRnge','NGsBlkXp',],
+                                full = True,
+                                exclude = ['CPU','ROLEs','QPkrange']):
+
+    already_done = False
+    parent_nscf = False
+    try:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
+    except:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf__kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()        
+    for k in ['kpoint_mesh','k_mesh_density']:
+        try:
+            what.remove(k)
+        except:
+            pass
+        
+    if full: 
+        what = copy.deepcopy(list(params_to_calc.keys()))
+        what_2 = copy.deepcopy(what)
+        for e in exclude:
+            for p in what_2:
+                if e in p: 
+                    what.remove(p)     
+    
+    for old in YamboWorkflow_group.nodes:
+        if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
+            for i in old.called:
+                already_done = check_same_yambo(i, params_to_calc,k_mesh_to_calc,what)
+                if already_done: break
+
+        elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
+            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what)
+        
+        if already_done: break
+            
+    for old in YamboWorkflow_group.nodes:
+        if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
+            for i in old.called:
+                parent_nscf = check_same_nscf(i, k_mesh_to_calc, already_done)
+                if parent_nscf: break
+        
+        elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
+            parent_nscf = check_same_nscf(old, k_mesh_to_calc, already_done)
+        
+        if parent_nscf: break
+
+    return already_done, parent_nscf  
     
