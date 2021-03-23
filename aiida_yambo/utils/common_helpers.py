@@ -15,6 +15,7 @@ try:
 except:
     pass
 
+from aiida_yambo.utils.k_path_utils import * 
 
 def find_parent(calc):
 
@@ -233,21 +234,107 @@ def find_gw_info(inputs):
     
     return bands, qp, last_qp, runlevels
 
-def gap_mapping_from_nscf(nscf_pk,):
+def build_list_QPkrange(mapping, quantity, nscf_pk):
+    s = load_node(nscf_pk)
+    if isinstance(quantity,str):
+        if 'gap_' in quantity:
+            if quantity[-1] == '_': 
+                return quantity,[[mapping['homo_k'],mapping['homo_k'],
+                         mapping['valence'],mapping['valence']],
+                        [mapping['lumo_k'],mapping['lumo_k'],
+                         mapping['conduction'],mapping['conduction']]]
+            else: #high-symmetry
+                m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase())
+                
+                if quantity in m.keys() : return quantity, None
+                return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
+                         mapping['valence'],mapping['valence']],
+                        [maps[quantity[-1]],maps[quantity[-1]],
+                         mapping['conduction'],mapping['conduction']]]
+        else: #high-symmetry
+                m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase())
+                
+                if quantity in m.keys() : return quantity, None
+                if '_v' in quantity:
+                    return quantity,[[maps[quantity[0]],maps[quantity[0]],
+                         mapping['valence'],mapping['valence']],]
+                elif '_c' in quantity:
+                    return quantity,[[maps[quantity[0]],maps[quantity[0]],
+                         mapping['conduction'],mapping['conduction']],]
+                
+                return quantity,[[maps[quantity],maps[quantity],
+                         mapping['valence'],mapping['valence']],
+                        [maps[quantity],maps[quantity],
+                         mapping['conduction'],mapping['conduction']]]
+            
+    elif isinstance(quantity,tuple):
+        if 'gap_' in quantity[0]:
+            m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase(),k_list={quantity[0][-2]:np.array(quantity[1][-2]),
+                                                                            quantity[0][-1]:np.array(quantity[1][-1])})
+
+            if quantity[0] in m.keys() : return quantity, None    
+            return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
+                     mapping['valence'],mapping['valence']],
+                    [maps[quantity[0][-1]],maps[quantity[0][-1]],
+                     mapping['conduction'],mapping['conduction']]]
+        else:
+            m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase(),k_list={quantity[0]:np.array(quantity[1]),
+                                                                            quantity[0]:np.array(quantity[1])})
+            
+            if quantity[0] in m.keys() : return quantity, None
+            if '_v' in quantity[0]:
+                return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
+                     mapping['valence'],mapping['valence']],]
+            elif '_c' in quantity[0]:
+                return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
+                     mapping['conduction'],mapping['conduction']],]
+            
+            
+            return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
+                     mapping['valence'],mapping['valence']],
+                    [maps[quantity[0]],maps[quantity[0]],
+                     mapping['conduction'],mapping['conduction']]]     
+
+def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     
     nscf = load_node(nscf_pk)
     bands = nscf.outputs.output_band.get_array('bands')
     occ = nscf.outputs.output_band.get_array('occupations')
     n_kpoints = nscf.outputs.output_parameters.get_dict()['number_of_k_points']
+    k_coords = nscf.outputs.output_band.get_kpoints()
     valence = len(occ[0][occ[0]>0.01]) #band index of the valence. 
     valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
-    if valence%2 !=0:
-        valence = int(valence+0.5) #metal
+    fermi = nscf.outputs.output_parameters.get_dict()['fermi_energy']
+    soc = nscf.outputs.output_parameters.get_dict()['spin_orbit_calculation']
+        
+    if valence%2 != 0:
+        valence = int(valence+0.5) #may be a metal
     else:
         valence = int(valence)
-    conduction = valence + 1 
-    ind_val = bands[:,valence-1].argmax()
-    ind_cond = bands[:,conduction-1].argmin()
+    conduction = valence + 1  
+    
+    if soc:
+        valence = valence*2 - 1
+        conduction = valence + 2
+
+    touch_fermi = np.where(abs(bands[:,valence-1]-fermi)<0.005)
+    if len(touch_fermi)>1: #metal??
+        ind_val = touch_fermi[0]
+        ind_cond = ind_val
+        dft_predicted = 'metal'
+    else:
+        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) < 0.005: #semiconductor, insulator??
+            ind_val = bands[:,valence-1].argmax()
+            ind_cond = bands[:,conduction-1].argmin()
+            dft_predicted = 'semiconductor/insulator'
+        else: #semimetal??
+            ind_val = bands[:,valence-1].argmax()
+            ind_cond = bands[:,conduction-1].argmin()
+            dft_predicted = 'semimetal'
 
     if ind_val+1 != ind_cond+1:
         gap_type = 'indirect'
@@ -255,15 +342,28 @@ def gap_mapping_from_nscf(nscf_pk,):
         gap_type = 'direct'
 
     mapping = {
+    'dft_predicted': dft_predicted,
     'valence': valence,
+    'conduction': conduction,
     'number_of_kpoints':n_kpoints,
     'nscf_gap_eV':round(abs(min(bands[:,conduction-1])-max(bands[:,valence-1])),3),
     'homo_k': ind_val+1,
-    'lumo_k':ind_cond+1,
-    'gap_type':gap_type,
-    'mapping_gap_qp':[ind_val+1,ind_cond+1,valence,valence+1], #the qp to be computed
+    'lumo_k': ind_cond+1,
+    'gap_type': gap_type,
+    'gap_': [ind_val+1,ind_cond+1,valence,valence+1], #the qp to be computed
+    'soc':soc,
            }
-    
+
+    for i in additional_parsing_List:
+        if i == 'homo' or i == 'lumo':
+            pass
+        else:
+            name, additional = build_list_QPkrange(mapping, i, nscf_pk)
+            if not additional: 
+                pass
+            else:
+                mapping[name] = additional
+
     return mapping
 
 def check_identical_calculation(YamboWorkflow_inputs, 

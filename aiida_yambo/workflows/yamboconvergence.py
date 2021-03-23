@@ -88,7 +88,11 @@ class YamboConvergence(WorkChain):
                                                                 self.ctx.calc_inputs.nscf.kpoints,
                                                                 )
 
-        self.ctx.calc_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
+        if hasattr(self.ctx.calc_inputs,'additional_parsing'):
+            l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
+            self.ctx.calc_inputs.additional_parsing = List(list=list(dict.fromkeys(l)))
+        else:
+            self.ctx.calc_inputs.additional_parsing = List(list=list(self.ctx.workflow_settings['what'])
 
         if hasattr(self.inputs, "group_label"):
             self.ctx.workflow_manager['group'] = load_group(self.inputs.group_label.value)
