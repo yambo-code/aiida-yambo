@@ -67,7 +67,7 @@ class YamboCalculation(CalcJob):
 #     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /
 #    /   /      Y88b /          Y888b 888__/    `88_-~
 #
-#             AIIDA input plugin.  YAMBO 4.x compatible
+#             AIIDA input plugin.  YAMBO >4.0 compatible
 #               http://www.yambo-code.org
 #
 """
@@ -357,7 +357,7 @@ class YamboCalculation(CalcJob):
         extra_retrieved = []
 
         if initialise:
-        #    extra_retrieved.append('SAVE/'+_dbs_accepted['ns.db1'])
+        #    extra_retrieved.append('SAVE/'+_dbs_accepted['p2y'])
             pass
         else:
             for dbs in _dbs_accepted.keys():
@@ -368,9 +368,6 @@ class YamboCalculation(CalcJob):
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
             extra_retrieved.append(additional)
-
-        for extra in extra_retrieved:
-            calcinfo.retrieve_list.append(extra)
 
         from aiida.common.datastructures import CodeRunMode, CodeInfo
 
@@ -416,7 +413,12 @@ class YamboCalculation(CalcJob):
             c3 = None
 
         #logic of the execution
-        #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]
+        #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]   
+        try:
+            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns.db1_path','')
+        except:
+            parent_save_path = None
+
         if yambo_parent:
             if not parent_initialise:
                 calcinfo.codes_info = [c3]
@@ -424,8 +426,10 @@ class YamboCalculation(CalcJob):
                 calcinfo.codes_info = [c2, c3]
         elif initialise:
             calcinfo.codes_info = [c1]
+            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
         else:
             calcinfo.codes_info = [c1, c2, c3]
+            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
@@ -434,6 +438,9 @@ class YamboCalculation(CalcJob):
                 "The following keys have been found in "
                 "the settings input node, but were not understood: {}".format(
                     ",".join(list(settings.keys()))))
+
+        for extra in extra_retrieved:
+            calcinfo.retrieve_list.append(extra)
 
         return calcinfo
 

@@ -32,7 +32,7 @@ def set_parallelism(instructions_, inputs):
     resources = inputs.yres.yambo.metadata.options.resources
     structure = inputs.structure.get_ase()
     mesh = inputs.nscf.kpoints.get_kpoints_mesh()[0]
-    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
+    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fi
 
     occupied, ecut = periodical(structure)
 
@@ -178,8 +178,8 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
         except:
             pass
     
-    already_done, parent_nscf = check_identical_calculation(inp_to_update, 
-                                               workflow_dict['to_be_parsed'])
+    already_done, parent_nscf = search_in_group(inp_to_update, 
+                                               workflow_dict['group'])
     
     if parent_nscf:
         try:
@@ -190,22 +190,17 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
     return inp_to_update, values_dict, already_done, parent_nscf
 
 ################################## parsers #####################################
-def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backtrace=1):
+def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], backtrace=1):
 
     parameter_names = list(workflow_dict['parameter_space'].keys())
     
     backtrace = calc_dict['steps'] 
     what = workflow_dict['what']
 
-    #quantities = np.zeros((len(what),backtrace,3))
-    #quantities = pd.DataFrame([], columns = parameter_names + what + ['uuid'])
     l_iter = []
     for i in range(1,backtrace+1):
         l_calc = []
-        #try: #YamboConvergence
-        ywf_node = load_node(workflow_dict['to_be_parsed'][backtrace-i]) #load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
-        #except: #YamboWorkflow,YamboRestart of YamboCalculation
-        #    ywf_node = load_node(calc_dict['wfl_pk'])
+        ywf_node = load_node(workflow_dict['wfl_pk'][backtrace-i])
         for n in parameter_names:
             try:
                 if 'mesh' in n:
@@ -224,7 +219,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
                 quantity = False
                 l_calc.append(quantity)           
             
-        l_calc.append(ywf_node.uuid) #CalcJobNode.pk responsible of the calculation
+        l_calc.append(ywf_node.uuid)
         l_iter.append(l_calc)
     
     quantities = pd.DataFrame(l_iter, columns = parameter_names + what + ['uuid'])

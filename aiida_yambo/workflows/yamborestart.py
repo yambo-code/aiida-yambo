@@ -43,7 +43,7 @@ class YamboRestart(BaseRestartWorkChain):
         spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
         spec.input("max_number_of_nodes", valid_type=Int, default=lambda: Int(0),
                     help = 'max number of nodes for restarts; if 0, it does not increase the number of nodes')
-        spec.input("code_version", valid_type=Str, default=lambda: Str('4.5'))
+        spec.input("code_version", valid_type=Str, default=lambda: Str('5.x'))
 
 
 ##################################### OUTLINE ####################################
@@ -137,8 +137,8 @@ class YamboRestart(BaseRestartWorkChain):
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO', True) # to link the dbs in aiida.out 
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
+            #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO', True) # to link the dbs in aiida.out 
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
         
         self.report_error_handled(calculation, 'walltime error detected, so we increase time: {} \
                                                 seconds and link outputs'\
@@ -164,8 +164,8 @@ class YamboRestart(BaseRestartWorkChain):
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
+            #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
 
 
 
@@ -182,7 +182,7 @@ class YamboRestart(BaseRestartWorkChain):
         accordingly to the inputs permissions.
         """
         new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
-                                                self.inputs.max_number_of_nodes)
+                                                self.inputs.max_number_of_nodes, self.ctx.iteration)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
@@ -196,8 +196,8 @@ class YamboRestart(BaseRestartWorkChain):
 
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
             self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', False)                   
+            #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
 
         self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance')
         return ProcessHandlerReport(True)

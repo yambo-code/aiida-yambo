@@ -33,7 +33,11 @@ import netCDF4
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.4.1"
-__authors__ = "Michael Atambo, Antimo Marrazzo, Gianluca Prandini and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
+__authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
+              " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
+              " Antimo Marrazzo (antimo.marrazzo@epfl.ch)," \
+              " Michael Atambo (michaelontita.atambo@unimore.it)", \
+              " and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
 
 class YamboParser(Parser):
@@ -143,14 +147,26 @@ class YamboParser(Parser):
 
         parent_calc = find_pw_parent(self._calc)
         cell = parent_calc.inputs.structure.cell
+        try:
+            parent_save_path = take_calc_from_remote(self._calc.inputs.parent_folder).outputs.output_parameters.get_dict().pop('ns.db1_path','')
+        except:
+            parent_save_path = '.'
 
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote_dbs': False, 'game_over': False,
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'4.5', 'Fermi(eV)':0}
+        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
         ndbqp = {}
         ndbhf = {}
+
+        for file in os.listdir(out_folder._repository._repo_folder.abspath):
+            if 'stderr' in file:
+                with open(file,'r') as stderr:
+                    parse_scheduler_stderr(stderr, output_params)
+        
+        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath):
+            output_params['ns.db1_path'] = out_folder._repository._repo_folder.abspath
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
@@ -158,11 +174,6 @@ class YamboParser(Parser):
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-
-        for file in os.listdir(out_folder._repository._repo_folder.abspath):
-            if 'stderr' in file:
-                with open(file,'r') as stderr:
-                    parse_scheduler_stderr(stderr, output_params)
 
         for result in results.yambofiles:
             if results is None:

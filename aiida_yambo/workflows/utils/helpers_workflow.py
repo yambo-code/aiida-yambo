@@ -134,7 +134,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['starting_inputs'] = collect_inputs(inputs, kpoints, new_l)
     workflow_dict['parameter_space'] = create_space(workflow_dict['starting_inputs'], new_l, workflow_dict['type'])
     workflow_dict['to_be_parsed'] = []
-    
+    workflow_dict['wfl_pk'] = []
     return workflow_dict
 
 @conversion_wrapper
@@ -160,7 +160,13 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 
     for i in range(calc_manager['steps']):
             workflow_dict['global_step'] += 1
-            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[calc_manager['var']]+\
+            if isinstance(calc_manager['var'],list):
+                separator = ', '
+                var_names = separator.join(calc_manager['var'])
+            else:
+                var_names = calc_manager['var']
+
+            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
 
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
@@ -196,10 +202,11 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
         for i in range(calc_manager['steps']*calc_manager['iter']-oversteps):
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
-    for i in range(none_encountered): 
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
-    if none_encountered:
-        for i in range(calc_manager['steps']*calc_manager['iter']-none_encountered):
+    for i in none_encountered: 
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'failed']=True
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'useful']=False
+    if len(none_encountered) > 0:
+        for i in range(calc_manager['steps']*calc_manager['iter']-len(none_encountered)):
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
 
@@ -244,17 +251,17 @@ def analysis_and_decision(calc_dict, workflow_dict):
         converged = True
         oversteps = 0
         oversteps_1 = 0
-        none_encountered = 0
+        none_encountered = []
 
         for j in range(1,len(quantities[:,0])+1):
             if quantities[-j,0] == False:
-                none_encountered +=1
+                none_encountered.append(j)
 
-        for i in range(none_encountered + 2, len(quantities[:,0])+1): #check it
-            if np.max(abs(quantities[-(1+none_encountered),:]-quantities[-i,:])) < tol: #backcheck
+        for i in range(len(none_encountered) + 2, len(quantities[:,0])+1): #check it
+            if np.max(abs(quantities[-(1+len(none_encountered)),:]-quantities[-i,:])) < tol: #backcheck
                 oversteps_1 = i-1
             else:
-                print(abs(quantities[-(1+none_encountered),:]-quantities[-i,:]),quantities[-i,:])
+                print(abs(quantities[-(1+len(none_encountered)),:]-quantities[-i,:]),quantities[-i,:])
                 break
 
         if oversteps_1 < window-1:
