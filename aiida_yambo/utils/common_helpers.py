@@ -456,12 +456,14 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what):
     
     return already_done
 
-def check_same_nscf(node, k_mesh_to_calc, already_done):
+def check_same_pw(node, k_mesh_to_calc, already_done):
     parent_nscf = False
+    parent_scf = False
     try:
         if  not already_done and not node.is_finished_ok:
             print(old)
             parent_nscf_try = find_pw_parent(load_node(old).called[0], calc_type=['nscf'])
+            parent_scf_try = find_pw_parent(load_node(old).called[0], calc_type=['scf'])
             same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
             try:
                 y = load_node(old).outputs.retrieved._repository._repo_folder.abspath+'/path/'
@@ -471,17 +473,20 @@ def check_same_nscf(node, k_mesh_to_calc, already_done):
                 pass
             if same_k and parent_nscf_try.is_finished_ok: 
                 parent_nscf = parent_nscf_try.pk     
+            if parent_scf_try.is_finished_ok: 
+                parent_scf = parent_scf_try.pk 
    
     except:
         pass
     
-    return parent_nscf   
+    return parent_nscf, parent_scf   
 
 def search_in_group(YamboWorkflow_inputs, 
                                 YamboWorkflow_group,
                                 what=['BndsRnXp','GbndRnge','NGsBlkXp',],
                                 full = True,
-                                exclude = ['CPU','ROLEs','QPkrange']):
+                                exclude = ['CPU','ROLEs','QPkrange'],
+                                only_pw = False):
 
     already_done = False
     parent_nscf = False
@@ -505,27 +510,28 @@ def search_in_group(YamboWorkflow_inputs,
                 if e in p: 
                     what.remove(p)     
     
-    for old in YamboWorkflow_group.nodes:
-        if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
-            for i in old.called:
-                already_done = check_same_yambo(i, params_to_calc,k_mesh_to_calc,what)
-                if already_done: break
+    if not only_pw:
+        for old in YamboWorkflow_group.nodes:
+            if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
+                for i in old.called:
+                    already_done = check_same_yambo(i, params_to_calc,k_mesh_to_calc,what)
+                    if already_done: break
 
-        elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what)
-        
-        if already_done: break
+            elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
+                already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what)
+            
+            if already_done: break
             
     for old in YamboWorkflow_group.nodes:
         if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
             for i in old.called:
-                parent_nscf = check_same_nscf(i, k_mesh_to_calc, already_done)
+                parent_nscf, parent_scf = check_same_pw(i, k_mesh_to_calc, already_done)
                 if parent_nscf: break
         
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            parent_nscf = check_same_nscf(old, k_mesh_to_calc, already_done)
+            parent_nscf, parent_scf = check_same_pw(old, k_mesh_to_calc, already_done)
         
         if parent_nscf: break
 
-    return already_done, parent_nscf  
+    return already_done, parent_nscf, parent_scf  
     

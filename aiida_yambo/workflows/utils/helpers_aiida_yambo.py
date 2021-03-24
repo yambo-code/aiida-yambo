@@ -178,10 +178,15 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
         except:
             pass
     
-    already_done, parent_nscf = search_in_group(inp_to_update, 
+    already_done, parent_nscf, parent_scf = search_in_group(inp_to_update, 
                                                workflow_dict['group'])
     
     if parent_nscf:
+        try:
+            inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+        except:
+            pass
+    elif parent_scf:
         try:
             inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
         except:

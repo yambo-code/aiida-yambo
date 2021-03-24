@@ -319,10 +319,29 @@ class YamboConvergence(WorkChain):
         
         if hasattr(self.inputs, 'precalc_inputs'):
             self.report('Yes, we will do a preliminary calculation')
+
+        already_done, parent_nscf, parent_scf = search_in_group(self.ctx.calc_inputs, 
+                                               self.ctx.workflow_manager['group'],
+                                               only_pw = True)
+    
+        if parent_nscf:
+            try:
+                parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+            except:
+                pass
+        elif parent_scf:
+            try:
+                parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+            except:
+                pass
         
         try:
             scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.inputs.ywfl)
-            set_parent(self.ctx.calc_inputs, self.inputs.ywfl.parent_folder)
+            try:
+                set_parent(self.ctx.calc_inputs, self.inputs.ywfl.parent_folder)
+            except:
+                set_parent(self.ctx.calc_inputs, parent_folder) #from check identical _calc
+
             parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)        
             
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
