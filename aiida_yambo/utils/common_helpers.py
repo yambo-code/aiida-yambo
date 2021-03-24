@@ -247,7 +247,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
                 
-                if quantity in m.keys() : return quantity, None
+                if quantity in m : return quantity, None
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
                          mapping['valence'],mapping['valence']],
                         [maps[quantity[-1]],maps[quantity[-1]],
@@ -256,7 +256,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
                 
-                if quantity in m.keys() : return quantity, None
+                if quantity in m : return quantity, None
                 if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          mapping['valence'],mapping['valence']],]
@@ -275,7 +275,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                                        s.inputs.structure.get_ase(),k_list={quantity[0][-2]:np.array(quantity[1][-2]),
                                                                             quantity[0][-1]:np.array(quantity[1][-1])})
 
-            if quantity[0] in m.keys() : return quantity, None    
+            if quantity[0] in m : return quantity, None    
             return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
                      mapping['valence'],mapping['valence']],
                     [maps[quantity[0][-1]],maps[quantity[0][-1]],
@@ -285,7 +285,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                                        s.inputs.structure.get_ase(),k_list={quantity[0]:np.array(quantity[1]),
                                                                             quantity[0]:np.array(quantity[1])})
             
-            if quantity[0] in m.keys() : return quantity, None
+            if quantity[0] in m : return quantity, None
             if '_v' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
                      mapping['valence'],mapping['valence']],]
