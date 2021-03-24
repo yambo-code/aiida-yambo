@@ -92,7 +92,7 @@ class YamboConvergence(WorkChain):
             l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
             self.ctx.calc_inputs.additional_parsing = List(list=list(dict.fromkeys(l)))
         else:
-            self.ctx.calc_inputs.additional_parsing = List(list=list(self.ctx.workflow_settings['what'])
+            self.ctx.calc_inputs.additional_parsing = List(list=list(self.ctx.workflow_settings['what']))
 
         if hasattr(self.inputs, "group_label"):
             self.ctx.workflow_manager['group'] = load_group(self.inputs.group_label.value)
@@ -104,6 +104,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.workflow_manager['group'] = Group(label="convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
                 self.report('creating group: {}'.format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
             if not self.ctx.workflow_manager['group'].is_stored: self.ctx.workflow_manager['group'].store()
+            #here shold be added the YC to the group, not the single YWFLS
         
         if hasattr(self.inputs, "parallelism_instructions"):
             self.ctx.workflow_manager['parallelism_instructions'] = build_parallelism_instructions(self.inputs.parallelism_instructions.get_dict(),)
@@ -193,7 +194,7 @@ class YamboConvergence(WorkChain):
 
             calc[str(i+1)] = future
             self.ctx.workflow_manager['wfl_pk'] = [future.pk] + self.ctx.workflow_manager['wfl_pk']  
-            self.ctx.workflow_manager['group'].add_nodes(future) 
+            self.ctx.workflow_manager['group'].add_nodes(future) #when added the whole YC, remove that
 
         return ToContext(calc)
 
