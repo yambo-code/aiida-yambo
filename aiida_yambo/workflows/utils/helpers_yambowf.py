@@ -121,11 +121,14 @@ def quantumespresso_input_validator(workchain_inputs,):
 
 def add_corrections(workchain_inputs, additional_parsing_List):
     
-    parsing_List = additional_parsing_List.get_list()
+    parsing_List = additional_parsing_List
     qp_list = []
     #take mapping from nscf
     parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
-    nscf = find_pw_parent(parent_calc, calc_type=['nscf'])
+    try:
+        nscf = find_pw_parent(parent_calc, calc_type=['nscf'])
+    except:
+        nscf = parent_calc
     mapping = gap_mapping_from_nscf(nscf.pk, additional_parsing_List)
     val = mapping['valence']
     cond = mapping['conduction'] 
@@ -137,21 +140,24 @@ def add_corrections(workchain_inputs, additional_parsing_List):
 
     for name in parsing_List:
 
-        if isinstance(name,tuple):
+        if isinstance(name,list) and name[0] in mapping.keys():
             for i in mapping[name[0]]:
                 if not i in new_params['QPkrange']: new_params['QPkrange'].append(i) 
+        elif isinstance(name,str) and name in mapping.keys():
+            for i in mapping[name]:
+                if not i in new_params['QPkrange']: new_params['QPkrange'].append(i) 
     
-        elif name == 'homo_level' in parsing_List:
+        elif name == 'homo' in parsing_List:
            if not [homo_k, homo_k, val,val] in new_params['QPkrange']: new_params['QPkrange'].append([homo_k, homo_k, val,val])
     
-        elif name == 'lumo_level' in parsing_List:
+        elif name == 'lumo' in parsing_List:
             if not [lumo_k,lumo_k, cond,cond] in new_params['QPkrange']: new_params['QPkrange'].append([lumo_k,lumo_k, cond,cond])
     
     return mapping, Dict(dict=new_params)
 
 def parse_qp_level(calc, level_map):
 
-    _vb=find_table_ind(level_map[0][2], level_map[0][0], calc.outputs.array_ndb)
+    _vb=find_table_ind(level_map[2], level_map[1], calc.outputs.array_ndb)
     level_dft = calc.outputs.array_ndb.get_array('Eo')[_vb].real
     level_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real
 
@@ -161,7 +167,7 @@ def parse_qp_level(calc, level_map):
 
 def parse_qp_gap(calc, gap_map):
 
-    _vb=find_table_ind(gap_map[0][0], gap_map[0][2], calc.outputs.array_ndb)
+    _vb=find_table_ind(gap_map[0], gap_map[2], calc.outputs.array_ndb)
     _cb=find_table_ind(gap_map[1][0], gap_map[1][2], calc.outputs.array_ndb)
     _vb_level_dft = calc.outputs.array_ndb.get_array('Eo')[_vb].real
     _vb_level_corr = calc.outputs.array_ndb.get_array('E_minus_Eo')[_vb].real
@@ -176,7 +182,7 @@ def parse_qp_gap(calc, gap_map):
 def additional_parsed(calc, additional_parsing_List, mapping):
     
     parsed_dict = {}
-    parsing_List = additional_parsing_List.get_list()
+    parsing_List = additional_parsing_List
 
     val = mapping['valence']
     cond = mapping['conduction']
@@ -184,47 +190,58 @@ def additional_parsed(calc, additional_parsing_List, mapping):
     lumo_k = mapping['lumo_k']
 
     for what in parsing_List:
-        if what=='gap_' and what in mapping.keys():
+        if isinstance(what,list): 
+            key = what[0]
+        else:
+            key = what
+
+        if key=='gap_' and key in mapping.keys():
     
-            homo_gw = parse_qp_level(calc, [[val, homo_k],[val, homo_k]])
-            lumo_gw = parse_qp_level(calc, [[cond, lumo_k],[cond, lumo_k]])
+            homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
+            lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
             print('homo: ', homo_gw)
             print('lumo: ', lumo_gw)
             print('gap: ', abs(lumo_gw-homo_gw))
 
             parsed_dict['gap_'] =  abs(lumo_gw-homo_gw)
-            parsed_dict['homo_level'] =  homo_gw
-            parsed_dict['lumo_level'] =  lumo_gw
+            parsed_dict['homo'] =  homo_gw
+            parsed_dict['lumo'] =  lumo_gw
+            continue
+        elif key=='homo':
 
-        elif what=='homo_level_eV':
+            homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
 
-            homo_gw = parse_qp_level(calc, [[val, homo_k],[val, homo_k]])
+            parsed_dict['homo'] =  homo_gw
 
-            parsed_dict['homo_level'] =  homo_gw
+        elif key=='lumo':
 
-        elif what=='lumo_level_eV':
+            lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
-            lumo_gw = parse_qp_level(calc, [[cond, lumo_k],[cond, lumo_k]])
-
-            parsed_dict['lumo_level'] =  lumo_gw
+            parsed_dict['lumo'] =  lumo_gw
         
-        elif 'gap_' in what and what in mapping.keys():
+        elif 'gap_' in key and key in mapping.keys():
 
-            homo_gw = parse_qp_level(calc, mapping[what][0])
-            lumo_gw = parse_qp_level(calc, mapping[what][1])
+            homo_gw = parse_qp_level(calc, mapping[key][0])
+            lumo_gw = parse_qp_level(calc, mapping[key][1])
 
             print('homo: ', homo_gw)
             print('lumo: ', lumo_gw)
             print('gap: ', abs(lumo_gw-homo_gw))
 
-            parsed_dict[what] =  abs(lumo_gw-homo_gw)
-            parsed_dict['homo_'+what[-2]] =  homo_gw
-            parsed_dict['lumo_'+what[-1]] =  lumo_gw
+            parsed_dict[key] =  abs(lumo_gw-homo_gw)
+            parsed_dict['homo_'+key[-2]] =  homo_gw
+            parsed_dict['lumo_'+key[-1]] =  lumo_gw
         
-        elif what in mapping.keys():
-            level_gw = parse_qp_level(calc, mapping[what])
-
-            parsed_dict[what] =  level_gw
-            
+        
+        elif key in mapping.keys():
+            if len(mapping[key]) == 2:
+                homo_gw = parse_qp_level(calc, mapping[key][0])
+                lumo_gw = parse_qp_level(calc, mapping[key][1])
+                parsed_dict['homo_'+key+'_v'] =  homo_gw
+                parsed_dict['lumo_'+key+'_c'] =  lumo_gw
+            else:
+                level_gw = parse_qp_level(calc, mapping[key][0])
+                parsed_dict[key] =  level_gw
+                   
     return parsed_dict
