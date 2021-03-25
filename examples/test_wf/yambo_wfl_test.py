@@ -211,28 +211,22 @@ def main(options):
 
     parameter_nscf = Dict(dict=params_nscf)
 
-    params_gw = {
-            'HF_and_locXC': True,
-            'dipoles': True,
-            'ppa': True,
-            'gw0': True,
-            'em1d': True,
-            'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 30],
-            'NGsBlkXp': 1,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 30],
-            'DysSolver': "n",
-            'QPkrange': [[1, 1, 7, 7]],
-            'DIP_CPU': "1 1 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 1 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 1",
-            'SE_ROLEs': "q qp b",
-        }
+    params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
+                 'variables':{
+                'GTermEn': [250.0, 'mHa'],
+                'NGsBlkXp': [1.0, 'Ry'],
+                'PPAPntXp': [30.0, 'eV'],
+                'CUTRadius': [13.228083, ''],
+                'CUTGeo': 'sphere xyz',
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'GTermKind': 'BG',
+                'BndsRnXp': [[1, 50], ''],
+                'GbndRnge': [[1, 50], ''],
+                'QPkrange': [[[1, 1, 25, 25], [1, 1, 4, 4,]], ''],
+                }}
+
+
     params_gw = Dict(dict=params_gw)
 
 

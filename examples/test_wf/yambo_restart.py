@@ -39,6 +39,7 @@ def get_options():
         type=int,
         dest='max_iterations',
         required=True,
+        default=2,
         help='maximum number of restarts')
 
     parser.add_argument(
@@ -133,28 +134,21 @@ def main(options):
 
     Dict = DataFactory('dict')
 
-    params_gw = {
-            'HF_and_locXC': True,
-            'dipoles': True,
-            'ppa': True,
-            'gw0': True,
-            'em1d': True,
-            'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 10],
-            'NGsBlkXp': 2,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 10],
-            'DysSolver': "n",
-            'QPkrange': [[1, 1, 8, 9]],
-            'DIP_CPU': "1 1 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 1 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 1",
-            'SE_ROLEs': "q qp b",
-        }
+    params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
+                 'variables':{
+                'GTermEn': [250.0, 'mHa'],
+                'NGsBlkXp': [1.0, 'Ry'],
+                'PPAPntXp': [30.0, 'eV'],
+                'CUTRadius': [13.228083, ''],
+                'CUTGeo': 'sphere xyz',
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'GTermKind': 'BG',
+                'BndsRnXp': [[1, 30], ''],
+                'GbndRnge': [[1, 30], ''],
+                'QPkrange': [[[1, 1, 25, 25], [1, 1, 4, 4,]], ''],
+                }}
+
     params_gw = Dict(dict=params_gw)
 
     ###### creation of the YamboRestart ######
@@ -178,8 +172,8 @@ def main(options):
 
     builder.yambo.parameters = params_gw
 
-    builder.yambo.precode_parameters = Dict(dict={})
-    builder.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    #builder.yambo.precode_parameters = Dict(dict={})
+    #builder.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
     builder.yambo.code = load_code(options['yambocode_id'])
     builder.yambo.preprocessing_code = load_code(options['yamboprecode_id'])

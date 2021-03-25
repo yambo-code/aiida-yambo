@@ -16,8 +16,8 @@ from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 
-from aiida_yambo.parsers.ext_dep.yambofile import *
-from aiida_yambo.parsers.ext_dep.yambofolder import *
+from yamboparser.yambofile import *
+from yamboparser.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
@@ -201,7 +201,7 @@ class YamboParser(Parser):
             elif 'ndb.HF_and_locXC' == result.filename:
                 ndbhf = copy.deepcopy(result.data)
 
-            elif 'gw0___' in input_params:
+            elif 'gw0___' in input_params['arguments']:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
@@ -210,7 +210,7 @@ class YamboParser(Parser):
                     if type(arr) == ArrayData:  #
                         self.out(self._qp_array_linkname,arr)
 
-            elif 'life___' in input_params:
+            elif 'life___' in input_params['arguments']:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
@@ -222,7 +222,7 @@ class YamboParser(Parser):
         yambo_wrote_dbs(output_params)
 
         # we store  all the information from the ndb.* files rather than in separate files
-        # if possible, else we default to separate files.
+        # if possible, else we default to separate files. #to check MB
         if ndbqp and ndbhf:  #
             self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
         else:
@@ -265,7 +265,7 @@ class YamboParser(Parser):
     def _aiida_array(self, data):
         arraydata = ArrayData()
         for ky in data.keys():
-            arraydata.set_array(ky, data[ky])
+            arraydata.set_array(ky.replace('-','_minus_'), data[ky])
         return arraydata
 
     def _aiida_bands_data(self, data, cell, kpoints_dict):
@@ -342,14 +342,9 @@ class YamboParser(Parser):
         Save the data from ndb.QP to the db
         """
         pdata = ArrayData()
-        pdata.set_array('Eo', numpy.array(data['Eo']))
-        pdata.set_array('E_minus_Eo', numpy.array(data['E-Eo']))
-        pdata.set_array('Z', numpy.array(data['Z']))
-        pdata.set_array('qp_table', numpy.array(data['qp_table']))
-        try:
-            pdata.set_array('So', numpy.array(data['So']))
-        except KeyError:
-            pass
+        for quantity in data.keys():
+            name_quantity = quantity.replace('-','_minus_')
+            pdata.set_array(name_quantity, numpy.array(data[quantity]))
         return pdata
 
     def _aiida_ndb_hf(self, data):
@@ -357,8 +352,9 @@ class YamboParser(Parser):
 
         """
         pdata = ArrayData()
-        pdata.set_array('Sx', numpy.array(data['Sx']))
-        pdata.set_array('Vxc', numpy.array(data['Vxc']))
+        for quantity in data.keys():
+            name_quantity = quantity.replace('-','_minus_')
+            pdata.set_array(name_quantity, numpy.array(data[quantity]))
         return pdata
 
     def _sigma_c(self, ndbqp, ndbhf):
@@ -366,7 +362,6 @@ class YamboParser(Parser):
 
          Sc = 1/Z[ E-Eo] -S_x + Vxc
         """
-        Eo = numpy.array(ndbqp['Eo'])
         Z = numpy.array(ndbqp['Z'])
         E_minus_Eo = numpy.array(ndbqp['E-Eo'])
         Sx = numpy.array(ndbhf['Sx'])
@@ -376,11 +371,11 @@ class YamboParser(Parser):
         except KeyError:
             Sc = 1 / Z * E_minus_Eo - Sx + Vxc
         pdata = ArrayData()
-        pdata.set_array('Eo', Eo)
-        pdata.set_array('E_minus_Eo', E_minus_Eo)
-        pdata.set_array('Z', Z)
-        pdata.set_array('Sx', Sx)
+        for quantity in ndbqp.keys():
+            name_quantity = quantity.replace('-','_minus_')
+            pdata.set_array(name_quantity, numpy.array(ndbqp[quantity]))
+        for quantity in ndbhf.keys():
+            name_quantity = quantity.replace('-','_minus_')
+            pdata.set_array(name_quantity, numpy.array(ndbhf[quantity]))
         pdata.set_array('Sc', Sc)
-        pdata.set_array('Vxc', Vxc)
-        pdata.set_array('qp_table', numpy.array(ndbqp['qp_table']))
         return pdata

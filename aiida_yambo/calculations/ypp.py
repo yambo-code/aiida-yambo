@@ -76,7 +76,7 @@ class YppCalculation(CalcJob):
 
 
         spec.input('settings',valid_type=Dict,
-                default=lambda: orm.Dict({'COPY_DBS':True}),
+                default=Dict({'COPY_DBS':True}),
                 help='Use an additional node for special settings')
         spec.input('parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters')

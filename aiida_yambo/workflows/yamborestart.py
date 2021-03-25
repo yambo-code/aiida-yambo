@@ -82,17 +82,17 @@ class YamboRestart(BaseRestartWorkChain):
            for example, the parallelism namelist is different from version the version... 
            we need some input helpers to fix automatically this with respect to the version of yambo
         """
-        new_para = check_para_namelists(self.ctx.inputs.parameters.get_dict(), self.inputs.code_version.value)
+        new_para = check_para_namelists(self.ctx.inputs.parameters.get_dict()['variables'], self.inputs.code_version.value)
         if new_para:
-            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
             self.report('adjusting parallelism namelist... please check yambo documentation')
         
         try:
             nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder))
         except:
             nscf_parent = take_calc_from_remote(self.inputs.parent_folder)
-        yambo_bandsX = self.ctx.inputs.parameters.get_dict().pop('BndsRnXp',[0])[-1]
-        yambo_bandsSc = self.ctx.inputs.parameters.get_dict().pop('GbndRnge',[0])[-1]
+        yambo_bandsX = self.ctx.inputs.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+        yambo_bandsSc = self.ctx.inputs.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
 
         if nscf_parent.inputs.parameters.get_dict()['SYSTEM']['nbnd'] < max(yambo_bandsX,yambo_bandsSc):
             self.report('You must run an nscf with nbnd at least =  {}'.format(max(yambo_bandsX,yambo_bandsSc)))
@@ -157,11 +157,11 @@ class YamboRestart(BaseRestartWorkChain):
         new_para, new_resources  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
-        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
 
         new_para = check_para_namelists(new_para, self.inputs.code_version.value)
         if new_para:
-            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
             self.report('adjusting parallelism namelist... please check yambo documentation')
 
         
@@ -188,12 +188,12 @@ class YamboRestart(BaseRestartWorkChain):
                                                 self.inputs.max_number_of_nodes, self.ctx.iteration)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
-        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
 
             
         new_para = check_para_namelists(new_para, self.inputs.code_version.value)
         if new_para:
-            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
+            self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
             self.report('adjusting parallelism namelist... please check yambo documentation')
 
 
