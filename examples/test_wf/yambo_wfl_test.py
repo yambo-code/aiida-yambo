@@ -161,7 +161,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([2,2,1])
+    kpoints.set_kpoints_mesh([8,8,1])
 
     ###### setting the scf parameters ######
 
@@ -221,7 +221,7 @@ def main(options):
             #'EXXRLvcs': 40,
             #'EXXRLvcs_units': 'Ry',
             'BndsRnXp': [1, 30],
-            'NGsBlkXp': 2,
+            'NGsBlkXp': 1,
             'NGsBlkXp_units': 'Ry',
             'GbndRnge': [1, 30],
             'DysSolver': "n",
@@ -290,7 +290,7 @@ def main(options):
     builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
     builder.yres.max_iterations = Int(5)
 
-    builder.additional_parsing = List(list=['gap_eV'])
+    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM',('O',[0.125,0.125,0.0]),('gap_ok',[[0,0.5,0],[0.125,0.125,0.0]]) ])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])

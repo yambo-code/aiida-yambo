@@ -87,7 +87,10 @@ class YamboRestart(BaseRestartWorkChain):
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()))
             self.report('adjusting parallelism namelist... please check yambo documentation')
         
-        nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder))
+        try:
+            nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder))
+        except:
+            nscf_parent = take_calc_from_remote(self.inputs.parent_folder)
         yambo_bandsX = self.ctx.inputs.parameters.get_dict().pop('BndsRnXp',[0])[-1]
         yambo_bandsSc = self.ctx.inputs.parameters.get_dict().pop('GbndRnge',[0])[-1]
 

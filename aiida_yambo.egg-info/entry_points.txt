@@ -1,5 +1,6 @@
 [aiida.calculations]
 yambo.yambo = aiida_yambo.calculations.yambo:YamboCalculation
+yambo.ypp = aiida_yambo.calculations.ypp.YppCalculation
 
 [aiida.data]
 

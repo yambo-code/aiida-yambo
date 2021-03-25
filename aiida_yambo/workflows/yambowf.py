@@ -119,6 +119,8 @@ class YamboWorkflow(WorkChain):
         try:
 
             parent = take_calc_from_remote(self.inputs.parent_folder)
+            if parent.process_type=='aiida.workflows:quantumespresso.pw.base':
+                parent = parent.called[0]
 
             if parent.process_type=='aiida.calculations:quantumespresso.pw':
 
@@ -216,7 +218,10 @@ class YamboWorkflow(WorkChain):
 
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('updating yambo parameters to parse more results')
-                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
+                self.report(self.inputs.additional_parsing.get_list())
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
+                self.report(self.inputs.additional_parsing.get_list())
+                self.report(mapping)
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
             self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'
@@ -234,8 +239,10 @@ class YamboWorkflow(WorkChain):
         if calc.is_finished_ok:
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('parsing additional quantities')
-                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
-                parsed = additional_parsed(calc, self.inputs.additional_parsing, mapping)
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
+                self.report(self.inputs.additional_parsing.get_list())
+                self.report(mapping)
+                parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
                 self.out('nscf_mapping', store_Dict(mapping))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 

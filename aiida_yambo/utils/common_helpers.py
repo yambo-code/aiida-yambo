@@ -22,7 +22,10 @@ def find_parent(calc):
     try:
         parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
     except:
-        parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+        try:
+            parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+        except:
+            parent_calc = calc.called[0] #nscf_workchain...??
     return parent_calc
 
 def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
@@ -239,15 +242,13 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
     if isinstance(quantity,str):
         if 'gap_' in quantity:
             if quantity[-1] == '_': 
-                return quantity,[[mapping['homo_k'],mapping['homo_k'],
-                         mapping['valence'],mapping['valence']],
-                        [mapping['lumo_k'],mapping['lumo_k'],
-                         mapping['conduction'],mapping['conduction']]]
+                pass
             else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
                 
-                if quantity in m : return quantity, None
+                if quantity[-1] in m or quantity[-2] in m: return quantity, 0
+                if not quantity[-1] in maps.keys() or not quantity[-2] in maps.keys(): return quantity, 0
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
                          mapping['valence'],mapping['valence']],
                         [maps[quantity[-1]],maps[quantity[-1]],
@@ -256,7 +257,8 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
                 
-                if quantity in m : return quantity, None
+                if quantity in m : return quantity, 0
+                if not quantity in maps.keys(): return quantity, 0
                 if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          mapping['valence'],mapping['valence']],]
@@ -269,13 +271,13 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                         [maps[quantity],maps[quantity],
                          mapping['conduction'],mapping['conduction']]]
             
-    elif isinstance(quantity,tuple):
+    elif isinstance(quantity,list):
         if 'gap_' in quantity[0]:
             m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase(),k_list={quantity[0][-2]:np.array(quantity[1][-2]),
                                                                             quantity[0][-1]:np.array(quantity[1][-1])})
 
-            if quantity[0] in m : return quantity, None    
+            if quantity[0] in m : return quantity[0], 0    
             return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
                      mapping['valence'],mapping['valence']],
                     [maps[quantity[0][-1]],maps[quantity[0][-1]],
@@ -285,7 +287,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                                        s.inputs.structure.get_ase(),k_list={quantity[0]:np.array(quantity[1]),
                                                                             quantity[0]:np.array(quantity[1])})
             
-            if quantity[0] in m : return quantity, None
+            if quantity[0] in m : return quantity[0], 0
             if '_v' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
                      mapping['valence'],mapping['valence']],]
@@ -298,7 +300,8 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                      mapping['valence'],mapping['valence']],
                     [maps[quantity[0]],maps[quantity[0]],
                      mapping['conduction'],mapping['conduction']]]     
-
+    else:
+        return 0, 0
 def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     
     nscf = load_node(nscf_pk)
@@ -310,7 +313,17 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
     fermi = nscf.outputs.output_parameters.get_dict()['fermi_energy']
     soc = nscf.outputs.output_parameters.get_dict()['spin_orbit_calculation']
-        
+    
+    try:
+        try:
+            nscf.inputs.pw__structure.get.ase()
+        except:
+            nscf.inputs.structure.get.ase()
+        cell = structure.get_cell()
+        k = cell.bandpath()
+        high_symmetry = k.special_points
+    except:
+        high_symmetry = []
     if valence%2 != 0:
         valence = int(valence+0.5) #may be a metal
     else:
@@ -327,7 +340,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         ind_cond = ind_val
         dft_predicted = 'metal'
     else:
-        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) < 0.005: #semiconductor, insulator??
+        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) > 0.005: #semiconductor, insulator??
             ind_val = bands[:,valence-1].argmax()
             ind_cond = bands[:,conduction-1].argmin()
             dft_predicted = 'semiconductor/insulator'
@@ -350,16 +363,17 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     'homo_k': ind_val+1,
     'lumo_k': ind_cond+1,
     'gap_type': gap_type,
-    'gap_': [ind_val+1,ind_cond+1,valence,valence+1], #the qp to be computed
+    'gap_': [[ind_val+1,ind_val+1,valence,valence],
+            [ind_cond+1,ind_cond+1,conduction,conduction]], #the qp to be computed
     'soc':soc,
            }
 
-    for i in additional_parsing_List:
-        if i == 'homo' or i == 'lumo':
+    for i in additional_parsing_List + high_symmetry:
+        if i == 'homo' or i == 'lumo' or i == 'gap_':
             pass
         else:
             name, additional = build_list_QPkrange(mapping, i, nscf_pk)
-            if not additional: 
+            if additional == 0: 
                 pass
             else:
                 mapping[name] = additional
