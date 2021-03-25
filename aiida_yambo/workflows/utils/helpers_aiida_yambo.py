@@ -43,18 +43,18 @@ def set_parallelism(instructions_, inputs):
     instructions['manual'] = instructions.pop('manual',None)
     instructions['function'] = instructions.pop('function',None)
 
-    if 'BndsRnXp' in inputs.yres.yambo.parameters.get_dict().keys():
-        yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['BndsRnXp'][-1]
+    if 'BndsRnXp' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['variables']['BndsRnXp'][0][-1]
     else:
         yambo_bandsX = 0 
     
-    if 'GbndRnge' in inputs.yres.yambo.parameters.get_dict().keys():
-        yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['GbndRnge'][-1]
+    if 'GbndRnge' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['variables']['GbndRnge'][0][-1]
     else:
         yambo_bandsSc = 0
     
-    if 'NGsBlkXp' in inputs.yres.yambo.parameters.get_dict().keys():
-        yambo_cutG = inputs.yres.yambo.parameters.get_dict()['NGsBlkXp']
+    if 'NGsBlkXp' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_cutG = inputs.yres.yambo.parameters.get_dict()['variables']['NGsBlkXp'][0]
     else:
         yambo_cutG = 0
 
@@ -137,7 +137,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
     if not isinstance(calc_dict['var'],list):
         calc_dict['var'] = [calc_dict['var']]
 
-    input_dict = inp_to_update.yres.yambo.parameters.get_dict()
+    input_dict = copy.deepcopy(inp_to_update.yres.yambo.parameters.get_dict())
     
     for var in calc_dict['var']:
         
@@ -162,16 +162,16 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
             values_dict[var]=k_quantity
         else:
-
-            input_dict[var] = parameters[var].pop(0)
+            input_dict['variables'][var] = parameters[var].pop(0)
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
-            values_dict[var]=input_dict[var]
+            values_dict[var]=input_dict['variables'][var]
 
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
     if new_para and new_res:
-        inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
+        inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), 
+                                                        list(new_para.values()),sublevel='variables')
         inp_to_update.yres.yambo.metadata.options.resources = new_res
         try:
             inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
@@ -206,7 +206,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                 if 'mesh' in n:
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
                 else:
-                    value = ywf_node.inputs.yres__yambo__parameters.get_dict()[n]
+                    value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
             except:
                 value = 0
             l_calc.append(value)

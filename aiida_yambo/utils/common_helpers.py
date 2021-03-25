@@ -214,11 +214,12 @@ def find_pw_info(calc):
 
 def find_gw_info(inputs):
 
-    parameters = inputs.parameters.get_dict()
+    parameters = copy.deepcopy(inputs.parameters.get_dict())
     
     ## bands ##
-    BndsRnXp = parameters.pop('BndsRnXp',0)
-    GbndRnge = parameters.pop('GbndRnge',0)
+
+    BndsRnXp = parameters['variables'].pop('BndsRnXp',[[0],''])[0]
+    GbndRnge = parameters['variables'].pop('GbndRnge',[[0],''])[0]
     X_b = 1 + BndsRnXp[1] - BndsRnXp[0]
     SE_b = 1 + GbndRnge[1] - GbndRnge[0]
     if X_b and SE_b:
@@ -235,15 +236,14 @@ def find_gw_info(inputs):
 
     qp = 0
     last_qp = 0
-    for i in parameters['QPkrange']:
+    for i in parameters['variables']['QPkrange'][0]:
         qp += (1 + i[1]-i[0])*(1 + i[3]-i[2])
         last_qp = max(i[3],last_qp)
 
     ## runlevels ##
     runlevels = []
-    for i in parameters.keys():
-        if parameters[i] == True:
-            runlevels.append(i)
+    for i in parameters['arguments']:
+        runlevels.append(i)
     
     return bands, qp, last_qp, runlevels
 
@@ -469,7 +469,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what):
             old_params = node.inputs.yres__yambo__parameters.get_dict()
             for p in what:
                 #print(p,params_to_calc[p],old_params[p])
-                if params_to_calc[p] == old_params[p] and same_k:
+                if params_to_calc['variables'][p][0] == old_params['variables'][p][0] and same_k:
                     already_done = node.pk
                 else:
                     already_done = False

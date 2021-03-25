@@ -22,8 +22,8 @@ def quantumespresso_input_validator(workchain_inputs,):
     
     messages = []
 
-    yambo_bandsX = workchain_inputs.yres.yambo.parameters.get_dict().pop('BndsRnXp',[0])[-1]
-    yambo_bandsSc = workchain_inputs.yres.yambo.parameters.get_dict().pop('GbndRnge',[0])[-1]
+    yambo_bandsX = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+    yambo_bandsSc = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
     gwbands = max(yambo_bandsX,yambo_bandsSc)
     message_bands = 'GW bands are: {} '.format(gwbands)
     messages.append(message_bands)
@@ -136,22 +136,22 @@ def add_corrections(workchain_inputs, additional_parsing_List):
     lumo_k = mapping['lumo_k']
     
     new_params = workchain_inputs.yambo.parameters.get_dict()
-    new_params['QPkrange'] = new_params.pop('QPkrange', [])
+    new_params['variables']['QPkrange'] = new_params['variables'].pop('QPkrange', [[],''])
 
     for name in parsing_List:
 
         if isinstance(name,list) and name[0] in mapping.keys():
             for i in mapping[name[0]]:
-                if not i in new_params['QPkrange']: new_params['QPkrange'].append(i) 
+                if not i in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append(i) 
         elif isinstance(name,str) and name in mapping.keys():
             for i in mapping[name]:
-                if not i in new_params['QPkrange']: new_params['QPkrange'].append(i) 
+                if not i in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append(i) 
     
         elif name == 'homo' in parsing_List:
-           if not [homo_k, homo_k, val,val] in new_params['QPkrange']: new_params['QPkrange'].append([homo_k, homo_k, val,val])
+           if not [homo_k, homo_k, val,val] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([homo_k, homo_k, val,val])
     
         elif name == 'lumo' in parsing_List:
-            if not [lumo_k,lumo_k, cond,cond] in new_params['QPkrange']: new_params['QPkrange'].append([lumo_k,lumo_k, cond,cond])
+            if not [lumo_k,lumo_k, cond,cond] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([lumo_k,lumo_k, cond,cond])
     
     return mapping, Dict(dict=new_params)
 

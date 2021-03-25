@@ -233,51 +233,29 @@ def main(options):
     structure = StructureData(ase=atoms)
 
 
+    StructureData = DataFactory('structure')
+    structure = StructureData(ase=atoms)
 
 
-    params_gw = {
-            'HF_and_locXC': True,
-            'dipoles': True,
-            'ppa': True,
-            'gw0': True,
-            'em1d': True,
-            'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 50],
-            'NGsBlkXp': 2,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 50],
-            'DysSolver': "n",
-            'QPkrange': [[1, 1, 17, 18]],
-            'DIP_CPU': "1 16 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 16 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 16",
-            'SE_ROLEs': "q qp b",
-        }
+
+
+    params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
+                 'variables':{
+                'GTermEn': [250.0, 'mHa'],
+                'NGsBlkXp': [1.0, 'Ry'],
+                'PPAPntXp': [30.0, 'eV'],
+                'CUTRadius': [13.228083, ''],
+                'CUTGeo': 'sphere xyz',
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'GTermKind': 'BG',
+                'BndsRnXp': [[1, 20], ''],
+                'GbndRnge': [[1, 20], ''],
+                'QPkrange': [[[1, 1, 4, 4,]], ''],
+                }}
+
     params_gw = Dict(dict=params_gw)
 
-    params_p = {
-            'dipoles': True,
-            'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 50],
-            'NGsBlkXp': 2,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 50],
-            'DysSolver': "n",
-            'QPkrange': [[1, 1, 17, 18]],
-            'DIP_CPU': "1 16 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 16 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 16",
-            'SE_ROLEs': "q qp b",
-        }
-    params_p = Dict(dict=params_p)
     builder = YamboConvergence.get_builder()
 
 
@@ -352,7 +330,7 @@ def main(options):
     builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
 
     builder.workflow_settings = Dict(dict={'type':'1D_convergence',
-                                           'what':['gap_eV','homo_level_eV'],
+                                           'what':['gap_'],'bands_nscf_update':'all-at-once',
                                             })
 
     #'what': 'single-levels','where':[(1,8),(1,9)]
@@ -362,10 +340,12 @@ def main(options):
     var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,100],[0,100]],},]
 
 
-    var_to_conv_dc =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 2, \
-                                 'conv_thr': 0.001,'conv_window': 2},
-                   {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_iterations': 2, \
-                                'conv_thr': 0.2,},]
+    var_to_conv_dc =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
+                                 'conv_thr': 0.2,'conv_window': 3},
+                       {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_iterations': 3, \
+                                'conv_thr': 0.2,},
+                       {'var':'kpoint_mesh','delta': [1,1,0], 'max_iterations': 3, \
+                                 'conv_thr': 0.5,},]
     var_to_conv_hydra =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,50],[0,50]], 'steps': 3, 'max_iterations': 3, \
                                  'conv_thr': 0.1,},
                    {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
@@ -411,17 +391,17 @@ def main(options):
     #builder.parallelism_instructions = Dict(dict={'automatic' : True})
 
     dict_para_low = {}
-    dict_para_low['X_CPU'] = '1 1 1 8 1'
+    dict_para_low['X_CPU'] = '1 1 1 1 1'
     dict_para_low['X_ROLEs'] = 'q k g c v'
-    dict_para_low['DIP_CPU'] = '1 1 8'
+    dict_para_low['DIP_CPU'] = '1 1 1'
     dict_para_low['DIP_ROLEs'] = 'k c v'
-    dict_para_low['SE_CPU'] = '1 1 1 8'
+    dict_para_low['SE_CPU'] = '1 1 1 1'
     dict_para_low['SE_ROLEs'] = 'q g qp b'
 
     dict_res_low = {
             "num_machines": 1,
-            "num_mpiprocs_per_machine":8,
-            "num_cores_per_mpiproc":2,
+            "num_mpiprocs_per_machine":1,
+            "num_cores_per_mpiproc":1,
         }
 
 
@@ -440,17 +420,11 @@ def main(options):
         }
 
 
-    builder_parallelism_instructions = Dict(dict={'manual' : {'low':{'BndsRnXp':[45,1200],
-                                                                     'NGsBlkXp':[4,25],
+    builder_parallelism_instructions = Dict(dict={'manual' : {'low':{'BndsRnXp':[1,1200],
+                                                                     'NGsBlkXp':[1,25],
                                                                      'kpoints':[1,300],
                                                                      'parallelism':dict_para_low,
                                                                      'resources':dict_res_low,
-                                                                     },
-                                                              'normal':{'BndsRnXp':[80,1200],
-                                                                     'NGsBlkXp':[4,25],
-                                                                     'kpoints':[301,1000],
-                                                                     'parallelism':dict_para_normal,
-                                                                     'resources':dict_res_normal,
                                                                      },
                                                               }})
 

@@ -175,10 +175,12 @@ class YamboConvergence(WorkChain):
         if self.ctx.calc_manager['iter'] == 1: self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
         for i in range(self.ctx.calc_manager['steps']):
             #self.report(parameter)
+
             self.ctx.calc_inputs, value, already_done, parent_nscf = updater(self.ctx.calc_manager, 
                                                 self.ctx.calc_inputs,
                                                 self.ctx.params_space, 
                                                 self.ctx.workflow_manager)
+                                    
             self.ctx.workflow_manager['values'].append(value)
             self.report('New parameters are: {}'.format(value))
             self.report('Preparing iteration #{} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
@@ -281,30 +283,34 @@ class YamboConvergence(WorkChain):
         
         if self.ctx.how_bands == 'single-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
-            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]))
         elif self.ctx.how_bands == 'single-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
-            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]))
 
         elif self.ctx.how_bands == 'full-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
-            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]))
         elif self.ctx.how_bands == 'full-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
-            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]))
+            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]))
 
         elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
             space_index = 0
-        
+            if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys(): 
+                self.report('Max #bands needed in the whole convergence = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]))
+  
         else:
             space_index = 0
-
+            if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys(): 
+                self.report('Max #bands needed in the whole convergence = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]))
+        
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][-1]
+            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][space_index-1][0][-1]
         else:
             yambo_bandsX = 0 
         if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys():
-            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][space_index-1][-1]
+            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][space_index-1][0][-1]
         else:
             yambo_bandsSc = 0
 
@@ -316,17 +322,14 @@ class YamboConvergence(WorkChain):
         if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
             self.report('Not needed, we start with k-points')
             return False
-        
-        if hasattr(self.inputs, 'precalc_inputs'):
-            self.report('Yes, we will do a preliminary calculation')
-        
+
         try:
-            scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.inputs.ywfl)
-            set_parent(self.ctx.calc_inputs, self.inputs.ywfl.parent_folder)
+            scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.ctx.calc_inputs)
             parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)        
             
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
-        
+            self.ctx.gwbands = max(self.ctx.gwbands,self.ctx.bands)
+
             if nbnd < self.ctx.gwbands:
                 self.report('we have to compute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.gwbands))
                 set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
@@ -359,7 +362,8 @@ class YamboConvergence(WorkChain):
             self.ctx.pre_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
         else:
             self.ctx.calculation_type='p2y'
-            self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, ['GbndRnge','BndsRnXp'], [[1,self.ctx.gwbands],[1,self.ctx.gwbands]])
+            self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, 
+                                                            ['GbndRnge','BndsRnXp'], [[[1,self.ctx.gwbands],''],[[1,self.ctx.gwbands],'']],sublevel='variables')
             #self.report(self.ctx.pre_inputs.yres.yambo.parameters.get_dict())
             self.ctx.pre_inputs.yres.yambo.settings = update_dict(self.ctx.pre_inputs.yres.yambo.settings, 'INITIALISE', True)
             if hasattr(self.ctx.pre_inputs, 'additional_parsing'):

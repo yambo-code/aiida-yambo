@@ -53,9 +53,9 @@ def collect_inputs(inputs, kpoints, ideal_iter):
             #print(var)
             if var not in starting_inputs.keys():
                 if 'mesh' in var:
-                    starting_inputs[var] = kpoints.get_kpoints_mesh()[0]
+                    starting_inputs[var] = kpoints.get_kpoints_mesh()
                 else:
-                    starting_inputs[var] = inputs[var]
+                    starting_inputs[var] = inputs['variables'][var]
 
     return starting_inputs
 
@@ -80,11 +80,14 @@ def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
                 starting_inputs[var]=space[var][-1]
             if wfl_type == '1D_convergence':
                 for r in range(1,i['steps']*i['max_iterations']+1):
-                    if isinstance(delta[l.index(var)],int):
-                        new_val = starting_inputs[var]+delta[l.index(var)]*(r+first-1)
+                    if isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
+                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
+                        if not 'mesh' in var:
+                            new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(delta[l.index(var)],list): 
-                        new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
-                    
+                        new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
+                        if not 'mesh' in var:
+                            new_val = [new_val, starting_inputs[var][1]]
                     space[var].append(new_val)
                     #print(new_val)
             else:
@@ -108,6 +111,8 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict = {}
     new_l = []
 
+    #here should be a default list of convergence "parameters_space".
+
     for i in parameters_space.get_list():
         new_conv = copy.deepcopy(i)
         new_conv['max_iterations'] = i.pop('max_iterations', 3)
@@ -126,7 +131,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     
     copy_wfl_sett = copy.deepcopy(wfl_settings)
     workflow_dict['type'] = copy_wfl_sett.pop('type','1D_convergence')
-    workflow_dict['what'] = copy_wfl_sett.pop('what','gap_eV')
+    workflow_dict['what'] = copy_wfl_sett.pop('what','gap_')
 
     workflow_dict['global_step'] = 0
     workflow_dict['fully_success'] = False

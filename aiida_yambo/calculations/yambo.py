@@ -232,7 +232,7 @@ class YamboCalculation(CalcJob):
             # Prepare yambo input file
             ###################################################
 
-            params_dict = parameters.get_dict()
+            params_dict = parameters.get_dict() ##needed loop for retrocompatibility
 
             y = YamboIn().from_dictionary(params_dict)
 
