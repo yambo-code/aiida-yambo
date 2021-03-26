@@ -97,7 +97,7 @@ def quantumespresso_input_validator(workchain_inputs,):
     
             
     if 'defaults' in message_scf:
-        message_scf_corr='setting scf defaults according to found nscf'
+        message_scf_corr='setting scf defaults according to nscf'
         messages.append(message_scf_corr)
         scf_params = copy.deepcopy(scf_params.get_dict())
         bands_scf = scf_params['SYSTEM']['nbnd']

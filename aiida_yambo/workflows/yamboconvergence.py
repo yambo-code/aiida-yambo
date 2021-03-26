@@ -187,7 +187,7 @@ class YamboConvergence(WorkChain):
                         value))
             if not already_done:
                 self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step']+i)
-                if parent_nscf:
+                if parent_nscf and not hasattr(self.ctx.calc_inputs,'parent_folder'):
                     self.report('Recovering NSCF/P2Y parent: {}'.format(parent_nscf))
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
             else:
@@ -346,15 +346,20 @@ class YamboConvergence(WorkChain):
         except:
             try:
                 already_done, parent_nscf = search_in_group(self.ctx.calc_inputs, 
-                                            self.ctx.workflow_manager['group'])
+                                            self.ctx.workflow_manager['group'], up_to_p2y = True)
             
-                if parent_nscf: 
-                    nscf_par = find_parent(load_node(parent_nscf))
-                    set_parent(self.ctx.calc_inputs, nscf_par)
+                if already_done: 
+                    set_parent(self.ctx.calc_inputs, load_node(p2y_par))
+                    self.report('setting parent yambo found in group...')
+                    return True
+                
+                elif parent_nscf: 
+                    set_parent(self.ctx.calc_inputs, load_node(parent_nscf))
                     self.report('yes, no yambo parent, setting parent nscf found in group')
                     return True
                 
-                else:              
+                else: 
+                    parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)              
                     set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
                     self.report('yes, no yambo parent, setting parent scf')
                     return True
@@ -365,6 +370,9 @@ class YamboConvergence(WorkChain):
     def do_pre(self):
         self.ctx.pre_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
         self.ctx.pre_inputs.yres.clean_workdir = Bool(False)
+
+        if hasattr(self.ctx.calc_inputs, 'parent_folder'):
+            set_parent(self.ctx.pre_inputs, self.ctx.calc_inputs.parent_folder)
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'

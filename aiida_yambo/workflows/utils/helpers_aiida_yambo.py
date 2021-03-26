@@ -181,7 +181,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
     already_done, parent_nscf = search_in_group(inp_to_update, 
                                                workflow_dict['group'])
     
-    if parent_nscf:
+    if parent_nscf and not hasattr(inp_to_update, 'parent_folder'):
         try:
             inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
         except:
