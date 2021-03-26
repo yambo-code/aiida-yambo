@@ -345,9 +345,19 @@ class YamboConvergence(WorkChain):
                 return True
         except:
             try:
-                set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
-                self.report('yes, no yambo parent, setting parent scf')
-                return True
+                already_done, parent_nscf = search_in_group(self.ctx.calc_inputs, 
+                                            self.ctx.workflow_manager['group'])
+            
+                if parent_nscf: 
+                    nscf_par = find_parent(load_node(parent_nscf))
+                    set_parent(self.ctx.calc_inputs, nscf_par)
+                    self.report('yes, no yambo parent, setting parent nscf found in group')
+                    return True
+                
+                else:              
+                    set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
+                    self.report('yes, no yambo parent, setting parent scf')
+                    return True
             except:
                 self.report('no available parent folder, so we start from scratch')
                 return True
