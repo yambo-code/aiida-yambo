@@ -162,7 +162,7 @@ class YamboParser(Parser):
 
         for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
             if 'stderr' in file:
-                with open(file,'r') as stderr:
+                with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
         
         if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
