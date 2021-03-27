@@ -346,13 +346,15 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         valence = valence*2 - 1
         conduction = valence + 2
 
-    touch_fermi = np.where(abs(bands[:,valence-1]-fermi)<0.005)
-    if len(touch_fermi)>1: #metal??
-        ind_val = touch_fermi[0]
+    touch_fermi = bands[:,valence-1]-fermi
+    above_fermi = np.where(touch_fermi>0)
+    below_fermi = np.where(touch_fermi<=0)
+    if len(above_fermi)>1 and len(below_fermi)>1: #metal??
+        ind_val = abs(touch_fermi).argmin()
         ind_cond = ind_val
         dft_predicted = 'metal'
     else:
-        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) > 0.005: #semiconductor, insulator??
+        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) > 0.025: #semiconductor, insulator??
             ind_val = bands[:,valence-1].argmax()
             ind_cond = bands[:,conduction-1].argmin()
             dft_predicted = 'semiconductor/insulator'
@@ -470,9 +472,10 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False):
             print('finished_ok')
             same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
             old_params = node.inputs.yres__yambo__parameters.get_dict()['variables']
+            was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
             for p in what:
                 print(p,params_to_calc[p],old_params[p])
-                if params_to_calc[p][0] == old_params[p][0] and same_k:
+                if params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y:
                     already_done = node.pk
                 else:
                     print('here')
