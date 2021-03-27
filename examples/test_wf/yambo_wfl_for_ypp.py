@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import List, Dict
+from aiida.orm import List, Dict, Str,UpfData
 from aiida.engine import submit
 from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
@@ -161,7 +161,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([2,2,1])
+    kpoints.set_kpoints_mesh([8,8,1])
 
     ###### setting the scf parameters ######
 
@@ -211,49 +211,22 @@ def main(options):
 
     parameter_nscf = Dict(dict=params_nscf)
 
-    KpointsData = DataFactory('array.kpoints')
-    kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([2,2,1])
-
-    alat = 2.4955987320 # Angstrom
-    the_cell = [[1.000000*alat,   0.000000,   0.000000],
-                [-0.500000*alat,  0.866025*alat,   0.000000],
-                [0.000000,   0.000000,  6.4436359260]]
-
-    atoms = Atoms('BNNB', [(1.2477994910, 0.7204172280, 0.0000000000),
-    (-0.0000001250, 1.4408346720, 0.0000000000),
-    (1.2477994910, 0.7204172280, 3.2218179630),
-    (-0.0000001250,1.4408346720, 3.2218179630)],
-    cell = [1,1,1])
-    atoms.set_cell(the_cell, scale_atoms=False)
-    atoms.set_pbc([True,True,True])
-
-    StructureData = DataFactory('structure')
-    structure = StructureData(ase=atoms)
+    params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
+                 'variables':{
+                'GTermEn': [250.0, 'mHa'],
+                'NGsBlkXp': [1.0, 'Ry'],
+                'PPAPntXp': [30.0, 'eV'],
+                'CUTRadius': [13.228083, ''],
+                'CUTGeo': 'sphere xyz',
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'GTermKind': 'BG',
+                'BndsRnXp': [[1, 50], ''],
+                'GbndRnge': [[1, 50], ''],
+                'QPkrange': [[[1, 10, 6, 11],], ''],
+                }}
 
 
-    params_gw = {
-            'HF_and_locXC': True,
-            'dipoles': True,
-            'ppa': True,
-            'gw0': True,
-            'em1d': True,
-            'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 30],
-            'NGsBlkXp': 2,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 30],
-            'DysSolver': "n",
-            'QPkrange': [[1, 2, 8, 9]],
-            'DIP_CPU': "1 1 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 1 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 1",
-            'SE_ROLEs': "q qp b",
-        }
     params_gw = Dict(dict=params_gw)
 
 
@@ -262,7 +235,7 @@ def main(options):
 
     ##################scf+nscf part of the builder
     builder.structure = structure
-    #builder.scf.pw.parameters = parameter_scf
+    #builder.scf_parameters = parameter_scf
     builder.scf.kpoints = kpoints
     builder.nscf.kpoints = kpoints
     builder.scf.pw.metadata.options.max_wallclock_seconds = \
@@ -282,7 +255,7 @@ def main(options):
     builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
     #builder.structure = builder.structure
-    builder.nscf_parameters = parameter_nscf
+    #builder.nscf_parameters = parameter_nscf
     #builder.nscf.kpoints = builder.scf.kpoints
     builder.nscf.pw.metadata = builder.scf.pw.metadata
 
@@ -290,6 +263,7 @@ def main(options):
     #builder.nscf.pw.code = load_code(options['pwcode_id'])
     builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
                 builder.structure, pseudo_family = Str(options['pseudo_family']))
+
     ##################yambo part of the builder
     builder.yres.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
@@ -307,15 +281,16 @@ def main(options):
 
     builder.yres.yambo.parameters = params_gw
     builder.yres.yambo.precode_parameters = Dict(dict={})
-    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
     builder.yres.max_iterations = Int(5)
 
-    builder.additional_parsing = List(list=['gap_eV',('livello_a_caso',[1,14]),('gap_a_caso',[2,11,1,6])])
+    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM',('O',[0.125,0.125,0.0]),('gap_ok',[[0,0.5,0],[0.125,0.125,0.0]]) ])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])
     try:
         builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+        builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': True, 'T_VERBOSE':True,})
     except:
         pass
 

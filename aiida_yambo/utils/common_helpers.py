@@ -488,8 +488,9 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False):
     
     return already_done
 
-def check_same_nscf(node, k_mesh_to_calc, already_done):
+def check_same_pw(node, k_mesh_to_calc, already_done):
     parent_nscf = False
+    parent_scf = False
     try:
         if not already_done:
             
@@ -504,11 +505,13 @@ def check_same_nscf(node, k_mesh_to_calc, already_done):
                     pass
             if same_k and parent_nscf_try.is_finished_ok: 
                 parent_nscf = parent_nscf_try.pk     
+            if parent_scf_try.is_finished_ok: 
+                parent_scf = parent_scf_try.pk 
    
     except:
         pass
     
-    return parent_nscf   
+    return parent_nscf, parent_scf   
 
 def search_in_group(YamboWorkflow_inputs, 
                                 YamboWorkflow_group,
@@ -546,21 +549,19 @@ def search_in_group(YamboWorkflow_inputs,
                 if already_done: break
 
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y)
-        
+            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y)        
         if already_done: break
             
     for old in YamboWorkflow_group.nodes:
         if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
             for i in old.called:
-                parent_nscf = check_same_nscf(i, k_mesh_to_calc, already_done)
+                parent_nscf, parent_scf = check_same_pw(i, k_mesh_to_calc, already_done)
                 if parent_nscf: break
         
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            print(old.pk)
             parent_nscf = check_same_nscf(old, k_mesh_to_calc, already_done)
         
         if parent_nscf: break
 
-    return already_done, parent_nscf    
+    return already_done, parent_nscf, parent_scf  
     
