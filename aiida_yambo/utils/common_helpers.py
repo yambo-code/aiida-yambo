@@ -467,18 +467,21 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False):
     already_done = False
     try:
         if node.is_finished_ok:
+            print('finished_ok')
             same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
-            old_params = node.inputs.yres__yambo__parameters.get_dict()
+            old_params = node.inputs.yres__yambo__parameters.get_dict()['variables']
             for p in what:
                 print(p,params_to_calc[p],old_params[p])
-                if up_to_p2y and same_k:
-                    already_done = node.pk
-                    break
-                elif params_to_calc['variables'][p][0] == old_params['variables'][p][0] and same_k:
+                if params_to_calc[p][0] == old_params[p][0] and same_k:
                     already_done = node.pk
                 else:
+                    print('here')
                     already_done = False
-                    break 
+                    break
+            if up_to_p2y and same_k:
+                    already_done = node.pk
+                    return already_done
+            
     
     except:
         pass
@@ -518,10 +521,10 @@ def search_in_group(YamboWorkflow_inputs,
     parent_nscf = False
     try:
         k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
-        params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
+        params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()['variables']
     except:
         k_mesh_to_calc = YamboWorkflow_inputs.nscf__kpoints.get_kpoints_mesh()
-        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()        
+        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()['variables']        
     for k in ['kpoint_mesh','k_mesh_density']:
         try:
             what.remove(k)
@@ -559,5 +562,5 @@ def search_in_group(YamboWorkflow_inputs,
         
         if parent_nscf: break
 
-    return already_done, parent_nscf  
+    return already_done, parent_nscf    
     

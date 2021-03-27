@@ -190,58 +190,63 @@ def additional_parsed(calc, additional_parsing_List, mapping):
     lumo_k = mapping['lumo_k']
 
     for what in parsing_List:
-        if isinstance(what,list): 
-            key = what[0]
-        else:
-            key = what
+        try:
+            if isinstance(what,list): 
+                key = what[0]
+            else:
+                key = what
 
-        if key=='gap_' and key in mapping.keys():
-    
-            homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
-            lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
-
-            print('homo: ', homo_gw)
-            print('lumo: ', lumo_gw)
-            print('gap: ', abs(lumo_gw-homo_gw))
-
-            parsed_dict['gap_'] =  abs(lumo_gw-homo_gw)
-            parsed_dict['homo'] =  homo_gw
-            parsed_dict['lumo'] =  lumo_gw
-            continue
-        elif key=='homo':
-
-            homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
-
-            parsed_dict['homo'] =  homo_gw
-
-        elif key=='lumo':
-
-            lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
-
-            parsed_dict['lumo'] =  lumo_gw
+            if key=='gap_' and key in mapping.keys():
         
-        elif 'gap_' in key and key in mapping.keys():
+                homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
+                lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
-            homo_gw = parse_qp_level(calc, mapping[key][0])
-            lumo_gw = parse_qp_level(calc, mapping[key][1])
+                print('homo: ', homo_gw)
+                print('lumo: ', lumo_gw)
+                print('gap: ', abs(lumo_gw-homo_gw))
 
-            print('homo: ', homo_gw)
-            print('lumo: ', lumo_gw)
-            print('gap: ', abs(lumo_gw-homo_gw))
+                parsed_dict['gap_'] =  abs(lumo_gw-homo_gw)
+                parsed_dict['homo'] =  homo_gw
+                parsed_dict['lumo'] =  lumo_gw
+                continue
+            elif key=='homo':
 
-            parsed_dict[key] =  abs(lumo_gw-homo_gw)
-            parsed_dict['homo_'+key[-2]] =  homo_gw
-            parsed_dict['lumo_'+key[-1]] =  lumo_gw
-        
-        
-        elif key in mapping.keys():
-            if len(mapping[key]) == 2:
+                homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
+
+                parsed_dict['homo'] =  homo_gw
+
+            elif key=='lumo':
+
+                lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
+
+                parsed_dict['lumo'] =  lumo_gw
+            
+            elif 'gap_' in key and key in mapping.keys():
+
                 homo_gw = parse_qp_level(calc, mapping[key][0])
                 lumo_gw = parse_qp_level(calc, mapping[key][1])
-                parsed_dict['homo_'+key+'_v'] =  homo_gw
-                parsed_dict['lumo_'+key+'_c'] =  lumo_gw
-            else:
-                level_gw = parse_qp_level(calc, mapping[key][0])
-                parsed_dict[key] =  level_gw
-                   
+
+                print('homo: ', homo_gw)
+                print('lumo: ', lumo_gw)
+                print('gap: ', abs(lumo_gw-homo_gw))
+
+                parsed_dict[key] =  abs(lumo_gw-homo_gw)
+                parsed_dict['homo_'+key[-2]] =  homo_gw
+                parsed_dict['lumo_'+key[-1]] =  lumo_gw
+            
+            
+            elif key in mapping.keys():
+                
+                    if len(mapping[key]) == 2:
+                        homo_gw = parse_qp_level(calc, mapping[key][0])
+                        lumo_gw = parse_qp_level(calc, mapping[key][1])
+                        parsed_dict['homo_'+key+'_v'] =  homo_gw
+                        parsed_dict['lumo_'+key+'_c'] =  lumo_gw
+                    else:
+                        level_gw = parse_qp_level(calc, mapping[key][0])
+                        parsed_dict[key] =  level_gw
+            
+        except:
+            parsed_dict[key] =  False
+
     return parsed_dict

@@ -349,9 +349,9 @@ class YamboConvergence(WorkChain):
                                             self.ctx.workflow_manager['group'], up_to_p2y = True)
             
                 if already_done: 
-                    set_parent(self.ctx.calc_inputs, load_node(p2y_par))
-                    self.report('setting parent yambo found in group...')
-                    return True
+                    set_parent(self.ctx.calc_inputs, load_node(already_done))
+                    self.report('yambo parent found in group: p2y not needed')
+                    return False
                 
                 elif parent_nscf: 
                     set_parent(self.ctx.calc_inputs, load_node(parent_nscf))
@@ -393,6 +393,7 @@ class YamboConvergence(WorkChain):
         calc[self.ctx.calculation_type] = self.submit(YamboWorkflow, **self.ctx.pre_inputs) #################run
         self.ctx.PRE = calc[self.ctx.calculation_type]
         self.report('Submitted YamboWorkflow up to {}, pk = {}'.format(self.ctx.calculation_type,calc[self.ctx.calculation_type].pk))
+        self.ctx.workflow_manager['group'].add_nodes(calc[self.ctx.calculation_type]) #when added the whole YC, remove that
 
         load_node(calc[self.ctx.calculation_type].pk).label = self.ctx.calculation_type
 
