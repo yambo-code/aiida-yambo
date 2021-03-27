@@ -559,7 +559,7 @@ def search_in_group(YamboWorkflow_inputs,
                 if parent_nscf: break
         
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            parent_nscf = check_same_nscf(old, k_mesh_to_calc, already_done)
+            parent_nscf, parent_scf = check_same_pw(old, k_mesh_to_calc, already_done)
         
         if parent_nscf: break
 
