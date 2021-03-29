@@ -53,7 +53,7 @@ def collect_inputs(inputs, kpoints, ideal_iter):
             #print(var)
             if var not in starting_inputs.keys():
                 if 'mesh' in var:
-                    starting_inputs[var] = kpoints.get_kpoints_mesh()
+                    starting_inputs[var] = kpoints.get_kpoints_mesh()[0]
                 else:
                     starting_inputs[var] = inputs['variables'][var]
 
@@ -85,9 +85,11 @@ def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(delta[l.index(var)],list): 
-                        new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
                         if not 'mesh' in var:
+                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
                             new_val = [new_val, starting_inputs[var][1]]
+                        else:
+                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
                     space[var].append(new_val)
                     #print(new_val)
             else:
