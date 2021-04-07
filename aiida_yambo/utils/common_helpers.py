@@ -354,7 +354,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         ind_cond = ind_val
         dft_predicted = 'metal'
     else:
-        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) > 0.025: #semiconductor, insulator??
+        if round(abs(min(bands[:,conduction-1])-max(bands[:,valence-1])),3) > 0.025: #semiconductor, insulator??
             ind_val = bands[:,valence-1].argmax()
             ind_cond = bands[:,conduction-1].argmin()
             dft_predicted = 'semiconductor/insulator'
@@ -526,6 +526,7 @@ def search_in_group(YamboWorkflow_inputs,
 
     already_done = False
     parent_nscf = False
+    parent_scf = False
     try:
         k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
         params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()['variables']

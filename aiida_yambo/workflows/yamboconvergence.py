@@ -99,10 +99,10 @@ class YamboConvergence(WorkChain):
             self.report('group: {}'.format(self.inputs.group_label.value))
         else:
             try:
-                self.ctx.workflow_manager['group'] = load_group("convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
+                self.ctx.workflow_manager['group'] = load_group("convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_formula()))
             except:
-                self.ctx.workflow_manager['group'] = Group(label="convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
-                self.report('creating group: {}'.format(self.ctx.calc_inputs.structure.get_ase().symbols.__str__()))
+                self.ctx.workflow_manager['group'] = Group(label="convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_formula()))
+                self.report('creating group: {}'.format(self.ctx.calc_inputs.structure.get_formula()))
             if not self.ctx.workflow_manager['group'].is_stored: self.ctx.workflow_manager['group'].store()
             #here shold be added the YC to the group, not the single YWFLS
         
@@ -190,6 +190,7 @@ class YamboConvergence(WorkChain):
                 if parent_nscf and not hasattr(self.ctx.calc_inputs,'parent_folder'):
                     self.report('Recovering NSCF/P2Y parent: {}'.format(parent_nscf))
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
+                self.ctx.workflow_manager['group'].add_nodes(future.caller)
             else:
                 self.report('Calculation already done: {}'.format(already_done))
                 future = load_node(already_done)
@@ -255,6 +256,7 @@ class YamboConvergence(WorkChain):
         self.out('history', story)
         try:
             calc = load_node(self.ctx.final_result['uuid'])
+            if self.ctx.workflow_manager['fully_success']: calc.set_extra('converged', True)
             self.out_many(self.exposed_outputs(calc,YamboWorkflow))
         except:
             self.report('no YamboWorkflows available to expose outputs')
