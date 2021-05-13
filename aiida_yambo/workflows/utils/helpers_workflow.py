@@ -244,6 +244,23 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
 ################################################################################
 ############################## convergence_evaluator ######################################
 
+def prepare_for_ce(calc_dict, workflow_dict):
+    workflow_story = pd.DataFrame.from_dict(workflow_dict['workflow_story']) 
+    real = workflow_story[workflow_story.failed == False]
+    #lines = {}
+    for k in workflow_dict['parameter_space'].keys():
+        if k in ['BndsRnXp','GbndRnge']:
+            bb = np.array([i[0] for i in zip(list(real[k].values))])[:,1]
+        else:
+            g = np.array([i for i in zip(list(real[k].values))])[:,0]
+    homo = real[workflow_dict['what']].values
+    
+    return real,bb,g,homo
+
+def fit_and_new_space(real,bb,g,homo,steps):
+       
+    return
+
 #@conversion_wrapper
 def analysis_and_decision(calc_dict, workflow_dict):
     steps = calc_dict['steps']*calc_dict['iter']+1
