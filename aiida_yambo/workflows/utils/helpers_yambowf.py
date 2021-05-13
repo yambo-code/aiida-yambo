@@ -203,9 +203,9 @@ def additional_parsed(calc, additional_parsing_List, mapping):
 
                 print('homo: ', homo_gw)
                 print('lumo: ', lumo_gw)
-                print('gap: ', abs(lumo_gw-homo_gw))
+                print('gap: ', lumo_gw-homo_gw)
 
-                parsed_dict['gap_'] =  abs(lumo_gw-homo_gw)
+                parsed_dict['gap_'] =  lumo_gw-homo_gw
                 parsed_dict['homo'] =  homo_gw
                 parsed_dict['lumo'] =  lumo_gw
                 continue
@@ -228,9 +228,9 @@ def additional_parsed(calc, additional_parsing_List, mapping):
 
                 print('homo: ', homo_gw)
                 print('lumo: ', lumo_gw)
-                print('gap: ', abs(lumo_gw-homo_gw))
+                print('gap: ', lumo_gw-homo_gw)
 
-                parsed_dict[key] =  abs(lumo_gw-homo_gw)
+                parsed_dict[key] =  lumo_gw-homo_gw
                 parsed_dict['homo_'+key[-2]] =  homo_gw
                 parsed_dict['lumo_'+key[-1]] =  lumo_gw
             
