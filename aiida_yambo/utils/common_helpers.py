@@ -257,7 +257,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk):
                 pass
             else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
-                                       s.inputs.structure.get_ase())
+                                       s.inputs.structure.get_ase()) #m stands for missing
                 
                 if quantity[-1] in m or quantity[-2] in m: return quantity, 0
                 if not quantity[-1] in maps.keys() or not quantity[-2] in maps.keys(): return quantity, 0

@@ -66,11 +66,12 @@ def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
     for i in workflow_dict:
         #print(i)
         l = i['var']
-        delta=i['delta']
+        if 'delta' in i.keys(): delta=i['delta']
+        if 'commensurate' in i.keys(): delta=i['commensurate']
         if not isinstance(i['var'],list):
             l=[i['var']]
-        if not isinstance(i['delta'],list) or 'mesh' in i['var']:
-            delta=[i['delta']]
+        if not isinstance(delta,list) or 'mesh' in i['var']:
+            delta=[delta]
         for var in l:
             #print(var)
             
@@ -78,7 +79,7 @@ def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
                 space[var] = []
             else:
                 starting_inputs[var]=space[var][-1]
-            if wfl_type == '1D_convergence':
+            if wfl_type == '1D_convergence' and 'delta' in i.keys() and not 'commensurate' in i.keys():
                 for r in range(1,i['steps']*i['max_iterations']+1):
                     if isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
                         new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
@@ -90,6 +91,24 @@ def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
                             new_val = [new_val, starting_inputs[var][1]]
                         else:
                             new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
+                    space[var].append(new_val)
+                    #print(new_val)
+            elif wfl_type == '1D_convergence' and 'commensurate' in i.keys():
+                for r in range(1,i['steps']*i['max_iterations']+1):
+                    if first == 0: first = 1
+                    if 'mesh' in var:
+                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]*(r+first-1),
+                                                                                 delta[l.index(var)]*(r+first-1),
+                                                                                 delta[l.index(var)]*(r+first-1)])]
+                    elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
+                        new_val = starting_inputs[var][0]*delta[l.index(var)]*(r+first-1)
+                        if not 'mesh' in var:
+                            new_val = [new_val, starting_inputs[var][1]]
+                    elif isinstance(starting_inputs[var][0],list): 
+                        if not 'mesh' in var:
+                            new_val = [a*b for a,b in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
+                            new_val = [new_val, starting_inputs[var][1]]
+                        
                     space[var].append(new_val)
                     #print(new_val)
             else:
