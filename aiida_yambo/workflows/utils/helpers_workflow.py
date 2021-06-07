@@ -301,11 +301,11 @@ class Convergence_evaluator():
         
         return extra[1], self.fun
 
-def prepare_for_ce(workflow_dict,keys=['gap_GG']):
+def prepare_for_ce(workflow_dict,var,keys=['gap_GG']):
     workflow_story = workflow_dict # pd.DataFrame.from_dict(workflow_dict['workflow_story']) 
     real = workflow_story
     lines = {}
-    for k in ['BndsRnXp','GbndRnge','NGsBlkXp','kpoint_mesh']: #to be generalized
+    for k in var: #to be generalized
         if k in ['BndsRnXp','GbndRnge']:
             lines[k] = np.array([i[0] for i in zip(list(real[k].values))])[:,1]
         elif k in ['kpoint_mesh']:
@@ -323,7 +323,7 @@ def prepare_for_ce(workflow_dict,keys=['gap_GG']):
 @conversion_wrapper
 def analysis_and_decision(calc_dict, workflow_dict={}):
     steps = calc_dict['steps']*calc_dict['iter']+1
-    if len(calc_dict['var'])>1:
+    if isinstance(calc_dict['var'],list):
         var=calc_dict['var'][0]
     else:
         var=calc_dict['var']
@@ -334,7 +334,7 @@ def analysis_and_decision(calc_dict, workflow_dict={}):
         what=workflow_dict['what']
 
      
-    real,lines,homo = prepare_for_ce(workflow_dict['workflow_story'][workflow_dict['workflow_story'].failed==False][-steps:],)
+    real,lines,homo = prepare_for_ce(workflow_dict['workflow_story'][workflow_dict['workflow_story'].failed==False][-steps:],var=var)
     y = Convergence_evaluator(conv_array=homo[what], 
                                 thr=calc_dict['conv_thr'], 
                                 window=calc_dict['conv_window'], 
