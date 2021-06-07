@@ -9,28 +9,34 @@ import copy
 import os
 
 try:
-    from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData
+    from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData, Group
     from aiida.plugins import CalculationFactory, DataFactory
     from aiida.engine import calcfunction 
 except:
     pass
 
+from aiida_yambo.utils.k_path_utils import * 
 
 def find_parent(calc):
 
     try:
         parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
     except:
-        parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+        try:
+            parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
+        except:
+            parent_calc = calc.called[0] #nscf_workchain...??
     return parent_calc
 
 def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
 
     has_found_pw = False
     while (not has_found_pw):
-        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
+        if parent_calc.process_type=='aiida.calculations:yambo.yambo' or parent_calc.process_type=='aiida.workflows:yambo.yambo.yambowf':
             has_found_pw = False
             parent_calc = find_parent(parent_calc)
+            if parent_calc.process_type=='aiida.workflows:quantumespresso.pw.base':
+                parent_calc = parent_calc.called[0]
             if parent_calc.process_type=='aiida.calculations:quantumespresso.pw' and \
                 find_pw_type(parent_calc) in calc_type:
                 has_found_pw = True
@@ -69,15 +75,25 @@ def find_table_ind(kpoint,band,_array_ndb):
             return(i)
 
 
-def update_dict(_dict, whats, hows):
-    if not isinstance(whats, list):
-        whats = [whats]
-    if not isinstance(hows, list):
-        hows = [hows] 
-    for what,how in zip(whats,hows):    
-        new = _dict.get_dict()
-        new[what] = how
-        _dict = Dict(dict=new)
+def update_dict(_dict, whats, hows, sublevel=None):
+    if sublevel:
+        if not isinstance(whats, list):
+            whats = [whats]
+        if not isinstance(hows, list):
+            hows = [hows] 
+        for what,how in zip(whats,hows):    
+            new = _dict.get_dict()
+            new[sublevel][what] = how
+            _dict = Dict(dict=new)
+    else:
+        if not isinstance(whats, list):
+            whats = [whats]
+        if not isinstance(hows, list):
+            hows = [hows] 
+        for what,how in zip(whats,hows):    
+            new = _dict.get_dict()
+            new[what] = how
+            _dict = Dict(dict=new)
     return _dict
 
 def get_caller(calc_pk, depth = 1):
@@ -200,11 +216,12 @@ def find_pw_info(calc):
 
 def find_gw_info(inputs):
 
-    parameters = inputs.parameters.get_dict()
+    parameters = copy.deepcopy(inputs.parameters.get_dict())
     
     ## bands ##
-    BndsRnXp = parameters.pop('BndsRnXp',0)
-    GbndRnge = parameters.pop('GbndRnge',0)
+
+    BndsRnXp = parameters['variables'].pop('BndsRnXp',[[0],''])[0]
+    GbndRnge = parameters['variables'].pop('GbndRnge',[[0],''])[0]
     X_b = 1 + BndsRnXp[1] - BndsRnXp[0]
     SE_b = 1 + GbndRnge[1] - GbndRnge[0]
     if X_b and SE_b:
@@ -221,32 +238,130 @@ def find_gw_info(inputs):
 
     qp = 0
     last_qp = 0
-    for i in parameters['QPkrange']:
+    for i in parameters['variables']['QPkrange'][0]:
         qp += (1 + i[1]-i[0])*(1 + i[3]-i[2])
         last_qp = max(i[3],last_qp)
 
     ## runlevels ##
     runlevels = []
-    for i in parameters.keys():
-        if parameters[i] == True:
-            runlevels.append(i)
+    for i in parameters['arguments']:
+        runlevels.append(i)
     
     return bands, qp, last_qp, runlevels
 
-def gap_mapping_from_nscf(nscf_pk,):
+def build_list_QPkrange(mapping, quantity, nscf_pk):
+    s = load_node(nscf_pk)
+    if isinstance(quantity,str):
+        if 'gap_' in quantity:
+            if quantity[-1] == '_': 
+                pass
+            else: #high-symmetry
+                m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase())
+                
+                if quantity[-1] in m or quantity[-2] in m: return quantity, 0
+                if not quantity[-1] in maps.keys() or not quantity[-2] in maps.keys(): return quantity, 0
+                return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
+                         mapping['valence'],mapping['valence']],
+                        [maps[quantity[-1]],maps[quantity[-1]],
+                         mapping['conduction'],mapping['conduction']]]
+        else: #high-symmetry
+                m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase())
+                
+                if quantity in m : return quantity, 0
+                if not quantity in maps.keys(): return quantity, 0
+                if '_v' in quantity:
+                    return quantity,[[maps[quantity[0]],maps[quantity[0]],
+                         mapping['valence'],mapping['valence']],]
+                elif '_c' in quantity:
+                    return quantity,[[maps[quantity[0]],maps[quantity[0]],
+                         mapping['conduction'],mapping['conduction']],]
+                
+                return quantity,[[maps[quantity],maps[quantity],
+                         mapping['valence'],mapping['valence']],
+                        [maps[quantity],maps[quantity],
+                         mapping['conduction'],mapping['conduction']]]
+            
+    elif isinstance(quantity,list):
+        if 'gap_' in quantity[0]:
+            m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase(),k_list={quantity[0][-2]:np.array(quantity[1][-2]),
+                                                                            quantity[0][-1]:np.array(quantity[1][-1])})
+
+            if quantity[0] in m : return quantity[0], 0    
+            return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
+                     mapping['valence'],mapping['valence']],
+                    [maps[quantity[0][-1]],maps[quantity[0][-1]],
+                     mapping['conduction'],mapping['conduction']]]
+        else:
+            m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
+                                       s.inputs.structure.get_ase(),k_list={quantity[0]:np.array(quantity[1]),
+                                                                            quantity[0]:np.array(quantity[1])})
+            
+            if quantity[0] in m : return quantity[0], 0
+            if '_v' in quantity[0]:
+                return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
+                     mapping['valence'],mapping['valence']],]
+            elif '_c' in quantity[0]:
+                return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
+                     mapping['conduction'],mapping['conduction']],]
+            
+            
+            return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
+                     mapping['valence'],mapping['valence']],
+                    [maps[quantity[0]],maps[quantity[0]],
+                     mapping['conduction'],mapping['conduction']]]     
+    else:
+        return 0, 0
+def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     
     nscf = load_node(nscf_pk)
     bands = nscf.outputs.output_band.get_array('bands')
     occ = nscf.outputs.output_band.get_array('occupations')
-    #valence = len(occ[0][occ[0]>0]) #band index of the valence. 
+    n_kpoints = nscf.outputs.output_parameters.get_dict()['number_of_k_points']
+    k_coords = nscf.outputs.output_band.get_kpoints()
+    valence = len(occ[0][occ[0]>0.01]) #band index of the valence. 
     valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
-    if valence%2 !=0:
-        valence = int(valence+0.5) #metal
+    fermi = nscf.outputs.output_parameters.get_dict()['fermi_energy']
+    soc = nscf.outputs.output_parameters.get_dict()['spin_orbit_calculation']
+    
+    try:
+        try:
+            nscf.inputs.pw__structure.get.ase()
+        except:
+            nscf.inputs.structure.get.ase()
+        cell = structure.get_cell()
+        k = cell.bandpath()
+        high_symmetry = k.special_points
+    except:
+        high_symmetry = []
+    if valence%2 != 0:
+        valence = int(valence+0.5) #may be a metal
     else:
         valence = int(valence)
-    conduction = valence + 1 
-    ind_val = bands[:,valence-1].argmax()
-    ind_cond = bands[:,conduction-1].argmin()
+    conduction = valence + 1  
+    
+    if soc:
+        valence = valence*2 - 1
+        conduction = valence + 2
+
+    touch_fermi = bands[:,valence-1]-fermi
+    above_fermi = np.where(touch_fermi>0)
+    below_fermi = np.where(touch_fermi<=0)
+    if len(above_fermi)>1 and len(below_fermi)>1: #metal??
+        ind_val = abs(touch_fermi).argmin()
+        ind_cond = ind_val
+        dft_predicted = 'metal'
+    else:
+        if abs(bands[:,valence-1].argmax() - bands[:,conduction-1].argmin()) > 0.025: #semiconductor, insulator??
+            ind_val = bands[:,valence-1].argmax()
+            ind_cond = bands[:,conduction-1].argmin()
+            dft_predicted = 'semiconductor/insulator'
+        else: #semimetal??
+            ind_val = bands[:,valence-1].argmax()
+            ind_cond = bands[:,conduction-1].argmin()
+            dft_predicted = 'semimetal'
 
     if ind_val+1 != ind_cond+1:
         gap_type = 'indirect'
@@ -254,13 +369,205 @@ def gap_mapping_from_nscf(nscf_pk,):
         gap_type = 'direct'
 
     mapping = {
+    'dft_predicted': dft_predicted,
     'valence': valence,
+    'conduction': conduction,
+    'number_of_kpoints':n_kpoints,
     'nscf_gap_eV':round(abs(min(bands[:,conduction-1])-max(bands[:,valence-1])),3),
     'homo_k': ind_val+1,
-    'lumo_k':ind_cond+1,
-    'gap_type':gap_type,
-    'mapping_gap_qp':[ind_val+1,ind_cond+1,valence,valence+1], #the qp to be computed
+    'lumo_k': ind_cond+1,
+    'gap_type': gap_type,
+    'gap_': [[ind_val+1,ind_val+1,valence,valence],
+            [ind_cond+1,ind_cond+1,conduction,conduction]], #the qp to be computed
+    'soc':soc,
            }
-    
+
+    for i in additional_parsing_List + high_symmetry:
+        if i == 'homo' or i == 'lumo' or i == 'gap_':
+            pass
+        else:
+            name, additional = build_list_QPkrange(mapping, i, nscf_pk)
+            if additional == 0: 
+                pass
+            else:
+                mapping[name] = additional
+
     return mapping
+
+def check_identical_calculation(YamboWorkflow_inputs, 
+                                YamboWorkflow_list,
+                                what=['BndsRnXp','GbndRnge','NGsBlkXp',],
+                                full = True,
+                                exclude = ['CPU','ROLEs','QPkrange']):
+
+    already_done = False
+    parent_nscf = False
+    try:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()
+    except:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf__kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()        
+    for k in ['kpoint_mesh','k_mesh_density']:
+        try:
+            what.remove(k)
+        except:
+            pass
         
+    if full: 
+        what = copy.deepcopy(list(params_to_calc.keys()))
+        what_2 = copy.deepcopy(what)
+        #print(what)
+        for e in exclude:
+            #print(e)
+            for p in what_2:
+                if e in p: 
+                    what.remove(p)
+                    #print(p)
+        #print(what)            
+    
+    for old in YamboWorkflow_list:
+        try:
+            if load_node(old).is_finished_ok:
+                same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
+                old_params = load_node(old).inputs.yres__yambo__parameters.get_dict()
+                for p in what:
+                    #print(p,params_to_calc[p],old_params[p])
+                    if params_to_calc[p] == old_params[p] and same_k:
+                        already_done = old
+                    else:
+                        already_done = False
+                        break
+
+            if already_done: break
+        except:
+            already_done = False
+    
+    for old in YamboWorkflow_list:
+        try:
+            if  not already_done and not load_node(old).is_finished_ok:
+                print(old)
+                parent_nscf_try = find_pw_parent(load_node(old).called[0], calc_type=['nscf'])
+                same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
+                try:
+                    y = load_node(old).outputs.retrieved._repository._repo_folder.abspath+'/path/'
+                    if 'ns.db1' in  os.listdir(y) and same_k:
+                        parent_nscf = old
+                        
+                except:
+                    pass
+                if parent_nscf: break
+                if same_k and parent_nscf_try.is_finished_ok: 
+                    parent_nscf = parent_nscf_try.pk
+            if parent_nscf: break       
+        except:
+            parent_nscf = False
+
+    return already_done, parent_nscf 
+
+def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,full=True):
+    already_done = False
+    try:
+        if node.is_finished_ok:
+            same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
+            old_params = node.inputs.yres__yambo__parameters.get_dict()['variables']
+            was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
+            for p in what:
+                if params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y:
+                    already_done = node.pk
+                else:
+                    already_done = False
+                    break
+            if already_done and full and len(params_to_calc) == len(old_params):
+                already_done = node.pk
+            elif already_done and full and len(params_to_calc) != len(old_params):
+                already_done = False
+                
+            if up_to_p2y and same_k:
+                    already_done = node.pk
+                    return already_done
+    
+    except:
+        already_done = False
+    
+    return already_done
+
+def check_same_pw(node, k_mesh_to_calc, already_done):
+    parent_nscf = False
+    parent_scf = False
+    try:
+        if not already_done:
+            
+            parent_nscf_try = find_pw_parent(node, calc_type=['nscf'])
+            same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
+            if node.is_finished_ok:
+                try:
+                    y = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
+                    if 'ns.db1' in  os.listdir(y) and same_k:
+                        parent_nscf = node.pk                    
+                except:
+                    pass
+            if same_k and parent_nscf_try.is_finished_ok: 
+                parent_nscf = parent_nscf_try.pk     
+            if parent_scf_try.is_finished_ok: 
+                parent_scf = parent_scf_try.pk 
+   
+    except:
+        pass
+    
+    return parent_nscf, parent_scf   
+
+def search_in_group(YamboWorkflow_inputs, 
+                                YamboWorkflow_group,
+                                what=['BndsRnXp','GbndRnge','NGsBlkXp'],
+                                full = True,
+                                exclude = ['CPU','ROLEs','QPkrange'],
+                                up_to_p2y = False):
+
+    already_done = False
+    parent_nscf = False
+    try:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()['variables']
+    except:
+        k_mesh_to_calc = YamboWorkflow_inputs.nscf__kpoints.get_kpoints_mesh()
+        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()['variables']        
+    for k in ['kpoint_mesh','k_mesh_density']:
+        try:
+            what.remove(k)
+        except:
+            pass
+        
+    if 1: 
+        what = copy.deepcopy(list(params_to_calc.keys()))
+        what_2 = copy.deepcopy(what)
+        
+        for e in exclude:
+            for p in what_2:
+                if e in p: 
+                    what.remove(p) 
+        print(what)
+    
+    for old in YamboWorkflow_group.nodes:
+        if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
+            for i in old.called:
+                already_done = check_same_yambo(i, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full)
+                if already_done: break
+
+        elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
+            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full)        
+        if already_done: break
+            
+    for old in YamboWorkflow_group.nodes:
+        if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
+            for i in old.called:
+                parent_nscf, parent_scf = check_same_pw(i, k_mesh_to_calc, already_done)
+                if parent_nscf: break
+        
+        elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
+            parent_nscf, parent_scf = check_same_pw(old, k_mesh_to_calc, already_done)
+        
+        if parent_nscf: break
+
+    return already_done, parent_nscf, parent_scf     
+    

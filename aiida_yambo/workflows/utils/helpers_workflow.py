@@ -55,7 +55,7 @@ def collect_inputs(inputs, kpoints, ideal_iter):
                 if 'mesh' in var:
                     starting_inputs[var] = kpoints.get_kpoints_mesh()[0]
                 else:
-                    starting_inputs[var] = inputs[var]
+                    starting_inputs[var] = inputs['variables'][var]
 
     return starting_inputs
 
@@ -80,11 +80,16 @@ def create_space(starting_inputs, workflow_dict, wfl_type='1D_convergence'):
                 starting_inputs[var]=space[var][-1]
             if wfl_type == '1D_convergence':
                 for r in range(1,i['steps']*i['max_iterations']+1):
-                    if isinstance(delta[l.index(var)],int):
-                        new_val = starting_inputs[var]+delta[l.index(var)]*(r+first-1)
+                    if isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
+                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
+                        if not 'mesh' in var:
+                            new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(delta[l.index(var)],list): 
-                        new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
-                    
+                        if not 'mesh' in var:
+                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
+                            new_val = [new_val, starting_inputs[var][1]]
+                        else:
+                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
                     space[var].append(new_val)
                     #print(new_val)
             else:
@@ -108,6 +113,8 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict = {}
     new_l = []
 
+    #here should be a default list of convergence "parameters_space".
+
     for i in parameters_space.get_list():
         new_conv = copy.deepcopy(i)
         new_conv['max_iterations'] = i.pop('max_iterations', 3)
@@ -126,14 +133,15 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     
     copy_wfl_sett = copy.deepcopy(wfl_settings)
     workflow_dict['type'] = copy_wfl_sett.pop('type','1D_convergence')
-    workflow_dict['what'] = copy_wfl_sett.pop('what','gap_eV')
+    workflow_dict['what'] = copy_wfl_sett.pop('what','gap_')
 
     workflow_dict['global_step'] = 0
     workflow_dict['fully_success'] = False
 
     workflow_dict['starting_inputs'] = collect_inputs(inputs, kpoints, new_l)
     workflow_dict['parameter_space'] = create_space(workflow_dict['starting_inputs'], new_l, workflow_dict['type'])
-
+    workflow_dict['to_be_parsed'] = []
+    workflow_dict['wfl_pk'] = []
     return workflow_dict
 
 @conversion_wrapper
@@ -159,7 +167,13 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 
     for i in range(calc_manager['steps']):
             workflow_dict['global_step'] += 1
-            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[calc_manager['var']]+\
+            if isinstance(calc_manager['var'],list):
+                separator = ', '
+                var_names = separator.join(calc_manager['var'])
+            else:
+                var_names = calc_manager['var']
+
+            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
 
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
@@ -170,14 +184,14 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
     for i in range(1,len(workflow_dict['workflow_story'])+1):
         try:                
             last_ok_uuid = workflow_dict['workflow_story'].iloc[-i]['uuid']
-            last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
-            start_from_converged(inputs, last_ok_wfl)
+            #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+            start_from_converged(inputs, last_ok_uuid)
             if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
                 set_parent(inputs, load_node(last_ok_uuid))
             break
         except:
             last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
-            last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+            #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
     
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
 
@@ -191,18 +205,31 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     final_result = {}
     for i in range(oversteps):
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
-    for i in range(none_encountered): 
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'failed']=True
+    if oversteps:
+        for i in range(calc_manager['steps']*calc_manager['iter']-oversteps):
+            for j in calc_manager['var']:
+                workflow_dict['parameter_space'][j].pop(0)
+    for i in none_encountered: 
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'failed']=True
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'useful']=False
+    if len(none_encountered) > 0:
+        for i in range(calc_manager['steps']*calc_manager['iter']-len(none_encountered)):
+            for j in calc_manager['var']:
+                workflow_dict['parameter_space'][j].pop(0)
 
-    try:
+    #try:
+    if len(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)]) > 0:
         last_ok_uuid = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['uuid']
-        last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
-        start_from_converged(inputs, last_ok_wfl)
+        #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+        start_from_converged(inputs, last_ok_uuid)
+    
         if calc_manager['var'] == 'kpoint_mesh' or calc_manager['var'] == 'kpoint_density':
             set_parent(inputs, load_node(last_ok_uuid))
-    except:
-        last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
-        last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
+    else: 
+        final_result={}
+    #except:
+    #    last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
+    #    last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
 
     
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
@@ -216,6 +243,23 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
 
 ################################################################################
 ############################## convergence_evaluator ######################################
+
+def prepare_for_ce(calc_dict, workflow_dict):
+    workflow_story = pd.DataFrame.from_dict(workflow_dict['workflow_story']) 
+    real = workflow_story[workflow_story.failed == False]
+    #lines = {}
+    for k in workflow_dict['parameter_space'].keys():
+        if k in ['BndsRnXp','GbndRnge']:
+            bb = np.array([i[0] for i in zip(list(real[k].values))])[:,1]
+        else:
+            g = np.array([i for i in zip(list(real[k].values))])[:,0]
+    homo = real[workflow_dict['what']].values
+    
+    return real,bb,g,homo
+
+def fit_and_new_space(real,bb,g,homo,steps):
+       
+    return
 
 #@conversion_wrapper
 def analysis_and_decision(calc_dict, workflow_dict):
@@ -231,17 +275,17 @@ def analysis_and_decision(calc_dict, workflow_dict):
         converged = True
         oversteps = 0
         oversteps_1 = 0
-        none_encountered = 0
+        none_encountered = []
 
         for j in range(1,len(quantities[:,0])+1):
             if quantities[-j,0] == False:
-                none_encountered +=1
+                none_encountered.append(j)
 
-        for i in range(none_encountered + 2, len(quantities[:,0])+1): #check it
-            if np.max(abs(quantities[-(1+none_encountered),:]-quantities[-i,:])) < tol: #backcheck
+        for i in range(len(none_encountered) + 2, len(quantities[:,0])+1): #check it
+            if np.max(abs(quantities[-(1+len(none_encountered)),:]-quantities[-i,:])) < tol: #backcheck
                 oversteps_1 = i-1
             else:
-                print(abs(quantities[-(1+none_encountered),:]-quantities[-i,:]),quantities[-i,:])
+                print(abs(quantities[-(1+len(none_encountered)),:]-quantities[-i,:]),quantities[-i,:])
                 break
 
         if oversteps_1 < window-1:

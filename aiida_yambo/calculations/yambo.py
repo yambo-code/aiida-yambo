@@ -26,6 +26,8 @@ from aiida.common import LinkType
 
 from aiida_yambo.utils.common_helpers import * 
 
+from yambopy.io.inputfile import YamboIn
+
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
@@ -67,15 +69,14 @@ class YamboCalculation(CalcJob):
 #     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /
 #    /   /      Y88b /          Y888b 888__/    `88_-~
 #
-#             AIIDA input plugin.  YAMBO 4.x compatible
+#             AIIDA input plugin.  YAMBO >4.0 compatible
 #               http://www.yambo-code.org
 #
 """
 )
 
-
         spec.input('settings',valid_type=Dict,
-                help='Use an additional node for special settings')
+                default=Dict())
         spec.input('parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters')
         spec.input('parent_folder',valid_type=RemoteData,
@@ -83,7 +84,8 @@ class YamboCalculation(CalcJob):
         spec.input('preprocessing_code',valid_type=Code,
                 help='Use a preprocessing code for starting yambo',required=False)
         spec.input('precode_parameters',valid_type=Dict,
-                help='Use a node that specifies the input parameters for the yambo precode',required=False)
+                default=Dict(),
+                help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
 
@@ -230,75 +232,13 @@ class YamboCalculation(CalcJob):
             # Prepare yambo input file
             ###################################################
 
-            params_dict = parameters.get_dict()
+            params_dict = parameters.get_dict() ##needed loop for retrocompatibility
 
-            # extract boolean keys
-            boolean_dict = {
-                k: v
-                for k, v in six.iteritems(params_dict) if isinstance(v, bool)
-            }
-            params_dict = {
-                k: v
-                for k, v in six.iteritems(params_dict)
-                if k not in list(boolean_dict.keys())
-            }
-
-            # reorganize the dictionary and create a list of dictionaries with key, value and units
-            parameters_list = []
-            for k, v in six.iteritems(params_dict):
-
-                if "_units" in k:
-                    continue
-
-                units_key = "{}_units".format(k)
-                try:
-                    units = params_dict[units_key]
-                except KeyError:
-                    units = None
-
-                this_dict = {}
-                this_dict['key'] = k
-                this_dict['value'] = v
-                this_dict['units'] = units
-
-                parameters_list.append(this_dict)
+            y = YamboIn().from_dictionary(params_dict)
 
             input_filename = tempfolder.get_abs_path(self.metadata.options.input_filename)
 
-            with open(input_filename, 'w') as infile:
-                infile.write(self.metadata.options.logostring)
-
-                for k, v in six.iteritems(boolean_dict):
-                    if v:
-                        infile.write("{}\n".format(k))
-
-                for this_dict in parameters_list:
-                    key = this_dict['key']
-                    value = this_dict['value']
-                    units = this_dict['units']
-
-
-                    if isinstance(value, list):
-                        value_string = ''
-                        try:
-                            for v in value:
-                                value_string += " | ".join([str(_) for _ in v]) + " |\n"
-                        except:
-                            value_string += " | ".join([str(_) for _ in value]) + " |\n"
-
-                        the_string = "% {}\n {}".format(key, value_string)
-                        the_string += "%"
-
-
-                    else:
-                        the_value = '"{}"'.format(value) if isinstance(
-                            value, six.string_types) else '{}'.format(value)
-                        the_string = "{} = {}".format(key, the_value)
-
-                    if units is not None:
-                        the_string += " {}".format(units)
-
-                    infile.write(the_string + "\n")
+            y.write(input_filename, prefix=self.metadata.options.logostring)
 
         ############################################
         # set copy of the parent calculation
@@ -357,20 +297,16 @@ class YamboCalculation(CalcJob):
         extra_retrieved = []
 
         if initialise:
-        #    extra_retrieved.append('SAVE/'+_dbs_accepted['ns.db1'])
+        #    extra_retrieved.append('SAVE/'+_dbs_accepted['p2y'])
             pass
         else:
             for dbs in _dbs_accepted.keys():
-                db = boolean_dict.pop(dbs,False)
-                if db:
+                if dbs in params_dict['arguments']:
                     extra_retrieved.append('aiida.out/'+_dbs_accepted[dbs])
 
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
             extra_retrieved.append(additional)
-
-        for extra in extra_retrieved:
-            calcinfo.retrieve_list.append(extra)
 
         from aiida.common.datastructures import CodeRunMode, CodeInfo
 
@@ -416,7 +352,12 @@ class YamboCalculation(CalcJob):
             c3 = None
 
         #logic of the execution
-        #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]
+        #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]   
+        try:
+            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns.db1_path','')
+        except:
+            parent_save_path = None
+
         if yambo_parent:
             if not parent_initialise:
                 calcinfo.codes_info = [c3]
@@ -424,8 +365,10 @@ class YamboCalculation(CalcJob):
                 calcinfo.codes_info = [c2, c3]
         elif initialise:
             calcinfo.codes_info = [c1]
+            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
         else:
             calcinfo.codes_info = [c1, c2, c3]
+            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
@@ -434,6 +377,9 @@ class YamboCalculation(CalcJob):
                 "The following keys have been found in "
                 "the settings input node, but were not understood: {}".format(
                     ",".join(list(settings.keys()))))
+
+        for extra in extra_retrieved:
+            calcinfo.retrieve_list.append(extra)
 
         return calcinfo
 

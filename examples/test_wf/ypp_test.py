@@ -223,7 +223,7 @@ def main(options):
                 'GTermKind': 'BG',
                 'BndsRnXp': [[1, 50], ''],
                 'GbndRnge': [[1, 50], ''],
-                'QPkrange': [[[1, 1, 25, 25], [1, 1, 4, 4,]], ''],
+                'QPkrange': [[[1, 10, 6, 11],], ''],
                 }}
 
 
@@ -290,6 +290,7 @@ def main(options):
     builder.yres.yambo.code = load_code(options['yambocode_id'])
     try:
         builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
+        builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': True, 'T_VERBOSE':True,})
     except:
         pass
 

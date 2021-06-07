@@ -40,7 +40,7 @@ __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
 
-class YamboParser(Parser):
+class YppParser(Parser):
     """This class is a wrapper class for the Parser class for Yambo calculators from yambopy.
 
     *IMPORTANT:* This plugin can parse netcdf files produced by yambo if the
@@ -160,13 +160,13 @@ class YamboParser(Parser):
         ndbqp = {}
         ndbhf = {}
 
-        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
+        for file in os.listdir(out_folder._repository._repo_folder.abspath):
             if 'stderr' in file:
-                with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
+                with open(file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
         
-        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
-            output_params['ns_db1_path'] = out_folder._repository._repo_folder.abspath+'/path'
+        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath):
+            output_params['ns.db1_path'] = out_folder._repository._repo_folder.abspath
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)

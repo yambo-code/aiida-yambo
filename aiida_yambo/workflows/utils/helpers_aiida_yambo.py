@@ -25,14 +25,14 @@ else:
 ################################################################################
 ################################################################################
 
-def set_parallelism(instructions, inputs):
+def set_parallelism(instructions_, inputs):
 
     new_parallelism, new_resources = False, False
-
+    instructions = copy.deepcopy(instructions_)
     resources = inputs.yres.yambo.metadata.options.resources
     structure = inputs.structure.get_ase()
     mesh = inputs.nscf.kpoints.get_kpoints_mesh()[0]
-    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fix
+    kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fi
 
     occupied, ecut = periodical(structure)
 
@@ -43,18 +43,18 @@ def set_parallelism(instructions, inputs):
     instructions['manual'] = instructions.pop('manual',None)
     instructions['function'] = instructions.pop('function',None)
 
-    if 'BndsRnXp' in inputs.yres.yambo.parameters.get_dict().keys():
-        yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['BndsRnXp'][-1]
+    if 'BndsRnXp' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['variables']['BndsRnXp'][0][-1]
     else:
         yambo_bandsX = 0 
     
-    if 'GbndRnge' in inputs.yres.yambo.parameters.get_dict().keys():
-        yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['GbndRnge'][-1]
+    if 'GbndRnge' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['variables']['GbndRnge'][0][-1]
     else:
         yambo_bandsSc = 0
     
-    if 'NGsBlkXp' in inputs.yres.yambo.parameters.get_dict().keys():
-        yambo_cutG = inputs.yres.yambo.parameters.get_dict()['NGsBlkXp']
+    if 'NGsBlkXp' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_cutG = inputs.yres.yambo.parameters.get_dict()['variables']['NGsBlkXp'][0]
     else:
         yambo_cutG = 0
 
@@ -93,9 +93,10 @@ def set_parallelism(instructions, inputs):
             if X and Sc and G and K:
                 new_parallelism = instructions['manual'][i]['parallelism']
                 new_resources = instructions['manual'][i]['resources']
+                break
             else: 
                 pass
-
+        
         #new_parallelism = instructions['manual']['parallelism']
         #new_resources = instructions['manual']['resources']
     
@@ -127,19 +128,23 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     return calc_dict
 
 ################################## update_parameters - create parameters space #####################################
-def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
-
-    values_dict = {}
+def updater(calc_dict, inp_to_update, parameters, workflow_dict):
     
+    already_done = False
+    values_dict = {}
+    parallelism_instructions = workflow_dict['parallelism_instructions']
+
     if not isinstance(calc_dict['var'],list):
         calc_dict['var'] = [calc_dict['var']]
 
-    input_dict = inp_to_update.yres.yambo.parameters.get_dict()
+    input_dict = copy.deepcopy(inp_to_update.yres.yambo.parameters.get_dict())
     
     for var in calc_dict['var']:
+        
         if var == 'kpoint_mesh' or var == 'kpoint_density':
             k_quantity = parameters[var].pop(0)
             k_quantity_shift = inp_to_update.nscf.kpoints.get_kpoints_mesh()[1]
+
             inp_to_update.nscf.kpoints = KpointsData()
             inp_to_update.nscf.kpoints.set_cell_from_structure(inp_to_update.structure) #to count the PBC...
             if isinstance(k_quantity,tuple) or isinstance(k_quantity,list):
@@ -157,47 +162,56 @@ def updater(calc_dict, inp_to_update, parameters, parallelism_instructions):
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
             values_dict[var]=k_quantity
         else:
-            
-            input_dict[var] = parameters[var].pop(0)
+            input_dict['variables'][var] = parameters[var].pop(0)
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
-            values_dict[var]=input_dict[var]
-    
+            values_dict[var]=input_dict['variables'][var]
+
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
 
     if new_para and new_res:
-            inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), list(new_para.values()))
-            inp_to_update.yres.yambo.metadata.options.resources = new_res
-            try:
-                inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
-            except:
-                pass
+        inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), 
+                                                        list(new_para.values()),sublevel='variables')
+        inp_to_update.yres.yambo.metadata.options.resources = new_res
+        try:
+            inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
+        except:
+            pass
+    
+    already_done, parent_nscf, parent_scf = search_in_group(inp_to_update, 
+                                               workflow_dict['group'])
+    
+    if parent_nscf and not hasattr(inp_to_update, 'parent_folder'):
+        try:
+            inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+        except:
+            pass
+    elif parent_scf:
+        try:
+            inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+        except:
+            pass
 
-    return inp_to_update, values_dict
+    return inp_to_update, values_dict, already_done, parent_nscf
 
 ################################## parsers #####################################
-def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backtrace=1):
+def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], backtrace=1):
 
     parameter_names = list(workflow_dict['parameter_space'].keys())
     
     backtrace = calc_dict['steps'] 
     what = workflow_dict['what']
 
-    #quantities = np.zeros((len(what),backtrace,3))
-    #quantities = pd.DataFrame([], columns = parameter_names + what + ['uuid'])
     l_iter = []
     for i in range(1,backtrace+1):
         l_calc = []
-        try: #YamboConvergence
-            ywf_node = load_node(calc_dict['wfl_pk']).caller.called[backtrace-i]
-        except: #YamboWorkflow,YamboRestart of YamboCalculation
-            ywf_node = load_node(calc_dict['wfl_pk'])
+        ywf_node = load_node(workflow_dict['wfl_pk'][backtrace-i])
         for n in parameter_names:
             try:
                 if 'mesh' in n:
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
                 else:
-                    value = ywf_node.called[0].called[0].inputs.parameters.get_dict()[n]
+                    value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
             except:
                 value = 0
             l_calc.append(value)
@@ -210,14 +224,15 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'],backt
                 quantity = False
                 l_calc.append(quantity)           
             
-        l_calc.append(ywf_node.uuid) #CalcJobNode.pk responsible of the calculation
+        l_calc.append(ywf_node.uuid)
         l_iter.append(l_calc)
     
     quantities = pd.DataFrame(l_iter, columns = parameter_names + what + ['uuid'])
 
     return quantities
 
-def start_from_converged(inputs, node,):
+def start_from_converged(inputs, node_uuid,):
+    node = load_node(node_uuid)
     inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']
     inputs.yres.yambo.metadata.options.resources = node.called[0].called[0].get_options()['resources']
     inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[0].called[0].get_options()['max_wallclock_seconds']

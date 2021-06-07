@@ -95,7 +95,7 @@ def parse_log(log, output_params, timing):
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
         memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
         alloc1_error = re.compile('\[ERROR\]Allocation')
-        #alloc2_error = re.compile('\[MEMORY\] Alloc')
+        alloc2_error = re.compile('\[MEMORY\] Alloc')
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
         impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
@@ -122,16 +122,20 @@ def parse_log(log, output_params, timing):
                 output_params['errors'].append('memory_general')
         except:
             pass
+        
+        try:
+            if  alloc2_error.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
+        except:
+            pass
+        
         try:
             if  X_par_mem.findall(log.lines[-1]):
                 output_params['memory_error'] = True
                 output_params['errors'].append('X_par_allocation')
         except:
             pass
-        # if  alloc2_error.findall(log.lines[-1]):
-        #    output_params['memory_error'] = True
-        #    output_params['errors'].append('memory_general')
-        
             
     return output_params
 
@@ -160,19 +164,20 @@ def parse_report(report, output_params):
 def parse_scheduler_stderr(stderr, output_params):
 
     m1 = re.compile('out of memory')
+    m1_1 = re.compile('out-of-memory')
     m2 = re.compile('Segmentation')
     m3 = re.compile('dumped')
     t1 = re.compile('walltime')
     t2 = re.compile('time')
-    for line in stderr.lines:
-        if m1.findall(line) or m2.findall(line) or m3.findall(line):
+    for line in stderr.readlines():
+        if m1.findall(line) or m1_1.findall(line) or m2.findall(line) or m3.findall(line):
             output_params['memory_error'] = True
             output_params['errors'].append('memory_general') 
         elif t1.findall(line) or t2.findall(line):
             output_params['time_error'] = True
 
 def yambo_wrote_dbs(output_params):
-    if len(output_params['timing']) > 6:
+    if len(output_params['timing']) > 4:
         output_params['yambo_wrote_dbs'] = True
     else:
         output_params['yambo_wrote_dbs'] = False

@@ -119,6 +119,8 @@ class YamboWorkflow(WorkChain):
         try:
 
             parent = take_calc_from_remote(self.inputs.parent_folder)
+            if parent.process_type=='aiida.workflows:quantumespresso.pw.base':
+                parent = parent.called[0]
 
             if parent.process_type=='aiida.calculations:quantumespresso.pw':
 
@@ -190,6 +192,7 @@ class YamboWorkflow(WorkChain):
 
         if self.ctx.calc_to_do == 'scf':
 
+            self.ctx.scf_inputs.metadata.call_link_label = 'scf'
             future = self.submit(PwBaseWorkChain, **self.ctx.scf_inputs)
 
             self.ctx.calc_to_do = 'nscf'
@@ -200,7 +203,8 @@ class YamboWorkflow(WorkChain):
                 self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
             except:
                 self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
-
+            
+            self.ctx.nscf_inputs.metadata.call_link_label = 'nscf'  
             future = self.submit(PwBaseWorkChain, **self.ctx.nscf_inputs)
 
             self.ctx.calc_to_do = 'yambo'
@@ -214,9 +218,10 @@ class YamboWorkflow(WorkChain):
 
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('updating yambo parameters to parse more results')
-                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
+            self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
             self.ctx.calc_to_do = 'the workflow is finished'
@@ -231,8 +236,8 @@ class YamboWorkflow(WorkChain):
         if calc.is_finished_ok:
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('parsing additional quantities')
-                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing)
-                parsed = additional_parsed(calc, self.inputs.additional_parsing, mapping)
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
+                parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
                 self.out('nscf_mapping', store_Dict(mapping))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
