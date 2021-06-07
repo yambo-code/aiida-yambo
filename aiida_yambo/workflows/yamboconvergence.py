@@ -210,16 +210,8 @@ class YamboConvergence(WorkChain):
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
 
-        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes = \
-                analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
-
-        self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
-        
-        #self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
-        #                 workflow_dict=self.ctx.workflow_manager)
-
-        #self.report('The history:')
-        #self.report(self.ctx.workflow_manager['workflow_story'])
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, hint = \
+                analysis_and_decision(self.ctx.calc_manager, workflow_dict=self.ctx.workflow_manager)
 
         if self.ctx.calc_manager['success']:
 
@@ -245,7 +237,23 @@ class YamboConvergence(WorkChain):
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
-                        
+
+            if hint>1:
+                self.report('Updating parameters to accelerate convergence.')
+
+                _inputs = collect_inputs(self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
+                                                                  self.ctx.calc_inputs.nscf.kpoints, [self.ctx.calc_manager])
+                
+                for what in self.ctx.calc_manager['var']:
+                    space = create_space(_inputs, [self.ctx.calc_manager], 
+                                                                        self.ctx.workflow_manager['type'], 
+                                                                        hint=hint)
+                    
+                    self.report('old space',self.ctx.workflow_manager['parameter_space'][what])
+                    self.ctx.workflow_manager['parameter_space'][what] = space[what]
+                    self.report('old space',self.ctx.workflow_manager['parameter_space'][what],space[what])
+
+
         self.ctx.workflow_manager['first_calc'] = False
 
     def report_wf(self):
