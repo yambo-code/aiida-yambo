@@ -113,6 +113,15 @@ def get_options():
         default=None,
         help='account name')
 
+    parser.add_argument(
+        '--group_label',
+        type=str,
+        dest='group_label',
+        required=False,
+        default=None,
+        help='group name')
+
+
     args = parser.parse_args()
 
     ###### setting the machine options ######
@@ -144,16 +153,37 @@ def get_options():
 
     if args.account:
         options['account']=args.account
+    
+    if args.group_label:
+        options['group_label']=args.group_label
 
     return options
 
 def main(options):
 
+    ###### setting the lattice structure ######
+
+    alat = 2.4955987320 # Angstrom
+    the_cell = [[1.000000*alat,   0.000000,   0.000000],
+                [-0.500000*alat,  0.866025*alat,   0.000000],
+                [0.000000,   0.000000,  6.4436359260]]
+
+    atoms = Atoms('BNNB', [(1.2477994910, 0.7204172280, 0.0000000000),
+    (-0.0000001250, 1.4408346720, 0.0000000000),
+    (1.2477994910, 0.7204172280, 3.2218179630),
+    (-0.0000001250,1.4408346720, 3.2218179630)],
+    cell = [1,1,1])
+    atoms.set_cell(the_cell, scale_atoms=False)
+    atoms.set_pbc([True,True,True])
+
+    StructureData = DataFactory('structure')
+    structure = StructureData(ase=atoms)
+
     ###### setting the kpoints mesh ######
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
+    kpoints.set_kpoints_mesh([4,4,2])
 
     ###### setting the scf parameters ######
 
@@ -205,40 +235,6 @@ def main(options):
 
     parameter_nscf = Dict(dict=params_nscf)
 
-    KpointsData = DataFactory('array.kpoints')
-    kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([8,8,1])
-
-    ###### setting the lattice structure ######
-
-    alat = 9.17865990871*0.529177 # Angstrom
-    the_cell = [[1.000000*alat,   0.000000,   0.000000],
-                [-0.500000*alat,  0.866025*alat,   0.000000],
-                [0.000000,   0.000000,  3.2*alat]]
-
-    atoms = Atoms('CCCCCCNN',
-    [(0.502355208*alat,   0.550236753*alat,   0.0),
-    (0.252424145*alat,   0.694521005*alat,   0.0),
-    (0.002507615*alat,   0.550234737*alat,   0.0),
-    (0.002510406*alat,   0.261657594*alat,   0.0),
-    (0.252429688*alat,   0.117353190*alat,   0.0),
-    (0.502366692*alat,   0.261640955*alat,   0.0),
-    (-0.247619414*alat,  0.694645605*alat,   0.0),
-    (0.752387961*alat,   0.117291062*alat,   0.0)],
-    cell = [1,1,1])
-    atoms.set_cell(the_cell, scale_atoms=False)
-    atoms.set_pbc([True,True,False])
-
-    StructureData = DataFactory('structure')
-    structure = StructureData(ase=atoms)
-
-
-    StructureData = DataFactory('structure')
-    structure = StructureData(ase=atoms)
-
-
-
-
     params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
                  'variables':{
                 'GTermEn': [250.0, 'mHa'],
@@ -278,6 +274,9 @@ def main(options):
     if 'account' in options:
         builder.ywfl.scf.pw.metadata.options.account = options['account']
 
+    if 'group_label' in options:
+        builder.group_label = Str(options['group_label'])
+        
     builder.ywfl.scf.pw.metadata.options.prepend_text = options['prepend_text']
     builder.ywfl.scf.pw.metadata.options.mpirun_extra_params = []
     #builder.precalc_inputs=params_p
@@ -330,65 +329,33 @@ def main(options):
     builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
 
     builder.workflow_settings = Dict(dict={'type':'1D_convergence',
-                                           'what':['gap_'],'bands_nscf_update':'all-at-once',
+                                           'what':['gap_GG'],
+                                           'bands_nscf_update':'all-at-once',
                                             })
 
-    #'what': 'single-levels','where':[(1,8),(1,9)]
-    var_to_conv = [{'var':'kpoint_mesh','delta': [2,2,0], 'max_iterations': 2, \
-                                 'conv_thr': 0.1,},]
 
-    var_to_conv = [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,100],[0,100]],},]
-
-
-    var_to_conv_dc =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
+    var_to_conv =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
                                  'conv_thr': 0.2,'conv_window': 3},
-                       {'var':'NGsBlkXp','delta': 1, 'steps': 3, 'max_iterations': 3, \
+                       {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
                                 'conv_thr': 0.2,},
-                       {'var':'kpoint_mesh','delta': [1,1,0], 'max_iterations': 3, \
+                       {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
+                                 'conv_thr': 0.2,'conv_window': 3},
+                       {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
+                                'conv_thr': 0.2,},                   
+                       {'var':'kpoint_mesh','delta': [1,1,1], 'max_iterations': 3, \
                                  'conv_thr': 0.5,},]
-    var_to_conv_hydra =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,50],[0,50]], 'steps': 3, 'max_iterations': 3, \
-                                 'conv_thr': 0.1,},
-                   {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
-                                'conv_thr': 0.1,},
-                   {'var':['BndsRnXp','GbndRnge'],'delta': [[0,50],[0,50]], 'steps': 3, 'max_iterations': 5, \
-                                 'conv_thr': 0.01,},
-                   {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 5, \
-                                 'conv_thr': 0.01,},
-                   {'var':'kpoint_mesh','delta': [2,2,0], 'max_iterations': 3, \
-                                 'conv_thr': 0.02,},]
-                    
-                    # 
-                    # {'var':['BndsRnXp','GbndRnge'],'delta': [[0,20],[0,20]], 'steps': 2, 'max_iterations': 2, \
-                      #           'conv_thr': 0.02, 'conv_window': 2},]
-                  # {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 4, \
-                  #              'conv_thr': 0.02, 'conv_window': 3},
-                  # {'var':['BndsRnXp','GbndRnge'],'delta': [[0,100],[0,100]], 'steps': 3, 'max_iterations': 4, \
-                  #               'conv_thr': 0.01, 'conv_window': 3},
-                  #  {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 4, \
-                  #              'conv_thr': 0.01, 'conv_window': 3},]
-                   #{'var':['BndsRnXp','GbndRnge'],'delta': [[0,50],[0,50]], 'steps': 3, 'max_iterations': 5, \
-                   #              'conv_thr': 0.05, 'conv_window': 3},
-                   #{'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
-                   #              'conv_thr': 0.05, 'conv_window': 3},]
-                   #{'var':'kpoint_density','delta': 1, 'steps': 2, 'max_iterations': 2, \
-                    #             'conv_thr': 0.1, 'conv_window': 2}]
 
-    '''
-    builder.workflow_settings = Dict(dict={'type':'2D_space',
-                                    'what':['direct_gap_eV,7_8_7_9'],
-                                        })
 
-    var_to_conv = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                'space': [[[1, 50], [1, 50],2], [[1,60], [1, 60],4]],'max_iterations': 1,},]
-    '''
+    for i in range(len(var_to_conv)):
+        print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 
-    for i in range(len(var_to_conv_dc)):
-        print('{}-th variable will be {}'.format(i+1,var_to_conv_dc[i]['var']))
-
-    builder.parameters_space = List(list = var_to_conv_dc)
+    builder.parameters_space = List(list = var_to_conv)
 
 
     #builder.parallelism_instructions = Dict(dict={'automatic' : True})
+    
+    #here parallelism instructions: couples of dictionaries for each level-> 'low', 'medium' ... 
+    # names low, medium are arbitrary
 
     dict_para_low = {}
     dict_para_low['X_CPU'] = '1 1 1 1 1'
@@ -414,17 +381,23 @@ def main(options):
     dict_para_normal['SE_ROLEs'] = 'q g qp b'
 
     dict_res_normal = {
-            "num_machines": 4,
-            "num_mpiprocs_per_machine":4,
-            "num_cores_per_mpiproc":4,
+            "num_machines": 1,
+            "num_mpiprocs_per_machine":16,
+            "num_cores_per_mpiproc":8,
         }
 
 
-    builder_parallelism_instructions = Dict(dict={'manual' : {'low':{'BndsRnXp':[1,1200],
-                                                                     'NGsBlkXp':[1,25],
+    builder_parallelism_instructions = Dict(dict={'manual' : {'low':{'BndsRnXp':[1,500], #range of values for this parameter
+                                                                     'NGsBlkXp':[1,15],
                                                                      'kpoints':[1,300],
                                                                      'parallelism':dict_para_low,
                                                                      'resources':dict_res_low,
+                                                                     },
+                                                              'medium':{'BndsRnXp':[501,1200],
+                                                                     'NGsBlkXp':[16,25],
+                                                                     'kpoints':[301,500],
+                                                                     'parallelism':dict_para_normal,
+                                                                     'resources':dict_res_normal,
                                                                      },
                                                               }})
 
@@ -434,5 +407,5 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    running.label = 'C3N test on hydra'
-    print("Submitted YamboConvergence for C3N; with pk=< {} >".format(running.pk))
+    running.label = 'hBN test on doncamillo'
+    print("Submitted YamboConvergence for bulk hBN; with pk=< {} >".format(running.pk))
