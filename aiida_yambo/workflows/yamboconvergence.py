@@ -202,24 +202,19 @@ class YamboConvergence(WorkChain):
 
 
     def data_analysis(self):
-
+        
         self.report('Data analysis, we will try to parse some result and decide what next')
 
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
-        #build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
 
-        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes = \
+
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
-
-        self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
         
-        #self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
-        #                 workflow_dict=self.ctx.workflow_manager)
-
-        #self.report('The history:')
-        #self.report(self.ctx.workflow_manager['workflow_story'])
+        self.report(self.ctx.workflow_manager['parameter_space'])
+        self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
 
         if self.ctx.calc_manager['success']:
 
@@ -246,8 +241,18 @@ class YamboConvergence(WorkChain):
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
                         
-        self.ctx.workflow_manager['first_calc'] = False
+            if hint: 
+                self.report('hint: {}'.format(hint))
+                self.ctx.workflow_manager['parameter_space'] = update_space(existing_inputs = self.ctx.workflow_manager['parameter_space'],
+                                                                        calc_dict = self.ctx.calc_manager,
+                                                                        hint=hint)
+                self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
+            
+            self.report(self.ctx.workflow_manager['parameter_space'])
 
+        
+        self.ctx.workflow_manager['first_calc'] = False
+        
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
