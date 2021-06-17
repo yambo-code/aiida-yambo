@@ -61,7 +61,7 @@ class k_path_dealer():
             ind = 1 
             found = False
             for g in grid:
-                if np.allclose(high_symmetry[point],abs(g),1e-4,1e-4):
+                if np.allclose(abs(high_symmetry[point]),abs(g),1e-4,1e-4):
                     found = True
                     maps[point] = ind
                     break
