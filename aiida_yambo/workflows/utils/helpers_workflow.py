@@ -161,7 +161,8 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
             else:
                 starting_inputs[var]=space[var][-1]
             if 'delta' in i.keys() and not 'commensurate' in i.keys():
-                for r in range(1,i['steps']*i['max_iterations']+1):
+                #for r in range(1,i['steps']*i['max_iterations']+1):
+                for r in range(1,len(existing_inputs[var])+1):
                     if r <= i['steps']*i['iter']: 
                         continue
                     if isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
@@ -201,6 +202,11 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                     new_val = i['space'][r][l.index(var)]
                 
                     space[var].append(new_val)
+            
+            #for ii in range(len(space[var]),len(existing_inputs[var])-len(space[var])):
+            #    space[var].append(existing_inputs[var][ii])
+
+
         first = 1
     existing_inputs.update(space)
     return existing_inputs
@@ -306,7 +312,7 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     for i in range(oversteps):
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
     if oversteps:
-        for i in range(calc_manager['steps']*calc_manager['iter']-oversteps):
+        for i in range(calc_manager['steps']*calc_manager['iter']-(oversteps+1)):
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
