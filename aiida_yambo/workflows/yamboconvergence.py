@@ -243,11 +243,12 @@ class YamboConvergence(WorkChain):
                         
             if hint: 
                 self.report('hint: {}'.format(hint))
-                self.ctx.workflow_manager['parameter_space'] = update_space(existing_inputs = self.ctx.workflow_manager['parameter_space'],
+                self.ctx.params_space, self.ctx.workflow_manager['parameter_space'] = update_space(existing_inputs = self.ctx.workflow_manager['parameter_space'],
                                                                         calc_dict = self.ctx.calc_manager,
-                                                                        hint=hint)
-                self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
-            
+                                                                        hint=hint,
+                                                                        convergence_algorithm = self.ctx.workflow_manager['convergence_algorithm'])
+                #self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
+
             self.report(self.ctx.workflow_manager['parameter_space'])
 
         
@@ -378,7 +379,7 @@ class YamboConvergence(WorkChain):
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
             self.ctx.pre_inputs.yres.yambo.parameters = self.inputs.precalc_inputs
-            self.ctx.pre_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
+            self.ctx.pre_inputs.additional_parsing = self.ctx.calc_inputs.additional_parsing 
         else:
             self.ctx.calculation_type='p2y'
             self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, 

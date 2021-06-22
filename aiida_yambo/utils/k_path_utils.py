@@ -61,7 +61,7 @@ class k_path_dealer():
             ind = 1 
             found = False
             for g in grid:
-                if np.allclose(high_symmetry[point],abs(g),0.03,0.03):    #1e-4,1e-4):
+                if np.allclose(abs(high_symmetry[point]),abs(g),1e-4,1e-4):    #1e-4,1e-4):
                     found = True
                     maps[point] = ind
                     break
@@ -83,7 +83,12 @@ class k_path_dealer():
             ind = 1 
             found = False
             for g in qe_grid:
-                if np.allclose(high_symmetry[point],abs(g),0.03,0.03):    #1e-4,1e-4):
+                if np.allclose(abs(high_symmetry[point]),abs(g),1e-4,1e-4):    #1e-4,1e-4):
+                    found = True
+                    maps[point] = ind
+                    break
+                elif abs(high_symmetry[point][0])-abs(g[1])<1e-4 and abs(high_symmetry[point][1])-abs(g[0])<1e-4 \
+                        and abs(high_symmetry[point][2])-abs(g[2])<1e-4 :    #1e-4,1e-4):
                     found = True
                     maps[point] = ind
                     break

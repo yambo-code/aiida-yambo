@@ -432,6 +432,7 @@ def check_identical_calculation(YamboWorkflow_inputs,
                 same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
                 old_params = load_node(old).inputs.yres__yambo__parameters.get_dict()
                 for p in what:
+                    if 'CPU' in p or 'ROLEs' in p: continue
                     #print(p,params_to_calc[p],old_params[p])
                     if params_to_calc[p] == old_params[p] and same_k:
                         already_done = old
@@ -466,6 +467,7 @@ def check_identical_calculation(YamboWorkflow_inputs,
     return already_done, parent_nscf 
 
 def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,full=True):
+    l = 0 
     already_done = False
     try:
         if node.is_finished_ok:
@@ -473,14 +475,16 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             old_params = node.inputs.yres__yambo__parameters.get_dict()['variables']
             was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
             for p in what:
-                if params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y:
+                if 'CPU' in p or 'ROLEs' in p: 
+                    l += 1
+                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y:
                     already_done = node.pk
                 else:
                     already_done = False
                     break
-            if already_done and full and len(params_to_calc) == len(old_params):
+            if already_done and full and abs(len(params_to_calc)-len(old_params))==l:
                 already_done = node.pk
-            elif already_done and full and len(params_to_calc) != len(old_params):
+            elif already_done and full and abs(len(params_to_calc)-len(old_params))!=l:
                 already_done = False
                 
             if up_to_p2y and same_k:
@@ -521,7 +525,7 @@ def search_in_group(YamboWorkflow_inputs,
                                 YamboWorkflow_group,
                                 what=['BndsRnXp','GbndRnge','NGsBlkXp'],
                                 full = True,
-                                exclude = ['CPU','ROLEs','QPkrange'],
+                                exclude = [],
                                 up_to_p2y = False):
 
     already_done = False

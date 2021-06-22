@@ -129,15 +129,21 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
     return space
 
 def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hint=0,
-                 existing_inputs={},
+                 existing_inputs={},convergence_algorithm='smart',
                  ):
     
     space={}
     
-    first = 0
+    first = 1
     if existing_inputs: starting_inputs = copy.deepcopy(existing_inputs)
+    if convergence_algorithm == 'smart':
+        factor = 1 # (calc_dict['iter']**0.5)
+    elif convergence_algorithm == 'aggressive':
+        factor = (calc_dict['iter']**0.5) + 1
+    elif convergence_algorithm == 'dummy':
+        factor = 0
 
-    hint_ = int(hint)
+    hint_ = int(hint*factor)
         
     for j in [1]:
         
@@ -155,17 +161,17 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         if not isinstance(delta,list) or 'mesh' in i['var']:
             delta=[delta]
         for var in l:  
-            starting_inputs[var] =  starting_inputs[var][0]
+            starting_inputs[var] =  starting_inputs[var][i['steps']-1]
             if var not in space.keys():
                 space[var] = []
             else:
                 starting_inputs[var]=space[var][-1]
             if 'delta' in i.keys() and not 'commensurate' in i.keys():
                 #for r in range(1,i['steps']*i['max_iterations']+1):
-                for r in range(1,len(existing_inputs[var])+1):
-                    if r <= i['steps']*i['iter']: 
-                        continue
-                    if isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
+                for r in range(-i['steps']+1,len(existing_inputs[var])-i['steps']+1):
+                    if r <= 0: 
+                        new_val = existing_inputs[var][i['steps']+r-1]
+                    elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
                         new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)*(1+hint_)
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
@@ -208,8 +214,15 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
 
 
         first = 1
+
     existing_inputs.update(space)
-    return existing_inputs
+    param_space = copy.deepcopy(existing_inputs)
+    for v in l:
+        for r in range(calc_dict['steps']*calc_dict['iter']):
+            param_space[v].pop(0)
+    
+
+    return param_space, existing_inputs
 
 
 def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints):
@@ -312,12 +325,13 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     for i in range(oversteps):
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
     if oversteps:
-        for i in range(calc_manager['steps']*calc_manager['iter']-(oversteps+1)):
+        for i in range(calc_manager['iter']*calc_manager['steps']-(oversteps)):
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'failed']=True
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i,'useful']=False
+            gs = workflow_dict['global_step'][workflow_dict['uuid']==i].index
+            workflow_dict['workflow_story'].at[gs,'failed']=True
+            workflow_dict['workflow_story'].at[gs,'useful']=False
     if len(none_encountered) > 0:
         for i in range(calc_manager['steps']*calc_manager['iter']-len(none_encountered)):
             for j in calc_manager['var']:
@@ -380,6 +394,7 @@ class Convergence_evaluator():
         if not hasattr(self,'power_law'): self.power_law = 1 
         
     def dummy_convergence(self): #solo window, thr e oversteps
+
         self.delta = self.conv_array-self.conv_array[-1]
         converged = self.delta[-self.window:][np.where(abs(self.delta[-self.window:])<=self.thr)]
         if len(converged)<self.window:
@@ -474,7 +489,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
         converged = True
         oversteps = 0
         oversteps_1 = 0
-        none_encountered = []
+        none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
 
         real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,var_ = calc_dict['var'])
          
@@ -482,7 +497,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
         conv_array, delta, converged, is_converged, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
 
-        if 'smart' in workflow_dict['convergence_algorithm']:
+        if workflow_dict['convergence_algorithm'] != 'dummy':
             hint = y.convergence_prediction()
         else:
             hint = 0
