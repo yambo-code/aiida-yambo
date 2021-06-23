@@ -466,7 +466,7 @@ def check_identical_calculation(YamboWorkflow_inputs,
 
     return already_done, parent_nscf 
 
-def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,full=True):
+def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,full=True,additional=[]):
     l = 0 
     already_done = False
     try:
@@ -477,15 +477,34 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             for p in what:
                 if 'CPU' in p or 'ROLEs' in p: 
                     l += 1
+                elif 'QPkrange' in p:
+                    if hasattr(node.inputs,'additional_parsing'):
+                        if additional==node.inputs.additional_parsing.get_list():
+                            already_done = node.pk
+                            l += 1
+                        else:
+                            already_done = False
+                            break 
+                    else: 
+                        if additional==[]: 
+                            already_done = node.pk
+                            l += 1
+                        else:
+                            already_done = False
+                            break 
+
                 elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y:
                     already_done = node.pk
                 else:
                     already_done = False
                     break
-            if already_done and full and abs(len(params_to_calc)-len(old_params))==l:
+            over = abs(len(params_to_calc)-len(old_params))
+            if already_done and full and (over == l or over == 0):
                 already_done = node.pk
-            elif already_done and full and abs(len(params_to_calc)-len(old_params))!=l:
+
+            elif already_done and full and (over != l or over != 0):
                 already_done = False
+
                 
             if up_to_p2y and same_k:
                     already_done = node.pk
@@ -533,9 +552,18 @@ def search_in_group(YamboWorkflow_inputs,
     try:
         k_mesh_to_calc = YamboWorkflow_inputs.nscf.kpoints.get_kpoints_mesh()
         params_to_calc = YamboWorkflow_inputs.yres.yambo.parameters.get_dict()['variables']
+        if hasattr(YamboWorkflow_inputs,'additional_parsing'):
+            additional = YamboWorkflow_inputs.additional_parsing.get_list()
+        else: 
+            additional = []
     except:
         k_mesh_to_calc = YamboWorkflow_inputs.nscf__kpoints.get_kpoints_mesh()
-        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()['variables']        
+        params_to_calc = YamboWorkflow_inputs.yres__yambo__parameters.get_dict()['variables']    
+        if hasattr(YamboWorkflow_inputs,'additional_parsing'):
+            additional = YamboWorkflow_inputs.additional_parsing.get_list()
+        else: 
+            additional = []
+
     for k in ['kpoint_mesh','k_mesh_density']:
         try:
             what.remove(k)
@@ -559,7 +587,7 @@ def search_in_group(YamboWorkflow_inputs,
                 if already_done: break
 
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full)        
+            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full,additional = additional)        
         if already_done: break
             
     for old in YamboWorkflow_group.nodes:
@@ -573,5 +601,5 @@ def search_in_group(YamboWorkflow_inputs,
         
         if parent_nscf: break
 
-    return already_done, parent_nscf, parent_scf     
+    return already_done, parent_nscf, parent_scf   
     
