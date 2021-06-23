@@ -491,17 +491,29 @@ def analysis_and_decision(calc_dict, workflow_dict):
         oversteps_1 = 0
         none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
 
-        real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,var_ = calc_dict['var'])
-         
-        y = Convergence_evaluator(conv_array=homo['gap_GG'][-steps:], thr=tol, window=window, parameters=[var], p=[lines[var][-steps:],])
-        conv_array, delta, converged, is_converged, oversteps, converged_result = y.dummy_convergence() #just convergence as before
+        real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,keys=workflow_dict['what'],var_ = calc_dict['var'])
+        
+        
+        is_converged = True
+        hints = []
+        oversteps_ = []
+        for k in workflow_dict['what']:
+            y = Convergence_evaluator(conv_array=homo[k][-steps:], thr=tol, window=window, parameters=[var], p=[lines[var][-steps:],])
+            conv_array, delta, converged, is_converged_, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
+            if not is_converged_:
+                is_converged = False
 
-        if workflow_dict['convergence_algorithm'] != 'dummy':
-            hint = y.convergence_prediction()
-        else:
-            hint = 0
+            if workflow_dict['convergence_algorithm'] != 'dummy':
+                hint = y.convergence_prediction()
+            else:
+                hint = 0
 
+            hints.append(hint)
+            oversteps_.append(oversteps)
+
+        oversteps = min(oversteps_)
+        hint = max(hints)
 
         return is_converged, oversteps, none_encountered, homo, hint
 
