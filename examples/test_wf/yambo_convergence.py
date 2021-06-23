@@ -183,7 +183,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([4,4,2])
+    kpoints.set_kpoints_mesh([6,6,2])
 
     ###### setting the scf parameters ######
 
@@ -195,7 +195,7 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 60.,
+            'ecutwfc': 90.,
             'force_symmorphic': True,
             'nbnd': 20
         },
@@ -218,9 +218,9 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 60.,
+            'ecutwfc': 90.,
             'force_symmorphic': True,
-            'nbnd': 300
+            'nbnd': 800
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
@@ -237,14 +237,14 @@ def main(options):
 
     params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
                  'variables':{
-                'GTermEn': [250.0, 'mHa'],
-                'NGsBlkXp': [1.0, 'Ry'],
-                'PPAPntXp': [30.0, 'eV'],
-                'CUTRadius': [13.228083, ''],
-                'CUTGeo': 'sphere xyz',
+                #'GTermEn': [250.0, 'mHa'],
+                'NGsBlkXp': [2.0, 'Ry'],
+                #'PPAPntXp': [30.0, 'eV'],
+                #'CUTRadius': [13.228083, ''],
+                #'CUTGeo': 'sphere xyz',
                 'Chimod': 'hartree',
                 'DysSolver': 'n',
-                'GTermKind': 'BG',
+                #'GTermKind': 'BG',
                 'BndsRnXp': [[1, 20], ''],
                 'GbndRnge': [[1, 20], ''],
                 'QPkrange': [[[1, 1, 4, 4,]], ''],
@@ -281,7 +281,8 @@ def main(options):
     builder.ywfl.scf.pw.metadata.options.mpirun_extra_params = []
     #builder.precalc_inputs=params_p
     #builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
-    #builder.ywfl.nscf.pw.parameters = parameter_nscf
+    builder.ywfl.nscf_parameters = parameter_nscf
+    builder.ywfl.scf_parameters = parameter_scf
     builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 
     builder.ywfl.pw_code = load_code(options['pwcode_id'])
@@ -328,38 +329,40 @@ def main(options):
     builder.ywfl.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
 
+    builder.ywfl.additional_parsing = List(list=['gap_KK','gap_MM'])
+
     builder.workflow_settings = Dict(dict={'type':'1D_convergence',
                                            'what':['gap_GG'],
-                                           'bands_nscf_update':'all-at-once',
+                                           'bands_nscf_update':'full-step',
+                                           'convergence_algorithm':'smart', #dummy,smart,aggressive
                                             })
 
 
-    var_to_conv =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
-                                 'conv_thr': 0.2,'conv_window': 3},
+    var_to_conv_dc =  [{'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
+                                 'conv_thr': 0.1,'conv_window': 3},
+                       {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 6, \
+                                'conv_thr': 0.1,},
+                       {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 8, \
+                                 'conv_thr': 0.1,'conv_window': 3},
                        {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
-                                'conv_thr': 0.2,},
-                       {'var':['BndsRnXp','GbndRnge'],'delta': [[0,10],[0,10]], 'steps': 3, 'max_iterations': 3, \
-                                 'conv_thr': 0.2,'conv_window': 3},
-                       {'var':'NGsBlkXp','delta': 2, 'steps': 3, 'max_iterations': 3, \
-                                'conv_thr': 0.2,},                   
-                       {'var':'kpoint_mesh','delta': [1,1,1], 'max_iterations': 3, \
+                                'conv_thr': 0.1,},  ]                
+    '''                   {'var':'kpoint_mesh','delta': [6,6,2], 'max_iterations': 3, \
                                  'conv_thr': 0.5,},]
+    '''
+    
 
 
-    for i in range(len(var_to_conv)):
-        print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
+    for i in range(len(var_to_conv_dc)):
+        print('{}-th variable will be {}'.format(i+1,var_to_conv_dc[i]['var']))
 
-    builder.parameters_space = List(list = var_to_conv)
+    builder.parameters_space = List(list = var_to_conv_dc)
 
 
     #builder.parallelism_instructions = Dict(dict={'automatic' : True})
-    
-    #here parallelism instructions: couples of dictionaries for each level-> 'low', 'medium' ... 
-    # names low, medium are arbitrary
 
     dict_para_low = {}
-    dict_para_low['X_CPU'] = '1 1 1 1 1'
-    dict_para_low['X_ROLEs'] = 'q k g c v'
+    dict_para_low['X_and_IO_CPU'] = '1 1 1 1 1'
+    dict_para_low['X_and_IO_ROLEs'] = 'q k g c v'
     dict_para_low['DIP_CPU'] = '1 1 1'
     dict_para_low['DIP_ROLEs'] = 'k c v'
     dict_para_low['SE_CPU'] = '1 1 1 1'
@@ -373,9 +376,9 @@ def main(options):
 
 
     dict_para_normal = {}
-    dict_para_normal['X_CPU'] = '1 2 1 8 1'
-    dict_para_normal['X_ROLEs'] = 'q k g c v'
-    dict_para_normal['DIP_CPU'] = '2 8 1'
+    dict_para_normal['X_and_IO_CPU'] = '1 1 1 8 2'
+    dict_para_normal['X_and_IO_ROLEs'] = 'q k g c v'
+    dict_para_normal['DIP_CPU'] = '1 8 2'
     dict_para_normal['DIP_ROLEs'] = 'k c v'
     dict_para_normal['SE_CPU'] = '1 1 2 8'
     dict_para_normal['SE_ROLEs'] = 'q g qp b'
@@ -383,29 +386,25 @@ def main(options):
     dict_res_normal = {
             "num_machines": 1,
             "num_mpiprocs_per_machine":16,
-            "num_cores_per_mpiproc":8,
+            "num_cores_per_mpiproc":1,
         }
 
 
-    builder_parallelism_instructions = Dict(dict={'manual' : {'low':{'BndsRnXp':[1,500], #range of values for this parameter
-                                                                     'NGsBlkXp':[1,15],
-                                                                     'kpoints':[1,300],
-                                                                     'parallelism':dict_para_low,
-                                                                     'resources':dict_res_low,
-                                                                     },
-                                                              'medium':{'BndsRnXp':[501,1200],
-                                                                     'NGsBlkXp':[16,25],
-                                                                     'kpoints':[301,500],
+    builder_parallelism_instructions = Dict(dict={'manual' : {'low':{'BndsRnXp':[1,2000],
+                                                                     'NGsBlkXp':[1,500],
                                                                      'parallelism':dict_para_normal,
                                                                      'resources':dict_res_normal,
                                                                      },
                                                               }})
 
+
+    builder.parallelism_instructions = builder_parallelism_instructions
+    
     return builder
     
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    running.label = 'hBN test on doncamillo'
+    running.label = 'hBN test'
     print("Submitted YamboConvergence for bulk hBN; with pk=< {} >".format(running.pk))
