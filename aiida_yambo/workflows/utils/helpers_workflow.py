@@ -66,7 +66,6 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
     if not hint:
         hint = 1
     for i in workflow_dict:
-        #print(i)
         l = i['var']
         if 'delta' in i.keys(): delta=i['delta']*hint
         if 'commensurate' in i.keys(): delta=i['commensurate']
@@ -319,7 +318,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
     return final_result
 
 @conversion_wrapper
-def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}):
+def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
     
     final_result = {}
     for i in range(oversteps):
@@ -362,7 +361,7 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     return final_result
 
 ################################################################################
-############################## convergence_evaluator ######################################
+############################## NEW convergence_evaluator ######################################
 
 def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[]):
     workflow_story = workflow_dict
@@ -394,7 +393,6 @@ class Convergence_evaluator():
         if not hasattr(self,'power_law'): self.power_law = 1 
         
     def dummy_convergence(self): #solo window, thr e oversteps
-
         self.delta = self.conv_array-self.conv_array[-1]
         converged = self.delta[-self.window:][np.where(abs(self.delta[-self.window:])<=self.thr)]
         if len(converged)<self.window:
@@ -517,10 +515,9 @@ def analysis_and_decision(calc_dict, workflow_dict):
 
         return is_converged, oversteps, none_encountered, homo, hint
 
-    if workflow_dict['type'] == '2D_space':
-        '''documentation...'''
+    return is_converged, oversteps, none_encountered, hint    
+    
 
-        return True, 0, 0, quantities
 
 
 ###############################  parallelism  ####################################
