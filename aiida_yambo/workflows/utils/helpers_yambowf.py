@@ -119,7 +119,7 @@ def quantumespresso_input_validator(workchain_inputs,):
     
     return scf_params, nscf_params, redo_nscf, gwbands, messages 
 
-def add_corrections(workchain_inputs, additional_parsing_List):
+def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     
     parsing_List = additional_parsing_List
     qp_list = []
@@ -134,7 +134,10 @@ def add_corrections(workchain_inputs, additional_parsing_List):
     cond = mapping['conduction'] 
     homo_k = mapping['homo_k']
     lumo_k = mapping['lumo_k']
-    
+    number_of_kpoints = mapping['number_of_kpoints']
+    sub_val = 4 
+    sup_cond = 4 #so, for now 3+3 bands
+
     new_params = workchain_inputs.yambo.parameters.get_dict()
     new_params['variables']['QPkrange'] = new_params['variables'].pop('QPkrange', [[],''])
 
@@ -152,6 +155,9 @@ def add_corrections(workchain_inputs, additional_parsing_List):
     
         elif name == 'lumo' in parsing_List:
             if not [lumo_k,lumo_k, cond,cond] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([lumo_k,lumo_k, cond,cond])
+        
+        elif name == 'band_structure' in parsing_List:
+            new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
     
     return mapping, Dict(dict=new_params)
 
@@ -163,9 +169,9 @@ def parse_qp_level(calc, level_map):
 
     level_gw = (level_dft + level_corr)*27.2114
 
-    return level_gw
+    return level_gw, level_dft
 
-def parse_qp_gap(calc, gap_map):
+def parse_qp_gap(calc, gap_map): #post proc 
 
     _vb=find_table_ind(gap_map[0], gap_map[2], calc.outputs.array_ndb)
     _cb=find_table_ind(gap_map[1][0], gap_map[1][2], calc.outputs.array_ndb)
@@ -177,9 +183,9 @@ def parse_qp_gap(calc, gap_map):
     _vb_level_gw = (_vb_level_dft + _vb_level_corr)*27.2114
     _cb_level_gw = (_cb_level_dft + _cb_level_corr)*27.2114
 
-    return _cb_level_gw-_vb_level_gw
+    return _cb_level_gw-_vb_level_gw, _cb_level_dft-_vb_level_dft
 
-def additional_parsed(calc, additional_parsing_List, mapping):
+def additional_parsed(calc, additional_parsing_List, mapping): #post proc 
     
     parsed_dict = {}
     parsing_List = additional_parsing_List
@@ -198,8 +204,8 @@ def additional_parsed(calc, additional_parsing_List, mapping):
 
             if key=='gap_' and key in mapping.keys():
         
-                homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
-                lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
+                homo_gw, homo_dft = parse_qp_level(calc, [homo_k, homo_k, val, val])
+                lumo_gw, lumo_dft = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
                 print('homo: ', homo_gw)
                 print('lumo: ', lumo_gw)
@@ -209,22 +215,23 @@ def additional_parsed(calc, additional_parsing_List, mapping):
                 parsed_dict['homo'] =  homo_gw
                 parsed_dict['lumo'] =  lumo_gw
                 continue
+            
             elif key=='homo':
 
-                homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
+                homo_gw, homo_dft = parse_qp_level(calc, [homo_k, homo_k, val, val])
 
                 parsed_dict['homo'] =  homo_gw
 
             elif key=='lumo':
 
-                lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
+                lumo_gw, lumo_dft = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
                 parsed_dict['lumo'] =  lumo_gw
             
             elif 'gap_' in key and key in mapping.keys():
 
-                homo_gw = parse_qp_level(calc, mapping[key][0])
-                lumo_gw = parse_qp_level(calc, mapping[key][1])
+                homo_gw, homo_dft = parse_qp_level(calc, mapping[key][0])
+                lumo_gw, lumo_dft = parse_qp_level(calc, mapping[key][1])
 
                 print('homo: ', homo_gw)
                 print('lumo: ', lumo_gw)
@@ -238,15 +245,28 @@ def additional_parsed(calc, additional_parsing_List, mapping):
             elif key in mapping.keys():
                 
                     if len(mapping[key]) == 2:
-                        homo_gw = parse_qp_level(calc, mapping[key][0])
-                        lumo_gw = parse_qp_level(calc, mapping[key][1])
+                        homo_gw, homo_dft = parse_qp_level(calc, mapping[key][0])
+                        lumo_gw, lumo_dft = parse_qp_level(calc, mapping[key][1])
                         parsed_dict['homo_'+key+'_v'] =  homo_gw
                         parsed_dict['lumo_'+key+'_c'] =  lumo_gw
                     else:
-                        level_gw = parse_qp_level(calc, mapping[key][0])
+                        level_gw, level_dft = parse_qp_level(calc, mapping[key][0])
                         parsed_dict[key] =  level_gw
             
         except:
             parsed_dict[key] =  False
 
     return parsed_dict
+
+
+def organize_output(output, node=None): #prepare to be stored
+    
+    if isinstance(output,dict):
+        if 'band_structure' in output.keys() and node:
+            pass
+        else:
+            return Dict(dict=output)
+    
+    elif isinstance(output,list):
+        return List(list=output)
+

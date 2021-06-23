@@ -6,7 +6,7 @@ import itertools
 from aiida.orm import RemoteData,StructureData,KpointsData,UpfData
 from aiida.orm import Dict,Str,Code
 
-from aiida.engine import WorkChain, while_, append_
+from aiida.engine import WorkChain, while_, append_, if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
@@ -71,7 +71,10 @@ class YamboWorkflow(WorkChain):
                     while_(cls.can_continue)(
                            cls.perform_next,
                     ),
-                     cls.report_wf,)
+                    if_(cls.post_processing_needed)(
+                        cls.ypp_action,
+                    ),
+                    cls.report_wf,)
 
 ##################################################################################
 
@@ -227,6 +230,12 @@ class YamboWorkflow(WorkChain):
             self.ctx.calc_to_do = 'the workflow is finished'
 
         return ToContext(calc = future)
+    
+    def post_processing_needed(self):
+        return False
+
+    def ypp_action(self):
+        pass
 
     def report_wf(self):
 
