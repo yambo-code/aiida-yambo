@@ -203,16 +203,19 @@ class YamboConvergence(WorkChain):
 
 
     def data_analysis(self):
-
+        
         self.report('Data analysis, we will try to parse some result and decide what next')
 
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
-        #build_story_global(self.ctx.calc_manager, quantities, workflow_dict=self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
 
-        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, hint = \
-                analysis_and_decision(self.ctx.calc_manager, workflow_dict=self.ctx.workflow_manager)
+
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, hint = \
+                analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
+        
+        self.report(self.ctx.workflow_manager['parameter_space'])
+        self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
 
         if self.ctx.calc_manager['success']:
 
@@ -238,25 +241,20 @@ class YamboConvergence(WorkChain):
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
+                        
+            if hint: 
+                self.report('hint: {}'.format(hint))
+                self.ctx.params_space, self.ctx.workflow_manager['parameter_space'] = update_space(existing_inputs = self.ctx.workflow_manager['parameter_space'],
+                                                                        calc_dict = self.ctx.calc_manager,
+                                                                        hint=hint,
+                                                                        convergence_algorithm = self.ctx.workflow_manager['convergence_algorithm'])
+                #self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
 
-            if hint>1:
-                self.report('Updating parameters to accelerate convergence.')
+            self.report(self.ctx.workflow_manager['parameter_space'])
 
-                _inputs = collect_inputs(self.ctx.calc_inputs.yres.yambo.parameters.get_dict(), 
-                                                                  self.ctx.calc_inputs.nscf.kpoints, [self.ctx.calc_manager])
-                
-                for what in self.ctx.calc_manager['var']:
-                    space = create_space(_inputs, [self.ctx.calc_manager], 
-                                                                        self.ctx.workflow_manager['type'], 
-                                                                        hint=hint)
-                    
-                    self.report('old space',self.ctx.workflow_manager['parameter_space'][what])
-                    self.ctx.workflow_manager['parameter_space'][what] = space[what]
-                    self.report('old space',self.ctx.workflow_manager['parameter_space'][what],space[what])
-
-
+        
         self.ctx.workflow_manager['first_calc'] = False
-
+        
     def report_wf(self):
 
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
@@ -383,7 +381,7 @@ class YamboConvergence(WorkChain):
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'
             self.ctx.pre_inputs.yres.yambo.parameters = self.inputs.precalc_inputs
-            self.ctx.pre_inputs.additional_parsing = List(list=self.ctx.workflow_settings['what'])
+            self.ctx.pre_inputs.additional_parsing = self.ctx.calc_inputs.additional_parsing 
         else:
             self.ctx.calculation_type='p2y'
             self.ctx.pre_inputs.yres.yambo.parameters = update_dict(self.ctx.pre_inputs.yres.yambo.parameters, 
