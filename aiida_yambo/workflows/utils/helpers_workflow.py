@@ -252,7 +252,6 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['convergence_algorithm'] = copy_wfl_sett.pop('convergence_algorithm','dummy')
     workflow_dict['type'] = copy_wfl_sett.pop('type','1D_convergence')
     workflow_dict['what'] = copy_wfl_sett.pop('what','gap_')
-    workflow_dict['convergence_algorithm'] = copy_wfl_sett.pop('convergence_algorithm', 'dummy')
 
     workflow_dict['global_step'] = 0
     workflow_dict['fully_success'] = False
