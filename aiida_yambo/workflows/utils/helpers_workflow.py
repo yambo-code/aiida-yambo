@@ -293,7 +293,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
             else:
                 var_names = calc_manager['var']
 
-            if if -500 in quantities.values[-3]:
+            if -500 in quantities.values[-3]:
                 workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [False, True]
             else:
