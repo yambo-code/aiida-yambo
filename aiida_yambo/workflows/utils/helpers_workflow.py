@@ -518,7 +518,10 @@ def analysis_and_decision(calc_dict, workflow_dict):
             oversteps_.append(oversteps)
 
         oversteps = min(oversteps_)
-        hint = max(hints)
+        if max(hints) > 3:
+            hint = min(hints)
+        else:
+            hint = max(hints)
 
         return is_converged, oversteps, none_encountered, homo, hint
 
