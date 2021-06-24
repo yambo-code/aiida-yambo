@@ -296,7 +296,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
             workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
             
-            for calc in len(workflow_story_list):
+            for calc in range(len(workflow_story_list)):
                 if workflow_story_list[calc][-4] == -500:
                     workflow_story_list[calc][-1] = True
                     workflow_story_list[calc][-2] = False
