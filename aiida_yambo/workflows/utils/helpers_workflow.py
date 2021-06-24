@@ -160,6 +160,8 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         if not isinstance(delta,list) or 'mesh' in i['var']:
             delta=[delta]
         for var in l:  
+            if 'mesh' in var:
+                hint_=0
             starting_inputs[var] =  starting_inputs[var][i['steps']-1]
             if var not in space.keys():
                 space[var] = []
