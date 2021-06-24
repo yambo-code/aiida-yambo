@@ -479,12 +479,15 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                     l += 1
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
-                        if additional==node.inputs.additional_parsing.get_list():
-                            already_done = node.pk
-                            l += 1
-                        else:
-                            already_done = False
-                            break 
+                        for i in additional:
+                            if i in node.inputs.additional_parsing.get_list():
+                                already_done = node.pk
+                                l += 1
+
+                            else:
+                                print(i,node.inputs.additional_parsing.get_list())
+                                already_done = False
+                                break 
                     else: 
                         if additional==[]: 
                             already_done = node.pk
