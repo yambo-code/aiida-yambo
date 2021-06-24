@@ -201,7 +201,7 @@ class YppParser(Parser):
             elif 'ndb.HF_and_locXC' == result.filename:
                 ndbhf = copy.deepcopy(result.data)
 
-            elif 'gw0___' in input_params['arguments']:
+            elif 'electrons' in input_params['arguments'] and 'interpolated' in result.filename:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
