@@ -136,7 +136,7 @@ class YamboCalculation(CalcJob):
 
     def prepare_for_submission(self, tempfolder):
 
-        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC',}
+        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC','p2y':'ns.db1'}
 
         local_copy_list = []
         remote_copy_list = []
@@ -297,8 +297,7 @@ class YamboCalculation(CalcJob):
         extra_retrieved = []
 
         if initialise:
-        #    extra_retrieved.append('SAVE/'+_dbs_accepted['p2y'])
-            pass
+            extra_retrieved.append('SAVE/'+_dbs_accepted['p2y'])
         else:
             for dbs in _dbs_accepted.keys():
                 if dbs in params_dict['arguments']:
@@ -354,7 +353,7 @@ class YamboCalculation(CalcJob):
         #logic of the execution
         #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]   
         try:
-            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns.db1_path','')
+            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns_db1_path', None)
         except:
             parent_save_path = None
 
@@ -365,10 +364,11 @@ class YamboCalculation(CalcJob):
                 calcinfo.codes_info = [c2, c3]
         elif initialise:
             calcinfo.codes_info = [c1]
-            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+            
         else:
             calcinfo.codes_info = [c1, c2, c3]
-            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+        
+        if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 

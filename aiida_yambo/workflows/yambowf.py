@@ -3,12 +3,12 @@ from __future__ import absolute_import
 import sys
 import itertools
 
-from aiida.orm import RemoteData,StructureData,KpointsData,UpfData
-from aiida.orm import Dict,Str,Code
+from aiida.orm import RemoteData,StructureData,KpointsData,UpfData,BandsData
+from aiida.orm import Dict,Str,Code,Int
 
-from aiida.engine import WorkChain, while_, append_
+from aiida.engine import WorkChain, while_, append_, if_
 from aiida.engine import ToContext
-from aiida.engine import submit
+from aiida.engine import submit, run
 
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
@@ -71,7 +71,10 @@ class YamboWorkflow(WorkChain):
                     while_(cls.can_continue)(
                            cls.perform_next,
                     ),
-                     cls.report_wf,)
+                    if_(cls.post_processing_needed)(
+                        cls.ypp_action,
+                    ),
+                    cls.report_wf,)
 
 ##################################################################################
 
@@ -79,6 +82,10 @@ class YamboWorkflow(WorkChain):
         
         spec.output('output_ywfl_parameters', valid_type = Dict, required = False)
         spec.output('nscf_mapping', valid_type = Dict, required = False)
+        
+        spec.output('scissor', valid_type = List, required = False)
+        spec.output('band_structure_GW', valid_type = BandsData, required = False)
+        spec.output('band_structure_DFT', valid_type = BandsData, required = False)
 
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
                              message='The workchain failed with an unrecoverable error.')
@@ -227,6 +234,12 @@ class YamboWorkflow(WorkChain):
             self.ctx.calc_to_do = 'the workflow is finished'
 
         return ToContext(calc = future)
+    
+    def post_processing_needed(self):
+        return False
+
+    def ypp_action(self):
+        pass
 
     def report_wf(self):
 
@@ -234,6 +247,7 @@ class YamboWorkflow(WorkChain):
 
         calc = self.ctx.calc
         if calc.is_finished_ok:
+
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('parsing additional quantities')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
@@ -241,9 +255,14 @@ class YamboWorkflow(WorkChain):
                 self.out('nscf_mapping', store_Dict(mapping))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
+                if 'band_structure' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.
+                    b = QP_bands_interface(node=Int(self.ctx.calc.called[0].pk), mapping = Dict(dict = mapping))
+                    self.report('electronic band structure computed by interpolation')
+                    for k,v in b.items():
+                        self.out(k, v)
+
             self.out_many(self.exposed_outputs(calc,YamboRestart))
             self.report("workflow completed successfully")
-
         else:
             self.report("workflow NOT completed successfully")
             return self.exit_codes.ERROR_WORKCHAIN_FAILED

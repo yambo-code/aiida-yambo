@@ -8,8 +8,13 @@ import pandas as pd
 import copy
 import cmath
 
+from yambopy.dbs.qpdb import *
+from yambopy.dbs.savedb import * 
+from qepy.lattice import Path
+from aiida.tools.data.array.kpoints import get_kpoints_path, get_explicit_kpoints_path
+
 try:
-    from aiida.orm import Dict, Str, load_node, KpointsData
+    from aiida.orm import Dict, Str, load_node, KpointsData, Bool
     from aiida.plugins import CalculationFactory, DataFactory
     from aiida_yambo.utils.common_helpers import *
     from aiida_yambo.utils.parallelism_finder import *
@@ -17,6 +22,87 @@ except:
     pass
 
 from aiida_yambo.utils.defaults.create_defaults import *
+
+def QP_bands(node,mapping=None,only_scissor=False, plot=False):
+    
+    x = node
+
+    save_dir = x.outputs.output_parameters.get_dict()['ns_db1_path']
+    qp_dir = x.outputs.retrieved._repository._repo_folder.abspath+'/path'
+    
+    lat  = YamboSaveDB.from_db_file(folder=save_dir,filename='ns.db1')  
+    ydb  = YamboQPDB.from_db(filename='ndb.QP',folder=qp_dir)
+        
+    if mapping: 
+        valence = mapping.get_dict()['valence']
+        kpoints=  mapping.get_dict()['number_of_kpoints']
+    else:
+        valence = x.outputs.nscf_mapping.get_dict()['valence']
+        kpoints= x.outputs.nscf_mapping.get_dict()['number_of_kpoints']
+
+    scissor = ydb.get_scissor(valence=valence)
+    
+    if only_scissor: return scissor,0,0,0
+
+    if plot:
+         ydb.plot_scissor(valence=valence)
+    
+    pw = find_pw_parent(x,)
+    k_params = get_kpoints_path(pw.inputs.structure)['parameters'].get_dict()
+    p = []
+    for line in k_params['path']:
+        for point in line:
+            if point == 'GAMMA':
+                p.append([k_params['point_coords'][point],'$\Gamma$'])
+            else:
+                p.append([k_params['point_coords'][point],point])                
+    
+    path_full = Path(p, [int(kpoints*2)]*(len(p)-1) )
+    
+    ks_bs_0, qp_bs_0 = ydb.get_bs_path(lat, path_full)
+    ks_bs_1, qp_bs_1 = ydb.interpolate(lat, path_full)
+    
+    lab = [(0,'GAMMA')]
+
+    space = qp_bs_1.kpath.as_dict()['intervals'][0]
+    ind = space
+    for i in qp_bs_1.kpath.as_dict()['klabels'][1:]:
+        if i == lab[-1][1]:
+            lab.append((ind-space,i))
+        else:
+            lab.append((ind,i))
+        ind += space
+    
+    return scissor, ks_bs_1, qp_bs_1, lab
+
+@calcfunction
+def QP_bands_interface(node, mapping, only_scissor=Bool(False)):
+    
+    x = load_node(node.value)
+    
+    scissor, ks_bs_1, qp_bs_1, lab = QP_bands(x,mapping,only_scissor= only_scissor)
+
+    if only_scissor: return {'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
+        
+    BandsData = DataFactory('array.bands')
+    gw_bands_data = BandsData()
+    
+    gw_bands_data.set_kpoints(qp_bs_1.kpoints)
+    gw_bands_data.set_bands(qp_bs_1.bands, units='eV')
+    gw_bands_data.labels = lab
+    
+    dft_bands_data = BandsData()
+    
+    dft_bands_data.set_kpoints(ks_bs_1.kpoints)
+    dft_bands_data.set_bands(ks_bs_1.bands, units='eV')
+    dft_bands_data.labels = lab
+
+    #bands_data.show_mpl() # to visualize the bands
+    print([scissor[0],scissor[1],scissor[2]])
+    return {'band_structure_DFT':dft_bands_data, 
+            'band_structure_GW':gw_bands_data, 
+            'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
+
 
 def quantumespresso_input_validator(workchain_inputs,):
     
@@ -119,7 +205,7 @@ def quantumespresso_input_validator(workchain_inputs,):
     
     return scf_params, nscf_params, redo_nscf, gwbands, messages 
 
-def add_corrections(workchain_inputs, additional_parsing_List):
+def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     
     parsing_List = additional_parsing_List
     qp_list = []
@@ -134,7 +220,10 @@ def add_corrections(workchain_inputs, additional_parsing_List):
     cond = mapping['conduction'] 
     homo_k = mapping['homo_k']
     lumo_k = mapping['lumo_k']
-    
+    number_of_kpoints = mapping['number_of_kpoints']
+    sub_val = 4 
+    sup_cond = 4 #so, for now 3+3 bands
+
     new_params = workchain_inputs.yambo.parameters.get_dict()
     new_params['variables']['QPkrange'] = new_params['variables'].pop('QPkrange', [[],''])
 
@@ -152,6 +241,9 @@ def add_corrections(workchain_inputs, additional_parsing_List):
     
         elif name == 'lumo' in parsing_List:
             if not [lumo_k,lumo_k, cond,cond] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([lumo_k,lumo_k, cond,cond])
+        
+        elif name == 'band_structure' in parsing_List:
+            new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
     
     return mapping, Dict(dict=new_params)
 
@@ -163,9 +255,9 @@ def parse_qp_level(calc, level_map):
 
     level_gw = (level_dft + level_corr)*27.2114
 
-    return level_gw
+    return level_gw, level_dft
 
-def parse_qp_gap(calc, gap_map):
+def parse_qp_gap(calc, gap_map): #post proc 
 
     _vb=find_table_ind(gap_map[0], gap_map[2], calc.outputs.array_ndb)
     _cb=find_table_ind(gap_map[1][0], gap_map[1][2], calc.outputs.array_ndb)
@@ -177,9 +269,9 @@ def parse_qp_gap(calc, gap_map):
     _vb_level_gw = (_vb_level_dft + _vb_level_corr)*27.2114
     _cb_level_gw = (_cb_level_dft + _cb_level_corr)*27.2114
 
-    return _cb_level_gw-_vb_level_gw
+    return _cb_level_gw-_vb_level_gw, _cb_level_dft-_vb_level_dft
 
-def additional_parsed(calc, additional_parsing_List, mapping):
+def additional_parsed(calc, additional_parsing_List, mapping): #post proc 
     
     parsed_dict = {}
     parsing_List = additional_parsing_List
@@ -198,8 +290,8 @@ def additional_parsed(calc, additional_parsing_List, mapping):
 
             if key=='gap_' and key in mapping.keys():
         
-                homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
-                lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
+                homo_gw, homo_dft = parse_qp_level(calc, [homo_k, homo_k, val, val])
+                lumo_gw, lumo_dft = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
                 print('homo: ', homo_gw)
                 print('lumo: ', lumo_gw)
@@ -209,22 +301,23 @@ def additional_parsed(calc, additional_parsing_List, mapping):
                 parsed_dict['homo'] =  homo_gw
                 parsed_dict['lumo'] =  lumo_gw
                 continue
+            
             elif key=='homo':
 
-                homo_gw = parse_qp_level(calc, [homo_k, homo_k, val, val])
+                homo_gw, homo_dft = parse_qp_level(calc, [homo_k, homo_k, val, val])
 
                 parsed_dict['homo'] =  homo_gw
 
             elif key=='lumo':
 
-                lumo_gw = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
+                lumo_gw, lumo_dft = parse_qp_level(calc, [lumo_k, lumo_k, cond, cond])
 
                 parsed_dict['lumo'] =  lumo_gw
             
             elif 'gap_' in key and key in mapping.keys():
 
-                homo_gw = parse_qp_level(calc, mapping[key][0])
-                lumo_gw = parse_qp_level(calc, mapping[key][1])
+                homo_gw, homo_dft = parse_qp_level(calc, mapping[key][0])
+                lumo_gw, lumo_dft = parse_qp_level(calc, mapping[key][1])
 
                 print('homo: ', homo_gw)
                 print('lumo: ', lumo_gw)
@@ -238,15 +331,28 @@ def additional_parsed(calc, additional_parsing_List, mapping):
             elif key in mapping.keys():
                 
                     if len(mapping[key]) == 2:
-                        homo_gw = parse_qp_level(calc, mapping[key][0])
-                        lumo_gw = parse_qp_level(calc, mapping[key][1])
+                        homo_gw, homo_dft = parse_qp_level(calc, mapping[key][0])
+                        lumo_gw, lumo_dft = parse_qp_level(calc, mapping[key][1])
                         parsed_dict['homo_'+key+'_v'] =  homo_gw
                         parsed_dict['lumo_'+key+'_c'] =  lumo_gw
                     else:
-                        level_gw = parse_qp_level(calc, mapping[key][0])
+                        level_gw, level_dft = parse_qp_level(calc, mapping[key][0])
                         parsed_dict[key] =  level_gw
             
         except:
             parsed_dict[key] =  False
 
     return parsed_dict
+
+
+def organize_output(output, node=None): #prepare to be stored
+    
+    if isinstance(output,dict):
+        if 'band_structure' in output.keys() and node:
+            pass
+        else:
+            return Dict(dict=output)
+    
+    elif isinstance(output,list):
+        return List(list=output)
+
