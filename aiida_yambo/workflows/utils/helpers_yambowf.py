@@ -8,8 +8,13 @@ import pandas as pd
 import copy
 import cmath
 
+from yambopy.dbs.qpdb import *
+from yambopy.dbs.savedb import * 
+from qepy.lattice import Path
+from aiida.tools.data.array.kpoints import get_kpoints_path, get_explicit_kpoints_path
+
 try:
-    from aiida.orm import Dict, Str, load_node, KpointsData
+    from aiida.orm import Dict, Str, load_node, KpointsData, Bool
     from aiida.plugins import CalculationFactory, DataFactory
     from aiida_yambo.utils.common_helpers import *
     from aiida_yambo.utils.parallelism_finder import *
@@ -17,6 +22,87 @@ except:
     pass
 
 from aiida_yambo.utils.defaults.create_defaults import *
+
+def QP_bands(node,mapping=None,only_scissor=False, plot=False):
+    
+    x = node
+
+    save_dir = x.outputs.output_parameters.get_dict()['ns_db1_path']
+    qp_dir = x.outputs.retrieved._repository._repo_folder.abspath+'/path'
+    
+    lat  = YamboSaveDB.from_db_file(folder=save_dir,filename='ns.db1')  
+    ydb  = YamboQPDB.from_db(filename='ndb.QP',folder=qp_dir)
+        
+    if mapping: 
+        valence = mapping.get_dict()['valence']
+        kpoints=  mapping.get_dict()['number_of_kpoints']
+    else:
+        valence = x.outputs.nscf_mapping.get_dict()['valence']
+        kpoints= x.outputs.nscf_mapping.get_dict()['number_of_kpoints']
+
+    scissor = ydb.get_scissor(valence=valence)
+    
+    if only_scissor: return scissor,0,0,0
+
+    if plot:
+         ydb.plot_scissor(valence=valence)
+    
+    pw = find_pw_parent(x,)
+    k_params = get_kpoints_path(pw.inputs.structure)['parameters'].get_dict()
+    p = []
+    for line in k_params['path']:
+        for point in line:
+            if point == 'GAMMA':
+                p.append([k_params['point_coords'][point],'$\Gamma$'])
+            else:
+                p.append([k_params['point_coords'][point],point])                
+    
+    path_full = Path(p, [int(kpoints*2)]*(len(p)-1) )
+    
+    ks_bs_0, qp_bs_0 = ydb.get_bs_path(lat, path_full)
+    ks_bs_1, qp_bs_1 = ydb.interpolate(lat, path_full)
+    
+    lab = [(0,'GAMMA')]
+
+    space = qp_bs_1.kpath.as_dict()['intervals'][0]
+    ind = space
+    for i in qp_bs_1.kpath.as_dict()['klabels'][1:]:
+        if i == lab[-1][1]:
+            lab.append((ind-space,i))
+        else:
+            lab.append((ind,i))
+        ind += space
+    
+    return scissor, ks_bs_1, qp_bs_1, lab
+
+@calcfunction
+def QP_bands_interface(node, mapping, only_scissor=Bool(False)):
+    
+    x = load_node(node.value)
+    
+    scissor, ks_bs_1, qp_bs_1, lab = QP_bands(x,mapping,only_scissor= only_scissor)
+
+    if only_scissor: return {'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
+        
+    BandsData = DataFactory('array.bands')
+    gw_bands_data = BandsData()
+    
+    gw_bands_data.set_kpoints(qp_bs_1.kpoints)
+    gw_bands_data.set_bands(qp_bs_1.bands, units='eV')
+    gw_bands_data.labels = lab
+    
+    dft_bands_data = BandsData()
+    
+    dft_bands_data.set_kpoints(ks_bs_1.kpoints)
+    dft_bands_data.set_bands(ks_bs_1.bands, units='eV')
+    dft_bands_data.labels = lab
+
+    #bands_data.show_mpl() # to visualize the bands
+    print([scissor[0],scissor[1],scissor[2]])
+    return {'band_structure_DFT':dft_bands_data, 
+            'band_structure_GW':gw_bands_data, 
+            'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
+
 
 def quantumespresso_input_validator(workchain_inputs,):
     

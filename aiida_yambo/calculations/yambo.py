@@ -353,7 +353,7 @@ class YamboCalculation(CalcJob):
         #logic of the execution
         #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]   
         try:
-            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns.db1_path', None)
+            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns_db1_path', None)
         except:
             parent_save_path = None
 
@@ -364,10 +364,11 @@ class YamboCalculation(CalcJob):
                 calcinfo.codes_info = [c2, c3]
         elif initialise:
             calcinfo.codes_info = [c1]
-            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+            
         else:
             calcinfo.codes_info = [c1, c2, c3]
-            if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+        
+        if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
