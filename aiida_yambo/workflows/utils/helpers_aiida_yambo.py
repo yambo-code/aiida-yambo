@@ -221,7 +221,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                 quantity = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
                 l_calc.append(quantity)
             else:
-                quantity = False
+                quantity = -500
                 l_calc.append(quantity)           
             
         l_calc.append(ywf_node.uuid)
