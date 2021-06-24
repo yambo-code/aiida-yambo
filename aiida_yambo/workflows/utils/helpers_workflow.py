@@ -519,7 +519,10 @@ def analysis_and_decision(calc_dict, workflow_dict):
 
         oversteps = min(oversteps_)
         if max(hints) > 3:
-            hint = min(hints)
+            if min(hints) > 3:
+                hint = 3
+            else:
+                hint = min(hints)
         else:
             hint = max(hints)
 
