@@ -293,13 +293,12 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
             else:
                 var_names = calc_manager['var']
 
-            workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
+            if quantities.values[-3] == -500:
+                workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
+                        [False, True]
+            else:
+                workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
-            
-            for calc in range(len(workflow_story_list)):
-                if workflow_story_list[calc][-4] == -500:
-                    workflow_story_list[calc][-1] = True
-                    workflow_story_list[calc][-2] = False
 
 
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
