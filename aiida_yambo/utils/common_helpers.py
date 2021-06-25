@@ -220,8 +220,8 @@ def find_gw_info(inputs):
     
     ## bands ##
 
-    BndsRnXp = parameters['variables'].pop('BndsRnXp',[[0],''])[0]
-    GbndRnge = parameters['variables'].pop('GbndRnge',[[0],''])[0]
+    BndsRnXp = parameters['variables'].pop('BndsRnXp',[[0,0],''])[0]
+    GbndRnge = parameters['variables'].pop('GbndRnge',[[0,0],''])[0]
     X_b = 1 + BndsRnXp[1] - BndsRnXp[0]
     SE_b = 1 + GbndRnge[1] - GbndRnge[0]
     if X_b and SE_b:
