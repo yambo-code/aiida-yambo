@@ -70,16 +70,6 @@ class k_path_dealer():
                     found = True
                     maps[point] = ind
                     break
-                elif abs(high_symmetry[point][0])-abs(g[2])<1e-4 and abs(high_symmetry[point][2])-abs(g[0])<1e-4 \
-                        and abs(high_symmetry[point][1])-abs(g[1])<1e-4 :    #1e-4,1e-4):
-                    found = True
-                    maps[point] = ind
-                    break
-                elif abs(high_symmetry[point][2])-abs(g[1])<1e-4 and abs(high_symmetry[point][1])-abs(g[2])<1e-4 \
-                        and abs(high_symmetry[point][0])-abs(g[0])<1e-4 :    #1e-4,1e-4):
-                    found = True
-                    maps[point] = ind
-                    break
                 ind += 1
             if not found:
                 if point not in missing: missing.append(point)
@@ -104,16 +94,6 @@ class k_path_dealer():
                     break
                 elif abs(high_symmetry[point][0])-abs(g[1])<1e-4 and abs(high_symmetry[point][1])-abs(g[0])<1e-4 \
                         and abs(high_symmetry[point][2])-abs(g[2])<1e-4 :    #1e-4,1e-4):
-                    found = True
-                    maps[point] = ind
-                    break
-                elif abs(high_symmetry[point][0])-abs(g[2])<1e-4 and abs(high_symmetry[point][2])-abs(g[0])<1e-4 \
-                        and abs(high_symmetry[point][1])-abs(g[1])<1e-4 :    #1e-4,1e-4):
-                    found = True
-                    maps[point] = ind
-                    break
-                elif abs(high_symmetry[point][2])-abs(g[1])<1e-4 and abs(high_symmetry[point][1])-abs(g[2])<1e-4 \
-                        and abs(high_symmetry[point][0])-abs(g[0])<1e-4 :    #1e-4,1e-4):
                     found = True
                     maps[point] = ind
                     break
