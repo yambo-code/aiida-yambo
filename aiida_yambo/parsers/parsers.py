@@ -247,6 +247,9 @@ class YamboParser(Parser):
         params=Dict(dict=output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
 
+        if success and 'gw0' in input_params['arguments'] and not ndbqp:
+            success = False
+
         if success == False:
 
             if 'time_most_prob' in output_params['errors']:
