@@ -142,7 +142,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
     elif convergence_algorithm == 'dummy':
         factor = 0
 
-    hint_ = int(hint*factor)
+    
         
     for j in [1]:
         
@@ -160,6 +160,10 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         if not isinstance(delta,list) or 'mesh' in i['var']:
             delta=[delta]
         for var in l:  
+            if isinstance(hint,int):
+                hint_ = 0 
+            else:
+                hint_ = int(hint[var]*factor)
             if 'mesh' in var:
                 hint_=0
             starting_inputs[var] =  starting_inputs[var][i['steps']-1]
@@ -399,8 +403,12 @@ class Convergence_evaluator():
         self.extrapolated = 1
         if not hasattr(self,'power_law'): self.power_law = 1 
         
+        self.p = []
+        for param in self.parameters:
+            self.p.append(self.p_val[param][-self.steps:])
+            
     def dummy_convergence(self): #solo window, thr e oversteps
-        self.delta = self.conv_array-self.conv_array[-1]
+        self.delta = self.conv_array[-self.steps:]-self.conv_array[-1]
         converged = self.delta[-self.window:][np.where(abs(self.delta[-self.window:])<=self.thr)]
         if len(converged)<self.window:
             is_converged = False
@@ -417,7 +425,7 @@ class Convergence_evaluator():
                     break     
             converged_result = self.conv_array[-oversteps]
             
-        return self.conv_array, self.delta, converged, is_converged, oversteps-1, converged_result
+        return self.conv_array[-self.steps:], self.delta, converged, is_converged, oversteps-1, converged_result
     
     def convergence_function(self,xv,*args): #con fit e previsione parametri a convergenza con la thr
         if isinstance(self.power_law,int): self.power_law = [self.power_law]*len(self.parameters)
@@ -430,9 +438,11 @@ class Convergence_evaluator():
         return y
     
     def convergence_prediction(self):  #1D
-        extra, pcov = curve_fit(self.convergence_function,self.p,self.delta,p0=[1,1]*len(self.parameters))
+
+        extra, pcov = curve_fit(self.convergence_function,np.array(self.p),self.delta,p0=[1,1]*len(self.parameters))
         self.extra = extra
         print(extra)
+        hints = {}
         for i in range(len(self.parameters)):
             a = extra[2*i]
             b = extra[2*i+1]
@@ -440,42 +450,23 @@ class Convergence_evaluator():
             f = lambda x: a/x**self.power_law[i]
             x_1 = a/self.thr
             x_2 = np.sqrt(abs(a)/self.thr)
-            print(x_1,x_2)
             delta_ = self.p[i][-1] - self.p[i][-2]
+            print(delta_)
             delta_1 = x_1 - self.p[i][-1]
             delta_2 = x_2 - self.p[i][-1]
             
-            print(self.delta)
-            print('error = ',a/(self.p[i][-1]))
-            print('grad = ',a/(self.p[i][-1]**2))
-            print('curv = ',2*a/(self.p[i][-1]**3))     
             
             alpha = delta_ #/ b
             beta = delta_**2 #/ b
             gamma = delta_**3 #/ b
             
             d = alpha*a/(self.p[i][-1])+beta*a/(self.p[i][-1]**2)+gamma*2*a/(self.p[i][-1]**3)
-            
-            print('alpha*error = ',alpha*a/(self.p[i][-1]))
-            print('beta*grad = ',beta*a/(self.p[i][-1]**2))
-            print('gamma*curv = ',gamma*2*a/(self.p[i][-1]**3)) 
-            
-            print('sum: ',delta_+abs(d))
-            print('log(thr)*sum: ',abs(np.log10(self.thr))*(delta_+abs(d)))
-            print(np.log10(self.thr))
-            
-            '''
-            self.prediction = minimize(f,x0=self.p[i][-1],tol=0.1,method='BFGS')
-            print(self.prediction,'\n')
-            self.hint[self.parameters[i]] = int(self.prediction.x[0])
-            f_2 = lambda x: -a/x**(1+self.power_law[i])*self.power_law[i]
-            print('grad renorm:',self.p[i][-1]*f_2(self.p[i][-1]))
-            print('delta hint:',abs(self.p[i][-1]*f_2(self.p[i][-1]))/self.thr,'\n') #ma é uguale a fun*100 ... ?
-            '''
-        
-        hint = (delta_ + abs(np.log10(self.thr))*(delta_+abs(d)))/delta_ -1
+            grad_hint = a/self.thr
+                      
+            hint = abs(grad_hint/delta_)
+            hints[self.parameters[i]] = hint
 
-        return hint
+        return hints
 
 #@conversion_wrapper
 def analysis_and_decision(calc_dict, workflow_dict):
@@ -487,10 +478,11 @@ def analysis_and_decision(calc_dict, workflow_dict):
         '''documentation...'''
         window =  calc_dict['conv_window']
         tol = calc_dict['conv_thr']
-        if isinstance(calc_dict['var'],list):
-            var = calc_dict['var'][0]
+        var_ = calc_dict['var']
+        if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
+            var = ['BndsRnXp']
         else:
-            var = calc_dict['var']
+            var = var_
         converged = True
         oversteps = 0
         oversteps_1 = 0
@@ -498,37 +490,52 @@ def analysis_and_decision(calc_dict, workflow_dict):
 
         real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,keys=workflow_dict['what'],var_ = calc_dict['var'])
         
-        
         is_converged = True
-        hints = []
+        hints  = {}
+        for i in var:
+            hints[i] = []
         oversteps_ = []
         for k in workflow_dict['what']:
-            y = Convergence_evaluator(conv_array=homo[k][-steps:], thr=tol, window=window, parameters=[var], p=[lines[var][-steps:],])
+            y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps)
             conv_array, delta, converged, is_converged_, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
             if not is_converged_:
                 is_converged = False
 
             if workflow_dict['convergence_algorithm'] != 'dummy':
-                hint = y.convergence_prediction()
+                try:
+                    hint = y.convergence_prediction()
+                except:
+                    hint = {}
+                    for i in var:
+                        hint[i] = [2]
+                    print('not found optimal delta, setting factor 2 as default')
             else:
-                hint = 0
+                 hint[i] = [0]
 
-            hints.append(hint)
+            for i in var:
+                hints[i].append(hint[i])
             oversteps_.append(oversteps)
+        
+            
+            print(hints)
 
         oversteps = min(oversteps_)
-        if max(hints) > 3:
-            if min(hints) > 3:
-                hint = 3
+        hint = {}
+        for i in var:
+            if max(hints[i]) > 3:
+                if min(hints[i]) > 3:
+                    hint[i] = 3
+                else:
+                    hint[i] = min(hints[i])
             else:
-                hint = min(hints)
-        else:
-            hint = max(hints)
-
+                hint[i] = max(hints[i])
+        if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
+             hint['GbndRnge'] =  hint['BndsRnXp']
+                
         return is_converged, oversteps, none_encountered, homo, hint
 
-    return is_converged, oversteps, none_encountered, hint    
+    return is_converged, oversteps, none_encountered, hint      
     
 
 
