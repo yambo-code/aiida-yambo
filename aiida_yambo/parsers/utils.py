@@ -7,6 +7,9 @@ import numpy
 import copy
 import glob, os, re
 
+from yambopy.dbs.excitondb import *
+from yambopy.dbs.savedb import * 
+
 def take_fermi_parser(file):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
 
     for line in file:
@@ -184,3 +187,17 @@ def yambo_wrote_dbs(output_params):
 
 def get_yambo_version(report, output_params):
     pass
+
+def parse_BS(folder,filename, save_dir):
+    q = filename[13:]
+    lat  = YamboLatticeDB.from_db_file(filename=save_dir+'/ns.db1')
+    ydb  = YamboExcitonDB.from_db_file(filename=filename,folder=folder,lattice=lat)
+    chi = ydb.get_chi(emin=0, emax=10, estep=0.01, broad=0.05,)
+    chi_ = {'eV':chi[0],'eps_2':chi[1].imag,'eps_1':chi[1].real}
+    
+    excitons = {'energies':ydb.eigenvalues.real,
+               'intensities':ydb.get_intensities().real}
+    
+    
+    
+    return q, chi_, excitons

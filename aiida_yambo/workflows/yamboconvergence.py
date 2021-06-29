@@ -329,10 +329,10 @@ class YamboConvergence(WorkChain):
 
         try:
             scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.ctx.calc_inputs)
+            self.ctx.gwbands = max(self.ctx.gwbands,self.ctx.bands)
             parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)        
             
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
-            self.ctx.gwbands = max(self.ctx.gwbands,self.ctx.bands)
 
             if nbnd < self.ctx.gwbands:
                 self.report('we have to compute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.gwbands))

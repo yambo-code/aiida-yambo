@@ -238,9 +238,12 @@ def find_gw_info(inputs):
 
     qp = 0
     last_qp = 0
-    for i in parameters['variables']['QPkrange'][0]:
-        qp += (1 + i[1]-i[0])*(1 + i[3]-i[2])
-        last_qp = max(i[3],last_qp)
+    try:
+        for i in parameters['variables']['QPkrange'][0]:
+            qp += (1 + i[1]-i[0])*(1 + i[3]-i[2])
+            last_qp = max(i[3],last_qp)
+    except:
+        pass
 
     ## runlevels ##
     runlevels = []

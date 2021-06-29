@@ -129,6 +129,10 @@ class YamboCalculation(CalcJob):
                 required=False, help='returns the array for ndbQP')
         spec.output('array_ndb_HFlocXC', valid_type=ArrayData,
                 required=False, help='returns the array ndb for HFlocXC')
+        spec.output('array_chi', valid_type=ArrayData,
+                required=False, help='returns the array for chi')
+        spec.output('array_excitonic_states', valid_type=ArrayData,
+                required=False, help='returns the array for excitonic states')
         spec.output('system_info', valid_type=Dict,
                 required=False, help='returns some system information after a p2y')
 
@@ -136,7 +140,7 @@ class YamboCalculation(CalcJob):
 
     def prepare_for_submission(self, tempfolder):
 
-        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC','p2y':'ns.db1'}
+        _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC','p2y':'ns.db1','bse':'ndb.BS_diago_Q*'}
 
         local_copy_list = []
         remote_copy_list = []

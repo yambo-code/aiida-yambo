@@ -99,6 +99,8 @@ class YamboParser(Parser):
         self._qp_array_linkname = 'array_qp'
         self._ndb_linkname = 'array_ndb'
         self._ndb_QP_linkname = 'array_ndb_QP'
+        self._ndb_CHI_linkname = 'array_chi'
+        self._ndb_EXC_linkname = 'array_excitonic_states'
         self._ndb_HF_linkname = 'array_ndb_HFlocXC'
         self._lifetime_bands_linkname = 'bands_lifetime'
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
@@ -159,14 +161,25 @@ class YamboParser(Parser):
         'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
         ndbqp = {}
         ndbhf = {}
+        q = None
+        chi = {}
+        excitonic_states = {}
+
+
+        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
+            output_params['ns_db1_path'] = out_folder._repository._repo_folder.abspath+'/path'
+
 
         for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
+            
             if 'stderr' in file:
                 with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
-        
-        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
-            output_params['ns_db1_path'] = out_folder._repository._repo_folder.abspath+'/path'
+            
+            elif 'ndb.BS_diago' in file:
+                q, chi, excitonic_states = parse_BS(out_folder._repository._repo_folder.abspath+'/path/',
+                                                             file,
+                                                             output_params['ns_db1_path'])
 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
@@ -185,17 +198,18 @@ class YamboParser(Parser):
             if result.type=='report':
                 parse_report(result, output_params)
 
-            if 'eel' in result.filename:
-                eels_array = self._aiida_array(result.data)
-                self.out(self._eels_array_linkname, eels_array)
-            elif 'eps' in result.filename:
-                eps_array = self._aiida_array(result.data)
-                self.out(self._eps_array_linkname, eps_array)
-            elif 'alpha' in result.filename:
-                alpha_array = self._aiida_array(result.data)
-                self.out(self._alpha_array_linkname,alpha_array)
+            #if 'eel' in result.filename:
+            #    eels_array = self._aiida_array(result.data)
+            #    self.out(self._eels_array_linkname, eels_array)
+            #elif 'eps' in result.filename:
+            #    eps_array = self._aiida_array(result.data)
+            #    self.out(self._eps_array_linkname, eps_array)
+            #elif 'alpha' in result.filename:
+            #    alpha_array = self._aiida_array(result.data)
+            #    self.out(self._alpha_array_linkname,alpha_array)
 
-            elif 'ndb.QP' == result.filename:
+            
+            if 'ndb.QP' == result.filename:
                 ndbqp = copy.deepcopy(result.data)
 
             elif 'ndb.HF_and_locXC' == result.filename:
@@ -230,6 +244,12 @@ class YamboParser(Parser):
                 self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
             if ndbhf:
                 self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
+        
+        if chi:  #
+            self.out(self._ndb_CHI_linkname,self._aiida_array(chi))
+        
+        if excitonic_states:  #
+            self.out(self._ndb_EXC_linkname,self._aiida_array(excitonic_states))
 
         if output_params['game_over']:
             success = True
@@ -248,6 +268,8 @@ class YamboParser(Parser):
         self.out(self._parameter_linkname,params)  # output_parameters
 
         if success and 'gw0' in input_params['arguments'] and not ndbqp and not initialise:
+            success = False
+        elif success and 'bse' in input_params['arguments'] and not chi and not initialise:
             success = False
 
         if success == False:

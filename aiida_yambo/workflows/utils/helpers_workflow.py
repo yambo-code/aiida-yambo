@@ -378,14 +378,14 @@ def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[]):
     workflow_story = workflow_dict
     real = workflow_story[workflow_story.failed == False]
     lines = {}
-    for k in ['BndsRnXp','GbndRnge','NGsBlkXp','kpoint_mesh']:
-        if k in var_ and k in ['BndsRnXp','GbndRnge'] and not k == 'kpoint_mesh':
+    for k in var_:
+        if k in ['BndsRnXp','GbndRnge'] and not k == 'kpoint_mesh':
             lines[k] = np.array([i[0] for i in zip(list(real[k].values))])[:,1]
-        elif k in var_ and k in ['kpoint_mesh']:
+        elif k in ['kpoint_mesh']:
             lines[k] = np.array([i[0] for i in zip(list(real[k].values))])[:,0]
             for i in range(1,3):
                 lines[k] *= np.array([i[0] for i in zip(list(real[k].values))])[:,i]
-        elif k in var_:
+        else:
             lines[k] = np.array([i for i in zip(list(real[k].values))])[:,0]
     homo = {}
     for key in keys:
@@ -492,6 +492,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
         
         is_converged = True
         hints  = {}
+        hint={}
         for i in var:
             hints[i] = []
         oversteps_ = []
@@ -506,12 +507,12 @@ def analysis_and_decision(calc_dict, workflow_dict):
                 try:
                     hint = y.convergence_prediction()
                 except:
-                    hint = {}
                     for i in var:
-                        hint[i] = [2]
+                        hint[i] = 2
                     print('not found optimal delta, setting factor 2 as default')
             else:
-                 hint[i] = [0]
+                 for i in var:
+                     hint[i] = 0
 
             for i in var:
                 hints[i].append(hint[i])

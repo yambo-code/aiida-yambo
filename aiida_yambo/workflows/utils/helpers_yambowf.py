@@ -225,11 +225,15 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     sup_cond = 4 #so, for now 3+3 bands
 
     new_params = workchain_inputs.yambo.parameters.get_dict()
-    new_params['variables']['QPkrange'] = new_params['variables'].pop('QPkrange', [[],''])
+    for name in parsing_List:
+        if not 'exciton' in name and 'QPkrange' in new_params['variables'].keys():
+            new_params['variables']['QPkrange'] = new_params['variables'].pop('QPkrange', [[],''])
 
     for name in parsing_List:
 
-        if isinstance(name,list) and name[0] in mapping.keys():
+        if 'exciton' in parsing_List:
+            pass
+        elif isinstance(name,list) and name[0] in mapping.keys():
             for i in mapping[name[0]]:
                 if not i in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append(i) 
         elif isinstance(name,str) and name in mapping.keys():
@@ -270,6 +274,16 @@ def parse_qp_gap(calc, gap_map): #post proc
     _cb_level_gw = (_cb_level_dft + _cb_level_corr)*27.2114
 
     return _cb_level_gw-_vb_level_gw, _cb_level_dft-_vb_level_dft
+
+def parse_excitons(calc, what): #post proc 
+
+    if what == 'brightest':
+        brightest = calc.outputs.array_excitonic_states.get_array('intensities').argmax()
+        brightest = calc.outputs.array_excitonic_states.get_array('energies')[brightest]
+        return brightest
+    elif what == 'lowest':
+        lowest = calc.outputs.array_excitonic_states.get_array('energies')[0]
+        return lowest 
 
 def additional_parsed(calc, additional_parsing_List, mapping): #post proc 
     
@@ -326,6 +340,18 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                 parsed_dict[key] =  lumo_gw-homo_gw
                 parsed_dict['homo_'+key[-2]] =  homo_gw
                 parsed_dict['lumo_'+key[-1]] =  lumo_gw
+            
+            elif key=='brightest_exciton':
+
+                exciton = parse_excitons(calc, 'brightest')
+
+                parsed_dict['brightest_exciton'] =  exciton
+            
+            elif key=='lowest_exciton':
+
+                exciton = parse_excitons(calc, 'lowest')
+
+                parsed_dict['lowest_exciton'] =  exciton
             
             
             elif key in mapping.keys():
