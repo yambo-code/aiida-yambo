@@ -358,7 +358,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         ind_cond = ind_val
         dft_predicted = 'metal'
     else:
-        if min(abs(touch_fermi) > 0.02 and min(abs(touch_fermi_C) > 0.02: #semiconductor, insulator??
+        if min(abs(touch_fermi)) > 0.02 and min(abs(touch_fermi_C)) > 0.02: #semiconductor, insulator??
             ind_val = bands[:,valence-1].argmax()
             ind_cond = bands[:,conduction-1].argmin()
             dft_predicted = 'semiconductor/insulator'
