@@ -480,22 +480,19 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
             for p in what:
                 if 'CPU' in p or 'ROLEs' in p: 
+                    already_done = node.pk
                     l += 1
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
                             if i in node.inputs.additional_parsing.get_list():
                                 already_done = node.pk
-                                l += 1
-
-                            else:
-                                print(i,node.inputs.additional_parsing.get_list())
+                            else:                          
                                 already_done = False
                                 break 
                     else: 
                         if additional==[]: 
                             already_done = node.pk
-                            l += 1
                         else:
                             already_done = False
                             break 
@@ -505,13 +502,19 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 else:
                     already_done = False
                     break
+            
+            
             over = abs(len(params_to_calc)-len(old_params))
+
             if already_done and full and (over == l or over == 0):
                 already_done = node.pk
+                print('ok')
 
             elif already_done and full and (over != l or over != 0):
                 already_done = False
-
+                print(node.pk)
+                print(len(params_to_calc),len(old_params))
+                print(l,over)
                 
             if up_to_p2y and same_k:
                     already_done = node.pk
@@ -609,7 +612,7 @@ def search_in_group(YamboWorkflow_inputs,
         
         if parent_nscf: break
 
-    return already_done, parent_nscf, parent_scf   
+    return already_done, parent_nscf, parent_scf  
 
 @calcfunction
 def store_quantity(quantity):
