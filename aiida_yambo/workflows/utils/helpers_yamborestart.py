@@ -85,7 +85,7 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
     #elif 'bse' in runlevels:
     #    pass
     
-    new_parallelism, new_resources = {'PAR_def_mode': "memory"}, new_resources
+    new_parallelism, new_resources = {'PAR_def_mode': "memory"}, resources
 
 
     return new_parallelism, new_resources, pop_list
