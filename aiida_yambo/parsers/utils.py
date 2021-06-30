@@ -41,8 +41,7 @@ def yambotiming_to_seconds(yt):
         return yt
 
 
-errors = {'memory_error':['\[ERROR\]Allocation',
-                            '\[MEMORY\] Alloc',],
+errors = {'memory_error':['\[ERROR\]Allocation',],
           'time_most_prob':['Alloc Xo%blc_d',],
           'para_error':['\[ERROR\]Incomplete','\[ERROR\]Impossible','\[ERROR\]USER parallel',
                          '\[NULL\]',
