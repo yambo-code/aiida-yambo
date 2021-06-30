@@ -23,6 +23,7 @@ PAR_def_mode= "balanced"       # [PARALLEL] Default distribution mode ("balanced
 ################################################################################
 def fix_parallelism(resources, failed_calc):
 
+    '''
     bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
     nscf = find_pw_parent(failed_calc,calc_type=['nscf']) 
     occupied = gap_mapping_from_nscf(nscf.pk,)['valence']
@@ -36,16 +37,26 @@ def fix_parallelism(resources, failed_calc):
                                                         last_qp, namelist = {})
     elif 'bse' in runlevels:
         pass
+    '''
     
-    return new_parallelism, new_resources
+    pop_list = []
+    for p in failed_calc.inputs.parameters.get_dict()['variables']:
+        for k in ['CPU','ROLEs']:
+            if k in p:
+                pop_list.append(p)
+
+    new_parallelism, new_resources = {'PAR_def_mode': "balanced"}, resources
+
+
+    return new_parallelism, new_resources, pop_list
 
 def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
         
-    bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
-    nscf = find_pw_parent(failed_calc,calc_type=['nscf']) 
-    occupied = gap_mapping_from_nscf(nscf.pk,)['valence']
-    mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
-    kpoints = gap_mapping_from_nscf(nscf.pk,)['number_of_kpoints']
+    #bands, qp, last_qp, runlevels = find_gw_info(failed_calc.inputs)
+    #nscf = find_pw_parent(failed_calc,calc_type=['nscf']) 
+    #occupied = gap_mapping_from_nscf(nscf.pk,)['valence']
+    #mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
+    #kpoints = gap_mapping_from_nscf(nscf.pk,)['number_of_kpoints']
 
     if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu'] or iteration > 1: #there should be a limit
         
@@ -60,15 +71,24 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
         resources['num_mpiprocs_per_machine'] *= 2
         resources['num_cores_per_mpiproc'] /= 2
 
-    if 'gw0' or 'HF_and_locXC' in runlevels:
-        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine']/2, \
-                                                        resources['num_cores_per_mpiproc']*2, bands, \
-                                                        occupied, qp, kpoints,\
-                                                        last_qp, namelist = {})
-    elif 'bse' in runlevels:
-        pass
+    pop_list = []
+    for p in failed_calc.inputs.parameters.get_dict()['variables']:
+        for k in ['CPU','ROLEs']:
+            if k in p:
+                pop_list.append(p)
+
+    #if 'gw0' or 'HF_and_locXC' in runlevels:
+    #    new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine']/2, \
+                                                        #resources['num_cores_per_mpiproc']*2, bands, \
+                                                        #occupied, qp, kpoints,\
+                                                        #last_qp, namelist = {})
+    #elif 'bse' in runlevels:
+    #    pass
     
-    return new_parallelism, new_resources
+    new_parallelism, new_resources = {'PAR_def_mode': "memory"}, new_resources
+
+
+    return new_parallelism, new_resources, pop_list
 
 def fix_time(options, restart, max_walltime):
     options['max_wallclock_seconds'] = \

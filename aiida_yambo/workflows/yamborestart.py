@@ -154,15 +154,15 @@ class YamboRestart(BaseRestartWorkChain):
         Handle calculations for a parallelism error; 
         we try to change the parallelism options.
         """
-        new_para, new_resources  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
+        new_para, new_resources, pop_list  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
-        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
+        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()), sublevel='variables',pop_list= pop_list)
 
-        new_para = check_para_namelists(new_para, self.inputs.code_version.value)
+        '''new_para = check_para_namelists(new_para, self.inputs.code_version.value)
         if new_para:
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
-            self.report('adjusting parallelism namelist... please check yambo documentation')
+            self.report('adjusting parallelism namelist... please check yambo documentation')'''
 
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
@@ -172,7 +172,7 @@ class YamboRestart(BaseRestartWorkChain):
 
 
 
-        self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it')
+        self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it setting PAR_def_mode= "balanced"')
         return ProcessHandlerReport(True)
 
     @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, \
@@ -184,17 +184,17 @@ class YamboRestart(BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
-        new_para, new_resources  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
+        new_para, new_resources, pop_list  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
                                                 self.inputs.max_number_of_nodes, self.ctx.iteration)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
-        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
+        self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables',pop_list= pop_list)
 
             
-        new_para = check_para_namelists(new_para, self.inputs.code_version.value)
+        '''new_para = check_para_namelists(new_para, self.inputs.code_version.value)
         if new_para:
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
-            self.report('adjusting parallelism namelist... please check yambo documentation')
+            self.report('adjusting parallelism namelist... please check yambo documentation')'''
 
 
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
@@ -202,5 +202,5 @@ class YamboRestart(BaseRestartWorkChain):
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
 
-        self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance')
+        self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance and set PAR_def_mode= "memory"')
         return ProcessHandlerReport(True)

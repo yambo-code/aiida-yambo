@@ -209,7 +209,12 @@ class YamboConvergence(WorkChain):
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
-
+        
+        errors = self.ctx.final_result.pop('errors')
+        if errors: 
+            self.ctx.none_encountered = True
+            self.ctx.calc_manager['iter'] = 2*self.ctx.calc_manager['max_iterations']
+            return
 
         self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)

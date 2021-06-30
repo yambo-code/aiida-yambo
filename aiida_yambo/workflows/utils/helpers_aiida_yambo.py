@@ -60,12 +60,25 @@ def set_parallelism(instructions_, inputs):
 
     bands = max(yambo_bandsX,yambo_bandsSc)
 
-    if instructions['automatic'] and ('gw0' or 'HF_and_locXC' in runlevels):
+
+    pop_list = []
+    
+
+    if instructions['automatic']: # and ('gw0' or 'HF_and_locXC' in runlevels):
         #standard
-        new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
+        '''new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
                                                         resources['num_cores_per_mpiproc'], bands, \
                                                         occupied, qp, kpoints,\
-                                                        last_qp, namelist = {})
+                                                        last_qp, namelist = {})'''
+        if isinstance(instructions['automatic'],bool):
+            instructions['automatic'] = 'balanced'
+
+        for p in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+            for k in ['CPU','ROLEs']:
+                if k in p:
+                    pop_list.append(p)
+        new_parallelism, new_resources = {'PAR_def_mode': instructions['automatic']}, resources
+    
     
     elif instructions['semi-automatic'] and ('gw0' or 'HF_and_locXC' in runlevels):
         #parallel set for boundaries of params
@@ -106,7 +119,7 @@ def set_parallelism(instructions_, inputs):
     else:
         return False, False
 
-    return new_parallelism, new_resources
+    return new_parallelism, new_resources, pop_list
 
 
 #class calc_manager_aiida_yambo: 
@@ -167,11 +180,11 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
             values_dict[var]=input_dict['variables'][var]
 
     #if len(parallelism_instructions.keys()) >= 1:
-    new_para, new_res = set_parallelism(parallelism_instructions, inp_to_update)
+    new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update)
 
     if new_para and new_res:
         inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), 
-                                                        list(new_para.values()),sublevel='variables')
+                                                        list(new_para.values()),sublevel='variables',pop_list=pop_list)
         inp_to_update.yres.yambo.metadata.options.resources = new_res
         try:
             inp_to_update.yres.yambo.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_res['num_cores_per_mpiproc'])
@@ -221,7 +234,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                 quantity = ywf_node.outputs.output_ywfl_parameters.get_dict()[what[j]]
                 l_calc.append(quantity)
             else:
-                quantity = -500
+                quantity = False
                 l_calc.append(quantity)           
             
         l_calc.append(ywf_node.uuid)

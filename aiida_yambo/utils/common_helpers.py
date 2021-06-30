@@ -75,7 +75,7 @@ def find_table_ind(kpoint,band,_array_ndb):
             return(i)
 
 
-def update_dict(_dict, whats, hows, sublevel=None):
+def update_dict(_dict, whats, hows, sublevel=None, pop_list=[]):
     if sublevel:
         if not isinstance(whats, list):
             whats = [whats]
@@ -85,6 +85,11 @@ def update_dict(_dict, whats, hows, sublevel=None):
             new = _dict.get_dict()
             new[sublevel][what] = how
             _dict = Dict(dict=new)
+        if pop_list != []:
+            for i in pop_list:
+                new = _dict.get_dict()
+                new[sublevel].pop(i)
+                _dict = Dict(dict=new)
     else:
         if not isinstance(whats, list):
             whats = [whats]
@@ -94,6 +99,12 @@ def update_dict(_dict, whats, hows, sublevel=None):
             new = _dict.get_dict()
             new[what] = how
             _dict = Dict(dict=new)
+        if pop_list != []:
+            for i in pop_list:
+                new = _dict.get_dict()
+                new.pop(i)
+                _dict = Dict(dict=new)
+    
     return _dict
 
 def get_caller(calc_pk, depth = 1):
@@ -480,22 +491,19 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
             for p in what:
                 if 'CPU' in p or 'ROLEs' in p: 
+                    already_done = node.pk
                     l += 1
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
                             if i in node.inputs.additional_parsing.get_list():
                                 already_done = node.pk
-                                l += 1
-
-                            else:
-                                print(i,node.inputs.additional_parsing.get_list())
+                            else:                          
                                 already_done = False
                                 break 
                     else: 
                         if additional==[]: 
                             already_done = node.pk
-                            l += 1
                         else:
                             already_done = False
                             break 
@@ -505,13 +513,19 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 else:
                     already_done = False
                     break
+            
+            
             over = abs(len(params_to_calc)-len(old_params))
+
             if already_done and full and (over == l or over == 0):
                 already_done = node.pk
+                print('ok')
 
             elif already_done and full and (over != l or over != 0):
                 already_done = False
-
+                print(node.pk)
+                print(len(params_to_calc),len(old_params))
+                print(l,over)
                 
             if up_to_p2y and same_k:
                     already_done = node.pk
@@ -609,7 +623,7 @@ def search_in_group(YamboWorkflow_inputs,
         
         if parent_nscf: break
 
-    return already_done, parent_nscf, parent_scf   
+    return already_done, parent_nscf, parent_scf  
 
 @calcfunction
 def store_quantity(quantity):

@@ -283,7 +283,8 @@ def build_story_global(calc_manager, quantities, workflow_dict = {}):
 
 @conversion_wrapper
 def update_story_global(calc_manager, quantities, inputs, workflow_dict):
-        
+
+    errors = False  
     final_result = {}
     if workflow_dict['global_step'] == 0 :
         workflow_dict['workflow_story'] = pd.DataFrame(columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
@@ -297,9 +298,10 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
             else:
                 var_names = calc_manager['var']
 
-            if -500 in quantities.values[-3]:
+            if  False in quantities.values[i].tolist():
                 workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [False, True]
+                errors = True
             else:
                 workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
@@ -324,7 +326,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
     
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
 
-    final_result={'uuid': last_ok_uuid,}
+    final_result={'uuid': last_ok_uuid,'errors':errors}
         
     return final_result
 
