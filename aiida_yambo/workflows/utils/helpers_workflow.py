@@ -161,11 +161,12 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
             delta=[delta]
         for var in l:  
             if isinstance(hint,int):
-                hint_ = 0 
+                hint_ = 1 
             else:
-                hint_ = int(hint[var]*factor)
+                hint_ = int(1+hint[var]*factor)
             if 'mesh' in var:
-                hint_=0
+                hint_= 1
+
             starting_inputs[var] =  starting_inputs[var][i['steps']-1]
             if var not in space.keys():
                 space[var] = []
@@ -177,15 +178,15 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                     if r <= 0: 
                         new_val = existing_inputs[var][i['steps']+r-1]
                     elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
-                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)*(1+hint_)
+                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)*hint_
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(delta[l.index(var)],list): 
                         if not 'mesh' in var:
-                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1)*(1+hint_) for d in delta[l.index(var)]])]
+                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1)*hint_ for d in delta[l.index(var)]])]
                             new_val = [new_val, starting_inputs[var][1]]
                         else:
-                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1)*(1+hint_) for d in delta[l.index(var)]])]
+                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1)*hint_ for d in delta[l.index(var)]])]
                     space[var].append(new_val)
                     #print(new_val)
             elif 'commensurate' in i.keys():
@@ -194,16 +195,16 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                         continue
                     if first == 0: first = 1
                     if 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]*(r+first-1)*(1+hint_),
-                                                                                 delta[l.index(var)]*(r+first-1)*(1+hint_),
-                                                                                 delta[l.index(var)]*(r+first-1)*(1+hint_)])]
+                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]*(r+first-1)*hint_,
+                                                                                 delta[l.index(var)]*(r+first-1)*hint_,
+                                                                                 delta[l.index(var)]*(r+first-1)*hint_])]
                     elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
-                        new_val = starting_inputs[var][0]*delta[l.index(var)]*(r+first-1)*(1+hint_)
+                        new_val = starting_inputs[var][0]*delta[l.index(var)]*(r+first-1)*hint_
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(starting_inputs[var][0],list): 
                         if not 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var][0], [d*(r+first-1)*(1+hint_) for d in delta[l.index(var)]])]
+                            new_val = [a*b for a,b in zip(starting_inputs[var][0], [d*(r+first-1)*hint_ for d in delta[l.index(var)]])]
                             new_val = [new_val, starting_inputs[var][1]]
                         
                     space[var].append(new_val)
@@ -463,9 +464,9 @@ class Convergence_evaluator():
             gamma = delta_**3 #/ b
             
             d = alpha*a/(self.p[i][-1])+beta*a/(self.p[i][-1]**2)+gamma*2*a/(self.p[i][-1]**3)
-            grad_hint = a/self.thr
+            grad_hint = abs(a/self.thr)
                       
-            hint = abs(grad_hint/delta_)
+            hint = grad_hint/delta_
             hints[self.parameters[i]] = hint
 
         return hints
