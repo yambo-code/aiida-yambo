@@ -166,7 +166,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 hint_ = int(1+hint[var]*factor)
             if 'mesh' in var:
                 hint_= 1
-                
+
             starting_inputs[var] =  starting_inputs[var][i['steps']-1]
             if var not in space.keys():
                 space[var] = []
@@ -464,7 +464,7 @@ class Convergence_evaluator():
             gamma = delta_**3 #/ b
             
             d = alpha*a/(self.p[i][-1])+beta*a/(self.p[i][-1]**2)+gamma*2*a/(self.p[i][-1]**3)
-            grad_hint = np.sqrt(abs(a/self.thr))
+            grad_hint = abs(a/self.thr)
                       
             hint = grad_hint/delta_
             hints[self.parameters[i]] = hint
