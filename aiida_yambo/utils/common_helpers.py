@@ -75,7 +75,7 @@ def find_table_ind(kpoint,band,_array_ndb):
             return(i)
 
 
-def update_dict(_dict, whats, hows, sublevel=None):
+def update_dict(_dict, whats, hows, sublevel=None, pop_list=[]):
     if sublevel:
         if not isinstance(whats, list):
             whats = [whats]
@@ -85,6 +85,11 @@ def update_dict(_dict, whats, hows, sublevel=None):
             new = _dict.get_dict()
             new[sublevel][what] = how
             _dict = Dict(dict=new)
+        if pop_list != []:
+            for i in pop_list:
+                new = _dict.get_dict()
+                new[sublevel].pop(i)
+                _dict = Dict(dict=new)
     else:
         if not isinstance(whats, list):
             whats = [whats]
@@ -94,6 +99,12 @@ def update_dict(_dict, whats, hows, sublevel=None):
             new = _dict.get_dict()
             new[what] = how
             _dict = Dict(dict=new)
+        if pop_list != []:
+            for i in pop_list:
+                new = _dict.get_dict()
+                new.pop(i)
+                _dict = Dict(dict=new)
+    
     return _dict
 
 def get_caller(calc_pk, depth = 1):

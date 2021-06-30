@@ -366,7 +366,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                         parsed_dict[key] =  level_gw
             
         except:
-            parsed_dict[key] =  -500
+            parsed_dict[key] =  False
 
     return parsed_dict
 

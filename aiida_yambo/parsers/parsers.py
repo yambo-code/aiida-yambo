@@ -154,11 +154,11 @@ class YamboParser(Parser):
         
 
 
-        output_params = {'warnings': [], 'errors': [], 'yambo_wrote_dbs': False, 'game_over': False,
+        output_params = {'warnings': [], 'yambo_wrote_dbs': False, 'game_over': False,
         'p2y_completed': False, 'last_time':0,\
-        'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
+        'requested_time':self._calc.attributes['max_wallclock_seconds'], 'last_time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
+        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path,'X_par_allocation_error':False}
         ndbqp = {}
         ndbhf = {}
         q = None
@@ -274,11 +274,10 @@ class YamboParser(Parser):
 
         if success == False:
 
-            if 'time_most_prob' in output_params['errors']:
-                return self.exit_codes.WALLTIME_ERROR
-            elif output_params['para_error']:
+
+            if output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
-            elif output_params['memory_error'] and 'X_par_allocation' in output_params['errors']:
+            elif output_params['X_par_allocation_error']:
                 return self.exit_codes.X_par_MEMORY_ERROR              
             elif output_params['memory_error']:
                 return self.exit_codes.MEMORY_ERROR

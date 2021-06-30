@@ -41,8 +41,22 @@ def yambotiming_to_seconds(yt):
         return yt
 
 
-def parse_log(log, output_params, timing):
+errors = {'memory_error':['\[ERROR\]Allocation',
+                            '\[MEMORY\] Alloc',],
+          'time_most_prob':['Alloc Xo%blc_d',],
+          'para_error':['\[ERROR\]Incomplete','\[ERROR\]Impossible','\[ERROR\]USER parallel',
+                         '\[NULL\]',
+                        
+                        ],
+                            
 
+          'X_par_allocation':['\[ERROR\]Allocation of X_par%blc_d failed'],
+          
+         }
+
+def parse_log(log,output_params,timing):
+    
+    
     if 'p2y' in log.filename:    #just p2y...
         p2y_completed = re.compile('P2Y completed')
         for line in log.lines:
@@ -59,7 +73,8 @@ def parse_log(log, output_params, timing):
         for line in log.lines:
             if game_over.findall(line) or game_over_2.findall(line):
                 output_params['game_over'] = True
-
+            else:
+                output_params['game_over'] = False
         #timing sections...
         timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
         timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
@@ -70,18 +85,8 @@ def parse_log(log, output_params, timing):
                 elif timing_old.match(line):
                     output_params['timing'].append(timing_old.match(line).string)
 
-        if timing:
-            output_params['timing'].append('verbose_output:')
-            t_verbose = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[TIMING\])')
-            t_verbose_old = re.compile('^\s+?<([0-9a-z-]+)> (\[TIMING\]) ')
-            for line in log.lines:
-                if t_verbose.match(line):
-                    output_params['timing'].append(t_verbose.match(line).string)
-                elif t_verbose_old.match(line):
-                    output_params['timing'].append(t_verbose_old.match(line).string)
-
         time = re.compile('<([0-9hms-]+)>')
-        
+                
         try:
             last_time = time.findall(log.lines[-1])[-1]
             output_params['last_time'] = yambotiming_to_seconds(last_time)
@@ -92,6 +97,17 @@ def parse_log(log, output_params, timing):
             except:
                 last_time = 0
                 output_params['last_time'] = 0
+        
+        if timing:
+            output_params['timing'].append('verbose_output:')
+            t_verbose = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[TIMING\])')
+            t_verbose_old = re.compile('^\s+?<([0-9a-z-]+)> (\[TIMING\]) ')
+            for line in log.lines:
+                if t_verbose.match(line):
+                    output_params['timing'].append(t_verbose.match(line).string)
+                elif t_verbose_old.match(line):
+                    output_params['timing'].append(t_verbose_old.match(line).string)
+                    
         #warnings
         warning = re.compile('\[WARNING\]')      
         #memstats...
@@ -112,34 +128,14 @@ def parse_log(log, output_params, timing):
                 output_params['memstats'].append(memory.match(line).string)
             elif memory_old.match(line):
                     output_params['memstats'].append(memory_old.match(line).string)
-            elif  alloc1_error.findall(line):
-                output_params['memory_error'] = True
-                output_params['errors'].append('memory_general')
-            elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
-                output_params['para_error'] = True
-            elif time_probably.findall(line):
-                output_params['errors'].append('time_most_prob')
-        try:
-            if  reading_explosion_of_memory.findall(log.lines[-1]):
-                output_params['memory_error'] = True
-                output_params['errors'].append('memory_general')
-        except:
-            pass
         
-        try:
-            if  alloc2_error.findall(log.lines[-1]):
-                output_params['memory_error'] = True
-                output_params['errors'].append('memory_general')
-        except:
-            pass
+        for line in log.lines:    
+            for k,v in errors.items():
+                for v_ in v:
+                    r = re.compile(v_)
+                    if r.findall(line):
+                        output_params[k] = True
         
-        try:
-            if  X_par_mem.findall(log.lines[-1]):
-                output_params['memory_error'] = True
-                output_params['errors'].append('X_par_allocation')
-        except:
-            pass
-            
     return output_params
 
 def parse_report(report, output_params):
