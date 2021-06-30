@@ -73,6 +73,7 @@ def parse_log(log,output_params,timing):
         for line in log.lines:
             if game_over.findall(line) or game_over_2.findall(line):
                 output_params['game_over'] = True
+                break
             else:
                 output_params['game_over'] = False
         #timing sections...
