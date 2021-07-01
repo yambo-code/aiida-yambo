@@ -167,16 +167,16 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
             if 'mesh' in var:
                 hint_= 1
 
-            starting_inputs[var] =  starting_inputs[var][i['steps']-1]
+            starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1]
             if var not in space.keys():
                 space[var] = []
             else:
                 starting_inputs[var]=space[var][-1]
             if 'delta' in i.keys() and not 'commensurate' in i.keys():
                 #for r in range(1,i['steps']*i['max_iterations']+1):
-                for r in range(-i['steps']+1,len(existing_inputs[var])-i['steps']+1):
+                for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
                     if r <= 0: 
-                        new_val = existing_inputs[var][i['steps']+r-1]
+                        new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
                     elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
                         new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)*hint_
                         if not 'mesh' in var:
@@ -442,7 +442,10 @@ class Convergence_evaluator():
     
     def convergence_prediction(self):  #1D
 
-        extra, pcov = curve_fit(self.convergence_function,np.array(self.p),self.delta,p0=[1,1]*len(self.parameters))
+        sig = np.array(self.p)[0,:]
+        for i in range(1,len(np.array(self.p))):
+            sig = sig*np.array(self.p)[i,:]
+        extra, pcov = curve_fit(self.convergence_function,np.array(self.p),self.delta,p0=[1,1]*len(self.parameters),sigma=1/sig)
         self.extra = extra
         print(extra)
         hints = {}
@@ -464,7 +467,7 @@ class Convergence_evaluator():
             gamma = delta_**3 #/ b
             
             d = alpha*a/(self.p[i][-1])+beta*a/(self.p[i][-1]**2)+gamma*2*a/(self.p[i][-1]**3)
-            grad_hint = abs(a/self.thr)
+            grad_hint = abs(abs(a/self.thr) - self.p[i][-1])
                       
             hint = grad_hint/delta_
             hints[self.parameters[i]] = hint
