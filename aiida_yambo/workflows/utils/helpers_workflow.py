@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
+from aiida.engine.launch import TYPE_RUN_PROCESS
 import numpy as np
 from scipy.optimize import curve_fit, minimize
 from matplotlib import pyplot as plt, style
@@ -44,11 +45,8 @@ def collect_inputs(inputs, kpoints, ideal_iter):
     for i in ideal_iter:
         #print(i)
         l = i['var']
-        delta=i['delta']
         if not isinstance(i['var'],list):
             l=[i['var']]
-        if not isinstance(i['delta'],list) or 'mesh' in i['var']:
-            delta=[i['delta']]
         for var in l:
             #print(var)
             if var not in starting_inputs.keys():
@@ -68,7 +66,7 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
     for i in workflow_dict:
         l = i['var']
         if 'delta' in i.keys(): delta=i['delta']*hint
-        if 'commensurate' in i.keys(): delta=i['commensurate']
+        if 'ratio' in i.keys(): delta=i['ratio']
         # if 'explicit' in ... :
             #for new_val in i['explicit']:
             #    space[var].append(new_val)
@@ -86,7 +84,7 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
                 space[var] = []
             else:
                 starting_inputs[var]=space[var][-1]
-            if wfl_type == '1D_convergence' and 'delta' in i.keys() and not 'commensurate' in i.keys():
+            if wfl_type == '1D_convergence' and 'delta' in i.keys():
                 for r in range(1,i['steps']*i['max_iterations']+1):
                     if isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
                         new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
@@ -100,24 +98,31 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
                             new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
                     space[var].append(new_val)
                     #print(new_val)
-            elif wfl_type == '1D_convergence' and 'commensurate' in i.keys():
+
+            elif wfl_type == '1D_convergence' and 'ratio' in i.keys():
                 for r in range(1,i['steps']*i['max_iterations']+1):
-                    if first == 0: first = 1
+                    
                     if 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]*(r+first-1),
-                                                                                 delta[l.index(var)]*(r+first-1),
-                                                                                 delta[l.index(var)]*(r+first-1)])]
+                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]**(r+first-1),
+                                                                                 delta[l.index(var)]**(r+first-1),
+                                                                                 delta[l.index(var)]**(r+first-1)])]
                     elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
-                        new_val = starting_inputs[var][0]*delta[l.index(var)]*(r+first-1)
+                        if isinstance(starting_inputs[var][0],int):
+                            new_val = int(starting_inputs[var][0]*delta[l.index(var)]**(r+first-1))
+                        else:
+                            new_val = starting_inputs[var][0]*delta[l.index(var)]**(r+first-1)
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(starting_inputs[var][0],list): 
                         if not 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
+                            if isinstance(starting_inputs[var][0][-1],int):
+                                new_val = [int(a*b) for a,b in zip(starting_inputs[var][0], [d**(r+first-1) for d in delta[l.index(var)]])]
+                            else:
+                                new_val = [a*b for a,b in zip(starting_inputs[var][0], [d**(r+first-1) for d in delta[l.index(var)]])]
                             new_val = [new_val, starting_inputs[var][1]]
-                        
+                    if r == 0 and first == 0: first = 1
                     space[var].append(new_val)
-                    #print(new_val)
+
             else:
                 for r in range(len(i['space'])):
                     new_val = i['space'][r][l.index(var)]
@@ -148,8 +153,27 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         
         l = calc_dict['var']
         i = calc_dict
-        if 'delta' in i.keys(): delta=i['delta']
-        if 'commensurate' in i.keys(): delta=i['commensurate']
+        if 'delta' in i.keys(): 
+            delta=i['delta']
+            if not isinstance(delta,list) or 'mesh' in i['var']:
+                delta=[delta]
+                calc_dict['delta'] = [calc_dict['delta']]
+            for var in l: 
+                if isinstance(hint,int):
+                    hint_ = 1 
+                else:
+                    hint_ = int(1+hint[var]*factor)
+                if 'mesh' in var:
+                    hint_= 1
+
+                if isinstance(delta[calc_dict['var'].index(var)],int) or isinstance(delta[calc_dict['var'].index(var)],float):
+                        calc_dict['delta'][calc_dict['var'].index(var)] = calc_dict['delta'][calc_dict['var'].index(var)]*hint_
+                elif isinstance(delta[l.index(var)],list): 
+                        calc_dict['delta'][calc_dict['var'].index(var)] = [d*hint_ for d in delta[calc_dict['var'].index(var)]]
+
+            delta = calc_dict['delta']
+            
+        if 'ratio' in i.keys(): delta=i['ratio']
         # if 'explicit' in ... :
             #for new_val in i['explicit']:
             #    space[var].append(new_val)
@@ -157,58 +181,86 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
             #continue
         if not isinstance(i['var'],list):
             l=[i['var']]
-        if not isinstance(delta,list) or 'mesh' in i['var']:
-            delta=[delta]
+
+        
         for var in l:  
-            if isinstance(hint,int):
+            if hint==0:
                 hint_ = 1 
             else:
-                hint_ = int(1+hint[var]*factor)
+                hint_ = hint[var]
             if 'mesh' in var:
                 hint_= 1
 
-            starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1]
-            if var not in space.keys():
+            
+            
+
+            if not var in space.keys():
                 space[var] = []
-            else:
-                starting_inputs[var]=space[var][-1]
-            if 'delta' in i.keys() and not 'commensurate' in i.keys():
+
+            if 'ratio' in i.keys():
+                starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']] 
+                if isinstance(starting_inputs[var][0],int):
+                    is_integer = True
+                    starting_inputs[var][0] = int(starting_inputs[var][0]*hint_)
+                elif isinstance(starting_inputs[var][0],list):
+                    is_integer = isinstance(starting_inputs[var][0][-1],int)
+                    for j in starting_inputs[var][0]:
+                        if i['ratio'][starting_inputs[var][0].index(j)] == 1:
+                            starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]
+                        else:
+                            if is_integer:
+                                starting_inputs[var][0][starting_inputs[var][0].index(j)] = int(starting_inputs[var][0][starting_inputs[var][0].index(j)]*hint_)
+                            else:
+                                starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]*hint_
+                else:
+                    is_integer = False
+                    starting_inputs[var][0] = starting_inputs[var][0]*hint_
+                hint_ = 1
+            else: 
+                starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1]
+            if 'delta' in i.keys():
                 #for r in range(1,i['steps']*i['max_iterations']+1):
                 for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
                     if r <= 0: 
                         new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
                     elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
-                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)*hint_
+                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(delta[l.index(var)],list): 
                         if not 'mesh' in var:
-                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1)*hint_ for d in delta[l.index(var)]])]
+                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
                             new_val = [new_val, starting_inputs[var][1]]
                         else:
-                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1)*hint_ for d in delta[l.index(var)]])]
+                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
                     space[var].append(new_val)
                     #print(new_val)
-            elif 'commensurate' in i.keys():
-                for r in range(1,i['steps']*i['max_iterations']+1):
-                    if r <= i['steps']*i['iter']: 
-                        continue
-                    if first == 0: first = 1
+            elif 'ratio' in i.keys():
+                for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
+                    if r <= 0: 
+                        new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
                     if 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]*(r+first-1)*hint_,
-                                                                                 delta[l.index(var)]*(r+first-1)*hint_,
-                                                                                 delta[l.index(var)]*(r+first-1)*hint_])]
+                            new_val = [int(a*b) for a,b in zip(starting_inputs[var], [delta[l.index(var)]**((r+first-1)),
+                                                                                 delta[l.index(var)]**((r+first-1)),
+                                                                                 delta[l.index(var)]**((r+first-1))])]
                     elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
-                        new_val = starting_inputs[var][0]*delta[l.index(var)]*(r+first-1)*hint_
+                        if is_integer:
+                            new_val = int(starting_inputs[var][0]*delta[l.index(var)]**((r+first-1)))
+                        else:
+                            new_val = starting_inputs[var][0]*delta[l.index(var)]**((r+first-1))
                         if not 'mesh' in var:
                             new_val = [new_val, starting_inputs[var][1]]
                     elif isinstance(starting_inputs[var][0],list): 
                         if not 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var][0], [d*(r+first-1)*hint_ for d in delta[l.index(var)]])]
+                            if is_integer:
+                                new_val = [int(a*b) for a,b in zip(starting_inputs[var][0], [d**((r+first-1)) for d in delta[l.index(var)]])]
+                            else:
+                                new_val = [a*b for a,b in zip(starting_inputs[var][0], [d**((r+first-1)) for d in delta[l.index(var)]])]
                             new_val = [new_val, starting_inputs[var][1]]
                         
                     space[var].append(new_val)
                     #print(new_val)
+            
             else:
                 for r in range(len(i['space'])):
                     new_val = i['space'][r][l.index(var)]
@@ -242,7 +294,8 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     for i in parameters_space.get_list():
         new_conv = copy.deepcopy(i)
         new_conv['max_iterations'] = i.pop('max_iterations', 3)
-        new_conv['delta'] = i.pop('delta', 5)
+        #new_conv['delta'] = i.pop('delta', 5)
+        #new_conv['ratio'] = i.pop('ratio', 1.5)
         new_conv['steps'] = i.pop('steps', 3)
         new_conv['conv_thr'] = i.pop('conv_thr', 0.05)
         new_l.append(new_conv)
@@ -445,7 +498,8 @@ class Convergence_evaluator():
         sig = np.array(self.p)[0,:]
         for i in range(1,len(np.array(self.p))):
             sig = sig*np.array(self.p)[i,:]
-        extra, pcov = curve_fit(self.convergence_function,np.array(self.p),self.delta,p0=[1,1]*len(self.parameters),sigma=1/sig)
+        sig = sig[-steps_fit:]
+        extra, pcov = curve_fit(self.convergence_function,np.array(self.p)[:,-steps_fit:],self.delta[-steps_fit:],p0=[1,1]*len(self.parameters),sigma=1/sig)
         self.extra = extra
         print(extra)
         hints = {}
@@ -470,6 +524,9 @@ class Convergence_evaluator():
             grad_hint = abs(abs(a/self.thr) - self.p[i][-1])
                       
             hint = grad_hint/delta_
+
+            if self.has_ratio: hint = grad_hint/self.p[i][-1] + 1
+
             hints[self.parameters[i]] = hint
 
         return hints
@@ -494,6 +551,9 @@ def analysis_and_decision(calc_dict, workflow_dict):
         oversteps_1 = 0
         none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
 
+        has_ratio = False
+        if 'ratio' in calc_dict.keys(): has_ratio = True
+
         real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,keys=workflow_dict['what'],var_ = calc_dict['var'])
         
         is_converged = True
@@ -503,7 +563,8 @@ def analysis_and_decision(calc_dict, workflow_dict):
             hints[i] = []
         oversteps_ = []
         for k in workflow_dict['what']:
-            y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps)
+            y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps, steps_fit = calc_dict['steps']+1,
+                                        ratio = has_ratio)
             conv_array, delta, converged, is_converged_, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
             if not is_converged_:
@@ -530,9 +591,9 @@ def analysis_and_decision(calc_dict, workflow_dict):
         oversteps = min(oversteps_)
         hint = {}
         for i in var:
-            if max(hints[i]) > 3:
-                if min(hints[i]) > 3:
-                    hint[i] = 3
+            if max(hints[i]) > 5:
+                if min(hints[i]) > 5:
+                    hint[i] = 5
                 else:
                     hint[i] = min(hints[i])
             else:
