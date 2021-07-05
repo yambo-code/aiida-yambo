@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
-from aiida.engine.launch import TYPE_RUN_PROCESS
 import numpy as np
 from scipy.optimize import curve_fit, minimize
 from matplotlib import pyplot as plt, style
