@@ -197,14 +197,15 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 space[var] = []
 
             if 'ratio' in i.keys():
-                starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']] 
+                hint_ = hint_**0.5
+                starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1] 
                 if isinstance(starting_inputs[var][0],int):
                     is_integer = True
                     starting_inputs[var][0] = int(starting_inputs[var][0]*hint_)
                 elif isinstance(starting_inputs[var][0],list):
                     is_integer = isinstance(starting_inputs[var][0][-1],int)
                     for j in starting_inputs[var][0]:
-                        if i['ratio'][starting_inputs[var][0].index(j)] == 1:
+                        if i['ratio'][l.index(var)][starting_inputs[var][0].index(j)] == 1:
                             starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]
                         else:
                             if is_integer:
@@ -214,7 +215,6 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 else:
                     is_integer = False
                     starting_inputs[var][0] = starting_inputs[var][0]*hint_
-                hint_ = 1
             else: 
                 starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1]
             if 'delta' in i.keys():
@@ -238,7 +238,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
                     if r <= 0: 
                         new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
-                    if 'mesh' in var:
+                    elif 'mesh' in var:
                             new_val = [int(a*b) for a,b in zip(starting_inputs[var], [delta[l.index(var)]**((r+first-1)),
                                                                                  delta[l.index(var)]**((r+first-1)),
                                                                                  delta[l.index(var)]**((r+first-1))])]
@@ -497,8 +497,8 @@ class Convergence_evaluator():
         sig = np.array(self.p)[0,:]
         for i in range(1,len(np.array(self.p))):
             sig = sig*np.array(self.p)[i,:]
-        sig = sig[-steps_fit:]
-        extra, pcov = curve_fit(self.convergence_function,np.array(self.p)[:,-steps_fit:],self.delta[-steps_fit:],p0=[1,1]*len(self.parameters),sigma=1/sig)
+        sig = sig[-self.steps_fit:]
+        extra, pcov = curve_fit(self.convergence_function,np.array(self.p)[:,-self.steps_fit:],self.delta[-self.steps_fit:],p0=[1,1]*len(self.parameters),sigma=1/sig)
         self.extra = extra
         print(extra)
         hints = {}
@@ -563,14 +563,14 @@ def analysis_and_decision(calc_dict, workflow_dict):
         oversteps_ = []
         for k in workflow_dict['what']:
             y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps, steps_fit = calc_dict['steps']+1,
-                                        ratio = has_ratio)
+                                        has_ratio = has_ratio)
             conv_array, delta, converged, is_converged_, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
             if not is_converged_:
                 is_converged = False
 
             if workflow_dict['convergence_algorithm'] != 'dummy':
-                try:
+               try:
                     hint = y.convergence_prediction()
                 except:
                     for i in var:
