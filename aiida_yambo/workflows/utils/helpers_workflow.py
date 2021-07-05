@@ -158,13 +158,12 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 delta=[delta]
                 calc_dict['delta'] = [calc_dict['delta']]
             for var in l: 
-                if isinstance(hint,int):
-                    hint_ = 1 
+                if convergence_algorithm == 'smart':
+                    hint_ = int((1+hint[var]*factor)**0.5) #condition on the derivative
+                elif convergence_algorithm == 'aggressive':
+                    hint_ = int((1+hint[var]*factor)) #condition on the value... but the fit is not so reliable.
                 else:
-                    if convergence_algorithm == 'smart':
-                        hint_ = int((1+hint[var]*factor)**0.5) #condition on the derivative
-                    elif convergence_algorithm == 'aggressive':
-                        hint_ = int((1+hint[var]*factor)) #condition on the value... but the fit is not so reliable.
+                    hint_ = 1
                 if 'mesh' in var:
                     hint_= 1
 
