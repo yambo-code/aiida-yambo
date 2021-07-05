@@ -570,7 +570,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
                 is_converged = False
 
             if workflow_dict['convergence_algorithm'] != 'dummy':
-               try:
+                try:
                     hint = y.convergence_prediction()
                 except:
                     for i in var:
