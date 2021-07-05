@@ -142,7 +142,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
     if convergence_algorithm == 'smart':
         factor = 1 # (calc_dict['iter']**0.5)
     elif convergence_algorithm == 'aggressive':
-        factor = (calc_dict['iter']**0.5) + 1
+        factor = 1
     elif convergence_algorithm == 'dummy':
         factor = 0
 
@@ -161,7 +161,10 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 if isinstance(hint,int):
                     hint_ = 1 
                 else:
-                    hint_ = int(1+hint[var]*factor)
+                    if convergence_algorithm == 'smart':
+                        hint_ = int((1+hint[var]*factor)**0.5) #condition on the derivative
+                    elif convergence_algorithm == 'aggressive':
+                        hint_ = int((1+hint[var]*factor)) #condition on the value... but the fit is not so reliable.
                 if 'mesh' in var:
                     hint_= 1
 
