@@ -577,8 +577,8 @@ def analysis_and_decision(calc_dict, workflow_dict):
                         hint[i] = 2
                     print('not found optimal delta, setting factor 2 as default')
             else:
-                 for i in var:
-                     hint[i] = 0
+                for i in var:
+                    hint[i] = 0
 
             for i in var:
                 hints[i].append(hint[i])
