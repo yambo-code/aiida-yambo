@@ -143,8 +143,11 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         factor = 1 # (calc_dict['iter']**0.5)
     elif convergence_algorithm == 'aggressive':
         factor = 1
+    elif convergence_algorithm == 'dummy' and 'ratio' in calc_dict.keys():
+        factor = 1
     elif convergence_algorithm == 'dummy':
         factor = 0
+    
 
     
         
@@ -200,6 +203,8 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
 
             if 'ratio' in i.keys():
                 hint_ = hint_**0.5
+                if convergence_algorithm == 'dummy':
+                    hint_ = 1
                 starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1] 
                 if isinstance(starting_inputs[var][0],int):
                     is_integer = True
