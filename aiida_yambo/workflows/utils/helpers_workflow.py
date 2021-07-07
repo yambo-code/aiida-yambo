@@ -161,18 +161,18 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 delta=[delta]
                 calc_dict['delta'] = [calc_dict['delta']]
             for var in l: 
-                if convergence_algorithm == 'smart':
-                    hint_ = int((1+hint[var]*factor)**0.5) #condition on the derivative
-                elif convergence_algorithm == 'aggressive':
-                    hint_ = int((1+hint[var]*factor)) #condition on the value... but the fit is not so reliable.
-                else:
-                    hint_ = 1
+                hint_ = (1+hint[var]*factor)
                 if 'mesh' in var:
                     hint_= 1
 
-                if isinstance(delta[calc_dict['var'].index(var)],int) or isinstance(delta[calc_dict['var'].index(var)],float):
+                if isinstance(delta[calc_dict['var'].index(var)],int):
+                        calc_dict['delta'][calc_dict['var'].index(var)] = int(calc_dict['delta'][calc_dict['var'].index(var)]*hint_)
+                elif isinstance(delta[calc_dict['var'].index(var)],float):
                         calc_dict['delta'][calc_dict['var'].index(var)] = calc_dict['delta'][calc_dict['var'].index(var)]*hint_
                 elif isinstance(delta[l.index(var)],list): 
+                    if isinstance(delta[l.index(var)][-1],int):
+                        calc_dict['delta'][calc_dict['var'].index(var)] = [int(d*hint_) for d in delta[calc_dict['var'].index(var)]]
+                    else:
                         calc_dict['delta'][calc_dict['var'].index(var)] = [d*hint_ for d in delta[calc_dict['var'].index(var)]]
 
             delta = calc_dict['delta']
@@ -526,11 +526,11 @@ class Convergence_evaluator():
             beta = delta_**2 #/ b
             gamma = delta_**3 #/ b
             
-            d = alpha*a/(self.p[i][-1])+beta*a/(self.p[i][-1]**2)+gamma*2*a/(self.p[i][-1]**3)
-            grad_hint = abs(abs(a/self.thr) - self.p[i][-1])
+            grad_hint = abs(abs(x_1)/self.p[i][-1]-1)
                       
-            hint = grad_hint/delta_
+            hint = np.sqrt(grad_hint/delta_)
 
+            if self.logic == 'aggressive': hint = hint**2
             if self.has_ratio: hint = grad_hint/self.p[i][-1] + 1
 
             hints[self.parameters[i]] = hint
@@ -569,8 +569,8 @@ def analysis_and_decision(calc_dict, workflow_dict):
             hints[i] = []
         oversteps_ = []
         for k in workflow_dict['what']:
-            y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps, steps_fit = calc_dict['steps']+1,
-                                        has_ratio = has_ratio)
+            y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps, steps_fit = calc_dict['steps']*calc_dict['iter']+1,
+                                        has_ratio = has_ratio, logic=workflow_dict['convergence_algorithm'])
             conv_array, delta, converged, is_converged_, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
             if not is_converged_:
