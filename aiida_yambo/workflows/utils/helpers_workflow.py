@@ -146,10 +146,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
     elif convergence_algorithm == 'dummy' and 'ratio' in calc_dict.keys():
         factor = 1
     elif convergence_algorithm == 'dummy':
-        factor = 0
-    
-
-    
+        factor = 0   
         
     for j in [1]:
         
@@ -194,9 +191,6 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                 hint_ = hint[var]
             if 'mesh' in var:
                 hint_= 1
-
-            
-            
 
             if not var in space.keys():
                 space[var] = []
@@ -275,7 +269,6 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
             
             #for ii in range(len(space[var]),len(existing_inputs[var])-len(space[var])):
             #    space[var].append(existing_inputs[var][ii])
-
 
         first = 1
 
@@ -366,7 +359,6 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
                 workflow_story_list = [workflow_dict['global_step']]+quantities.values[i].tolist()+[var_names]+\
                         [True, False]
 
-
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
                     ['useful','failed'])
 
@@ -394,7 +386,10 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
     
     final_result = {}
-    for i in range(oversteps):
+    if oversteps > calc_manager['steps']*calc_manager['iter']:
+        for i in range(1,calc_manager['steps']*calc_manager['iter']+1): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-calc_manager['steps']*calc_manager['iter']-i,'useful']=False
+    for i in range(oversteps): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
     if oversteps:
         for i in range(calc_manager['iter']*calc_manager['steps']-(oversteps)):
@@ -423,7 +418,6 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     #    last_ok_uuid = workflow_dict['workflow_story'].iloc[-1]['uuid']
     #    last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
 
-    
     workflow_dict['workflow_story'] = workflow_dict['workflow_story'].replace({np.nan:None})
     
     try:
