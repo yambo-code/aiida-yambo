@@ -131,6 +131,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     calc_dict['iter']  = 0
     calc_dict['success'] = False
     calc_dict['conv_thr'] = calc_dict.pop('conv_thr',0.1)
+    calc_dict['ratio'] = calc_dict.pop('ratio',1.2)
     calc_dict['max_iterations'] = calc_dict.pop('max_iterations',3)
     calc_dict['steps'] = calc_dict.pop('steps',3)
     calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])

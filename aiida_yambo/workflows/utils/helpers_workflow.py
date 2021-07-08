@@ -63,6 +63,7 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
     if not hint:
         hint = 1
     for i in workflow_dict:
+        wfl_type = i['optimization']
         l = i['var']
         if 'delta' in i.keys(): delta=i['delta']*hint
         if 'ratio' in i.keys(): delta=i['ratio']
@@ -121,6 +122,15 @@ def create_space(starting_inputs={}, workflow_dict={}, wfl_type='1D_convergence'
                             new_val = [new_val, starting_inputs[var][1]]
                     if r == 0 and first == 0: first = 1
                     space[var].append(new_val)
+            
+            elif wfl_type == 'multivariate_optimization':
+                if 'space' in i.keys():
+                    for r in range(len(i['space'])):
+                        new_val = i['space'][r][l.index(var)]
+                else:
+                    pass #generate automatic space??
+                
+                    space[var].append(new_val)
 
             else:
                 for r in range(len(i['space'])):
@@ -149,7 +159,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         factor = 0   
         
     for j in [1]:
-        
+        wfl_type = calc_dict['optimization']
         l = calc_dict['var']
         i = calc_dict
         if 'delta' in i.keys(): 
@@ -261,6 +271,12 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                     space[var].append(new_val)
                     #print(new_val)
             
+            elif wfl_type == 'multivariate_optimization':
+                for r in range(len(hint['space'])):
+                    new_val = hint['space'][r][l.index(var)]
+                
+                    space[var].append(new_val)
+            
             else:
                 for r in range(len(i['space'])):
                     new_val = i['space'][r][l.index(var)]
@@ -278,7 +294,6 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         for r in range(calc_dict['steps']*calc_dict['iter']):
             param_space[v].pop(0)
     
-
     return param_space, existing_inputs
 
 
@@ -493,7 +508,7 @@ class Convergence_evaluator():
             y = y * ( A/xval + B)
         return y
     
-    def convergence_prediction(self):  #1D
+    def fit_prediction(self):  #1D
 
         sig = np.array(self.p)[0,:]
         for i in range(1,len(np.array(self.p))):
@@ -572,7 +587,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
 
             if workflow_dict['convergence_algorithm'] != 'dummy':
                 try:
-                    hint = y.convergence_prediction()
+                    hint = y.fit_prediction()
                 except:
                     for i in var:
                         hint[i] = 2
@@ -601,8 +616,6 @@ def analysis_and_decision(calc_dict, workflow_dict):
         if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
                 
-        return is_converged, oversteps, none_encountered, homo, hint
-
     return is_converged, oversteps, none_encountered, hint      
     
 
