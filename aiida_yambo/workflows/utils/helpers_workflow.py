@@ -601,7 +601,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
         if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
                 
-    return is_converged, oversteps, none_encountered, hint      
+    return is_converged, oversteps, none_encountered, homo, hint      
     
 
 
