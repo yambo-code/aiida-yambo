@@ -386,9 +386,9 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
     
     final_result = {}
-    if oversteps > calc_manager['steps']*calc_manager['iter']:
-        for i in range(1,calc_manager['steps']*calc_manager['iter']+1): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-calc_manager['steps']*calc_manager['iter']-i,'useful']=False
+    if oversteps >= calc_manager['steps']*calc_manager['iter']:
+        for i in range(1,oversteps-calc_manager['steps']*calc_manager['iter']+2): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i-calc_manager['steps']*calc_manager['iter'],'useful']=True
     for i in range(oversteps): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
     if oversteps:
