@@ -123,7 +123,7 @@ def set_parallelism(instructions_, inputs):
 
 
 #class calc_manager_aiida_yambo: 
-def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
+def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hyperparameters
     
     calc_dict = {}
     calc_dict.update(calc_info)
@@ -136,7 +136,10 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}):
     calc_dict['steps'] = calc_dict.pop('steps',3)
     calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])
     
-    if calc_dict['type'] != '1D_convergence': 
+    calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','1D_convergence') #1D, multivariate_optimization...
+    calc_dict['optimization'] = calc_dict.pop('optimization','dummy') #fit, metodo multivariate
+
+    if calc_dict['convergence_algorithm'] != '1D_convergence': 
         calc_dict['steps'] = len(calc_dict['space'])
     
     return calc_dict

@@ -159,110 +159,100 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
     elif convergence_algorithm == 'dummy':
         factor = 0   
         
-    for j in [1]:
-        wfl_type = calc_dict['optimization']
-        l = calc_dict['var']
-        i = calc_dict
-        if 'delta' in i.keys(): 
-            delta=i['delta']
-            if not isinstance(delta,list) or 'mesh' in i['var']:
-                delta=[delta]
-                calc_dict['delta'] = [calc_dict['delta']]
-            for var in l: 
-                hint_ = (1+hint[var]*factor)
-                if 'mesh' in var:
-                    hint_= 1
-
-                if isinstance(delta[calc_dict['var'].index(var)],int):
-                        calc_dict['delta'][calc_dict['var'].index(var)] = int(calc_dict['delta'][calc_dict['var'].index(var)]*hint_)
-                elif isinstance(delta[calc_dict['var'].index(var)],float):
-                        calc_dict['delta'][calc_dict['var'].index(var)] = calc_dict['delta'][calc_dict['var'].index(var)]*hint_
-                elif isinstance(delta[l.index(var)],list): 
-                    if isinstance(delta[l.index(var)][-1],int):
-                        calc_dict['delta'][calc_dict['var'].index(var)] = [int(d*hint_) for d in delta[calc_dict['var'].index(var)]]
-                    else:
-                        calc_dict['delta'][calc_dict['var'].index(var)] = [d*hint_ for d in delta[calc_dict['var'].index(var)]]
-
-            delta = calc_dict['delta']
-            
-        if 'ratio' in i.keys(): delta=i['ratio']
-        # if 'explicit' in ... :
-            #for new_val in i['explicit']:
-            #    space[var].append(new_val)
-            
-            #continue
-        if not isinstance(i['var'],list):
-            l=[i['var']]
-
-        
-        for var in l:  
-            if hint==0:
-                hint_ = 1 
-            else:
-                hint_ = hint[var]
+    
+    wfl_type = calc_dict['optimization']
+    l = calc_dict['var']
+    i = calc_dict
+    if 'delta' in i.keys(): 
+        delta=i['delta']
+        if not isinstance(delta,list) or 'mesh' in i['var']:
+            delta=[delta]
+            calc_dict['delta'] = [calc_dict['delta']]
+        for var in l: 
+            hint_ = (1+hint[var]*factor)
             if 'mesh' in var:
                 hint_= 1
-
-            if not var in space.keys():
-                space[var] = []
-
-            if 'ratio' in i.keys():
-                hint_ = hint_**0.5
-                if convergence_algorithm == 'dummy':
-                    hint_ = 1
-                starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1] 
-                if isinstance(starting_inputs[var][0],int):
-                    is_integer = True
-                    starting_inputs[var][0] = int(starting_inputs[var][0]*hint_)
-                elif isinstance(starting_inputs[var][0],list):
-                    is_integer = isinstance(starting_inputs[var][0][-1],int)
-                    for j in starting_inputs[var][0]:
-                        if i['ratio'][l.index(var)][starting_inputs[var][0].index(j)] == 1:
-                            starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]
-                        else:
-                            if is_integer:
-                                starting_inputs[var][0][starting_inputs[var][0].index(j)] = int(starting_inputs[var][0][starting_inputs[var][0].index(j)]*hint_)
-                            else:
-                                starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]*hint_
+            if isinstance(delta[calc_dict['var'].index(var)],int):
+                calc_dict['delta'][calc_dict['var'].index(var)] = int(calc_dict['delta'][calc_dict['var'].index(var)]*hint_)
+            elif isinstance(delta[calc_dict['var'].index(var)],float):
+                calc_dict['delta'][calc_dict['var'].index(var)] = calc_dict['delta'][calc_dict['var'].index(var)]*hint_
+            elif isinstance(delta[l.index(var)],list): 
+                if isinstance(delta[l.index(var)][-1],int):
+                    calc_dict['delta'][calc_dict['var'].index(var)] = [int(d*hint_) for d in delta[calc_dict['var'].index(var)]]
                 else:
-                    is_integer = False
-                    starting_inputs[var][0] = starting_inputs[var][0]*hint_
-            else: 
-                starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1]
-            if 'delta' in i.keys():
-                #for r in range(1,i['steps']*i['max_iterations']+1):
-                for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
-                    if r <= 0: 
-                        new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
-                    elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
-                        new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
-                        if not 'mesh' in var:
-                            new_val = [new_val, starting_inputs[var][1]]
-                    elif isinstance(delta[l.index(var)],list): 
-                        if not 'mesh' in var:
-                            new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
-                            new_val = [new_val, starting_inputs[var][1]]
-                        else:
-                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
-                    space[var].append(new_val)
-                    #print(new_val)
-            elif 'ratio' in i.keys():
-                for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
-                    if r <= 0: 
-                        new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
-                    elif 'mesh' in var:
-                            new_val = [int(a*b) for a,b in zip(starting_inputs[var], [delta[l.index(var)]**((r+first-1)),
-                                                                                 delta[l.index(var)]**((r+first-1)),
-                                                                                 delta[l.index(var)]**((r+first-1))])]
-                    elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
+                    calc_dict['delta'][calc_dict['var'].index(var)] = [d*hint_ for d in delta[calc_dict['var'].index(var)]]
+            delta = calc_dict['delta']
+            
+    if 'ratio' in i.keys(): delta=i['ratio']
+    if not isinstance(i['var'],list):
+        l=[i['var']]      
+    for var in l:  
+        if hint==0:
+            hint_ = 1 
+        else:
+            hint_ = hint[var]
+        if 'mesh' in var:
+            hint_= 1
+        if not var in space.keys():
+            space[var] = []
+
+        if 'ratio' in i.keys():
+            hint_ = hint_**0.5
+            if convergence_algorithm == 'dummy':
+                hint_ = 1
+            starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1] 
+            if isinstance(starting_inputs[var][0],int):
+                is_integer = True
+                starting_inputs[var][0] = int(starting_inputs[var][0]*hint_)
+            elif isinstance(starting_inputs[var][0],list):
+                is_integer = isinstance(starting_inputs[var][0][-1],int)
+                for j in starting_inputs[var][0]:
+                    if i['ratio'][l.index(var)][starting_inputs[var][0].index(j)] == 1:
+                        starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]
+                    else:
                         if is_integer:
-                            new_val = int(starting_inputs[var][0]*delta[l.index(var)]**((r+first-1)))
+                            starting_inputs[var][0][starting_inputs[var][0].index(j)] = int(starting_inputs[var][0][starting_inputs[var][0].index(j)]*hint_)
                         else:
-                            new_val = starting_inputs[var][0]*delta[l.index(var)]**((r+first-1))
-                        if not 'mesh' in var:
-                            new_val = [new_val, starting_inputs[var][1]]
-                    elif isinstance(starting_inputs[var][0],list): 
-                        if not 'mesh' in var:
+                            starting_inputs[var][0][starting_inputs[var][0].index(j)] = starting_inputs[var][0][starting_inputs[var][0].index(j)]*hint_
+            else:
+                is_integer = False
+                starting_inputs[var][0] = starting_inputs[var][0]*hint_
+        else: 
+            starting_inputs[var] =  starting_inputs[var][i['steps']*calc_dict['iter']-1]
+        if 'delta' in i.keys():
+            #for r in range(1,i['steps']*i['max_iterations']+1):
+            for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
+                if r <= 0: 
+                    new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
+                elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
+                    new_val = starting_inputs[var][0]+delta[l.index(var)]*(r+first-1)
+                    if not 'mesh' in var:
+                        new_val = [new_val, starting_inputs[var][1]]
+                elif isinstance(delta[l.index(var)],list): 
+                    if not 'mesh' in var:
+                        new_val = [sum(x) for x in zip(starting_inputs[var][0], [d*(r+first-1) for d in delta[l.index(var)]])]
+                        new_val = [new_val, starting_inputs[var][1]]
+                    else:
+                        new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
+                space[var].append(new_val)
+                #print(new_val)
+        elif 'ratio' in i.keys():
+            for r in range(-i['steps']*calc_dict['iter']+1,len(existing_inputs[var])-i['steps']*calc_dict['iter']+1):
+                if r <= 0: 
+                    new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
+                elif 'mesh' in var:
+                        new_val = [int(a*b) for a,b in zip(starting_inputs[var], [delta[l.index(var)]**((r+first-1)),
+                                                                             delta[l.index(var)]**((r+first-1)),
+                                                                             delta[l.index(var)]**((r+first-1))])]
+                elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
+                    if is_integer:
+                        new_val = int(starting_inputs[var][0]*delta[l.index(var)]**((r+first-1)))
+                    else:
+                        new_val = starting_inputs[var][0]*delta[l.index(var)]**((r+first-1))
+                    if not 'mesh' in var:
+                        new_val = [new_val, starting_inputs[var][1]]
+                elif isinstance(starting_inputs[var][0],list): 
+                    if not 'mesh' in var:
                             if is_integer:
                                 new_val = [int(a*b) for a,b in zip(starting_inputs[var][0], [d**((r+first-1)) for d in delta[l.index(var)]])]
                             else:
@@ -272,17 +262,17 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
                     space[var].append(new_val)
                     #print(new_val)
             
-            elif wfl_type == 'multivariate_optimization':
-                for r in range(len(hint['space'])):
-                    new_val = hint['space'][r][l.index(var)]
+        elif wfl_type == 'multivariate_optimization':
+            for r in range(len(hint['space'])):
+                new_val = hint['space'][r][l.index(var)]
                 
-                    space[var].append(new_val)
+                space[var].append(new_val)
             
-            else:
-                for r in range(len(i['space'])):
-                    new_val = i['space'][r][l.index(var)]
+        else:
+            for r in range(len(i['space'])):
+                new_val = i['space'][r][l.index(var)]
                 
-                    space[var].append(new_val)
+                space[var].append(new_val)
             
             #for ii in range(len(space[var]),len(existing_inputs[var])-len(space[var])):
             #    space[var].append(existing_inputs[var][ii])
@@ -486,7 +476,9 @@ def analysis_and_decision(calc_dict, workflow_dict):
         none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
 
         has_ratio = False
+        has_space = False
         if 'ratio' in calc_dict.keys(): has_ratio = True
+        if 'space' in calc_dict.keys(): has_space = True
 
         real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,keys=workflow_dict['what'],var_ = calc_dict['var'])
         
@@ -498,21 +490,26 @@ def analysis_and_decision(calc_dict, workflow_dict):
         oversteps_ = []
         for k in workflow_dict['what']:
             y = Convergence_evaluator(conv_array=homo[k], thr=tol, window=window, parameters=var, p_val=lines, steps = steps, steps_fit = calc_dict['steps']*calc_dict['iter']+1,
-                                        has_ratio = has_ratio, logic=workflow_dict['convergence_algorithm'])
+                                        has_ratio = has_ratio, has_space = has_space, logic = calc_dict['convergence_algorithm'])
             conv_array, delta, converged, is_converged_, oversteps, converged_result = y.dummy_convergence() #just convergence as before
 
             if not is_converged_:
                 is_converged = False
 
-            if workflow_dict['convergence_algorithm'] != 'dummy':
+            if calc_dict['optimization'] == 'fit':  #not accurate but cheaper.
                 try:
                     hint = y.fit_prediction()
                 except:
                     for i in var:
                         hint[i] = 2
                     print('not found optimal delta, setting factor 2 as default')
+            elif calc_dict['optimization'] == '@method of multivariate':
+                pass
             else:
                 for i in var:
+                    hint[i] = 0
+
+            for i in var:
                     hint[i] = 0
 
             for i in var:
@@ -523,15 +520,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
             print(hints)
 
         oversteps = min(oversteps_)
-        hint = {}
-        for i in var:
-            if max(hints[i]) > 5:
-                if min(hints[i]) > 5:
-                    hint[i] = 5
-                else:
-                    hint[i] = min(hints[i])
-            else:
-                hint[i] = max(hints[i])
+
         if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
                 

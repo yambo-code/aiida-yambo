@@ -77,6 +77,7 @@ class Convergence_evaluator():
             if self.logic == 'aggressive': hint = hint**2
             if self.has_ratio: hint = grad_hint/self.p[i,-1] + 1
 
+            if hint > 5: hint = 5
             hints[self.parameters[i]] = hint
         
         return hints
