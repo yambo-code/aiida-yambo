@@ -161,36 +161,46 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
         
     
     wfl_type = calc_dict['optimization']
-    l = calc_dict['var']
-    i = calc_dict
-    if 'delta' in i.keys(): 
-        delta=i['delta']
-        if not isinstance(delta,list) or 'mesh' in i['var']:
-            delta=[delta]
-            calc_dict['delta'] = [calc_dict['delta']]
-        for var in l: 
-            hint_ = (1+hint[var]*factor)
-            if 'mesh' in var:
-                hint_= 1
-            if isinstance(delta[calc_dict['var'].index(var)],int):
-                calc_dict['delta'][calc_dict['var'].index(var)] = int(calc_dict['delta'][calc_dict['var'].index(var)]*hint_)
-            elif isinstance(delta[calc_dict['var'].index(var)],float):
-                calc_dict['delta'][calc_dict['var'].index(var)] = calc_dict['delta'][calc_dict['var'].index(var)]*hint_
-            elif isinstance(delta[l.index(var)],list): 
-                if isinstance(delta[l.index(var)][-1],int):
-                    calc_dict['delta'][calc_dict['var'].index(var)] = [int(d*hint_) for d in delta[calc_dict['var'].index(var)]]
-                else:
-                    calc_dict['delta'][calc_dict['var'].index(var)] = [d*hint_ for d in delta[calc_dict['var'].index(var)]]
+    for j in [1]:
+        
+        l = calc_dict['var']
+        i = calc_dict
+        if not isinstance(i['var'],list):
+            l=[i['var']]
+        if 'delta' in i.keys(): 
+            delta=i['delta']
+            if not isinstance(delta,list) or 'kpoint_mesh' in i['var']:
+                delta=[delta]
+                calc_dict['delta'] = [calc_dict['delta']]
+            for var in l: 
+                hint_ = (1+hint[var]*factor)
+                if 'mesh' in var:
+                    hint_= 1
+
+                if isinstance(delta[calc_dict['var'].index(var)],int):
+                        calc_dict['delta'][calc_dict['var'].index(var)] = int(calc_dict['delta'][calc_dict['var'].index(var)]*hint_)
+                elif isinstance(delta[calc_dict['var'].index(var)],float):
+                        calc_dict['delta'][calc_dict['var'].index(var)] = calc_dict['delta'][calc_dict['var'].index(var)]*hint_
+                elif isinstance(delta[l.index(var)],list): 
+                    if isinstance(delta[l.index(var)][-1],int):
+                        calc_dict['delta'][calc_dict['var'].index(var)] = [int(d*hint_) for d in delta[calc_dict['var'].index(var)]]
+                    else:
+                        calc_dict['delta'][calc_dict['var'].index(var)] = [d*hint_ for d in delta[calc_dict['var'].index(var)]]
+
             delta = calc_dict['delta']
             
-    if 'ratio' in i.keys(): delta=i['ratio']
-    if not isinstance(i['var'],list):
-        l=[i['var']]      
-    for var in l:  
-        if hint==0:
-            hint_ = 1 
-        else:
-            hint_ = hint[var]
+        if 'ratio' in i.keys(): delta=i['ratio']
+        # if 'explicit' in ... :
+            #for new_val in i['explicit']:
+            #    space[var].append(new_val)
+            
+            #continue
+               
+        for var in l:  
+            if hint==0:
+                hint_ = 1 
+            else:
+                hint_ = hint[var]
         if 'mesh' in var:
             hint_= 1
         if not var in space.keys():
@@ -392,9 +402,9 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
     
     final_result = {}
-    if oversteps > calc_manager['steps']*calc_manager['iter']:
-        for i in range(1,calc_manager['steps']*calc_manager['iter']+1): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-calc_manager['steps']*calc_manager['iter']-i,'useful']=False
+    if oversteps >= calc_manager['steps']*calc_manager['iter']:
+        for i in range(1,oversteps-calc_manager['steps']*calc_manager['iter']+2): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
+            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i-calc_manager['steps']*calc_manager['iter'],'useful']=True
     for i in range(oversteps): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
         workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
     if oversteps:
@@ -465,11 +475,12 @@ def analysis_and_decision(calc_dict, workflow_dict):
         '''documentation...'''
         window =  calc_dict['conv_window']
         tol = calc_dict['conv_thr']
-        var_ = calc_dict['var']
-        if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
-            var = ['BndsRnXp']
-        else:
-            var = var_
+        var = [] #calc_dict['var']
+        for v in calc_dict['var']:
+            if v == 'GbndRnge' and 'BndsRnXp' in calc_dict['var'] :
+                pass
+            else:
+                var.append(v)
         converged = True
         oversteps = 0
         oversteps_1 = 0
@@ -524,7 +535,7 @@ def analysis_and_decision(calc_dict, workflow_dict):
         if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
                 
-    return is_converged, oversteps, none_encountered, hint      
+    return is_converged, oversteps, none_encountered, homo, hint      
     
 
 
