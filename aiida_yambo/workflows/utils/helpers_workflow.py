@@ -541,11 +541,12 @@ def analysis_and_decision(calc_dict, workflow_dict):
         '''documentation...'''
         window =  calc_dict['conv_window']
         tol = calc_dict['conv_thr']
-        var_ = calc_dict['var']
-        if 'BndsRnXp' in var_ and 'GbndRnge' in var_ and len(var_)==2:
-            var = ['BndsRnXp']
-        else:
-            var = var_
+        var = [] #calc_dict['var']
+        for v in calc_dict['var']:
+            if v == 'GbndRnge' and 'BndsRnXp' in calc_dict['var'] :
+                pass
+            else:
+                var.append(v)
         converged = True
         oversteps = 0
         oversteps_1 = 0
