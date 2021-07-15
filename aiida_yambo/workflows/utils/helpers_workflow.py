@@ -156,7 +156,7 @@ def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hin
             l=[i['var']]
         if 'delta' in i.keys(): 
             delta=i['delta']
-            if not isinstance(delta,list) or 'kpoint_mesh' in i['var']:
+            if not isinstance(delta,list) or ('kpoint_mesh' in i['var'] and not isinstance(calc_dict['delta'][calc_dict['var'].index('kpoint_mesh')],list)):
                 delta=[delta]
                 calc_dict['delta'] = [calc_dict['delta']]
             for var in l: 
