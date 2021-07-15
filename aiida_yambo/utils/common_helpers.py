@@ -264,7 +264,7 @@ def find_gw_info(inputs):
     return bands, qp, last_qp, runlevels
 
 def understand_valence_metal_wise(bands, fermi, index):
-    return len(np.where(bands[index-1]-fermi<0)[0])
+    return len(np.where(bands[index-1]-fermi<0.001)[0])
 
 def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
     s = load_node(nscf_pk)
@@ -349,7 +349,6 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     valence = nscf.outputs.output_parameters.get_dict()['number_of_electrons']/2.
     fermi = nscf.outputs.output_parameters.get_dict()['fermi_energy']
     soc = nscf.outputs.output_parameters.get_dict()['spin_orbit_calculation']
-    
     try:
         try:
             nscf.inputs.pw__structure.get.ase()
@@ -374,12 +373,13 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     touch_fermi_C = bands[:,valence]-fermi
     above_fermi = np.where(touch_fermi>0)[0]
     below_fermi = np.where(touch_fermi<=0)[0]
+    print(len(above_fermi),len(below_fermi))
     if len(above_fermi)>1 and len(below_fermi)>1: #metal??
         ind_val = abs(touch_fermi).argmin()
         ind_cond = ind_val
         dft_predicted = 'metal'
     else:
-        if min(abs(touch_fermi)) > 0.02 and min(abs(touch_fermi_C)) > 0.02: #semiconductor, insulator??
+        if min(abs(touch_fermi_C)) > 0.02 and abs(max(bands[:,valence-1])-min(bands[:,valence])) > 0.02: #semiconductor, insulator??
             ind_val = bands[:,valence-1].argmax()
             ind_cond = bands[:,conduction-1].argmin()
             dft_predicted = 'semiconductor/insulator'
