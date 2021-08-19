@@ -136,11 +136,10 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['steps'] = calc_dict.pop('steps',3)
     calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])
     
-    calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','1D_convergence') #1D, multivariate_optimization...
-    calc_dict['optimization'] = calc_dict.pop('optimization','dummy') #fit, metodo multivariate
+    calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','univariate_dummy') #1D, multivariate_optimization...
 
-    if calc_dict['convergence_algorithm'] != '1D_convergence': 
-        calc_dict['steps'] = len(calc_dict['space'])
+    #if calc_dict['convergence_algorithm'] != '1D_convergence': 
+    #    calc_dict['steps'] = len(calc_dict['space'])
     
     return calc_dict
 
@@ -179,9 +178,16 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
             values_dict[var]=k_quantity
         else:
-            input_dict['variables'][var] = parameters[var].pop(0)
+            
+            if var in ['BndsRnXp','GbndRnge']:
+                input_dict['variables'][var] = [[1,parameters[var].pop(0)],inp_to_update.yres.yambo.parameters['variables'][var][-1]]
+                values_dict[var]=input_dict['variables'][var][0][1]
+            else:
+                input_dict['variables'][var] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables'][var][-1]]
+                values_dict[var]=input_dict['variables'][var][0]
+
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
-            values_dict[var]=input_dict['variables'][var]
+            
 
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update)
@@ -229,6 +235,8 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
                 else:
                     value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
+                    if n in ['BndsRnXp','GbndRnge']:
+                        value = value[1] 
             except:
                 value = 0
             l_calc.append(value)
