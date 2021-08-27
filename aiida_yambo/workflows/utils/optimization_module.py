@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import numpy as np
-from scipy.optimize import curve_fit, minimize
+from scipy import optimize
 from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
@@ -16,99 +16,77 @@ class Convergence_evaluator():
             if k != 'calc_dict': setattr(self, k, v)
         print(kwargs['calc_dict'])
         
-
-        self.hint = {}
-        self.concavity = 1
-        self.extrapolated = 1
-        if not hasattr(self,'power_law'): self.power_law = 1 
-        
-        self.p = []      
-        if 'univariate' in self.convergence_algorithm:
-            self.variables = self.var
-            
-            for param in self.var:
-                self.p.append(self.p_val[param][:])
-            self.steps_fit = self.steps*self.iter
-            
-        elif 'multivariate' in self.convergence_algorithm:
-            self.variables = self.parameters
-            self.steps_fit = self.steps*self.iter #or something........
-            for param in self.parameters:
-                self.p.append(self.p_val[param][:])
-        
-        print(self.variables)
+        self.p = []
+        for k in self.p_val.keys():
+            self.p.append(self.p_val[k])
+            print(self.p_val[k])
         self.p = np.array(self.p)
+        print(self.p)
 
     def dummy_convergence(self,what): #solo window, thr e oversteps ---AAA generalize with all the "what", just a matrix . 
         self.delta_ = self.conv_array[what]-self.conv_array[what][-1]
             
-        converged = self.delta_[-self.conv_window:][np.where(abs(self.delta_[-self.conv_window:])<=self.conv_thr)]
+        converged = self.delta_[-self.steps:][np.where(abs(self.delta_[-self.steps:])<=self.conv_thr)]
         if len(converged)<self.conv_window:
             is_converged = False
-            oversteps = 0
+            oversteps = []
             converged_result = None
         else:
             is_converged = True
-            oversteps = len(converged)
-            for overstep in range(self.conv_window+1,len(self.delta_)+1):
-                overconverged = self.delta_[-overstep:][np.where(abs(self.delta_[-overstep:])<=self.conv_thr)]
-                if oversteps < len(overconverged):
-                    oversteps = len(overconverged)
-                else:
-                    break     
-            converged_result = self.conv_array[what][-oversteps]
-            
-        return converged, is_converged, oversteps-1, converged_result
-    
-    def convergence_function(self,xv,*args): #con fit e previsione parametri a convergenza con la thr
-        if isinstance(self.power_law,int): self.power_law = [self.power_law]*len(self.parameters)
-        y = 1.0
-        for i in range(len(xv)):
-            A=args[2*i]
-            B=args[2*i+1]
-            xval=xv[i]
-            y = y * ( A/xval + B)
-        return y
-    
-    def fit_prediction(self,what): 
+            oversteps = list(self.real[abs(self.real[what]-self.real[what].values[-1])<self.conv_thr].uuid)[1:]  
+            l = len(oversteps)
+            converged_result = self.conv_array[what][-l]
         
-        #we can do a fit for 1D or ND spaces... 
-        #weights 
-        sig = self.p[0,-self.steps_fit:]
-        for i in range(1,len(self.variables)):
-            sig = sig*self.p[i,-self.steps_fit:]/max(self.p[i,-self.steps_fit:])
-        
-        extra, pcov = curve_fit(self.convergence_function,
-                                self.p[:len(self.variables),-self.steps_fit:],
-                                self.conv_array[what][-self.steps_fit:],
-                                p0=[1,1]*len(self.variables),
-                                sigma=1/sig)
-        self.extra = extra
-        self.perr = np.average(abs(self.convergence_function(self.p[:len(self.variables),-self.steps_fit:],
-                                                            *self.extra)-self.conv_array[what][-self.steps_fit:]),weights=sig)
-        
-        self.gradient = np.zeros((len(self.variables),self.steps_fit))
-        self.laplacian = np.zeros((len(self.variables),self.steps_fit))
-        for i in range(len(self.variables)):
-            a = self.extra[2*i]
-            b = self.extra[2*i+1]
-            print(a,b,self.variables[i])
-            if len(self.variables) > 1: self.concavity = a*self.concavity
-            self.extrapolated = b*self.extrapolated  
+        hint={}
+        for i in self.var:
+            hint[i] = self.p[self.var.index(i),-len(oversteps)-1]
             
-            delta_ = self.p[i,-1] - self.p[i,-2]
+        return converged, is_converged, oversteps, converged_result, hint
             
-            self.gradient[i,:] = -a/self.p[i,:]**2
-            self.laplacian[i,:] = 2*a/self.p[i,:]**3
-            for j in range(len(self.variables)):
-                if i == j:
-                    continue
-                else:
-                    self.gradient[i,:] *= self.extra[2*j]/self.p[j,:] + self.extra[2*j+1]
-                    self.laplacian[i,:] *= self.extra[2*j]/self.p[j,:] + self.extra[2*j+1]
-            
-    def newton_method(self, evaluation='numerical',): #'numerical'/'analytical'
+    def newton_1D(self, what, evaluation='fit',): #'numerical'/'fit'
+        perr = 10
+        for i in [0.5,1,2,3]:
+            f = lambda x,a,b: a/x**i + b
+            try:
+                popt,pcov = optimize.curve_fit(f,
+                                           xdata=self.p[0,-self.steps:],  
+                                           ydata=self.conv_array[what][-self.steps:],
+                                           sigma=1/(self.p[0,-self.steps:]))
+
+                perr_n = abs(np.average(f(self.p[0,-self.steps:],*popt)-self.conv_array[what][-self.steps:],))
+                #print(perr_n,perr_n < perr)
+                if perr_n < perr:
+                    candidates = i
+                    perr = perr_n
+            except:
+                pass
         
+        f = lambda x,a,b: a/x**candidates + b
+        fx = lambda x,a,b: -candidates*a/x**(candidates+1)
+        fxx = lambda x,a,b: candidates*(candidates+1)*a/x**(candidates+2) 
+        
+        popt,pcov = optimize.curve_fit(f,
+                                       xdata=self.p[0,-self.steps:],  
+                                       ydata=self.conv_array[what][-self.steps:],
+                                       )
+
+        self.extra = popt[-1]
+        self.gradient = fx(self.p[0,-1],*popt)
+        self.laplacian = fxx(self.p[0,-1],*popt)
+        
+        is_converged = abs(self.extra-self.conv_array[what][-1] < self.conv_thr*4)
+        
+        guess = self.p[0,-1]+abs(self.gradient/self.laplacian)
+        if not isinstance(self.stop,list): self.stop = [self.stop]
+        new_metrics = int((self.stop[0]-guess)/(self.conv_thr/abs(popt[0]))**(1/candidates)-guess)
+
+        hint = {self.var[0]:guess,'extra':self.extra,'new_metrics':new_metrics,
+                self.var[0]+'_fit_converged':abs(popt[0]/self.conv_thr)**(1/candidates),
+                'power_law':candidates}
+
+        if guess > self.stop[0]:
+            hint.pop('new_metrics')
+
         if evaluation=='numerical':
             self.num_gradient = np.zeros((len(self.variables),self.steps_fit))
             self.num_laplacian = np.zeros((len(self.variables),self.steps_fit))
@@ -117,48 +95,120 @@ class Convergence_evaluator():
                 self.num_gradient[i,:] = np.gradient(self.delta_[-self.steps:],self.p[i,-self.steps:])
                 self.num_laplacian[i,:] = np.gradient(self.num_gradient[i,:],self.p[i,-self.steps:])
         
-            return self.num_gradient/self.num_laplacian
+            return is_converged, self.p[0,-1]+abs(self.num_gradient/self.num_laplacian)
         else:
-            return self.gradient/self.laplacian
+            return is_converged, hint 
         
-    def conjugate_gradient(self,k=2,s_0=0):
-        num_grad = np.zeros((len(c.parameters),c.steps))
-        hessian_matrix = np.zeros((len(c.parameters),len(c.parameters),c.steps))
-        for i in range(len(c.parameters)):
-                #num_grad = self.delta[-self.steps_fit:]*(1/self.delta_x[i,-self.steps_fit:])
-                num_grad[i] = np.gradient(c.delta_[-c.steps:],c.p[i,-c.steps:])
-                for j in range(len(c.parameters)):
-                    hessian_matrix[i,j] = np.gradient(num_grad[i],c.p[j,-c.steps:])
+    def newton_2D(self, what,extrapolation=False):
+        bb = self.p[0,-self.steps:]
+        g = self.p[1,-self.steps:]
+        homo = self.conv_array[what][-self.steps:]
+        perr= 10 
+        for eb in [0.5,1,2,3]:
+            for eg in [0.5,1,2,3]:
+
+                exp_b = eb
+                exp_g = eg
+                def f(x,a,b,c,d): 
+                    return (a/x[0]**exp_b +b)*(c/x[1]**exp_g+d)
+
+                def f_x(x,a,b,c,d):
+                    return (-exp_b*a/x[0]**(exp_b+1))*(c/x[1]**exp_g+d)
+
+                def f_y(x,a,b,c,d): 
+                    return (a/x[0]**exp_b +b)*(-exp_g*c/x[1]**(exp_g+1))
+
+                def f_xx(x,a,b,c,d):
+                    return (exp_b*(exp_b+1)*a/x[0]**(exp_b+2))*(c/x[1]**exp_g+d)
+
+                def f_yy(x,a,b,c,d): 
+                    return (a/x[0]**exp_b +b)*(exp_g*(exp_g+1)*c/x[1]**(exp_g+2))
+
+                def f_xy(x,a,b,c,d): 
+                    return (-exp_b*a/x[0]**(exp_b+1))*(-exp_g*c/x[1]**(exp_g+1))
+
+                try:
+                    popt,pcov = optimize.curve_fit(f,xdata=(bb,g),ydata=homo,sigma=1/(bb*g))
+
+                    perr_n = abs(np.average(f((bb,g),*popt)-homo,))
+                    #print(perr_n,perr_n < perr)
+                    if perr_n < perr:
+                        candidates = [eb,eg]
+                        perr = perr_n
+                except:
+                    pass
+
+
+        #create functions    
+        exp_b, exp_g = candidates[:]
+        def f(x,a,b,c,d): 
+                return (a/x[0]**exp_b +b)*(c/x[1]**exp_g+d)
+
+        def f_x(x,a,b,c,d):
+                return (-exp_b*a/x[0]**(exp_b+1))*(c/x[1]**exp_g+d)
+
+        def f_y(x,a,b,c,d): 
+                return (a/x[0]**exp_b +b)*(-exp_g*c/x[1]**(exp_g+1))
+
+        def f_xx(x,a,b,c,d):
+                return (exp_b*(exp_b+1)*a/x[0]**(exp_b+2))*(c/x[1]**exp_g+d)
+
+        def f_yy(x,a,b,c,d): 
+                return (a/x[0]**exp_b +b)*(exp_g*(exp_g+1)*c/x[1]**(exp_g+2))
+
+        def f_xy(x,a,b,c,d): 
+                return (-exp_b*a/x[0]**(exp_b+1))*(-exp_g*c/x[1]**(exp_g+1))
+
+        #fit    
+        popt, pcov = optimize.curve_fit(f,xdata=(bb,g),ydata=homo,sigma=1/(bb*g))
         
-        if not isinstance(s_0,int): 
-            s_k = - num_grad[:,-k] + s_0*(np.dot(num_grad[:,-k].transpose(),num_grad[:,-k])/np.dot(s_0.transpose(),s_0))
-        else:
-            s_k = -num_grad[:,-k]
-            
-        alfa = -np.dot(num_grad[:,-k].transpose(),s_k)/np.dot(s_k.transpose(),np.dot(hessian_matrix[:,:,-k],s_k))
-        return alfa*num_grad[:,-k], s_k
+        b = max(bb)
+        gg = max(g)
+        Gradient = np.zeros(2)
+        Hessian = np.zeros((2,2))
+        Gradient[0] = f_x((b,gg),*popt)
+        Gradient[1] = f_y((b,gg),*popt)
+        Hessian[0,0] = f_xx((b,gg),*popt)
+        Hessian[0,1] = f_xy((b,gg),*popt)
+        Hessian[1,0] = f_xy((b,gg),*popt)
+        Hessian[1,1] = f_yy((b,gg),*popt)
+
+        concavity = Hessian[0,0]*Hessian[1,1]
+        next_point = np.array([max(bb),max(g)])-np.dot(np.linalg.inv(Hessian),Gradient)
+        
+        self.extra = popt[-1]*popt[-3]
+
+        new_metrics = [int((self.stop[0]-next_point[0])/(abs(popt[0]/self.conv_thr)**(1/candidates[0])-next_point[0])),
+                       int((self.stop[1]-next_point[1])/(abs(popt[1]/self.conv_thr)**(1/candidates[1])-next_point[1]))]
+        infos = {'concavity':concavity,'extra':self.extra,'new_metrics':new_metrics,'power_law':candidates}
+        for h in range(len(next_point)):
+            infos[self.var[h]] = next_point[h]
+            infos[self.var[h]+'_fit_converged']=(abs(popt[0*2]/self.conv_thr))**(1/candidates[h])
+
+        for h in range(len(next_point)):
+            if next_point[h]>self.stop[h]:
+                infos.pop('new_metrics')
+                break
+
+
+        return abs(homo[-1]-popt[1]*popt[3])<self.conv_thr*4 and concavity>0,infos
     
     def analysis(self,):
-        hint = {}
         
-        converged, is_converged, oversteps, converged_result = self.dummy_convergence(what=self.quantities[-1])
-        if 'dummy' in self.convergence_algorithm:
-            print(self.convergence_algorithm)
-            return is_converged, oversteps, None
+        converged, is_converged, oversteps, converged_result,hint = self.dummy_convergence(what=self.quantities[-1])
         
-        if 'univariate' in self.convergence_algorithm:
-            print(self.convergence_algorithm)
-            for v in self.variables:
-                self.fit_prediction(what=self.quantities[-1])
-                hint[v] = self.p[self.variables.index(v),-1] - self.newton_method(evaluation = self.convergence_algorithm.split('_')[-1])[self.variables.index(v),-1]
-                if self.p[self.variables.index(v),-1] > 100 or v in ['BndsRnXp','GbndRnge']:
-                    hint[v] = int(hint[v])
-                #    hint[v] = int(round(hint[v],-1))
-                elif self.p[self.variables.index(v),-1] < 100 and not 'mesh' in v:
-                    hint[v] = int(hint[v])
-                #    hint[v] = int(hint[v])+int(hint[v])%2
-                
-            if self.extrapolated: hint['extra'] = round(self.extrapolated,3)
-            if self.concavity < 0: is_converged = False #wrong concavity in search univariate multiparams (1D diagonal line)
-
-            return is_converged, oversteps, hint
+        if 'dummy' in self.convergence_algorithm:            
+            hint = None
+            is_converged_fit = True #no fit
+        
+        elif 'newton_1D' in self.convergence_algorithm:
+            is_converged_fit, hint = self.newton_1D(what=self.quantities[-1])
+        
+        elif 'newton_2D_extra' in self.convergence_algorithm:
+            is_converged_fit, hint = self.newton_2D(what=self.quantities[-1],extrapolation=True)
+            is_converged, is_converged_fit, oversteps = True, True, []
+        
+        elif 'newton_2D' in self.convergence_algorithm:
+            is_converged_fit, hint = self.newton_2D(what=self.quantities[-1])
+           
+        return is_converged and is_converged_fit, oversteps, hint

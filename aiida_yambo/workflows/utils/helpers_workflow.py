@@ -66,6 +66,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
     
     space={}
     first = 0 
+    small_space = False
     existing_inputs = copy.deepcopy(starting_inputs)
     if workflow_dict == {}:
             workflow_dict = [copy.deepcopy(calc_dict)]
@@ -74,6 +75,51 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
         wfl_type = i.pop('convergence_algorithm','univariate_dummy')
         i['convergence_algorithm'] = wfl_type
         l = i['var']
+        if not isinstance(l,list): l = [l]
+
+
+        if wfl_type == 'newton_2D' or wfl_type == 'newton_1D' or wfl_type == 'newton_2D_extra':
+            start = i['start']
+            stop = i['stop']
+            metrics = i['points']
+
+            #if hint:   #experimental feature
+            #    metrics = hint.pop('metrics',i['points'])
+            if 'log_spacing' in i.keys(): 
+                logspace = i['log_spacing']
+            else:
+                logspace = [0]*len(l)
+            
+            if not isinstance(start,list): start = [start]
+            if not isinstance(stop,list): stop = [stop]
+            if not isinstance(metrics,list): metrics = [metrics]
+            if not isinstance(logspace,list): logspace = [logspace]
+
+            for v in l:
+                ll = metrics[l.index(v)] # int((stop[var.index(v)]-start[var.index(v)])/metrics[var.index(v)])
+                if logspace[l.index(v)]:
+                    space[v] = list(np.logspace(np.log10(start[l.index(v)]),np.log10(stop[l.index(v)]+1),ll,dtype=int))
+                else:
+                    space[v] = list(np.arange(start[l.index(v)],stop[l.index(v)]+1,int((stop[l.index(v)]-start[l.index(v)])/metrics[l.index(v)])))
+            
+            if wfl_type == 'newton_2D_extra':
+                new_space = {'BndsRnXp':[],'GbndRnge':[],'NGsBlkXp':[]}
+                for b in space['BndsRnXp']:
+                    for g in space['NGsBlkXp']:
+                        new_space['BndsRnXp'].append(b)
+                        new_space['GbndRnge'].append(b)
+                        new_space['NGsBlkXp'].append(g)
+                
+                space = copy.deepcopy(new_space)
+
+            for v in l:
+                if hint:
+                    index = abs((np.array(space[v])-hint[v])).argmin()
+                    if (len(space[v])-index-1) < i['steps']: small_space=True
+                    space[v] = space[v][index:]
+
+            continue
+
         if 'delta' in i.keys(): delta=i['delta']
         if 'ratio' in i.keys(): delta=i['ratio']
         
@@ -97,7 +143,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
             if var not in space.keys():
                 space[var] = []
             
-            if 'univariate' in wfl_type and 'delta' in i.keys():
+            if 'dummy' in wfl_type and 'delta' in i.keys():
                 for r in range(start, stop):
                     if r <= 0: 
                         new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
@@ -115,7 +161,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                             new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
                     space[var].append(new_val)
 
-            elif 'univariate' in wfl_type and 'ratio' in i.keys():
+            elif 'dummy' in wfl_type and 'ratio' in i.keys():
                 for r in range(start, stop):
                     if r <= 0:
                         new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
@@ -178,7 +224,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                     space[var].append(new_val)
         first = 1
 
-    return space, existing_inputs
+    return space, existing_inputs,small_space
 
 def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hint=0,
                  existing_inputs={}, convergence_algorithm='smart',
@@ -400,7 +446,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['fully_success'] = False
 
     workflow_dict['starting_inputs'] = collect_inputs(inputs, kpoints, new_l)
-    workflow_dict['parameter_space'], existing_inputs = create_space(workflow_dict['starting_inputs'], new_l, workflow_dict['type'])
+    workflow_dict['parameter_space'], existing_inputs, small_space = create_space(workflow_dict['starting_inputs'], new_l, workflow_dict['type'])
     workflow_dict['to_be_parsed'] = []
     workflow_dict['wfl_pk'] = []
     return workflow_dict
@@ -470,23 +516,17 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
     
     final_result = {}
-    if oversteps >= calc_manager['steps']*calc_manager['iter']: #also here as none encountered, better having a list and delete the overconverged. 
-        for i in range(1,oversteps-calc_manager['steps']*calc_manager['iter']+2): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
-            workflow_dict['workflow_story'].at[workflow_dict['global_step']-i-calc_manager['steps']*calc_manager['iter'],'useful']=True
-    for i in range(oversteps): #if maggiore di tot... allora stoppa e cambia. perché i vecchi falsi magari sono i nuovi non overconv. dal -1 useful rimettili tutti useful poi togli
-        workflow_dict['workflow_story'].at[workflow_dict['global_step']-1-i,'useful']=False
-    if oversteps:
-        for i in range(calc_manager['iter']*calc_manager['steps']-(oversteps)):
+    for i in oversteps: 
+            gs = workflow_dict['workflow_story']['global_step'][workflow_dict['workflow_story']['uuid']==i].index
+            workflow_dict['workflow_story'].at[gs,'useful']=False
+    if len(oversteps)>0 and calc_manager['convergence_algorithm']=='dummy':
+        for i in range(calc_manager['iter']*calc_manager['steps']-len(oversteps)):
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
-            gs = workflow_dict['global_step'][workflow_dict['uuid']==i].index
+            gs = workflow_dict['workflow_story']['global_step'][workflow_dict['uuid']==i].index
             workflow_dict['workflow_story'].at[gs,'failed']=True
             workflow_dict['workflow_story'].at[gs,'useful']=False
-    if len(none_encountered) > 0:
-        for i in range(calc_manager['steps']*calc_manager['iter']-len(none_encountered)):
-            for j in calc_manager['var']:
-                workflow_dict['parameter_space'][j].pop(0)
 
     #try:
     if len(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)]) > 0:
@@ -526,11 +566,12 @@ def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[]):
             for i in range(1,3):
                 lines[k] *= np.array([i[0] for i in zip(list(real[k].values))])[:,i]
         else:
-            lines[k] = np.array([i for i in zip(list(real[k].values))])[:]
+            lines[k] = np.array([i for i in zip(list(real[k].values))])[:,0]
     homo = {}
     for key in keys:
         homo[key] = real[key].values
     
+    print(lines)
     return real,lines,homo
 
 #@conversion_wrapper
@@ -551,35 +592,26 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[]):
         oversteps_1 = 0
         none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
 
-        separator = ','
-        #var_up_to_now = [x.strip() for x in separator.join(set(workflow_manager['workflow_story']['parameters_studied'])).split(',')]
-        var_up_to_now = copy.deepcopy(calc_dict['var'])
-        if 'GbndRnge' in var_up_to_now and 'BndsRnXp' in var_up_to_now:
-            var_up_to_now.pop(var_up_to_now.index('GbndRnge'))
-
         real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,
                                          keys=workflow_manager['what'], 
-                                         var_ = var_up_to_now)
+                                         var_ = var)
         
         is_converged = True 
-        oversteps_ = []
-        print(var_up_to_now)
-        print(lines,homo)
         y = Convergence_evaluator(
                                 conv_array=homo, 
                                 calc_dict = calc_dict, 
                                 var = var,
-                                parameters = var_up_to_now, 
                                 p_val=lines, 
                                 quantities = workflow_manager['what'],
+                                real = real
                                 )
-        #return y
+        
         is_converged, oversteps, hint = y.analysis() #just convergence as before
 
         if 'BndsRnXp' in calc_dict['var'] and 'GbndRnge' in calc_dict['var'] and hint: # and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
                 
-    return is_converged, oversteps, none_encountered, homo, hint      
+    return is_converged, oversteps, none_encountered, homo, hint            
     
 
 

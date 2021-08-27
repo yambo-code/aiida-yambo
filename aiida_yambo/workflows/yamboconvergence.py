@@ -63,7 +63,7 @@ class YamboConvergence(WorkChain):
 ##################################################################################
         spec.expose_outputs(YamboWorkflow) #the last calculation
         spec.output('history', valid_type = Dict, help='all calculations')
-        spec.output('extrapolation', valid_type = Dict, help='extrapolated values', required = False)
+        spec.output('infos', valid_type = Dict, help='infos on the convergence', required = False)
         spec.output('remaining_iter', valid_type = List,  required = False, help='remaining convergence iter')       
 
         spec.exit_code(300, 'UNDEFINED_STATE',
@@ -71,13 +71,16 @@ class YamboConvergence(WorkChain):
         spec.exit_code(301, 'PRECALC_FAILED',
                              message='The workchain failed the precalc step.')    
         spec.exit_code(302, 'CALCS_FAILED',
-                             message='The workchain failed some calculations.')                                 
+                             message='The workchain failed some calculations.')       
+        spec.exit_code(303, 'SPACE_TOO_SMALL',
+                             message='The workchain failed because the space is too small.')                           
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
 
     def start_workflow(self):
         """Initialize the workflow"""
 
+        self.ctx.small_space = False
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
@@ -125,7 +128,7 @@ class YamboConvergence(WorkChain):
         
         self.report("Workflow initilization step completed, the parameters will be: {}.".format(self.ctx.calc_manager['var']))
 
-    def has_to_continue(self):
+    def has_to_continue(self): #AAAAA check if the space is not large enough.
         
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
         if self.ctx.workflow_manager['fully_success']:
@@ -142,6 +145,11 @@ class YamboConvergence(WorkChain):
                     self.ctx.calc_manager['iter'] > self.ctx.calc_manager['max_iterations']:
             self.report('Workflow failed due to some failed calculation in the investigation of {}'.format(self.ctx.calc_manager['var']))
 
+            return False
+        
+        elif self.ctx.small_space:
+            self.report('space not large enough to complete convergence')
+            
             return False
 
         elif self.ctx.calc_manager['success']:
@@ -237,6 +245,10 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
+            
+            if hint: 
+                self.report('hint: {}'.format(hint))
+                self.ctx.extrapolated = hint.pop('extra', None)
         
         elif self.ctx.none_encountered:
             self.report('Some calculations failed, updating the history and exiting... ')
@@ -251,12 +263,12 @@ class YamboConvergence(WorkChain):
                         
             if hint: 
                 self.report('hint: {}'.format(hint))
-                self.ctx.extrapolated = hint.pop('extra', None)
-                self.ctx.params_space, self.ctx.workflow_manager['parameter_space'] = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
+                self.ctx.infos = hint
+                self.ctx.params_space, self.ctx.workflow_manager['parameter_space'],self.ctx.small_space = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
                                                                         calc_dict = self.ctx.calc_manager,
                                                                         hint=hint,
                                                                         )
-                #self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
+                
 
             self.report(self.ctx.workflow_manager['parameter_space'])
             self.report(self.ctx.params_space)
@@ -269,9 +281,9 @@ class YamboConvergence(WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        if hasattr(self.ctx,'extrapolated'): 
-            extrapolation = store_Dict(self.ctx.extrapolated)
-            self.out('extrapolation',extrapolation)
+        if hasattr(self.ctx,'infos'): 
+            infos = store_Dict(self.ctx.infos)
+            self.out('infos',infos)
         try:
             calc = load_node(self.ctx.final_result['uuid'])
             if self.ctx.workflow_manager['fully_success']: calc.set_extra('converged', True)
@@ -284,6 +296,11 @@ class YamboConvergence(WorkChain):
             self.out('remaining_iter', remaining_iter)
             self.report('Some calculation failed, so we stopped the workflow')
             return self.exit_codes.CALCS_FAILED
+        elif self.ctx.small_space:
+            remaining_iter = store_List(self.ctx.remaining_iter)
+            self.out('remaining_iter', remaining_iter)
+            self.report('Undefined state')
+            return self.exit_codes.SPACE_TOO_SMALL    
         elif not self.ctx.calc_manager['success']:
             remaining_iter = store_List(self.ctx.remaining_iter)
             self.out('remaining_iter', remaining_iter)
