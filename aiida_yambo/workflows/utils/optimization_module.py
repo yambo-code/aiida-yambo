@@ -23,6 +23,8 @@ class Convergence_evaluator():
         self.p = np.array(self.p)
         print(self.p)
 
+        self.steps_ = self.steps
+
     def dummy_convergence(self,what): #solo window, thr e oversteps ---AAA generalize with all the "what", just a matrix . 
         self.delta_ = self.conv_array[what]-self.conv_array[what][-1]
             
@@ -99,10 +101,13 @@ class Convergence_evaluator():
         else:
             return is_converged, hint 
         
-    def newton_2D(self, what,extrapolation=False):
-        bb = self.p[0,-self.steps:]
-        g = self.p[1,-self.steps:]
-        homo = self.conv_array[what][-self.steps:]
+    def newton_2D(self, what, extrapolation=False):
+
+        if extrapolation: self.steps_ = self.steps*self.iter
+
+        bb = self.p[0,-self.steps_:]
+        g = self.p[1,-self.steps_:]
+        homo = self.conv_array[what][-self.steps_:]
         perr= 10 
         for eb in [0.5,1,2,3]:
             for eg in [0.5,1,2,3]:
@@ -205,8 +210,11 @@ class Convergence_evaluator():
             is_converged_fit, hint = self.newton_1D(what=self.quantities[-1])
         
         elif 'newton_2D_extra' in self.convergence_algorithm:
-            is_converged_fit, hint = self.newton_2D(what=self.quantities[-1],extrapolation=True)
-            is_converged, is_converged_fit, oversteps = True, True, []
+            finish = self.max_iterations == self.iter
+            if finish: is_converged_fit, hint = self.newton_2D(what=self.quantities[-1],extrapolation=True)
+            
+            is_converged, is_converged_fit, oversteps =  finish, finish, []
+
         
         elif 'newton_2D' in self.convergence_algorithm:
             is_converged_fit, hint = self.newton_2D(what=self.quantities[-1])

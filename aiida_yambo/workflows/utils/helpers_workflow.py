@@ -110,10 +110,14 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                         new_space['GbndRnge'].append(b)
                         new_space['NGsBlkXp'].append(g)
                 
+                if hint:
+                    for k in new_space.keys():
+                        new_space[k] = new_space[k][i['steps']*i['iter']:]
+                
                 space = copy.deepcopy(new_space)
 
             for v in l:
-                if hint:
+                if hint and not wfl_type == 'newton_2D_extra':
                     index = abs((np.array(space[v])-hint[v])).argmin()
                     if (len(space[v])-index-1) < i['steps']: small_space=True
                     space[v] = space[v][index:]
