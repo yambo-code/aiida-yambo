@@ -237,6 +237,8 @@ class YamboConvergence(WorkChain):
             self.report('Success, updating the history... ')
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
                  self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+            
+            self.report(oversteps)
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.ctx.workflow_settings['type']+' on {} reached in {} calculations, the result is {}' \

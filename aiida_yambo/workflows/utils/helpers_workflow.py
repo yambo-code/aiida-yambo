@@ -560,7 +560,7 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
 
 def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[]):
     workflow_story = workflow_dict
-    real = workflow_story[workflow_story.failed == False]
+    real = workflow_story[(workflow_story.failed == False) & (workflow_story.useful == True)]
     lines = {}
     for k in var_:
         if k in ['BndsRnXp','GbndRnge'] and not k == 'kpoint_mesh':
