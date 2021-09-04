@@ -214,7 +214,6 @@ class Convergence_evaluator():
             if finish: is_converged_fit, hint = self.newton_2D(what=self.quantities[-1],extrapolation=True)
             
             is_converged, is_converged_fit, oversteps =  finish, finish, []
-
         
         elif 'newton_2D' in self.convergence_algorithm:
             is_converged_fit, hint = self.newton_2D(what=self.quantities[-1])

@@ -72,13 +72,13 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
             workflow_dict = [copy.deepcopy(calc_dict)]
             space = copy.deepcopy(starting_inputs)
     for i in workflow_dict:
-        wfl_type = i.pop('convergence_algorithm','univariate_dummy')
+        wfl_type = i.pop('convergence_algorithm','dummy')
         i['convergence_algorithm'] = wfl_type
         l = i['var']
         if not isinstance(l,list): l = [l]
 
 
-        if wfl_type == 'newton_2D' or wfl_type == 'newton_1D' or wfl_type == 'newton_2D_extra':
+        if 'newton' in wfl_type:
             start = i['start']
             stop = i['stop']
             metrics = i['points']
@@ -102,7 +102,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                 else:
                     space[v] = list(np.arange(start[l.index(v)],stop[l.index(v)]+1,int((stop[l.index(v)]-start[l.index(v)])/metrics[l.index(v)])))
             
-            if wfl_type == 'newton_2D_extra':
+            if 'newton_2D_extra' in wfl_type:
                 new_space = {'BndsRnXp':[],'GbndRnge':[],'NGsBlkXp':[]}
                 for b in space['BndsRnXp']:
                     for g in space['NGsBlkXp']:
@@ -117,7 +117,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                 space = copy.deepcopy(new_space)
 
             for v in l:
-                if hint and not wfl_type == 'newton_2D_extra':
+                if hint and not 'newton_2D_extra' in wfl_type:
                     index = abs((np.array(space[v])-hint[v])).argmin()
                     if (len(space[v])-index-1) < i['steps']: small_space=True
                     space[v] = space[v][index:]
@@ -142,10 +142,11 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                 starting_inputs[var] = hint[var]
                 #first = 0
             
-            space[var] = []
-            
             if var not in space.keys():
                 space[var] = []
+                last_inputs = starting_inputs[var]
+            else:
+                last_inputs = space[var][-1]
             
             if 'dummy' in wfl_type and 'delta' in i.keys():
                 for r in range(start, stop):
@@ -153,16 +154,15 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                         new_val = existing_inputs[var][i['steps']*calc_dict['iter']+r-1]
                         continue
                     elif isinstance(delta[l.index(var)],int) or isinstance(delta[l.index(var)],float):
-                        if isinstance(starting_inputs[var],int):
-                            new_val = int(starting_inputs[var]+delta[l.index(var)]*(r+first-1))
+                        if isinstance(last_inputs,int):
+                            new_val = int(last_inputs+delta[l.index(var)]*(r+first-1))
                         else:
-                            new_val = starting_inputs[var]+delta[l.index(var)]*(r+first-1)
+                            new_val = last_inputs+delta[l.index(var)]*(r+first-1)
                     elif isinstance(delta[l.index(var)],list): 
                         if not 'mesh' in var:
-                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
-                            new_val = new_val
+                            new_val = [sum(x) for x in zip(last_inputs, [d*(r+first-1) for d in delta[l.index(var)]])]
                         else:
-                            new_val = [sum(x) for x in zip(starting_inputs[var], [d*(r+first-1) for d in delta[l.index(var)]])]
+                            new_val = [sum(x) for x in zip(last_inputs, [d*(r+first-1) for d in delta[l.index(var)]])]
                     space[var].append(new_val)
 
             elif 'dummy' in wfl_type and 'ratio' in i.keys():
@@ -187,39 +187,6 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                                 new_val = [a*b for a,b in zip(starting_inputs[var], [d**(r+first-1) for d in delta[l.index(var)]])]
                     if r == 0 and first == 0: first = 1
                     space[var].append(new_val)
-            
-            elif wfl_type == 'multivariate_newton': #to fix with the new metric "ad hoc"
-                if 'space' in i.keys():
-                    for r in range(len(i['space'])):
-                        new_val = i['space'][r][l.index(var)]
-                elif 'ratio' in i.keys():
-                    for r in range(1,i['steps']*i['max_iterations']+1):
-                    
-                        if 'mesh' in var:
-                            new_val = [a*b for a,b in zip(starting_inputs[var], [delta[l.index(var)]**(r+first-1),
-                                                                                 delta[l.index(var)]**(r+first-1),
-                                                                                 delta[l.index(var)]**(r+first-1)])]
-                        elif isinstance(starting_inputs[var][0],int) or isinstance(starting_inputs[var][0],float):
-                            if isinstance(starting_inputs[var][0],int):
-                                new_val = int(starting_inputs[var][0]*delta[l.index(var)]**(r+first-1))
-                            else:
-                                new_val = starting_inputs[var][0]*delta[l.index(var)]**(r+first-1)
-                            if not 'mesh' in var:
-                                new_val = [new_val, starting_inputs[var][1]]
-                        elif isinstance(starting_inputs[var][0],list): 
-                            if not 'mesh' in var:
-                                if isinstance(starting_inputs[var][0][-1],int):
-                                    new_val = [int(a*b) for a,b in zip(starting_inputs[var][0], [d**(r+first-1) for d in delta[l.index(var)]])]
-                                else:
-                                    new_val = [a*b for a,b in zip(starting_inputs[var][0], [d**(r+first-1) for d in delta[l.index(var)]])]
-                                new_val = [new_val, starting_inputs[var][1]]
-                        if r == 0 and first == 0: first = 1
-                        space[var].append(new_val)
-                        for v in l:
-                            if v == var:
-                                pass
-                            else:
-                                space[v].append(starting_inputs[v])
 
             else:
                 for r in range(len(i['space'])):
