@@ -83,6 +83,11 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
             stop = i['stop']
             metrics = i['points']
 
+            if var not in space.keys():
+                pass
+            else:
+                start = space[var][-1]
+
             #if hint:   #experimental feature
             #    metrics = hint.pop('metrics',i['points'])
             if 'log_spacing' in i.keys(): 

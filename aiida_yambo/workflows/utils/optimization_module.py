@@ -28,14 +28,21 @@ class Convergence_evaluator():
     def dummy_convergence(self,what): #solo window, thr e oversteps ---AAA generalize with all the "what", just a matrix . 
         self.delta_ = self.conv_array[what]-self.conv_array[what][-1]
             
-        converged = self.delta_[-self.steps:][np.where(abs(self.delta_[-self.steps:])<=self.conv_thr)]
+        #converged = self.delta_[-self.steps:][np.where(abs(self.delta_[-self.steps:])<=self.conv_thr)]
+        converged = []
+        for i in range(1,len(self.delta_)+1):
+            if abs(self.delta_[-i])>self.conv_thr:
+                break
+            else:
+                converged.append(1)
+
         if len(converged)<self.conv_window:
             is_converged = False
             oversteps = []
             converged_result = None
         else:
             is_converged = True
-            oversteps = list(self.real[abs(self.real[what]-self.real[what].values[-1])<self.conv_thr].uuid)[1:]  
+            oversteps = list(self.real[abs(self.real[what]-self.real[what].values[-1])<self.conv_thr].uuid)[-len(converged)+1:]  
             l = len(oversteps)
             converged_result = self.conv_array[what][-l]
         
@@ -198,7 +205,7 @@ class Convergence_evaluator():
 
         return abs(homo[-1]-popt[1]*popt[3])<self.conv_thr*4 and concavity>0,infos
     
-    def analysis(self,):
+    def analysis(self,): #also conv evaluation wrt the relative thr (0.01 on a 7 eV gap... not so important)
         
         converged, is_converged, oversteps, converged_result,hint = self.dummy_convergence(what=self.quantities[-1])
         
