@@ -75,7 +75,7 @@ def set_parallelism(instructions_, inputs):
 
         for p in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
             for k in ['CPU','ROLEs']:
-                if k in p:
+                if k in p and not 'LinAlg' in p:
                     pop_list.append(p)
         new_parallelism, new_resources = {'PAR_def_mode': instructions['automatic']}, resources
     

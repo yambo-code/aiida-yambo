@@ -207,10 +207,10 @@ class Convergence_evaluator():
     
     def analysis(self,): #also conv evaluation wrt the relative thr (0.01 on a 7 eV gap... not so important)
         
-        converged, is_converged, oversteps, converged_result,hint = self.dummy_convergence(what=self.quantities[-1])
+        converged, is_converged, oversteps, converged_result, hint_dummy = self.dummy_convergence(what=self.quantities[-1])
         
         if 'dummy' in self.convergence_algorithm:            
-            hint = None
+            #hint = None
             is_converged_fit = True #no fit
         
         elif 'newton_1D' in self.convergence_algorithm:
@@ -224,5 +224,8 @@ class Convergence_evaluator():
         
         elif 'newton_2D' in self.convergence_algorithm:
             is_converged_fit, hint = self.newton_2D(what=self.quantities[-1])
+        
+        if is_converged:
+            hint = hint_dummy
            
         return is_converged and is_converged_fit, oversteps, hint

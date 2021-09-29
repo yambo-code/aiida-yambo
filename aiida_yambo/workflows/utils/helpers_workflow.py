@@ -62,7 +62,7 @@ def collect_inputs(inputs, kpoints, ideal_iter):
 
     return starting_inputs
 
-def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1D_convergence',hint=None):
+def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1D_convergence',hint=None,):
     
     space={}
     first = 0 
@@ -81,12 +81,11 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
         if 'newton' in wfl_type:
             start = i['start']
             stop = i['stop']
-            metrics = i['points']
+            metrics = i['delta']
 
-            if var not in space.keys():
-                pass
-            else:
-                start = space[var][-1]
+            if not isinstance(start,list): start = [start]
+            if not isinstance(stop,list): stop = [stop]
+            if not isinstance(metrics,list): metrics = [metrics]
 
             #if hint:   #experimental feature
             #    metrics = hint.pop('metrics',i['points'])
@@ -95,17 +94,16 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
             else:
                 logspace = [0]*len(l)
             
-            if not isinstance(start,list): start = [start]
-            if not isinstance(stop,list): stop = [stop]
-            if not isinstance(metrics,list): metrics = [metrics]
             if not isinstance(logspace,list): logspace = [logspace]
 
             for v in l:
-                ll = metrics[l.index(v)] # int((stop[var.index(v)]-start[var.index(v)])/metrics[var.index(v)])
+                #ll = metrics[l.index(v)] # int((stop[var.index(v)]-start[var.index(v)])/metrics[var.index(v)])
                 if logspace[l.index(v)]:
-                    space[v] = list(np.logspace(np.log10(start[l.index(v)]),np.log10(stop[l.index(v)]+1),ll,dtype=int))
+                    space[v] = list(np.logspace(np.log10(start[l.index(v)]),np.log10(stop[l.index(v)]+1),int((stop[l.index(v)]-start[l.index(v)])/metrics[l.index(v)]),dtype=int))
+                elif start[l.index(v)]==stop[l.index(v)]:
+                    space[v] = [start[l.index(v)]]*i['steps']*i['max_iterations']
                 else:
-                    space[v] = list(np.arange(start[l.index(v)],stop[l.index(v)]+1,int((stop[l.index(v)]-start[l.index(v)])/metrics[l.index(v)])))
+                    space[v] = list(np.arange(start[l.index(v)],stop[l.index(v)]+1,int(metrics[l.index(v)])))
             
             if 'newton_2D_extra' in wfl_type:
                 new_space = {'BndsRnXp':[],'GbndRnge':[],'NGsBlkXp':[]}
@@ -114,19 +112,25 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                         new_space['BndsRnXp'].append(b)
                         new_space['GbndRnge'].append(b)
                         new_space['NGsBlkXp'].append(g)
-                
-                if hint:
+                 
+                if hint:   #not useful
                     for k in new_space.keys():
                         new_space[k] = new_space[k][i['steps']*i['iter']:]
-                
+
                 space = copy.deepcopy(new_space)
 
-            for v in l:
-                if hint and not 'newton_2D_extra' in wfl_type:
-                    index = abs((np.array(space[v])-hint[v])).argmin()
-                    if (len(space[v])-index-1) < i['steps']: small_space=True
-                    space[v] = space[v][index:]
-
+            if hint and wfl_type != 'newton_2D_extra':
+                for v in l:
+                    if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
+                        index = abs((np.array(space[v])-hint[v])).argmin()
+                        if (len(space[v])-index-1) < i['steps']*(i['max_iterations']-i['iter']): small_space=True
+                        space[v] = space[v][index:]
+                    else:
+                        if (len(space[v])-1) < i['steps']*(i['max_iterations']-i['iter']): small_space=True
+            
+            if 'newton_1D_ratio' in wfl_type:
+                break
+                    
             continue
 
         if 'delta' in i.keys(): delta=i['delta']

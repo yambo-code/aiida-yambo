@@ -81,6 +81,7 @@ class YamboConvergence(WorkChain):
         """Initialize the workflow"""
 
         self.ctx.small_space = False
+        self.ctx.ratio = []   #ratio between Ecut and EmaxC
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
@@ -158,6 +159,13 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
                                             wfl_settings = self.ctx.workflow_settings,)
 
+            if self.ctx.calc_manager['convergence_algorithm'] == 'netwon_1D_ratio':
+                self.ctx.params_space, self.ctx.workflow_manager['parameter_space'],self.ctx.small_space = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
+                                                                        calc_dict = self.ctx.calc_manager,
+                                                                        hint=self.ctx.hint,
+                                                                        )
+                self.ctx.workflow_manager['parameter_space'] = copy.deepcopy(self.ctx.params_space)
+                self.report('netwon_1D_ratio')
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
             
             return True
@@ -226,7 +234,7 @@ class YamboConvergence(WorkChain):
             return
 
         self.report(self.ctx.workflow_manager['workflow_story'])
-        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, hint = \
+        self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, self.ctx.hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
         
         self.report(self.ctx.workflow_manager['parameter_space'])
@@ -248,9 +256,15 @@ class YamboConvergence(WorkChain):
             if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
             
-            if hint: 
-                self.report('hint: {}'.format(hint))
-                self.ctx.extrapolated = hint.pop('extra', None)
+            if self.ctx.hint: 
+                self.report('hint: {}'.format(self.ctx.hint))
+                self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
+                self.ctx.infos = self.ctx.hint
+                self.ctx.params_space, self.ctx.workflow_manager['parameter_space'],self.ctx.small_space = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
+                                                                        calc_dict = self.ctx.calc_manager,
+                                                                        hint=self.ctx.hint,
+                                                                        )
+                self.ctx.workflow_manager['parameter_space'] = copy.deepcopy(self.ctx.params_space)
         
         elif self.ctx.none_encountered:
             self.report('Some calculations failed, updating the history and exiting... ')
@@ -263,17 +277,17 @@ class YamboConvergence(WorkChain):
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
                         
-            if hint: 
-                self.report('hint: {}'.format(hint))
-                self.ctx.infos = hint
+            if self.ctx.hint: 
+                self.report('hint: {}'.format(self.ctx.hint))
+                self.ctx.infos = self.ctx.hint
                 self.ctx.params_space, self.ctx.workflow_manager['parameter_space'],self.ctx.small_space = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
                                                                         calc_dict = self.ctx.calc_manager,
-                                                                        hint=hint,
+                                                                        hint=self.ctx.hint,
                                                                         )
                 
 
-            self.report(self.ctx.workflow_manager['parameter_space'])
-            self.report(self.ctx.params_space)
+        self.report(self.ctx.workflow_manager['parameter_space'])
+        self.report(self.ctx.params_space)
 
         
         self.ctx.workflow_manager['first_calc'] = False
@@ -301,7 +315,7 @@ class YamboConvergence(WorkChain):
         elif self.ctx.small_space:
             remaining_iter = store_List(self.ctx.remaining_iter)
             self.out('remaining_iter', remaining_iter)
-            self.report('Undefined state')
+            self.report('Space too small to complete convergence.')
             return self.exit_codes.SPACE_TOO_SMALL    
         elif not self.ctx.calc_manager['success']:
             remaining_iter = store_List(self.ctx.remaining_iter)
@@ -317,27 +331,29 @@ class YamboConvergence(WorkChain):
 
 ############################### preliminary calculation #####################
     def pre_needed(self):
-
-        self.report('detecting if we need a starting calculation...')
         
+        if not hasattr(self.ctx,'params_space'):
+            self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
+        self.report('detecting if we need a starting calculation...')
+        self.report(self.ctx.workflow_manager['parameter_space'])        
         if self.ctx.how_bands == 'single-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
-            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this step = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
         elif self.ctx.how_bands == 'single-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
-            self.report('Max #bands needed in this step = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this step = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
 
         elif self.ctx.how_bands == 'full-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
-            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
         elif self.ctx.how_bands == 'full-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
-            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
 
         elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
             self.ctx.space_index = 0
-            if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and len(self.ctx.workflow_manager['parameter_space']['BndsRnXp'])>0: 
-                self.report('Max #bands needed in the whole convergence = {}'.format(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]))
+            if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and len(self.ctx.params_space['BndsRnXp'])>0: 
+                self.report('Max #bands needed in the whole convergence = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
         
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
             yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]
