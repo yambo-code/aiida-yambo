@@ -104,7 +104,7 @@ def QP_bands_interface(node, mapping, only_scissor=Bool(False)):
             'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
 
 
-def quantumespresso_input_validator(workchain_inputs,):
+def quantumespresso_input_validator(workchain_inputs,overrides={}):
     
     messages = []
 
@@ -114,6 +114,11 @@ def quantumespresso_input_validator(workchain_inputs,):
     message_bands = 'GW bands are: {} '.format(gwbands)
     messages.append(message_bands)
     scf_params_def, nscf_params_def = create_quantumespresso_inputs(workchain_inputs.structure, bands_gw = gwbands)
+
+    if len(override['pw'])>0: 
+        for k in override['pw'].keys():
+            scf_params_def[k].update(override['pw'][k])
+            nscf_params_def[k].update(override['pw'][k])
 
     if hasattr(workchain_inputs,'parent_folder'):
         parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
