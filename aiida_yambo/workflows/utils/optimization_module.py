@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
 from ase import Atoms
+from aiida_yambo.utils.common_helpers import *
 
 class Convergence_evaluator(): 
     
@@ -25,16 +26,80 @@ class Convergence_evaluator():
 
         self.steps_ = self.steps
 
-    def dummy_convergence(self,what): #solo window, thr e oversteps ---AAA generalize with all the "what", just a matrix . 
-        self.delta_ = self.conv_array[what]-self.conv_array[what][-1]
-            
+    def ratio_evaluator(self,what):
+        Ry = np.array(list(set(self.workflow_dict.NGsBlkXp)))
+        Ry.sort()
+        p=[]
+
+        if len(Ry)<3:
+            return False
+
+        for i in Ry: 
+            print(i,self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
+            p.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
+        b_index = np.array(p)
+        pw = find_pw_parent(load_node(self.workflow_dict['uuid'].values[-1]))
+        b = pw.outputs.output_band.get_bands()
+        valence = int(pw.outputs.output_parameters.get_dict()['number_of_electrons']/2)
+
+        lin=0
+
+        lim_u=len(Ry)+1
+        lim_d=0
+
+        #if lin:
+        if 1:
+            aa_lin,bb_lin = np.polyfit(Ry[lim_d:lim_u],b[0,b_index[lim_d:lim_u]]/13.6,deg=1)
+            f_lin = lambda x,a,b: a*x+b
+            error_lin = np.sqrt(np.average((f_lin(Ry[lim_d:lim_u],aa_lin,bb_lin)-b[0,b_index[lim_d:lim_u]]/13.6)**2))
+        #else:    
+            f = lambda x,a,b: a/x + b
+            aa,bb = curve_fit(f,Ry[lim_d:lim_u],b[0,b_index[lim_d:lim_u]]/13.6,sigma=1/np.array(Ry[lim_d:lim_u]))
+
+            bb = aa[1]
+            aa = aa[0]
+            error = np.sqrt(np.average((f(Ry[lim_d:lim_u],aa,bb)-b[0,b_index[lim_d:lim_u]]/13.6)**2))
+        
+        maps_bands=[]
+        maps_Ry_lin=[]
+        maps_Ry=[]
+        for i in range(1,1+len(b[0,:])):
+            maps_Ry_lin.append((b[0,i-1]/13.6-bb_lin)/(aa_lin))
+            maps_Ry.append(((b[0,i-1]/13.6-bb)/(aa))**(-1))
+            maps_bands.append(i)
+        
+        self.b_index = b_index
+        self.PW_G = Ry
+        self.b_energy_Ry = b[0,b_index[lim_d:lim_u]]/13.6
+        self.quantity = []
+        for i in Ry[:-1]:
+            self.quantity.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)][what].values[-1])
+
+        self.quantity.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==Ry[-1])][what].values[-self.steps]) #self.oversteps])
+
+        self.quantity = np.array(self.quantity)
+
+        return True
+
+    def dummy_convergence(self,what,ratio=False,diagonal=False): #solo window, thr e oversteps ---AAA generalize with all the "what", just a matrix . 
+        
+        if ratio:
+            self.delta_ = abs(self.b_energy_Ry-self.b_energy_Ry[-1])/self.b_energy_Ry[-1]
+            conv_thr = 1e-2
+        elif diagonal:
+            self.delta_ = abs(self.quantity-self.quantity[-1]) #abs((self.quantity-self.quantity[-1])/self.quantity[-1])
+            conv_thr=self.conv_thr
+        else:
+            self.delta_ = abs(self.conv_array[what]-self.conv_array[what][-1]) #abs((self.conv_array[what]-self.conv_array[what][-1])/self.conv_array[what][-1])
+            conv_thr=self.conv_thr
         #converged = self.delta_[-self.steps:][np.where(abs(self.delta_[-self.steps:])<=self.conv_thr)]
         converged = []
         for i in range(1,len(self.delta_)+1):
-            if abs(self.delta_[-i])>self.conv_thr:
+            if abs(self.delta_[-i])>conv_thr:
                 break
             else:
                 converged.append(1)
+        self.converged=converged
 
         if len(converged)<self.conv_window:
             is_converged = False
@@ -42,27 +107,49 @@ class Convergence_evaluator():
             converged_result = None
         else:
             is_converged = True
-            oversteps = list(self.real[abs(self.real[what]-self.real[what].values[-1])<self.conv_thr].uuid)[-len(converged)+1:]  
-            l = len(oversteps)
-            converged_result = self.conv_array[what][-l]
+            if not ratio:
+                oversteps = list(self.real[abs(self.real[what]-self.real[what].values[-1])<conv_thr].uuid)[-len(converged)+1:]  
+                l = len(oversteps)
+                converged_result = self.conv_array[what][-l]
+            else:
+                oversteps = len(self.delta_)-len(converged) + 1
+                l = len(oversteps)
+                converged_result = self.b_energy_Ry[what][-l]
         
         hint={}
         for i in self.var:
             hint[i] = self.p[self.var.index(i),-len(oversteps)-1]
+
+        if ratio: self.oversteps = oversteps
             
         return converged, is_converged, oversteps, converged_result, hint
             
-    def newton_1D(self, what, evaluation='fit',): #'numerical'/'fit'
+    def newton_1D(self, what, evaluation='fit',ratio=False): #'numerical'/'fit'
         perr = 10
-        for i in [0.5,1,2,3]:
+        homo = self.conv_array[what][-self.steps_:]
+        params=self.p[0,-self.steps:]
+        last=self.p[0,-1]
+        powers = [0.5,1,2,3]
+
+        if ratio:
+            homo = self.b_energy_Ry
+            params= self.PW_G
+            last= self.PW_G[-1]
+            powers = [0.5,1,2,3]
+            if len(params)<3: return False, None
+
+
+        
+        
+        for i in powers:
             f = lambda x,a,b: a/x**i + b
             try:
                 popt,pcov = optimize.curve_fit(f,
-                                           xdata=self.p[0,-self.steps:],  
-                                           ydata=self.conv_array[what][-self.steps:],
-                                           sigma=1/(self.p[0,-self.steps:]))
+                                           xdata=params,  
+                                           ydata=homo,
+                                           sigma=1/(params))
 
-                perr_n = abs(np.average(f(self.p[0,-self.steps:],*popt)-self.conv_array[what][-self.steps:],))
+                perr_n = abs(np.average(f(params,*popt)-homo,))
                 #print(perr_n,perr_n < perr)
                 if perr_n < perr:
                     candidates = i
@@ -75,17 +162,20 @@ class Convergence_evaluator():
         fxx = lambda x,a,b: candidates*(candidates+1)*a/x**(candidates+2) 
         
         popt,pcov = optimize.curve_fit(f,
-                                       xdata=self.p[0,-self.steps:],  
-                                       ydata=self.conv_array[what][-self.steps:],
+                                       xdata=params,  
+                                       ydata=homo,
                                        )
 
         self.extra = popt[-1]
-        self.gradient = fx(self.p[0,-1],*popt)
-        self.laplacian = fxx(self.p[0,-1],*popt)
+        self.gradient = fx(last,*popt)
+        self.laplacian = fxx(last,*popt)
         
-        is_converged = abs(self.extra-self.conv_array[what][-1] < self.conv_thr*4)
-        
-        guess = self.p[0,-1]+abs(self.gradient/self.laplacian)
+        is_converged = abs(self.extra-homo[-1] < self.conv_thr*4) and abs(self.extra-homo[-2] < self.conv_thr*4)
+        if ratio: is_converged = abs((self.extra-homo[-1])/homo[-1] < 1e-2) and abs(self.extra-homo[-2] < 1e-2)
+
+        guess = last+abs(self.gradient/self.laplacian)
+        if guess <= last : guess = 2*params[-1] - params[-2]
+        if guess > last + 3*(params[-1] - params[-2]) : guess = last +3*(params[-1] - params[-2])
         if not isinstance(self.stop,list): self.stop = [self.stop]
         new_metrics = int((self.stop[0]-guess)/(self.conv_thr/abs(popt[0]))**(1/candidates)-guess)
 
@@ -93,8 +183,17 @@ class Convergence_evaluator():
                 self.var[0]+'_fit_converged':abs(popt[0]/self.conv_thr)**(1/candidates),
                 'power_law':candidates}
 
-        if guess > self.stop[0]:
-            hint.pop('new_metrics')
+        if ratio:
+            hint = {self.var[1]:guess,'extra_bands_Ry':self.extra,'new_metrics':new_metrics,
+                self.var[0]+'_fit_converged':abs(popt[0]/self.conv_thr)**(1/candidates),
+                'power_law':candidates,'ratio':abs((self.extra-homo[-1])/homo[-1]),'extra':self.extra,'bands_Ry':self.b_energy_Ry,'Ry':self.PW_G,
+                'gaps':self.quantity,'bands_indexes':self.b_index,'delta':self.delta_,'converged_list':self.converged,'power':candidates}
+        
+
+        #if guess > self.stop[0]:
+        hint.pop('new_metrics')
+        hint.pop(self.var[0]+'_fit_converged')
+        hint.pop('power_law')
 
         if evaluation=='numerical':
             self.num_gradient = np.zeros((len(self.variables),self.steps_fit))
@@ -207,25 +306,60 @@ class Convergence_evaluator():
     
     def analysis(self,): #also conv evaluation wrt the relative thr (0.01 on a 7 eV gap... not so important)
         
-        converged, is_converged, oversteps, converged_result, hint_dummy = self.dummy_convergence(what=self.quantities[-1])
+        is_converged_fit_b=False
+        is_converged_d=False
+        is_converged_b=False
+        hint_b=None
+        for i in self.quantities[:]:
+            converged, is_converged, oversteps, converged_result, hint_dummy = self.dummy_convergence(what=i)
         
-        if 'dummy' in self.convergence_algorithm:            
-            #hint = None
-            is_converged_fit = True #no fit
+            if 'dummy' in self.convergence_algorithm:            
+                #hint = None
+                is_converged_fit = True #no fit
         
-        elif 'newton_1D' in self.convergence_algorithm:
-            is_converged_fit, hint = self.newton_1D(what=self.quantities[-1])
+            elif 'newton_1D_ratio' in self.convergence_algorithm:
+                is_converged_fit, hint = self.newton_1D(what=i)
+                if is_converged_fit:
+                    #try:
+                    if self.ratio_evaluator(what=i):
+                        converged_b, is_converged_b, oversteps_b, converged_result_b, hint_dummy_b = self.dummy_convergence(what=i,ratio=True)
+                        #if is_converged_b:
+                        is_converged_fit_b, hint_b = self.newton_1D(what=i,ratio=True)
+                            #hint.update(hint_b)
+                        converged_d, is_converged_d, oversteps_d, converged_result_d, hint_dummy_d = self.dummy_convergence(what=self.quantity,ratio=True,diagonal=True)
+
+                    #except:
+                    #    pass
+            elif 'newton_1D' in self.convergence_algorithm:
+                is_converged_fit, hint = self.newton_1D(what=i)
         
-        elif 'newton_2D_extra' in self.convergence_algorithm:
-            finish = self.max_iterations == self.iter
-            if finish: is_converged_fit, hint = self.newton_2D(what=self.quantities[-1],extrapolation=True)
+            elif 'newton_2D_extra' in self.convergence_algorithm:
+                finish = self.max_iterations == self.iter
+                if finish: is_converged_fit, hint = self.newton_2D(what=i,extrapolation=True)
             
-            is_converged, is_converged_fit, oversteps =  finish, finish, []
+                is_converged, is_converged_fit, oversteps =  finish, finish, []
         
-        elif 'newton_2D' in self.convergence_algorithm:
-            is_converged_fit, hint = self.newton_2D(what=self.quantities[-1])
+            elif 'newton_2D' in self.convergence_algorithm:
+                is_converged_fit, hint = self.newton_2D(what=i)
         
-        if is_converged:
-            hint = hint_dummy
+            if is_converged and is_converged_fit:
+                hint.update(hint_dummy)
+                
+                if 'newton_1D_ratio' in self.convergence_algorithm and not (is_converged_b and is_converged_fit_b and is_converged_d): #is_converged_d: d is for full 2D convergence.....                   
+                    if hint_b:
+                        hint.update(hint_b)
+                    else:
+                        hint.pop('NGsBlkXp')
+                    hint['converge_b_ratio'] = True
+                
+                hint['is_converged_diagonal'] = is_converged_d
+                hint['is_converged_b'] = is_converged_b
+                hint['is_converged_fit_b'] = is_converged_fit_b
+                hint['hint_b'] = hint_b
+
+            elif not is_converged or not is_converged_fit:
+                if 'newton_1D_ratio' in self.convergence_algorithm:
+                    if 'NGsBlkXp' in hint.keys(): hint.pop('NGsBlkXp')
+                break
            
         return is_converged and is_converged_fit, oversteps, hint

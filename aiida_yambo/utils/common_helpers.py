@@ -387,6 +387,14 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
             ind_val = bands[:,valence-1].argmax()
             ind_cond = bands[:,conduction-1].argmin()
             dft_predicted = 'semimetal'
+    
+    L_H = round((min(bands[:,conduction-1])-max(bands[:,valence-1])),3)
+    if L_H<-0.01:
+        dft_predicted = 'metal'
+    elif L_H<0.01 and L_H>0:
+        dft_predicted = 'semimetal'
+    elif L_H>0:
+        dft_predicted = 'semiconductor/insulator'
 
     if ind_val+1 != ind_cond+1:
         gap_type = 'indirect'

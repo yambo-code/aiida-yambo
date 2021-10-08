@@ -144,7 +144,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     return calc_dict
 
 ################################## update_parameters - create parameters space #####################################
-def updater(calc_dict, inp_to_update, parameters, workflow_dict):
+def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iteration,ratio=False):
     
     already_done = False
     values_dict = {}
@@ -154,9 +154,12 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict):
         calc_dict['var'] = [calc_dict['var']]
 
     input_dict = copy.deepcopy(inp_to_update.yres.yambo.parameters.get_dict())
-    
+    ratio = calc_dict['convergence_algorithm'] == 'newton_1D_ratio'
     for var in calc_dict['var']:
-        
+        if ratio and var=='NGsBlkXp' and (calc_dict['iter']>1 or internal_iteration>0):  
+            values_dict[var]=input_dict['variables'][var][0]
+            continue
+       
         if var == 'kpoint_mesh' or var == 'kpoint_density':
             k_quantity = parameters[var].pop(0)
             k_quantity_shift = inp_to_update.nscf.kpoints.get_kpoints_mesh()[1]

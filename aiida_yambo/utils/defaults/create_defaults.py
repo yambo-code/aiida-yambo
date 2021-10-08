@@ -66,6 +66,7 @@ def create_quantumespresso_inputs(structure, bands_gw=None, spin_orbit=False, wh
         scf['SYSTEM']['degauss'] = 0.02
         nscf['SYSTEM']['degauss'] = 0.02
 
+            
     return scf, nscf
 
 

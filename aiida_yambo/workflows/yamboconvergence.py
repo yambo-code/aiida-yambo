@@ -122,6 +122,8 @@ class YamboConvergence(WorkChain):
 
         self.ctx.final_result = {}     
 
+        self.ctx.calc_manager['G_iter'] = 1 #only for ratio
+
         self.report('Workflow type: {}; looking for convergence of {}'.format(self.ctx.workflow_settings['type'], self.ctx.workflow_settings['what']))
 
         
@@ -132,7 +134,7 @@ class YamboConvergence(WorkChain):
     def has_to_continue(self): #AAAAA check if the space is not large enough.
         
         """This function checks the status of the last calculation and determines what happens next, including a successful exit"""
-        if self.ctx.workflow_manager['fully_success']:
+        if self.ctx.workflow_manager['fully_success']: 
             self.report('Workflow finished')
             return False
 
@@ -155,6 +157,17 @@ class YamboConvergence(WorkChain):
 
         elif self.ctx.calc_manager['success']:
             #update variable to conv
+            if 'converge_b_ratio' in self.ctx.hint.keys():
+                self.report('success for this G, now we go on')
+                if self.ctx.calc_manager['G_iter'] > self.ctx.calc_manager['global_iterations']:
+                    self.report('but no more attempts availables')
+                    self.ctx.calc_manager['success']=False
+                    return False
+                
+                return True
+
+
+
             self.ctx.remaining_iter.pop()
             self.ctx.calc_manager = calc_manager(self.ctx.workflow_manager['true_iter'].pop(), 
                                             wfl_settings = self.ctx.workflow_settings,)
@@ -196,7 +209,8 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_inputs, value, already_done, parent_nscf = updater(self.ctx.calc_manager, 
                                                 self.ctx.calc_inputs,
                                                 self.ctx.params_space, 
-                                                self.ctx.workflow_manager)
+                                                self.ctx.workflow_manager,
+                                                i)
                                     
             self.ctx.workflow_manager['values'].append(value)
             self.report('New parameters are: {}'.format(value))
@@ -233,11 +247,11 @@ class YamboConvergence(WorkChain):
             self.ctx.calc_manager['iter'] = 2*self.ctx.calc_manager['max_iterations']
             return
 
-        self.report(self.ctx.workflow_manager['workflow_story'])
+        #self.report(self.ctx.workflow_manager['workflow_story'])
         self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, self.ctx.hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
         
-        self.report(self.ctx.workflow_manager['parameter_space'])
+        # self.report(self.ctx.workflow_manager['parameter_space'])
         self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
 
         if self.ctx.calc_manager['success']:
@@ -253,19 +267,29 @@ class YamboConvergence(WorkChain):
                         .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter'],\
                             df_story[df_story['useful'] == True].loc[:,self.ctx.workflow_manager['what']].values[-1:]))
 
-            if self.ctx.workflow_manager['true_iter'] == [] : #variables to be converged are finished
+            if self.ctx.workflow_manager['true_iter'] == [] and not 'converge_b_ratio' in self.ctx.hint.keys(): #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
             
             if self.ctx.hint: 
                 self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
                 self.ctx.infos = self.ctx.hint
+
+                if 'converge_b_ratio' in self.ctx.hint.keys(): 
+                    self.ctx.calc_manager['iter'] = 0
+                    self.ctx.calc_manager['G_iter'] +=1
+                    if not 'NGsBlkXp' in self.ctx.hint.keys():
+                        self.ctx.hint['NGsBlkXp']=self.ctx.workflow_manager['parameter_space']['NGsBlkXp'][1]
+                        self.report(self.ctx.hint)
+
                 self.ctx.params_space, self.ctx.workflow_manager['parameter_space'],self.ctx.small_space = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
                                                                         calc_dict = self.ctx.calc_manager,
                                                                         hint=self.ctx.hint,
                                                                         )
+                
+                    
                 self.ctx.workflow_manager['parameter_space'] = copy.deepcopy(self.ctx.params_space)
-        
+
         elif self.ctx.none_encountered:
             self.report('Some calculations failed, updating the history and exiting... ')
             
@@ -280,13 +304,19 @@ class YamboConvergence(WorkChain):
             if self.ctx.hint: 
                 self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.infos = self.ctx.hint
+                if 'converge_b_ratio' in self.ctx.hint.keys(): 
+                    #self.ctx.calc_manager['iter'] = 0
+                    #self.ctx.calc_manager['G_iter'] +=1
+                    if not 'NGsBlkXp' in self.ctx.hint.keys():
+                        self.ctx.hint['NGsBlkXp']=self.ctx.workflow_manager['parameter_space']['NGsBlkXp'][1]
+                        self.report(self.ctx.hint)
+
                 self.ctx.params_space, self.ctx.workflow_manager['parameter_space'],self.ctx.small_space = create_space(starting_inputs = self.ctx.workflow_manager['parameter_space'],
                                                                         calc_dict = self.ctx.calc_manager,
                                                                         hint=self.ctx.hint,
                                                                         )
                 
 
-        self.report(self.ctx.workflow_manager['parameter_space'])
         self.report(self.ctx.params_space)
 
         
@@ -297,9 +327,9 @@ class YamboConvergence(WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        if hasattr(self.ctx,'infos'): 
-            infos = store_Dict(self.ctx.infos)
-            self.out('infos',infos)
+        #if hasattr(self.ctx,'infos'): 
+            #infos = store_Dict(self.ctx.infos)
+            #self.out('infos',infos)
         try:
             calc = load_node(self.ctx.final_result['uuid'])
             if self.ctx.workflow_manager['fully_success']: calc.set_extra('converged', True)

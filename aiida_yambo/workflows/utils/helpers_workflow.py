@@ -119,7 +119,33 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
 
                 space = copy.deepcopy(new_space)
 
-            if hint and wfl_type != 'newton_2D_extra':
+            if hint and wfl_type == 'newton_1D_ratio':
+                for v in l[:-1]:
+                    if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
+                        index = abs((np.array(space[v])-hint[v])).argmin()
+                        try:
+                            if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1
+                            if space[v][index]<hint[v]: index+=1
+                        except:
+                            small_space=True
+                        if (len(space[v])-index-1) < i['steps']*(i['max_iterations']-i['iter']): small_space=True
+                        space[v] = space[v][index:]
+                    else:
+                        if (len(space[v])-1) < i['steps']*(i['max_iterations']-i['iter']*i['G_iter']): small_space=True
+                    
+                for v in l[-1:]:
+                    if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
+                        index = abs((np.array(space[v])-hint[v])).argmin()
+                        if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1
+                        if space[v][index]<hint[v]: index+=1
+                        if (len(space[v])-index-1) < (i['global_iterations']-i['G_iter']): small_space=True
+                        
+                        space[v] = space[v][index:]
+                    
+                    #else:
+                    #    if (len(space[v])-1) < i['steps']*(i['max_iterations_global']-i['iter_global']): small_space=True
+            
+            elif hint and wfl_type != 'newton_2D_extra' and wfl_type != 'newton_1D_ratio':
                 for v in l:
                     if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
                         index = abs((np.array(space[v])-hint[v])).argmin()
@@ -583,7 +609,8 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[]):
                                 var = var,
                                 p_val=lines, 
                                 quantities = workflow_manager['what'],
-                                real = real
+                                real = real,
+                                workflow_dict=workflow_story
                                 )
         
         is_converged, oversteps, hint = y.analysis() #just convergence as before
