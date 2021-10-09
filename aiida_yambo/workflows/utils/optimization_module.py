@@ -312,6 +312,8 @@ class Convergence_evaluator():
         is_converged_d=False
         is_converged_b=False
         hint_b=None
+        hint={}
+        hint_dummy={}
         for i in self.quantities[:]:
             converged, is_converged, oversteps, converged_result, hint_dummy = self.dummy_convergence(what=i)
         
