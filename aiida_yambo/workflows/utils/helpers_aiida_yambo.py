@@ -117,7 +117,7 @@ def set_parallelism(instructions_, inputs):
         pass
 
     else:
-        return False, False
+        return False, False, False
 
     return new_parallelism, new_resources, pop_list
 

@@ -85,12 +85,12 @@ class Convergence_evaluator():
         
         if ratio:
             self.delta_ = abs(self.b_energy_Ry-self.b_energy_Ry[-1])/self.b_energy_Ry[-1]
-            conv_thr = 1e-2
+            conv_thr = 1e-1
         elif diagonal:
-            self.delta_ = abs(self.quantity-self.quantity[-1]) #abs((self.quantity-self.quantity[-1])/self.quantity[-1])
+            self.delta_ = abs((self.quantity-self.quantity[-1])/self.quantity[-1]) #abs((self.quantity-self.quantity[-1])/self.quantity[-1])
             conv_thr=self.conv_thr
         else:
-            self.delta_ = abs(self.conv_array[what]-self.conv_array[what][-1]) #abs((self.conv_array[what]-self.conv_array[what][-1])/self.conv_array[what][-1])
+            self.delta_ = abs((self.conv_array[what]-self.conv_array[what][-1])/self.conv_array[what][-1]) #abs((self.conv_array[what]-self.conv_array[what][-1])/self.conv_array[what][-1])
             conv_thr=self.conv_thr
         #converged = self.delta_[-self.steps:][np.where(abs(self.delta_[-self.steps:])<=self.conv_thr)]
         converged = []
@@ -130,12 +130,14 @@ class Convergence_evaluator():
         params=self.p[0,-self.steps:]
         last=self.p[0,-1]
         powers = [0.5,1,2,3]
+        delta = self.delta[0]
 
         if ratio:
             homo = self.b_energy_Ry
             params= self.PW_G
             last= self.PW_G[-1]
             powers = [0.5,1,2,3]
+            delta = self.delta[-1]
             if len(params)<3: return False, None
 
 
@@ -171,11 +173,11 @@ class Convergence_evaluator():
         self.laplacian = fxx(last,*popt)
         
         is_converged = abs(self.extra-homo[-1] < self.conv_thr*4) and abs(self.extra-homo[-2] < self.conv_thr*4)
-        if ratio: is_converged = abs((self.extra-homo[-1])/homo[-1] < 1e-2) and abs(self.extra-homo[-2] < 1e-2)
+        if ratio: is_converged = abs((self.extra-homo[-1])/homo[-1] < 1e-1) and abs((self.extra-homo[-2])/homo[-2] < 1e-1)
 
         guess = last+abs(self.gradient/self.laplacian)
-        if guess <= last : guess = 2*params[-1] - params[-2]
-        if guess > last + 3*(params[-1] - params[-2]) : guess = last +3*(params[-1] - params[-2])
+        if guess <= last : guess = last + 2*(delta)
+        if guess > last + 3*(delta) : guess = last + 3*(delta)
         if not isinstance(self.stop,list): self.stop = [self.stop]
         new_metrics = int((self.stop[0]-guess)/(self.conv_thr/abs(popt[0]))**(1/candidates)-guess)
 
