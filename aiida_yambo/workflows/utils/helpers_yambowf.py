@@ -221,8 +221,8 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     homo_k = mapping['homo_k']
     lumo_k = mapping['lumo_k']
     number_of_kpoints = mapping['number_of_kpoints']
-    sub_val = 4 
-    sup_cond = 4 #so, for now 3+3 bands
+    sub_val = 3 
+    sup_cond = 3 #so, for now 3+3 bands
 
     new_params = workchain_inputs.yambo.parameters.get_dict()
     for name in parsing_List:

@@ -465,7 +465,7 @@ def check_identical_calculation(YamboWorkflow_inputs,
                 same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
                 old_params = load_node(old).inputs.yres__yambo__parameters.get_dict()
                 for p in what:
-                    if 'CPU' in p or 'ROLEs' in p: continue
+                    if 'CPU' in p or 'ROLEs' in p or 'PAR' in p: continue
                     #print(p,params_to_calc[p],old_params[p])
                     if params_to_calc[p] == old_params[p] and same_k:
                         already_done = old

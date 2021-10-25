@@ -29,14 +29,17 @@ class Convergence_evaluator():
     def ratio_evaluator(self,what):
         Ry = np.array(list(set(self.workflow_dict.NGsBlkXp)))
         Ry.sort()
+        self.PW_G = Ry
         p=[]
+        calcs = []
 
         if len(Ry)<3:
             return False
 
         for i in Ry: 
-            print(i,self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
+            #print(i,self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
             p.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
+            calcs.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['uuid'].values[-1])
         b_index = np.array(p)
         pw = find_pw_parent(load_node(self.workflow_dict['uuid'].values[-1]))
         b = pw.outputs.output_band.get_bands()
@@ -70,6 +73,7 @@ class Convergence_evaluator():
         
         self.b_index = b_index
         self.PW_G = Ry
+        self.calcs_diagonal = calcs
         self.b_energy_Ry = b[0,b_index[lim_d:lim_u]]/13.6
         self.quantity = []
         for i in Ry[:-1]:
@@ -84,13 +88,16 @@ class Convergence_evaluator():
     def dummy_convergence(self,what,ratio=False,diagonal=False): #solo window, thr e oversteps ---AAA generalize with all the "what", just a matrix . 
         
         if ratio:
-            self.delta_ = abs(self.b_energy_Ry-self.b_energy_Ry[-1])/self.b_energy_Ry[-1]
+            self.delta_ = abs((self.b_energy_Ry-self.b_energy_Ry[-1]))
+            if self.conv_thr_units == 'eV': self.delta_ = abs((self.b_energy_Ry-self.b_energy_Ry[-1])/self.b_energy_Ry[-1])
             conv_thr = 1e-1
         elif diagonal:
             self.delta_ = abs((self.quantity-self.quantity[-1])/self.quantity[-1]) #abs((self.quantity-self.quantity[-1])/self.quantity[-1])
+            if self.conv_thr_units == 'eV': self.delta_ = abs((self.quantity-self.quantity[-1]))
             conv_thr=self.conv_thr
         else:
             self.delta_ = abs((self.conv_array[what]-self.conv_array[what][-1])/self.conv_array[what][-1]) #abs((self.conv_array[what]-self.conv_array[what][-1])/self.conv_array[what][-1])
+            if self.conv_thr_units == 'eV': self.delta_ = abs((self.conv_array[what]-self.conv_array[what][-1]))
             conv_thr=self.conv_thr
         #converged = self.delta_[-self.steps:][np.where(abs(self.delta_[-self.steps:])<=self.conv_thr)]
         converged = []
@@ -107,14 +114,29 @@ class Convergence_evaluator():
             converged_result = None
         else:
             is_converged = True
-            if not ratio:
-                oversteps = list(self.real[abs(self.real[what]-self.real[what].values[-1])<conv_thr].uuid)[-len(converged)+1:]  
+            if ratio or diagonal:
+                oversteps =  list(self.workflow_dict[(self.workflow_dict.NGsBlkXp>self.PW_G[-len(converged)])].uuid.values[:])
+                oversteps_Ry =  set(self.workflow_dict[(self.workflow_dict.NGsBlkXp>self.PW_G[-len(converged)])]['NGsBlkXp'].values[:])
+                
+                l = len(oversteps_Ry)
+                converged_result = self.b_energy_Ry[-l]
+            else: 
+                if hasattr(self,'PW_G'): # do this only for a given PW cutoff. if only diagonal (not implemented yet), do normal 
+                    condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1])/self.real[what].values[-1])<=conv_thr) 
+                    if self.conv_thr_units == 'eV': condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1]))<=conv_thr)    
+                else:
+                    condition = abs((self.real[what]-self.real[what].values[-1])/self.real[what].values[-1])<=conv_thr
+                    if self.conv_thr_units == 'eV': condition = abs((self.real[what]-self.real[what].values[-1]))<=conv_thr
+                
+
+                oversteps = list(self.real[condition].uuid)[-len(converged)+1:] #  [-len(converged)+1:]
+                
+                if hasattr(self,'PW_G'):
+                    if len(oversteps) == len(list(self.real[self.real.NGsBlkXp==self.PW_G[-1]].uuid)): oversteps = oversteps[1:]
+
                 l = len(oversteps)
                 converged_result = self.conv_array[what][-l]
-            else:
-                oversteps = len(self.delta_)-len(converged) + 1
-                l = len(oversteps)
-                converged_result = self.b_energy_Ry[what][-l]
+                
         
         hint={}
         for i in self.var:
@@ -122,16 +144,11 @@ class Convergence_evaluator():
 
         if ratio: self.oversteps = oversteps
             
-        return converged, is_converged, oversteps, converged_result, hint
+        return self.delta_, is_converged, oversteps, converged_result, hint
             
-    def newton_1D(self, what, evaluation='fit',ratio=False): #'numerical'/'fit'
+    def newton_1D(self, what, evaluation='fit',ratio=False,diagonal=False): #'numerical'/'fit'
         perr = 10
-        homo = self.conv_array[what][-self.steps_:]
-        params=self.p[0,-self.steps:]
-        last=self.p[0,-1]
-        powers = [0.5,1,2,3]
-        delta = self.delta[0]
-
+        
         if ratio:
             homo = self.b_energy_Ry
             params= self.PW_G
@@ -139,6 +156,19 @@ class Convergence_evaluator():
             powers = [0.5,1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
+        elif diagonal:
+            homo = self.quantity
+            params= self.PW_G
+            last= self.PW_G[-1]
+            powers = [0.5,1,2,3]
+            delta = self.delta[-1]
+            if len(params)<3: return False, None
+        else:
+            homo = self.conv_array[what][-self.steps_:]
+            params=self.p[0,-self.steps:]
+            last=self.p[0,-1]
+            powers = [0.5,1,2,3]
+            delta = self.delta[0]
 
 
         
@@ -172,8 +202,9 @@ class Convergence_evaluator():
         self.gradient = fx(last,*popt)
         self.laplacian = fxx(last,*popt)
         
-        is_converged = abs(self.extra-homo[-1] < self.conv_thr*4) and abs(self.extra-homo[-2] < self.conv_thr*4)
-        if ratio: is_converged = abs((self.extra-homo[-1])/homo[-1] < 1e-1) and abs((self.extra-homo[-2])/homo[-2] < 1e-1)
+        is_converged = abs((self.extra-homo[-1])/self.extra) < self.conv_thr*4 and abs((self.extra-homo[-2])/self.extra) < self.conv_thr*4
+        if self.conv_thr_units == 'eV': is_converged = abs(self.extra-homo[-1]) < self.conv_thr*4 and abs(self.extra-homo[-2]) < self.conv_thr*4
+        if ratio: is_converged = abs((self.extra-homo[-1])/homo[-1]) < 1e-1 and abs((self.extra-homo[-2])/homo[-2]) < 1e-1
 
         guess = last+abs(self.gradient/self.laplacian)
         if guess <= last : guess = last + 2*(delta)
@@ -185,7 +216,7 @@ class Convergence_evaluator():
                 self.var[0]+'_fit_converged':abs(popt[0]/self.conv_thr)**(1/candidates),
                 'power_law':candidates}
 
-        if ratio:
+        if ratio or diagonal:
             hint = {self.var[1]:guess,'extra_bands_Ry':self.extra,'new_metrics':new_metrics,
                 self.var[0]+'_fit_converged':abs(popt[0]/self.conv_thr)**(1/candidates),
                 'power_law':candidates,'ratio':abs((self.extra-homo[-1])/homo[-1]),'extra':self.extra,'bands_Ry':self.b_energy_Ry,'Ry':self.PW_G,
@@ -309,12 +340,15 @@ class Convergence_evaluator():
     def analysis(self,): #also conv evaluation wrt the relative thr (0.01 on a 7 eV gap... not so important)
         
         is_converged_fit_b=False
+        is_converged_fit_d=False
         is_converged_d=False
         is_converged_b=False
         hint_b=None
+        hint_d=None
         hint={}
         hint_dummy={}
         for i in self.quantities[:]:
+            if 'newton_1D_ratio' in self.convergence_algorithm: self.ratio_evaluator(what=i)
             converged, is_converged, oversteps, converged_result, hint_dummy = self.dummy_convergence(what=i)
         
             if 'dummy' in self.convergence_algorithm:            
@@ -330,8 +364,8 @@ class Convergence_evaluator():
                         #if is_converged_b:
                         is_converged_fit_b, hint_b = self.newton_1D(what=i,ratio=True)
                             #hint.update(hint_b)
-                        converged_d, is_converged_d, oversteps_d, converged_result_d, hint_dummy_d = self.dummy_convergence(what=self.quantity,ratio=True,diagonal=True)
-
+                        converged_d, is_converged_d, oversteps_d, converged_result_d, hint_dummy_d = self.dummy_convergence(what=self.quantity,ratio=False,diagonal=True)
+                        is_converged_fit_d, hint_d = self.newton_1D(what=self.quantity,diagonal=True)
                     #except:
                     #    pass
             elif 'newton_1D' in self.convergence_algorithm:
@@ -350,17 +384,27 @@ class Convergence_evaluator():
             if is_converged and is_converged_fit:
                 hint.update(hint_dummy)
                 
-                if 'newton_1D_ratio' in self.convergence_algorithm and not (is_converged_b and is_converged_fit_b and is_converged_d): #is_converged_d: d is for full 2D convergence.....                   
+                if 'newton_1D_ratio' in self.convergence_algorithm and not is_converged_d:  #(is_converged_b and is_converged_fit_b and is_converged_d): #is_converged_d: d is for full 2D convergence.....                   
                     if hint_b:
                         hint.update(hint_b)
                     else:
                         hint.pop('NGsBlkXp')
                     hint['converge_b_ratio'] = True
+                elif is_converged_d:
+                    oversteps = oversteps + oversteps_d
                 
                 hint['is_converged_diagonal'] = is_converged_d
                 hint['is_converged_b'] = is_converged_b
                 hint['is_converged_fit_b'] = is_converged_fit_b
-                hint['hint_b'] = hint_b
+                hint['is_converged_fit_d'] = is_converged_fit_d
+                hint['hint_d'] = hint_d
+                hint['converged'] = converged
+
+                try:
+                    hint['path_d'] = converged_d
+                except:
+                    pass
+                #hint['hint_b'] = hint_b
 
             elif not is_converged or not is_converged_fit:
                 if 'newton_1D_ratio' in self.convergence_algorithm:

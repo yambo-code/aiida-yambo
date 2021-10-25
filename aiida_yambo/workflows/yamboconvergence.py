@@ -198,7 +198,7 @@ class YamboConvergence(WorkChain):
     def next_step(self):
         """This function will submit the next step"""
         self.ctx.calc_manager['iter'] +=1
-                
+        self.report(self.ctx.calc_manager)
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager['values'] = []
@@ -236,7 +236,7 @@ class YamboConvergence(WorkChain):
     def data_analysis(self):
         
         self.report('Data analysis, we will try to parse some result and decide what next')
-
+        self.report(self.ctx.calc_manager)
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
@@ -251,6 +251,8 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, self.ctx.hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
         
+        self.report(self.ctx.calc_manager)
+        self.report(self.ctx.hint)
         # self.report(self.ctx.workflow_manager['parameter_space'])
         self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
 
@@ -269,7 +271,9 @@ class YamboConvergence(WorkChain):
 
             if self.ctx.workflow_manager['true_iter'] == [] and not 'converge_b_ratio' in self.ctx.hint.keys(): #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
-            
+                    return 
+
+            self.report(self.ctx.calc_manager)
             if self.ctx.hint: 
                 self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.extrapolated = self.ctx.hint.pop('extra', None)

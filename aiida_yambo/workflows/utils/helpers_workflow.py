@@ -174,7 +174,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
             
             start, stop = 1,i['steps']*i['max_iterations']+1
 
-            if hint:
+            if hint and not 'mesh' in var:
                 length_space = len(starting_inputs[var])
                 start, stop = -i['steps']*calc_dict['iter']+1,length_space-i['steps']*calc_dict['iter']+1
                 starting_inputs[var] = hint[var]
