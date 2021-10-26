@@ -122,8 +122,6 @@ class YamboConvergence(WorkChain):
 
         self.ctx.final_result = {}     
 
-        self.ctx.calc_manager['G_iter'] = 1 #only for ratio
-
         self.report('Workflow type: {}; looking for convergence of {}'.format(self.ctx.workflow_settings['type'], self.ctx.workflow_settings['what']))
 
         
@@ -262,7 +260,7 @@ class YamboConvergence(WorkChain):
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
                  self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
             
-            self.report(oversteps)
+            self.report(self.ctx.final_result)
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.ctx.workflow_settings['type']+' on {} reached in {} calculations, the result is {}' \
@@ -274,7 +272,7 @@ class YamboConvergence(WorkChain):
                     return 
 
             self.report(self.ctx.calc_manager)
-            if self.ctx.hint: 
+            if self.ctx.hint and not 'kpoint_mesh' in self.ctx.calc_manager['var']: 
                 self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
                 self.ctx.infos = self.ctx.hint
@@ -410,8 +408,10 @@ class YamboConvergence(WorkChain):
 
         try:
             scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.ctx.calc_inputs)
+            self.report(messages)
             self.ctx.gwbands = max(self.ctx.gwbands,self.ctx.bands)
-            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)        
+            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder) #why for k-mesh is not working
+            
             
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
 
@@ -458,6 +458,10 @@ class YamboConvergence(WorkChain):
 
         if hasattr(self.ctx.calc_inputs, 'parent_folder'):
             set_parent(self.ctx.pre_inputs, self.ctx.calc_inputs.parent_folder)
+        
+        if hasattr(self.ctx.calc_inputs.nscf,'kpoints'):
+            self.report('mesh check')
+            self.ctx.pre_inputs.nscf.kpoints = self.ctx.calc_inputs.nscf.kpoints
 
         if hasattr(self.inputs, 'precalc_inputs'):
             self.ctx.calculation_type='pre_yambo'

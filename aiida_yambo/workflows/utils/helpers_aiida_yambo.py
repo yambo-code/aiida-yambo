@@ -129,6 +129,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict.update(calc_info)
     calc_dict.update(wfl_settings)
     calc_dict['iter']  = 0
+    calc_dict['G_iter']  = 1
     calc_dict['success'] = False
     calc_dict['conv_thr'] = calc_dict.pop('conv_thr',0.05)
     calc_dict['conv_thr_units'] = calc_dict.pop('conv_thr_units','eV')
@@ -260,8 +261,9 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
 
     return quantities
 
-def start_from_converged(inputs, node_uuid,):
+def start_from_converged(inputs, node_uuid, mesh=False):
     node = load_node(node_uuid)
     inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']
+    if mesh: inputs.nscf.kpoints = node.inputs.nscf__kpoints
     inputs.yres.yambo.metadata.options.resources = node.called[0].called[0].get_options()['resources']
     inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[0].called[0].get_options()['max_wallclock_seconds']
