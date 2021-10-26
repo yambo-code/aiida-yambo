@@ -370,16 +370,20 @@ class YamboConvergence(WorkChain):
         self.report(self.ctx.workflow_manager['parameter_space'])        
         if self.ctx.how_bands == 'single-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
+            if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
             self.report('Max #bands needed in this step = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
         elif self.ctx.how_bands == 'single-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
+            if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
             self.report('Max #bands needed in this step = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
 
         elif self.ctx.how_bands == 'full-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
+            if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
             self.report('Max #bands needed in this iteration = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
         elif self.ctx.how_bands == 'full-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
+            if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
             self.report('Max #bands needed in this iteration = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
 
         elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
@@ -407,11 +411,32 @@ class YamboConvergence(WorkChain):
             return False
 
         try:
+            
+            already_done, parent_nscf, parent_scf = search_in_group(self.ctx.calc_inputs, 
+                                               self.ctx.workflow_manager['group'], up_to_p2y = True)
+
+            self.report(already_done,parent_nscf)
+
+            if already_done:
+                try:
+                    self.ctx.calc_inputs.parent_folder =  load_node(already_done).outputs.remote_folder 
+                except:
+                    pass
+            elif parent_nscf:
+                try:
+                    self.ctx.calc_inputs.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+                except:
+                    pass
+            elif parent_scf:
+                try:
+                    self.ctx.calc_inputs.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
+                except:
+                    pass
+
             scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.ctx.calc_inputs)
             self.report(messages)
             self.ctx.gwbands = max(self.ctx.gwbands,self.ctx.bands)
             parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder) #why for k-mesh is not working
-            
             
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
 

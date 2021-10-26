@@ -128,10 +128,10 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                             if space[v][index]<hint[v]: index+=1
                         except:
                             small_space=True
-                        if (len(space[v])-index-1) < i['steps']*(i['max_iterations']-i['iter']): small_space=True
+                        if (len(space[v])-index-1) < i['steps']: small_space=True #i['steps']*(i['max_iterations']-i['iter']): small_space=True
                         space[v] = space[v][index:]
                     else:
-                        if (len(space[v])-1) < i['steps']*(i['max_iterations']-i['iter']*i['G_iter']): small_space=True
+                        if (len(space[v])-1) < i['steps']: small_space=True #i['steps']*(i['max_iterations']-i['iter']*i['G_iter']): small_space=True
                     
                 for v in l[-1:]:
                     if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
@@ -141,7 +141,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                         else:
                             if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1
                             if space[v][index]<hint[v]: index+=1
-                        if (len(space[v])-index-1) < (i['global_iterations']-i['G_iter']): small_space=True
+                        if space[v][-1] < hint[v]: small_space=True
                         
                         space[v] = space[v][index:]
                     
