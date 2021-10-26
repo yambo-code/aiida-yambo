@@ -389,11 +389,11 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
             dft_predicted = 'semimetal'
     
     L_H = round((min(bands[:,conduction-1])-max(bands[:,valence-1])),3)
-    if L_H<=0.02 and L_H>=-0.02 and fermi <= 0:
+    if L_H<=0.02 and L_H>=-0.02 and valence%2 !== 0:
         dft_predicted = 'semimetal'
-    elif L_H>0.02 and fermi <= 0:
+    elif L_H>0.02 and valence%2 == 0:
         dft_predicted = 'semiconductor/insulator'
-    else fermi>0:
+    elif fermi>0 or valence%2 != 0:
         dft_predicted = 'metal'
 
     if ind_val+1 != ind_cond+1:
