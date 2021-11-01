@@ -37,7 +37,6 @@ class Convergence_evaluator():
             return False
 
         for i in Ry: 
-            #print(i,self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
             p.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['BndsRnXp'].values[-1])
             calcs.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)]['uuid'].values[-1])
         b_index = np.array(p)
@@ -52,16 +51,16 @@ class Convergence_evaluator():
 
         #if lin:
         if 1:
-            aa_lin,bb_lin = np.polyfit(Ry[lim_d:lim_u],b[0,b_index[lim_d:lim_u]]/13.6,deg=1)
+            aa_lin,bb_lin = np.polyfit(Ry[lim_d:lim_u],b[0,b_index[lim_d:lim_u]-1]/13.6,deg=1)
             f_lin = lambda x,a,b: a*x+b
-            error_lin = np.sqrt(np.average((f_lin(Ry[lim_d:lim_u],aa_lin,bb_lin)-b[0,b_index[lim_d:lim_u]]/13.6)**2))
+            error_lin = np.sqrt(np.average((f_lin(Ry[lim_d:lim_u],aa_lin,bb_lin)-b[0,b_index[lim_d:lim_u]-1]/13.6)**2))
         #else:    
             f = lambda x,a,b: a/x + b
-            aa,bb = curve_fit(f,Ry[lim_d:lim_u],b[0,b_index[lim_d:lim_u]]/13.6,sigma=1/np.array(Ry[lim_d:lim_u]))
+            aa,bb = curve_fit(f,Ry[lim_d:lim_u],b[0,b_index[lim_d:lim_u]-1]/13.6,sigma=1/np.array(Ry[lim_d:lim_u]))
 
             bb = aa[1]
             aa = aa[0]
-            error = np.sqrt(np.average((f(Ry[lim_d:lim_u],aa,bb)-b[0,b_index[lim_d:lim_u]]/13.6)**2))
+            error = np.sqrt(np.average((f(Ry[lim_d:lim_u],aa,bb)-b[0,b_index[lim_d:lim_u]-1]/13.6)**2))
         
         maps_bands=[]
         maps_Ry_lin=[]
@@ -74,10 +73,10 @@ class Convergence_evaluator():
         self.b_index = b_index
         self.PW_G = Ry
         self.calcs_diagonal = calcs
-        self.b_energy_Ry = b[0,b_index[lim_d:lim_u]]/13.6
+        self.b_energy_Ry = b[0,b_index[lim_d:lim_u]-1]/13.6
         self.quantity = []
         for i in Ry[:-1]:
-            self.quantity.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)][what].values[-1])
+                self.quantity.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==i) & (self.workflow_dict.useful==True)][what].values[-1])
 
         self.quantity.append(self.workflow_dict[(self.workflow_dict.NGsBlkXp==Ry[-1])][what].values[-self.steps]) #self.oversteps])
 
@@ -113,6 +112,7 @@ class Convergence_evaluator():
             oversteps = []
             converged_result = None
         else:
+            check = 0 
             is_converged = True
             if ratio or diagonal:
                 oversteps =  list(self.workflow_dict[(self.workflow_dict.NGsBlkXp>self.PW_G[-len(converged)])].uuid.values[:])
@@ -123,13 +123,14 @@ class Convergence_evaluator():
             else: 
                 if hasattr(self,'PW_G'): # do this only for a given PW cutoff. if only diagonal (not implemented yet), do normal 
                     condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1])/self.real[what].values[-1])<=conv_thr) 
-                    if self.conv_thr_units == 'eV': condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1]))<=conv_thr)    
+                    if self.conv_thr_units == 'eV': condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1]))<=conv_thr) 
+                    if len(list(self.real[condition].uuid))  >= self.iter*self.steps: check = 1
                 else:
                     condition = abs((self.real[what]-self.real[what].values[-1])/self.real[what].values[-1])<=conv_thr
                     if self.conv_thr_units == 'eV': condition = abs((self.real[what]-self.real[what].values[-1]))<=conv_thr
                 
 
-                oversteps = list(self.real[condition].uuid)[-len(converged)+1:] #  [-len(converged)+1:]
+                oversteps = list(self.real[condition].uuid)[-len(converged)+1+check:] #  [-len(converged)+1:]
                 
                 if hasattr(self,'PW_G'):
                     if len(oversteps) == len(list(self.real[self.real.NGsBlkXp==self.PW_G[-1]].uuid)): oversteps = oversteps[1:]
@@ -153,21 +154,21 @@ class Convergence_evaluator():
             homo = self.b_energy_Ry
             params= self.PW_G
             last= self.PW_G[-1]
-            powers = [0.5,1,2,3]
+            powers = [1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
         elif diagonal:
             homo = self.quantity
             params= self.PW_G
             last= self.PW_G[-1]
-            powers = [0.5,1,2,3]
+            powers = [1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
         else:
             homo = self.conv_array[what][-self.steps_:]
             params=self.p[0,-self.steps:]
             last=self.p[0,-1]
-            powers = [0.5,1,2,3]
+            powers = [1,2,3]
             delta = self.delta[0]
 
 

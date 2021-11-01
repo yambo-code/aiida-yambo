@@ -136,7 +136,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                 for v in l[-1:]:
                     if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
                         index = abs((np.array(space[v])-hint[v])).argmin()
-                        if len(space[v])<index: 
+                        if len(space[v])<=index+1: 
                             small_space=True
                         else:
                             if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1

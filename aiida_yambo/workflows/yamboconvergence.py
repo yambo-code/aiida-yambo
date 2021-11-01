@@ -410,12 +410,11 @@ class YamboConvergence(WorkChain):
             self.report('Not needed, we start with k-points')
             return False
 
-        try:
-            
+        try:    
             already_done, parent_nscf, parent_scf = search_in_group(self.ctx.calc_inputs, 
                                                self.ctx.workflow_manager['group'], up_to_p2y = True)
 
-            self.report(already_done,parent_nscf)
+            #self.report(already_done,parent_nscf)
 
             if already_done:
                 try:
@@ -436,7 +435,7 @@ class YamboConvergence(WorkChain):
             scf_params, nscf_params, redo_nscf, self.ctx.bands, messages = quantumespresso_input_validator(self.ctx.calc_inputs)
             self.report(messages)
             self.ctx.gwbands = max(self.ctx.gwbands,self.ctx.bands)
-            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder) #why for k-mesh is not working
+            parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder) 
             
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
 
