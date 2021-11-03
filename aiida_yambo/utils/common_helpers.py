@@ -279,11 +279,11 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                 if quantity[-1] in m or quantity[-2] in m: return quantity, 0
                 if not quantity[-1] in maps.keys() or not quantity[-2] in maps.keys(): return quantity, 0
                 valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-2]])
-                conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]]) + 1
+                conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]]) + 1 + 1*int(mapping['soc'])
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
-                        valence,valence],
+                        mapping['valence'],mapping['valence']],
                         [maps[quantity[-1]],maps[quantity[-1]],
-                         conduction,conduction]]
+                         mapping['conduction'],mapping['conduction']]]
         else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
@@ -293,15 +293,15 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                 valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]])
                 if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
-                         valence,valence],]
+                         mapping['valence'],mapping['valence']],]
                 elif '_c' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
-                         valence+1,valence+1],]
+                         mapping['conduction'],mapping['conduction']],]
                 
                 return quantity,[[maps[quantity],maps[quantity],
-                         valence,valence],
+                         mapping['valence'],mapping['valence']],
                         [maps[quantity],maps[quantity],
-                         valence+1,valence+1]]
+                         mapping['conduction'],mapping['conduction']]]
             
     elif isinstance(quantity,list):
         if 'gap_' in quantity[0]:
@@ -325,16 +325,16 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
             valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]])
             if '_v' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     valence,valence],]
+                     mapping['valence'],mapping['valence']],]
             elif '_c' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     valence+1,valence+1],]
+                     mapping['conduction'],mapping['conduction']],]
             
             
             return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     valence,valence],
+                     mapping['valence'],mapping['valence']],
                     [maps[quantity[0]],maps[quantity[0]],
-                     valence+1,valence+1]]     
+                     mapping['conduction'],mapping['conduction']]]     
     else:
         return 0, 0
 

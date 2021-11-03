@@ -249,7 +249,7 @@ class YamboConvergence(WorkChain):
         self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, self.ctx.hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
         
-        self.report(self.ctx.calc_manager)
+        self.report(oversteps)
         self.report(self.ctx.hint)
         # self.report(self.ctx.workflow_manager['parameter_space'])
         self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))

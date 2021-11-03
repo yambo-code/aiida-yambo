@@ -104,15 +104,14 @@ class Convergence_evaluator():
             if abs(self.delta_[-i])>conv_thr:
                 break
             else:
-                converged.append(1)
-        self.converged=converged
+                converged.append(list(self.real.uuid)[-i])
+        self.converged = converged
 
         if len(converged)<self.conv_window:
             is_converged = False
             oversteps = []
             converged_result = None
         else:
-            check = 0 
             is_converged = True
             if ratio or diagonal:
                 oversteps =  list(self.workflow_dict[(self.workflow_dict.NGsBlkXp>self.PW_G[-len(converged)])].uuid.values[:])
@@ -124,16 +123,21 @@ class Convergence_evaluator():
                 if hasattr(self,'PW_G'): # do this only for a given PW cutoff. if only diagonal (not implemented yet), do normal 
                     condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1])/self.real[what].values[-1])<=conv_thr) 
                     if self.conv_thr_units == 'eV': condition = (self.real.NGsBlkXp==self.PW_G[-1]) & (abs((self.real[what]-self.real[what].values[-1]))<=conv_thr) 
-                    if len(list(self.real[condition].uuid))  >= self.iter*self.steps: check = 1
+                    #oversteps = list(self.real[condition].uuid)[-len(converged)+1:] #  [-len(converged)+1:]
                 else:
                     condition = abs((self.real[what]-self.real[what].values[-1])/self.real[what].values[-1])<=conv_thr
                     if self.conv_thr_units == 'eV': condition = abs((self.real[what]-self.real[what].values[-1]))<=conv_thr
                 
+                if len(converged) >= self.iter*self.steps + 1 and not hasattr(self,'PW_G'):
+                    oversteps= list(self.real[condition].uuid)[-(self.iter*self.steps):]  #converged[:-1]
+                elif len(converged) >= self.iter*self.steps and hasattr(self,'PW_G'):
+                    oversteps= list(self.real[condition].uuid)[-(self.iter*self.steps)+1:]  #converged[:-1]
+                else:
+                    oversteps= list(self.real[condition].uuid)[-len(converged)+1:]  #converged[:-1]
 
-                oversteps = list(self.real[condition].uuid)[-len(converged)+1+check:] #  [-len(converged)+1:]
-                
+
                 if hasattr(self,'PW_G'):
-                    if len(oversteps) == len(list(self.real[self.real.NGsBlkXp==self.PW_G[-1]].uuid)): oversteps = oversteps[1:]
+                    if len(oversteps) >= len(list(self.real[self.real.NGsBlkXp==self.PW_G[-1]].uuid)): oversteps = list(self.real[self.real.NGsBlkXp==self.PW_G[-1]].uuid)[1:]
 
                 l = len(oversteps)
                 converged_result = self.conv_array[what][-l]
@@ -141,31 +145,32 @@ class Convergence_evaluator():
         
         hint={}
         for i in self.var:
-            hint[i] = self.p[self.var.index(i),-len(oversteps)-1]
+            if not ratio: hint[i] = self.p[self.var.index(i),-len(oversteps)-1]
+
 
         if ratio: self.oversteps = oversteps
-            
+        
         return self.delta_, is_converged, oversteps, converged_result, hint
             
     def newton_1D(self, what, evaluation='fit',ratio=False,diagonal=False): #'numerical'/'fit'
         perr = 10
         
         if ratio:
-            homo = self.b_energy_Ry
-            params= self.PW_G
+            homo = self.b_energy_Ry[-self.steps:]
+            params= self.PW_G[-self.steps:]
             last= self.PW_G[-1]
             powers = [1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
         elif diagonal:
-            homo = self.quantity
-            params= self.PW_G
+            homo = self.quantity[-self.steps:]
+            params= self.PW_G[-self.steps:]
             last= self.PW_G[-1]
             powers = [1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
         else:
-            homo = self.conv_array[what][-self.steps_:]
+            homo = self.conv_array[what][-self.steps:]
             params=self.p[0,-self.steps:]
             last=self.p[0,-1]
             powers = [1,2,3]
@@ -249,8 +254,8 @@ class Convergence_evaluator():
         g = self.p[1,-self.steps_:]
         homo = self.conv_array[what][-self.steps_:]
         perr= 10 
-        for eb in [0.5,1,2,3]:
-            for eg in [0.5,1,2,3]:
+        for eb in [1,2,3]:
+            for eg in [1,2,3]:
 
                 exp_b = eb
                 exp_g = eg
