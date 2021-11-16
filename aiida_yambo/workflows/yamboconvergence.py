@@ -272,7 +272,7 @@ class YamboConvergence(WorkChain):
                     return 
 
             self.report(self.ctx.calc_manager)
-            if self.ctx.hint and not 'kpoint_mesh' in self.ctx.calc_manager['var']: 
+            if self.ctx.hint and not 'dummy' in self.ctx.calc_manager['convergence_algorithm']: 
                 self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
                 self.ctx.infos = self.ctx.hint

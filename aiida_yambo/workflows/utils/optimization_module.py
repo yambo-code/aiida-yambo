@@ -378,7 +378,7 @@ class Convergence_evaluator():
                 is_converged_fit, hint = self.newton_1D(what=i)
         
             elif 'newton_2D_extra' in self.convergence_algorithm:
-                finish = self.max_iterations == self.iter
+                finish = self.max_iterations == (self.iter)*self.steps
                 if finish: is_converged_fit, hint = self.newton_2D(what=i,extrapolation=True)
                 hint.update(hint_dummy)
             
@@ -405,6 +405,7 @@ class Convergence_evaluator():
                 hint['is_converged_fit_d'] = is_converged_fit_d
                 hint['hint_d'] = hint_d
                 hint['converged'] = converged
+                hint['self_p'] = self.p
 
                 try:
                     hint['path_d'] = converged_d
@@ -413,6 +414,8 @@ class Convergence_evaluator():
                 #hint['hint_b'] = hint_b
 
             elif not is_converged or not is_converged_fit:
+                if 'dummy' in self.convergence_algorithm:
+                    hint = {} #this for k points... for now. I wnat Newton's also for meshes
                 if 'newton_1D_ratio' in self.convergence_algorithm:
                     if 'NGsBlkXp' in hint.keys(): hint.pop('NGsBlkXp')
                 break

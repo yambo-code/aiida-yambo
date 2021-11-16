@@ -138,7 +138,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['steps'] = calc_dict.pop('steps',3)
     calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])
     
-    calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','univariate_dummy') #1D, multivariate_optimization...
+    calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','dummy') #1D, multivariate_optimization...
 
     #if calc_dict['convergence_algorithm'] != '1D_convergence': 
     #    calc_dict['steps'] = len(calc_dict['space'])
