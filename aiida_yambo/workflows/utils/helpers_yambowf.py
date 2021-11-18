@@ -240,17 +240,23 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
             for i in mapping[name]:
                 if not i in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append(i) 
     
-        elif name == 'homo' in parsing_List:
+        elif name == 'homo':
            if not [homo_k, homo_k, val,val] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([homo_k, homo_k, val,val])
     
-        elif name == 'lumo' in parsing_List:
+        elif name == 'lumo':
             if not [lumo_k,lumo_k, cond,cond] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([lumo_k,lumo_k, cond,cond])
         
-        elif name == 'band_structure' in parsing_List:
+        elif name == 'band_structure':
             if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
                 new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
             else:
                 new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
+        
+        elif 'band_structure' in name:    #should provide as 'band_structure_nv_nc'
+            if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
+                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
+            else:
+                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-name[-3]+1,cond+name[-1]-1]
     
     return mapping, Dict(dict=new_params)
 
@@ -377,10 +383,12 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
 def organize_output(output, node=None): #prepare to be stored
     
     if isinstance(output,dict):
-        if 'band_structure' in output.keys() and node:
-            pass
-        else:
-            return Dict(dict=output)
+        for k in output.keys():
+            if 'band_structure' in k and node:
+                pass
+            else:
+                return Dict(dict=output)
+                break
     
     elif isinstance(output,list):
         return List(list=output)

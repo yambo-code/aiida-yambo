@@ -152,10 +152,10 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                 for v in l:
                     if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
                         index = abs((np.array(space[v])-hint[v])).argmin()
-                        if (len(space[v])-index-1) < i['steps']*(i['max_iterations']-i['iter']): small_space=True
+                        if (len(space[v])-index) < i['steps']: small_space=True   #*(i['max_iterations']-i['iter']): small_space=True
                         space[v] = space[v][index:]
                     else:
-                        if (len(space[v])-1) < i['steps']*(i['max_iterations']-i['iter']): small_space=True
+                        if (len(space[v])) < i['steps']: small_space=True
             
             if 'newton_1D_ratio' in wfl_type:
                 break
