@@ -189,7 +189,7 @@ def parse_BS(folder,filename, save_dir):
     q = filename[13:]
     lat  = YamboLatticeDB.from_db_file(filename=save_dir+'/ns.db1')
     ydb  = YamboExcitonDB.from_db_file(filename=filename,folder=folder,lattice=lat)
-    chi = ydb.get_chi(emin=0, emax=10, estep=0.01, broad=0.05,)
+    chi = ydb.get_chi(emin=0, emax=20, estep=0.01, broad=0.05,)
     chi_ = {'eV':chi[0],'eps_2':chi[1].imag,'eps_1':chi[1].real}
     
     excitons = {'energies':ydb.eigenvalues.real,
