@@ -41,10 +41,10 @@ def yambotiming_to_seconds(yt):
         return yt
 
 
-errors = {'memory_error':['\[ERROR\]Allocation',],
+errors = {'memory_error':['\[ERROR\]Allocation','\[ERROR\] Allocation', '\[ERROR\]out of memory', '\[MEMORY\] Alloc','\[MEMORY\]Alloc'],
           'time_most_prob':['Alloc Xo%blc_d',],
           'para_error':['\[ERROR\]Incomplete','\[ERROR\]Impossible','\[ERROR\]USER parallel',
-                         '\[NULL\]',
+                         '\[NULL\]','\[ERROR\] Incomplete','\[ERROR\] Impossible','\[ERROR\] USER parallel',
                         
                         ],
                             
@@ -114,6 +114,7 @@ def parse_log(log,output_params,timing):
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
         memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
         alloc1_error = re.compile('\[ERROR\]Allocation')
+        alloc1_1_error = re.compile('\[ERROR\] Allocation')
         alloc2_error = re.compile('\[MEMORY\] Alloc')
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
