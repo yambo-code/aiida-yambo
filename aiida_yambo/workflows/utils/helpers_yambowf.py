@@ -247,15 +247,15 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
             if not [lumo_k,lumo_k, cond,cond] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([lumo_k,lumo_k, cond,cond])
         
         elif name == 'band_structure':
-            if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
-                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
-            else:
-                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
+            #if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
+            #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
+            #else:
+            #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
         
-        elif 'band_structure' in name:    #should provide as 'band_structure_nv_nc'
-            if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
-                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
-            else:
+        elif 'band_structure' in name:    #should provide as 'band_structure_vNcM', where N, M are the amount of valence and conduction bands included 
+            #if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
+            #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
+            #else:
                 new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-name[-3]+1,cond+name[-1]-1]
     
     return mapping, Dict(dict=new_params)

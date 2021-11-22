@@ -563,7 +563,7 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
 ################################################################################
 ############################## NEW convergence_evaluator #######################
 
-def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[]):
+def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[],bug_newton1d=False):
     workflow_story = workflow_dict
     real = workflow_story[(workflow_story.failed == False) & (workflow_story.useful == True)]
     lines = {}
@@ -581,6 +581,16 @@ def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[]):
         homo[key] = real[key].values
     
     print(lines)
+    if bug_newton1d: 
+        for k in var_:
+            for i in lines[k]:
+                if len(np.where(lines[k]==i)) > 1:
+                    where = list(np.where(lines[k]))[1:]
+                    lines[k] = np.delete(lines[k],where)
+            
+                    for key in keys:
+                        homo[key] = np.delete(homo[key],where)
+
     return real,lines,homo
 
 #@conversion_wrapper
@@ -603,7 +613,8 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[]):
 
         real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,
                                          keys=workflow_manager['what'], 
-                                         var_ = var)
+                                         var_ = var,
+                                         bug_newton1d=calc_dict['convergence_algorithm']=='newton_1D')
         
         is_converged = True 
         y = Convergence_evaluator(

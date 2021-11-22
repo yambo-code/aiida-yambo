@@ -132,6 +132,8 @@ class Convergence_evaluator():
                     oversteps= list(self.real[condition].uuid)[-(self.iter*self.steps):]  #converged[:-1]
                 elif len(converged) >= self.iter*self.steps and hasattr(self,'PW_G'):
                     oversteps= list(self.real[condition].uuid)[-(self.iter*self.steps)+1:]  #converged[:-1]
+                #elif self.convergence_algorithm == 'newton_1D': 
+                #    oversteps= list(self.real[condition].uuid)[-(self.iter*self.steps)+1:]  #converged[:-1]
                 else:
                     oversteps= list(self.real[condition].uuid)[-len(converged)+1:]  #converged[:-1]
 
@@ -141,6 +143,11 @@ class Convergence_evaluator():
 
                 l = len(oversteps)
                 converged_result = self.conv_array[what][-l]
+                
+                #if self.convergence_algorithm == 'newton_1D': 
+                #    oversteps = list(set(oversteps[1:]))
+                #    converged = list(set(converged[1:]))
+                #    self.converged = list(set(self.converged[1:]))
                 
         
         hint={}
@@ -175,9 +182,6 @@ class Convergence_evaluator():
             last=self.p[0,-1]
             powers = [1,2,3]
             delta = self.delta[0]
-
-
-        
         
         for i in powers:
             f = lambda x,a,b: a/x**i + b
@@ -254,6 +258,7 @@ class Convergence_evaluator():
         g = self.p[1,-self.steps_:]
         homo = self.conv_array[what][-self.steps_:]
         perr= 10 
+        if self.conv_thr_units != 'eV': homo = homo/homo[-1] 
         for eb in [1,2,3]:
             for eg in [1,2,3]:
 
@@ -341,7 +346,7 @@ class Convergence_evaluator():
                 break
 
 
-        return abs(homo[-1]-popt[1]*popt[3])<self.conv_thr*4 and concavity>0,infos
+        return abs(homo[-1]-popt[1]*popt[3])<self.conv_thr*5,infos #and concavity > 0 in the first boolean
     
     def analysis(self,): #also conv evaluation wrt the relative thr (0.01 on a 7 eV gap... not so important)
         
