@@ -142,7 +142,7 @@ class YamboRestart(BaseRestartWorkChain):
         return ProcessHandlerReport(True)
     
     
-    @process_handler(priority = 580, exit_codes = [YamboCalculation.exit_codes.WALLTIME_ERROR])
+    @process_handler(priority = 559, exit_codes = [YamboCalculation.exit_codes.WALLTIME_ERROR])
     def _handle_walltime_error(self, calculation):
         """
         Handle calculations for a walltime error; 
@@ -188,7 +188,7 @@ class YamboRestart(BaseRestartWorkChain):
         self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it setting PAR_def_mode= "balanced"')
         return ProcessHandlerReport(True)
 
-    @process_handler(priority =  540, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, \
+    @process_handler(priority =  561, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, \
                                                     YamboCalculation.exit_codes.X_par_MEMORY_ERROR])
     def _handle_memory_error(self, calculation):
         """

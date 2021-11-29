@@ -161,30 +161,38 @@ class Convergence_evaluator():
             
     def newton_1D(self, what, evaluation='fit',ratio=False,diagonal=False): #'numerical'/'fit'
         perr = 10
+        if self.functional_form == 'power_law':
+            powers = [1,2,3]
+        elif self.functional_form == 'exponential':
+            powers = [1]
+        elif self.functional_form == 'log':
+            powers = [1]
         
         if ratio:
             homo = self.b_energy_Ry[-self.steps:]
             params= self.PW_G[-self.steps:]
             last= self.PW_G[-1]
-            powers = [1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
         elif diagonal:
             homo = self.quantity[-self.steps:]
             params= self.PW_G[-self.steps:]
             last= self.PW_G[-1]
-            powers = [1,2,3]
             delta = self.delta[-1]
             if len(params)<3: return False, None
         else:
             homo = self.conv_array[what][-self.steps:]
             params=self.p[0,-self.steps:]
             last=self.p[0,-1]
-            powers = [1,2,3]
             delta = self.delta[0]
         
         for i in powers:
-            f = lambda x,a,b: a/x**i + b
+            if self.functional_form == 'power_law':
+                f = lambda x,a,b: a/x**i + b
+            elif self.functional_form == 'exponential':
+                f = lambda x,a,b: np.exp(a*x) + b 
+            elif self.functional_form == 'log':
+                f = lambda x,a,b: np.log(1+a/x) + b 
             try:
                 popt,pcov = optimize.curve_fit(f,
                                            xdata=params,  
@@ -199,9 +207,18 @@ class Convergence_evaluator():
             except:
                 pass
         
-        f = lambda x,a,b: a/x**candidates + b
-        fx = lambda x,a,b: -candidates*a/x**(candidates+1)
-        fxx = lambda x,a,b: candidates*(candidates+1)*a/x**(candidates+2) 
+        if self.functional_form == 'power_law':
+            f = lambda x,a,b: a/x**candidates + b
+            fx = lambda x,a,b: -candidates*a/x**(candidates+1)
+            fxx = lambda x,a,b: candidates*(candidates+1)*a/x**(candidates+2) 
+        elif self.functional_form == 'exponential':
+            f = lambda x,a,b: np.exp(a*x)  + b
+            fx = lambda x,a,b: a*np.exp(a*x) 
+            fxx = lambda x,a,b: a*a*np.exp(a*x)      
+        elif self.functional_form == 'log':
+            f = lambda x,a,b: np.log(1+a/x) + b 
+            fx = lambda x,a,b: -a/(x*(x+a))
+            fxx = lambda x,a,b: (2*a*x + a**2)/(x*(x+a))**2   
         
         popt,pcov = optimize.curve_fit(f,
                                        xdata=params,  
@@ -217,14 +234,17 @@ class Convergence_evaluator():
         if ratio: is_converged = abs((self.extra-homo[-1])/homo[-1]) < 1e-1 and abs((self.extra-homo[-2])/homo[-2]) < 1e-1
 
         guess = last+abs(self.gradient/self.laplacian)
+        #guess = last*(candidates+2)/(candidates+1) #analytic with power laws.
         if guess <= last : guess = last + 2*(delta)
-        if guess > last + 3*(delta) : guess = last + 3*(delta)
+        if guess > last + 2*(delta) : guess = last + delta
         if not isinstance(self.stop,list): self.stop = [self.stop]
         new_metrics = int((self.stop[0]-guess)/(self.conv_thr/abs(popt[0]))**(1/candidates)-guess)
 
         hint = {self.var[0]:guess,'extra':self.extra,'new_metrics':new_metrics,
                 self.var[0]+'_fit_converged':abs(popt[0]/self.conv_thr)**(1/candidates),
-                'power_law':candidates}
+                'power_law':candidates,'pop':False,'grad':self.gradient,'lapl':self.laplacian,'Newton_up':abs(self.gradient/self.laplacian)}
+        
+        if is_converged: hint['pop'] = True
 
         if ratio or diagonal:
             hint = {self.var[1]:guess,'extra_bands_Ry':self.extra,'new_metrics':new_metrics,
@@ -236,7 +256,7 @@ class Convergence_evaluator():
         #if guess > self.stop[0]:
         hint.pop('new_metrics')
         hint.pop(self.var[0]+'_fit_converged')
-        hint.pop('power_law')
+        #hint.pop('power_law')
 
         if evaluation=='numerical':
             self.num_gradient = np.zeros((len(self.variables),self.steps_fit))

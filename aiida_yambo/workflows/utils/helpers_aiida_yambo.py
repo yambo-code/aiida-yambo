@@ -137,6 +137,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['max_iterations'] = calc_dict.pop('max_iterations',3)
     calc_dict['steps'] = calc_dict.pop('steps',3)
     calc_dict['conv_window'] = calc_dict.pop('conv_window',calc_dict['steps'])
+    calc_dict['functional_form'] = calc_dict.pop('functional_form','power_law')
     
     calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','dummy') #1D, multivariate_optimization...
 

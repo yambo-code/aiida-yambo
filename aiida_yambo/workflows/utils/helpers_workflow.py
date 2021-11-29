@@ -123,13 +123,15 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                 for v in l[:-1]:
                     if v in hint.keys() and not start[l.index(v)]==stop[l.index(v)]:
                         index = abs((np.array(space[v])-hint[v])).argmin()
+                        if (len(space[v])-index-1) < i['steps']: index -= 1
                         try:
                             if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1
-                            if space[v][index]<hint[v]: index+=1
+                            #if space[v][index]<hint[v]: index+=1
                         except:
                             small_space=True
-                        if (len(space[v])-index-1) < i['steps']: small_space=True #i['steps']*(i['max_iterations']-i['iter']): small_space=True
                         space[v] = space[v][index:]
+                        if len(space[v]) < i['steps']: small_space=True #i['steps']*(i['max_iterations']-i['iter']): small_space=True
+                        
                     else:
                         if (len(space[v])-1) < i['steps']: small_space=True #i['steps']*(i['max_iterations']-i['iter']*i['G_iter']): small_space=True
                     
@@ -139,10 +141,10 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                         if len(space[v])<=index+1: 
                             small_space=True
                         else:
-                            if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1
+                            #if abs((space[v][index+1]+space[v][index])/2 - hint[v])<1e-1: index+=1
                             if space[v][index]<hint[v]: index+=1
                         if space[v][-1] < hint[v]: small_space=True
-                        
+                        if hint[v] == space[v][-1]: small_space=False 
                         space[v] = space[v][index:]
                     
                     #else:
@@ -156,7 +158,13 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                         space[v] = space[v][index:]
                     else:
                         if (len(space[v])) < i['steps']: small_space=True
-            
+                if hint['pop']:
+                    for k in space.keys():
+                        if k in l:
+                            pass
+                        else:
+                            space[k].pop(0)
+
             if 'newton_1D_ratio' in wfl_type:
                 break
                     

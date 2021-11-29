@@ -151,8 +151,7 @@ class YamboParser(Parser):
         cell = parent_calc.inputs.structure.cell
         parent_save_path = take_calc_from_remote(self._calc.inputs.parent_folder).outputs.output_parameters.get_dict().pop('ns_db1_path',None)
         if not parent_save_path: parent_save_path = '.'
-        
-
+    
 
         output_params = {'warnings': [], 'yambo_wrote_dbs': False, 'game_over': False,
         'p2y_completed': False, 'last_time':0,\
