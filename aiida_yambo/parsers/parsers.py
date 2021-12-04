@@ -274,14 +274,14 @@ class YamboParser(Parser):
         if success == False:
 
 
-            if output_params['para_error']:
+            if output_params['time_error']:
+                return self.exit_codes.WALLTIME_ERROR
+            elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR
             elif output_params['X_par_allocation_error']:
                 return self.exit_codes.X_par_MEMORY_ERROR              
             elif output_params['memory_error']:
                 return self.exit_codes.MEMORY_ERROR
-            elif output_params['time_error']:
-                return self.exit_codes.WALLTIME_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
 
