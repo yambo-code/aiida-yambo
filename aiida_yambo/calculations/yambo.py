@@ -333,9 +333,9 @@ class YamboCalculation(CalcJob):
                 parent_initialise = parent_settings['INITIALISE']
             except KeyError:
                 parent_initialise = False
-            c1 = None
-            if not parent_initialise:
-                c2 = None
+            #c1 = None
+            #if not parent_initialise:
+            #    c2 = None
         else:
             c1.cmdline_params = precode_params_list
             c1.code_uuid = preproc_code.uuid
@@ -351,7 +351,7 @@ class YamboCalculation(CalcJob):
         c3.code_uuid = main_code.uuid
 
         if initialise:
-            c2 = None
+            #c2 = None
             c3 = None
 
         #logic of the execution
@@ -362,12 +362,13 @@ class YamboCalculation(CalcJob):
             parent_save_path = None
 
         if yambo_parent:
-            if not parent_initialise:
-                calcinfo.codes_info = [c3]
-            else:
-                calcinfo.codes_info = [c2, c3]
+            calcinfo.codes_info = [c3]
+            #if not parent_initialise:
+            #    calcinfo.codes_info = [c3]
+            #else:
+            #    calcinfo.codes_info = [c2, c3]
         elif initialise:
-            calcinfo.codes_info = [c1]
+            calcinfo.codes_info = [c1, c2]
             
         else:
             calcinfo.codes_info = [c1, c2, c3]
