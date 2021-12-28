@@ -69,6 +69,8 @@ class YamboRestart(BaseRestartWorkChain):
             message='The calculation failed with an unrecoverable error.')
         spec.exit_code(301, 'LOW_NUMBER_OF_NSCF_BANDS',
             message='not enough bands in the Nscf dft step - nbnd - .')
+        spec.exit_code(302, 'EMPTY_PARENT',
+            message='parent is empty in the remote computer.')
 
     def setup(self):
         """setup of the calculation and run
@@ -108,6 +110,8 @@ class YamboRestart(BaseRestartWorkChain):
         """validation of the parent calculation --> should be at least nscf/p2y
         """
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+        if self.ctx.inputs['parent_folder'].is_empty: 
+            return self.exit_codes.EMPTY_PARENT
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.
