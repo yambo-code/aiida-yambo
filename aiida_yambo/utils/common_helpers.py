@@ -545,7 +545,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 print(len(params_to_calc),len(old_params))
                 print(l,over)
                 
-            if up_to_p2y and same_k:
+            if up_to_p2y and same_k and not node.called[0].called[0].outputs.remote_folder.is_empty:
                     already_done = node.pk
                     return already_done
     
