@@ -514,7 +514,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
-                            if i in node.inputs.additional_parsing.get_list():
+                            if i in node.inputs.additional_parsing.get_list() and not node.called[0].called[0].outputs.remote_folder.is_empty:
                                 already_done = node.pk
                             else:                          
                                 already_done = False
@@ -526,7 +526,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                             already_done = False
                             break 
 
-                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y:
+                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty:
                     already_done = node.pk
                 else:
                     already_done = False
@@ -535,11 +535,11 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             
             over = abs(len(params_to_calc)-len(old_params))
 
-            if already_done and full and (over == l or over == 0):
+            if already_done and full and (over == l or over == 0) and not node.called[0].called[0].outputs.remote_folder.is_empty:
                 already_done = node.pk
                 print('ok')
 
-            elif already_done and full and (over != l or over != 0):
+            elif already_done and full and (over != l or over != 0) and not node.called[0].called[0].outputs.remote_folder.is_empty:
                 already_done = False
                 print(node.pk)
                 print(len(params_to_calc),len(old_params))
