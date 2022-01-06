@@ -514,7 +514,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
-                            if i in node.inputs.additional_parsing.get_list() and not node.called[0].called[0].outputs.remote_folder.is_empty:
+                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
                                 already_done = node.pk
                             else:                          
                                 already_done = False
@@ -526,7 +526,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                             already_done = False
                             break 
 
-                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty:
+                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
                     already_done = node.pk
                 else:
                     already_done = False
@@ -535,11 +535,11 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             
             over = abs(len(params_to_calc)-len(old_params))
 
-            if already_done and full and (over == l or over == 0) and not node.called[0].called[0].outputs.remote_folder.is_empty:
+            if already_done and full and (over == l or over == 0) and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
                 already_done = node.pk
                 print('ok')
 
-            elif already_done and full and (over != l or over != 0) and not node.called[0].called[0].outputs.remote_folder.is_empty:
+            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
                 already_done = False
                 print(node.pk)
                 print(len(params_to_calc),len(old_params))
@@ -561,17 +561,18 @@ def check_same_pw(node, k_mesh_to_calc, already_done):
         if not already_done:
             
             parent_nscf_try = find_pw_parent(node, calc_type=['nscf'])
+            parent_scf_try = find_pw_parent(node, calc_type=['scf'])
             same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
             if node.is_finished_ok:
                 try:
                     y = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
-                    if 'ns.db1' in  os.listdir(y) and same_k:
+                    if 'ns.db1' in  os.listdir(y) and same_k and not node.outputs.remote_folder.is_empty:
                         parent_nscf = node.pk                    
                 except:
                     pass
-            if same_k and parent_nscf_try.is_finished_ok: 
+            if same_k and parent_nscf_try.is_finished_ok and not parent_nscf_try.outputs.remote_folder.is_empty: 
                 parent_nscf = parent_nscf_try.pk     
-            if parent_scf_try.is_finished_ok: 
+            if parent_scf_try.is_finished_ok and not parent_scf_try.outputs.remote_folder.is_empty: 
                 parent_scf = parent_scf_try.pk 
    
     except:

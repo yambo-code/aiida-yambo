@@ -126,8 +126,19 @@ class YamboWorkflow(WorkChain):
         try:
 
             parent = take_calc_from_remote(self.inputs.parent_folder)
+            
             if parent.process_type=='aiida.workflows:quantumespresso.pw.base':
                 parent = parent.called[0]
+            
+            if parent.outputs.remote_folder.is_empty: 
+                for i in range(2):
+                    try:
+                        parent = find_pw_parent(parent)
+                        if parent.outputs.remote_folder.is_empty and i == 1: continue
+                    except:
+                        break
+                    
+            if parent.outputs.remote_folder.is_empty: raise
 
             if parent.process_type=='aiida.calculations:quantumespresso.pw':
 
