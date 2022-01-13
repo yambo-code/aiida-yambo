@@ -389,9 +389,9 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
             dft_predicted = 'semimetal'
     
     L_H = abs(round((min(bands[:,conduction-1])-max(bands[:,valence-1])),3))
-    if L_H<=0.02 and L_H>=-0.02 and (valence%2 == 0 or (soc and valence%2 == 1)):
+    if L_H<=0.02 and L_H>=-0.02: #and (valence%2 == 0 or (soc and valence%2 == 1)):
         dft_predicted = 'semimetal'
-    elif L_H>0.02 and (valence%2 == 0 or (soc and valence%2 == 1)):
+    elif L_H>0.02: # and (valence%2 == 0 or (soc and valence%2 == 1)):
         dft_predicted = 'semiconductor/insulator'
     else:
         dft_predicted = 'metal'
@@ -514,19 +514,19 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
-                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
+                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
                                 already_done = node.pk
                             else:                          
                                 already_done = False
                                 break 
                     else: 
-                        if additional==[]: 
+                        if additional==[] and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty): 
                             already_done = node.pk
                         else:
                             already_done = False
                             break 
 
-                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
+                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
                     already_done = node.pk
                 else:
                     already_done = False
@@ -535,11 +535,11 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             
             over = abs(len(params_to_calc)-len(old_params))
 
-            if already_done and full and (over == l or over == 0) and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
+            if already_done and full and (over == l or over == 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
                 already_done = node.pk
                 print('ok')
 
-            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and node.called[0].called[0].outputs.remote_folder.is_empty):
+            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
                 already_done = False
                 print(node.pk)
                 print(len(params_to_calc),len(old_params))

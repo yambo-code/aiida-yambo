@@ -378,6 +378,7 @@ class Convergence_evaluator():
         hint_d=None
         hint={}
         hint_dummy={}
+
         for i in self.quantities[:]:
             if 'newton_1D_ratio' in self.convergence_algorithm: self.ratio_evaluator(what=i)
             converged, is_converged, oversteps, converged_result, hint_dummy = self.dummy_convergence(what=i)
@@ -403,7 +404,7 @@ class Convergence_evaluator():
                 is_converged_fit, hint = self.newton_1D(what=i)
         
             elif 'newton_2D_extra' in self.convergence_algorithm:
-                finish = self.max_iterations == (self.iter)*self.steps
+                finish = self.max_iterations == (self.iter)*(self.steps-self.skipped)
                 if finish: is_converged_fit, hint = self.newton_2D(what=i,extrapolation=True)
                 hint.update(hint_dummy)
             

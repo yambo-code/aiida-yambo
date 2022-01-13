@@ -4,7 +4,7 @@ import sys
 import itertools
 import traceback
 
-from time import time
+import time
 
 #if aiida_calcs:
 from aiida.orm import Dict, Str, Bool, KpointsData, RemoteData, List, load_node, Group, load_group
@@ -79,12 +79,13 @@ class YamboConvergence(WorkChain):
 
     def start_workflow(self):
         """Initialize the workflow"""
-
+        time.sleep(5)
         self.ctx.small_space = False
         self.ctx.ratio = []   #ratio between Ecut and EmaxC
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
+        self.ctx.hint = {}
         self.ctx.workflow_settings = self.inputs.workflow_settings.get_dict()
         self.ctx.how_bands = self.ctx.workflow_settings.pop('bands_nscf_update', 0)
         self.ctx.workflow_manager = convergence_workflow_manager(self.inputs.parameters_space,
@@ -178,7 +179,7 @@ class YamboConvergence(WorkChain):
                 self.ctx.workflow_manager['parameter_space'] = copy.deepcopy(self.ctx.params_space)
                 self.report('netwon_1D_ratio')
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
-            
+            self.ctx.hint = {}
             return True
       
         elif not self.ctx.calc_manager['success']:
@@ -196,13 +197,22 @@ class YamboConvergence(WorkChain):
     def next_step(self):
         """This function will submit the next step"""
         self.ctx.calc_manager['iter'] +=1
-        self.report(self.ctx.calc_manager)
+        self.ctx.calc_manager['skipped'] = 0
+        self.report('ITER {}'.format(self.ctx.calc_manager['iter']))
+
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager['values'] = []
         if self.ctx.calc_manager['iter'] == 1: self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
+        self.report('SPACE: {}'.format(self.ctx.params_space))
+        l = len(self.ctx.params_space[self.ctx.calc_manager['var'][0]])
         for i in range(self.ctx.calc_manager['steps']):
-            #self.report(parameter)
+            self.report(self.ctx.params_space)
+
+            if 'new_algorithm' in self.ctx.calc_manager['convergence_algorithm'] and i > l-1:
+                self.report('skipping...')
+                self.ctx.calc_manager['skipped'] += 1
+                continue
 
             self.ctx.calc_inputs, value, already_done, parent_nscf = updater(self.ctx.calc_manager, 
                                                 self.ctx.calc_inputs,
@@ -248,7 +258,7 @@ class YamboConvergence(WorkChain):
 
         #self.report(self.ctx.workflow_manager['workflow_story'])
         self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, self.ctx.hint = \
-                analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager)
+                analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager, hints = self.ctx.hint)
         
         #self.report(oversteps)
         #self.report(self.ctx.hint)
@@ -276,6 +286,7 @@ class YamboConvergence(WorkChain):
             if self.ctx.hint and not 'dummy' in self.ctx.calc_manager['convergence_algorithm']: 
                 #self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
+                self.ctx.extrapolated = self.ctx.hint.pop('extrapolation', None)
                 self.ctx.infos = self.ctx.hint
 
                 if 'converge_b_ratio' in self.ctx.hint.keys(): 
@@ -302,7 +313,7 @@ class YamboConvergence(WorkChain):
 
         else:
             self.report('Success on {} not reached yet in {} calculations' \
-                        .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter']))
+                        .format(self.ctx.calc_manager['var'], (self.ctx.calc_manager['steps']-self.ctx.calc_manager['skipped'])*self.ctx.calc_manager['iter']))
                         
             if self.ctx.hint: 
                 #self.report('hint: {}'.format(self.ctx.hint))

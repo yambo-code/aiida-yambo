@@ -131,6 +131,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['iter']  = 0
     calc_dict['G_iter']  = 1
     calc_dict['success'] = False
+    calc_dict['skipped'] = 0
     calc_dict['conv_thr'] = calc_dict.pop('conv_thr',0.05)
     calc_dict['conv_thr_units'] = calc_dict.pop('conv_thr_units','eV')
     calc_dict['ratio'] = calc_dict.pop('ratio',1.2)
@@ -155,10 +156,10 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
 
     if not isinstance(calc_dict['var'],list):
         calc_dict['var'] = [calc_dict['var']]
-
     input_dict = copy.deepcopy(inp_to_update.yres.yambo.parameters.get_dict())
     ratio = calc_dict['convergence_algorithm'] == 'newton_1D_ratio'
     for var in calc_dict['var']:
+
         if ratio and var=='NGsBlkXp' and (calc_dict['iter']>1 or internal_iteration>0):  
             values_dict[var]=input_dict['variables'][var][0]
             continue
@@ -188,12 +189,11 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
             if var in ['BndsRnXp','GbndRnge']:
                 input_dict['variables'][var] = [[1,parameters[var].pop(0)],inp_to_update.yres.yambo.parameters['variables'][var][-1]]
                 values_dict[var]=input_dict['variables'][var][0][1]
-            else:
+            else:                
                 input_dict['variables'][var] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables'][var][-1]]
                 values_dict[var]=input_dict['variables'][var][0]
 
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
-            
 
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update)
@@ -228,7 +228,7 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
 
     parameter_names = list(workflow_dict['parameter_space'].keys())
     
-    backtrace = calc_dict['steps'] 
+    backtrace = calc_dict['steps'] - calc_dict['skipped']
     what = workflow_dict['what']
 
     l_iter = []

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
+from aiida_yambo.workflows.utils.predictor_2D import The_Predictor_2D
 import numpy as np
 from scipy.optimize import curve_fit, minimize
 from matplotlib import pyplot as plt, style
@@ -11,6 +12,7 @@ from aiida_yambo.workflows.utils.helpers_aiida_yambo import *
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.utils.optimization_module import * 
+from aiida_yambo.workflows.utils.predictor_2D import * 
 ############################# AiiDA - independent ################################
 
 #class convergence_workflow_manager:
@@ -76,8 +78,32 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
         i['convergence_algorithm'] = wfl_type
         l = i['var']
         if not isinstance(l,list): l = [l]
-
-
+        print('SPACE,',space)
+        if 'new_algorithm_2D' in wfl_type:
+            if hint:
+                for v in l:
+                    if i['max'][l.index(v)] < hint[v]: small_space = True
+                    space[v] = [hint[v]]
+            else:
+                var = copy.deepcopy(l)
+                if 'BndsRnXp' in l and 'GbndRnge' in l:
+                    start = copy.deepcopy(i['start'])
+                    stop = copy.deepcopy(i['stop'])
+                    metrics = copy.deepcopy(i['delta'])
+                    start.pop(l.index('GbndRnge'))
+                    stop.pop(l.index('GbndRnge'))
+                    metrics.pop(l.index('GbndRnge'))
+                    var.remove('GbndRnge')
+                else:
+                    start = i['start']
+                    stop = i['stop']
+                    metrics = i['delta']
+                space_ = create_grid(edges = start+stop,delta= metrics,var=var)
+                space.update(space_)
+                if 'BndsRnXp' in l and 'GbndRnge' in l: space['GbndRnge'] = copy.deepcopy(space['BndsRnXp'])
+                
+            continue
+            
         if 'newton' in wfl_type:
             start = i['start']
             stop = i['stop']
@@ -490,7 +516,7 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
         workflow_dict['workflow_story'] = pd.DataFrame(columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
                         ['useful','failed'])
 
-    for i in range(calc_manager['steps']):
+    for i in range(calc_manager['steps']-calc_manager['skipped']):
             workflow_dict['global_step'] += 1
             if isinstance(calc_manager['var'],list):
                 separator = ', '
@@ -537,7 +563,7 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['workflow_story']['uuid']==i].index
             workflow_dict['workflow_story'].at[gs,'useful']=False
     if len(oversteps)>0 and calc_manager['convergence_algorithm']=='dummy':
-        for i in range(calc_manager['iter']*calc_manager['steps']-len(oversteps)):
+        for i in range(calc_manager['iter']*(calc_manager['steps']-calc_manager['skipped'])-len(oversteps)):
             for j in calc_manager['var']:
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
@@ -599,10 +625,16 @@ def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[],bug_newton1d=False):
                     for key in keys:
                         homo[key] = np.delete(homo[key],where)
 
-    return real,lines,homo
+    try:
+        pw = find_pw_parent(load_node(load_node(real.uuid.values[-1]).called[0].called[0].pk))
+        bande = pw.outputs.output_band.get_bands()
+    except:
+        bande = 0
+
+    return real,lines,homo,bande
 
 #@conversion_wrapper
-def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[]):
+def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={}):
     
     if parameter_space == []:
         parameter_space = workflow_manager['parameter_space']
@@ -619,13 +651,36 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[]):
         oversteps_1 = 0
         none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
 
-        real,lines,homo = prepare_for_ce(workflow_dict=workflow_story,
+        real,lines,homo,bande = prepare_for_ce(workflow_dict=workflow_story,
                                          keys=workflow_manager['what'], 
                                          var_ = var,
                                          bug_newton1d=calc_dict['convergence_algorithm']=='newton_1D')
         
         is_converged = True 
-        y = Convergence_evaluator(
+
+        if 'new_algorithm_2D' in calc_dict['convergence_algorithm']:
+            k = workflow_manager['what'][0]
+            y = The_Predictor_2D(grid=lines,  #parameters
+                                 result=real,
+                                 bande=bande, #KS states
+                                 r=homo[k], 
+                                 calc_dict=calc_dict,
+                                )
+
+            print('old_hints:',hints)
+            y.analyse(old_hints=hints) #just convergence as before
+            is_converged = y.check_passed and y.point_reached
+            print(y.check_passed, y.point_reached)
+            oversteps = []
+            if y.check_passed:
+                hint = y.next_step
+                hint['extrapolation'] = y.extra
+                hint['extrapolation_units'] = 'eV'
+            else:
+                hint['new_grid'] = y.new_grid
+        
+        else:
+            y = Convergence_evaluator(
                                 conv_array=homo, 
                                 calc_dict = calc_dict, 
                                 var = var,
@@ -635,7 +690,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[]):
                                 workflow_dict=workflow_story
                                 )
         
-        is_converged, oversteps, hint = y.analysis() #just convergence as before
+            is_converged, oversteps, hint = y.analysis() #just convergence as before
 
         if 'BndsRnXp' in calc_dict['var'] and 'GbndRnge' in calc_dict['var'] and hint: # and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
