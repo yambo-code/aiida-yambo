@@ -597,9 +597,20 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
 ################################################################################
 ############################## NEW convergence_evaluator #######################
 
-def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[],bug_newton1d=False):
+def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[],var_full=[],bug_newton1d=False,new_algorithm=False):
     workflow_story = workflow_dict
     real = workflow_story[(workflow_story.failed == False) & (workflow_story.useful == True)]
+    print('real_1',real)
+    if new_algorithm: 
+        s = ''
+        for i in var_full:
+            s += i+', '
+        s = s[:-2]
+        real = real[real.parameters_studied == s]
+        print('s',s)
+    print(real.parameters_studied)
+    
+    print('real_2',real)
     lines = {}
     for k in var_:
         if k in ['BndsRnXp','GbndRnge'] and not k == 'kpoint_mesh':
@@ -654,7 +665,9 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
         real,lines,homo,bande = prepare_for_ce(workflow_dict=workflow_story,
                                          keys=workflow_manager['what'], 
                                          var_ = var,
-                                         bug_newton1d=calc_dict['convergence_algorithm']=='newton_1D')
+                                         var_full = calc_dict['var'],
+                                         bug_newton1d=calc_dict['convergence_algorithm']=='newton_1D',
+                                         new_algorithm = 'new_algorithm' in calc_dict['convergence_algorithm'])
         
         is_converged = True 
 
