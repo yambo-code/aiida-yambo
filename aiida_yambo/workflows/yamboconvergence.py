@@ -389,31 +389,31 @@ class YamboConvergence(WorkChain):
         if self.ctx.how_bands == 'single-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this step = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this step = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         elif self.ctx.how_bands == 'single-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this step = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this step = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         elif self.ctx.how_bands == 'full-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         elif self.ctx.how_bands == 'full-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this iteration = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
 
         elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
             self.ctx.space_index = 0
             if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and len(self.ctx.params_space['BndsRnXp'])>0: 
-                self.report('Max #bands needed in the whole convergence = {}'.format(self.ctx.params_space['BndsRnXp'][self.ctx.space_index-1]))
+            self.report('Max #bands needed in the whole convergence = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
-            yambo_bandsX = self.ctx.workflow_manager['parameter_space']['BndsRnXp'][self.ctx.space_index-1]
+            yambo_bandsX = max(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][:self.ctx.space_index-1])
         else:
             yambo_bandsX = 0 
         if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys() and 'GbndRnge' in self.ctx.calc_manager['var']:
-            yambo_bandsSc = self.ctx.workflow_manager['parameter_space']['GbndRnge'][self.ctx.space_index-1]
+            yambo_bandsSc = max(self.ctx.workflow_manager['parameter_space']['GbndRnge'][:self.ctx.space_index-1])
         else:
             yambo_bandsSc = 0
 
