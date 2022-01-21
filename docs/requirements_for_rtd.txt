@@ -51,7 +51,7 @@ monty==3.0.2
 mpmath==1.1.0
 netCDF4==1.5.3
 networkx==2.4
-numpy==1.17.5
+numpy==1.21.0
 orderedmultidict==1.0.1
 packaging==20.1
 palettable==3.3.0
