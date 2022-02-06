@@ -102,7 +102,7 @@ class The_Predictor_2D():
                                marker='s',
                                lw = 7,
                                label='',
-                               just_points=False):       
+                               just_points=False,bar=False):       
         
         #fig,ax = plt.subplots(figsize=[7,7])
 
@@ -116,15 +116,11 @@ class The_Predictor_2D():
         
         if not just_points:
             ax.legend(fontsize=13)
-            cmap = fig.colorbar(scatter, shrink=0.5, aspect=7, pad=0.01)
             dictionary_labels = {}
 
             ax.set_xlabel('# of bands',fontdict={'fontsize':20})
             ax.set_ylabel('PW (Ry)',fontdict={'fontsize':20})
             ax.tick_params(axis='both',labelsize=20)
-
-            cmap.set_label('eV', rotation=0,labelpad=36,fontsize=20)
-            cmap.ax.tick_params(labelsize=20)
 
             ax.grid()
 
@@ -141,15 +137,15 @@ class The_Predictor_2D():
                 ax2.set_xlabel('KS states (Ry)',fontdict={'size':20})
             except:
                 pass
+        
+        if bar:
+                cmap = fig.colorbar(scatter, shrink=0.5, aspect=7, pad=0.01)
+                cmap.set_label('eV', rotation=0,labelpad=20,fontsize=20)
+                cmap.ax.tick_params(labelsize=20)
             
 ################################################################
 
-    def fit_space_2D(self,fit=False,alpha=1,beta=1,verbose=True,plot=False,dim=100,colormap='gist_rainbow_r',b=None,g=None):
-        
-        if self.conv_thr_units=='%':
-            factor = 100
-        else:
-            factor=1
+    def fit_space_2D(self,fit=False,alpha=1,beta=1,reference = None,verbose=True,plot=False,dim=100,colormap='gist_rainbow_r',b=None,g=None,save=False):
         
         f = lambda x,a,b,c,d: (a/x[0]**alpha + b)*( c/x[1]**beta + d)
         fx = lambda x,a,c,d: -alpha*a/(x[0]**(alpha+1))*( c/x[1] + d)
@@ -170,9 +166,14 @@ class The_Predictor_2D():
         print('MAE fit = {} eV'.format(MAE_int))
         self.MAE_fit = MAE_int
         
+        #if self.MAE_fit > 2*self.conv_thr: 
+        #    print('Fit not reliable, exit')
+        #    return False
+        #else:
+        #    print('Fit reliable, continue...')
+        
         if verbose: 
             print(max(xdata[0,:]),max(xdata[1,:])) #,popt[1]*popt[3])
-            print('factor, ',factor)
             print('conv_thr, ',self.conv_thr)
         ###########Preliminary fit#################################
         
@@ -185,15 +186,29 @@ class The_Predictor_2D():
         
         self.X_fit,self.Y_fit = np.meshgrid(self.X_fit,self.Y_fit)
         
+        self.extra = popt[1]*popt[3]
 
         ###########Estimation of the plateaux corner###############
-        self.condition_conv_calc = np.where((abs(factor*self.Zx_fit*self.delta_[0])<=self.conv_thr/10) & \
-                            (abs(factor*self.Zy_fit*self.delta_[1])<=self.conv_thr/10) & \
-                            (abs(factor*self.Zxy_fit*self.delta_[0] * self.delta_[1])<=self.conv_thr/10))
+        
+        if reference == 'extra':
+            reference = self.extra
+        else:
+            self.Z_fit = f(np.meshgrid(self.X_fit,self.Y_fit),popt[0],popt[1],popt[2],popt[3])  
+            reference = self.Z_fit[-1,-1]
+            
+        if self.conv_thr_units=='%':
+            thr = self.conv_thr*abs(reference)/100
+        else:
+            thr = self.conv_thr
+            
+        
+        self.condition_conv_calc = np.where((abs(self.Zx_fit*self.delta_[0])<=thr/10) & \
+                            (abs(self.Zy_fit*self.delta_[1])<=thr/10) & \
+                            (abs(self.Zxy_fit*self.delta_[0] * self.delta_[1])<=thr/10))
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
-        if not b: b = self.X_fit[self.condition_conv_calc][0]
-        if not g: g = self.Y_fit[self.condition_conv_calc][0]
+        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0])
+        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0])
             
         print('b: {}\ng: {}'.format(b,g))
         
@@ -222,33 +237,38 @@ class The_Predictor_2D():
         
         self.X_fit,self.Y_fit = np.meshgrid(self.X_fit,self.Y_fit)
 
-        self.extra = popt[1]*popt[3]
+       
         self.gradient_angle = popt[0]*popt[2]*np.sign(self.Z_fit[-1,-1])
 
         
         if plot:
-            
-            fig,ax = plt.subplots(figsize=[7,7])
+            lw=10
+            print('res min {}, res max {}'.format(min(self.res),max(self.res)))
+            fig,ax = plt.subplots(figsize=[8,8])
             
             self.plot_scatter_contour_2D(fig,ax,
                                       self.X_fit,self.Y_fit,self.Z_fit,
                                       vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = 7,
-                                      colormap=colormap,label='points from fit',
-                                      just_points=True)
+                                      marker='o',lw = lw,
+                                      colormap=colormap,
+                                      just_points=True,bar=True)
             
-            self.plot_scatter_contour_2D(fig,ax,
-                                      getattr(self,self.var_[0]), getattr(self,self.var_[1]),self.res,
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = 7,
-                                      colormap=colormap,label='all simulations',
-                                      just_points=True)
+            #self.plot_scatter_contour_2D(fig,ax,
+            #                          getattr(self,self.var_[0]), getattr(self,self.var_[1]),self.res,
+            #                          vmin=min(self.res),vmax=max(self.res),
+            #                          marker='o',lw = 7,
+            #                          colormap=colormap,label='all simulations',
+            #                          just_points=True)
             
             self.plot_scatter_contour_2D(fig,ax,
                                       xdata[0],xdata[1],'black',
                                       vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = 7,
-                                      colormap=colormap,label='used points')
+                                      marker='o',lw = lw,
+                                      colormap=colormap,label='simulations',
+                                      just_points=False)
+                        
+            if save : plt.savefig('plot_fit.png')
+
             
         return True
     
@@ -257,7 +277,7 @@ class The_Predictor_2D():
                                    overconverged_values=[],
                                    plot=False,
                                    colormap='gist_rainbow_r',
-                                   reference = None):
+                                   reference = None,save=False):
         
         print('last point:{} eV'.format(self.Z_fit[-1,-1]))
         
@@ -267,15 +287,15 @@ class The_Predictor_2D():
             reference = self.Z_fit[-1,-1]
             
         if self.conv_thr_units=='%':
-            factor = 100/abs(reference)
+            thr = self.conv_thr*abs(reference)/100
         else:
-            factor=1
+            thr = self.conv_thr
         
-        #print(self.Zy_fit)
-        condition = np.where((abs(factor*(reference-self.Z_fit))<=self.conv_thr) & \
-                            (abs(factor*self.Zx_fit*self.delta_[0])<=self.conv_thr) & \
-                            (abs(factor*self.Zy_fit*self.delta_[1])<=self.conv_thr) & \
-                            (abs(factor*self.Zxy_fit*self.delta_[0]*self.delta_[1])<=self.conv_thr))
+        print(thr)
+        condition = np.where((abs(reference-self.Z_fit)<=thr) & \
+                            (abs(self.Zx_fit*self.delta_[0])<=thr) & \
+                            (abs(self.Zy_fit*self.delta_[1])<=thr) & \
+                            (abs(self.Zxy_fit*self.delta_[0]*self.delta_[1])<=thr))
         print(condition)
         print(self.Z_fit[condition])
         print('\n')
@@ -302,22 +322,40 @@ class The_Predictor_2D():
             self.next_step['GbndRnge'] = copy.deepcopy(self.next_step['BndsRnXp'])
         
         if plot:
+            lw = 10
+            fig,ax = plt.subplots(figsize=[8,8])
             
-            fig,ax = plt.subplots(figsize=[7,7])
+            self.plot_scatter_contour_2D(fig,ax,
+                                      self.X_fit,self.Y_fit,'grey',
+                                      vmin=min(self.res),vmax=max(self.res),
+                                      marker='o',lw = lw,
+                                      colormap=colormap,label='excluded points',
+                                      just_points=True)
             
             self.plot_scatter_contour_2D(fig,ax,
                                       self.X_fit[condition], self.Y_fit[condition],self.Z_fit[condition],
                                       vmin=min(self.res),vmax=max(self.res),
-                                      marker='s',lw = 7,
+                                      marker='o',lw = lw,
                                       colormap=colormap,
                                       label='converged points',
-                                      just_points=True)
+                                      just_points=True,bar = True)
+            
+            self.plot_scatter_contour_2D(fig,ax,
+                                      self.parameters[0,:], self.parameters[1,:],'black',
+                                      vmin=min(self.res),vmax=max(self.res),
+                                      marker='o',lw = lw,
+                                      colormap=colormap,
+                                      just_points=True)  
+            
             
             self.plot_scatter_contour_2D(fig,ax,
                                       conv_bands, conv_G,'red',
                                       vmin=min(self.res),vmax=max(self.res),
-                                      marker='s',lw = 7,
-                                      colormap=colormap,label='cheapest point')        
+                                      marker='o',lw = lw,
+                                      colormap=colormap,label='cheapest point',
+                                      just_points=False)   
+            
+            if save : plt.savefig('plot_next.png')
         
         return self.next_step
     
@@ -337,11 +375,20 @@ class The_Predictor_2D():
         return
     
     
-    def analyse(self,old_hints={},reference = None):
+    def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis'):
         
         self.check_passed = True
-        
-        self.check_passed = self.fit_space_2D(fit=True,alpha=1,beta=1,verbose=True)
+        #error = 10
+        #for i in [1,2,]:
+        #    for j in [1,2]:
+        #        print(i,j)
+        #        self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
+        #        if self.MAE_fit<error: 
+        #            ii,jj = i,j
+        #            error = self.MAE_fit
+
+        #print('Best power laws: {}, {}'.format(i,j))            
+        self.check_passed = self.fit_space_2D(fit=True,alpha=1,beta=1,verbose=True,plot=plot,save=save_fit,colormap=colormap)
         if not self.check_passed: 
             self.point_reached = False
             self.new_grid = create_grid(
@@ -353,7 +400,7 @@ class The_Predictor_2D():
                 shift=[2,2])
             return
             
-        self.determine_next_calculation()
+        self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next)
         self.point_reached = False
         
         if old_hints:
