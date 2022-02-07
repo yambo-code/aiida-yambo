@@ -146,7 +146,7 @@ class YppCalculation(CalcJob):
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
-            raise InputValidationError("parent must be a YamboCalculation")
+            raise InputValidationError("YppCalculation parent MUST be a YamboCalculation")
 
         # TODO: check that remote data must be on the same computer
 
@@ -178,10 +178,7 @@ class YppCalculation(CalcJob):
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
         if copy_save:
-            try:
-                remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
-            except:
-                remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
+            remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
         else:
             try:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
@@ -225,6 +222,9 @@ class YppCalculation(CalcJob):
         c = CodeInfo()
         c.withmpi = True
         #c.withmpi = self.get_withmpi()
+
+        # Here we need something more flexible, because it is not always like that. 
+        # Like something automatic, where you specify 'interpolate bands' or 'excitonic wavefunctions...'
         c.cmdline_params = [
             "-F", self.metadata.options.input_filename, \
             '-J', self.metadata.options.output_filename, \
