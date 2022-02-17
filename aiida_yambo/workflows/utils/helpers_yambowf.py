@@ -48,14 +48,45 @@ def QP_bands(node,mapping=None,only_scissor=False, plot=False):
          ydb.plot_scissor(valence=valence)
     
     pw = find_pw_parent(x,)
-    k_params = get_kpoints_path(pw.inputs.structure)['parameters'].get_dict()
+    try:
+        k_params = get_kpoints_path(pw.inputs.structure)['parameters'].get_dict()
+        bulk = True
+    except:
+        bulk = False
+        fake_bulk = StructureData(ase=pw.inputs.structure.get_ase())
+        fake_bulk.set_pbc([True,True,True])
+        k_params = get_kpoints_path(fake_bulk)['parameters'].get_dict()
+        
     p = []
+    exit = False
     for line in k_params['path']:
+        if exit: break
         for point in line:
-            if point == 'GAMMA':
-                p.append([k_params['point_coords'][point],'$\Gamma$'])
+            if point == 'GAMMA' or point == 'G':
+                print(point)
+                print(p)
+                print(len(p),bulk)
+                if len(p) > 0 and bulk:
+                    if '$\Gamma$' == p[-1][-1]:
+                        print('continue')
+                        continue
+                elif len(p) > 1 and not bulk:
+                    print('uscire')
+                    exit = True
+                    p.append([k_params['point_coords'][point],'$\Gamma$'])
+                    break
+                else:
+                    p.append([k_params['point_coords'][point],'$\Gamma$'])
+
             else:
+                print(point)
+                if point == p[-1][-1]:
+                    continue
                 p.append([k_params['point_coords'][point],point])                
+                for i in range(3):
+                    if not pbc[i]:
+                        if abs(k_params['point_coords'][point][i]) > 0:
+                            p.pop(-1)              
     
     path_full = Path(p, [int(kpoints*2)]*(len(p)-1) )
     
