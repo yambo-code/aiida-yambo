@@ -76,14 +76,17 @@ def parse_log(log,output_params,timing):
             else:
                 output_params['game_over'] = False
         #timing sections...
-        timing = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
+        timing_new = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] \[([0-9]+)\] [A-Za-z\s]+')
         timing_old = re.compile('^\s+?<([0-9a-z-]+)> \[([0-9]+)\] [A-Za-z\s]+')
+        timing_bugs = re.compile('^\s+?<([0-9a-z-]+)> [A-Z0-9a-z-?+]*[.][A-Z0-9a-z-?+]*[:] \[([0-9]+)\] [A-Za-z\s]+')
         if output_params['timing'] == []:
             for line in log.lines:
-                if timing.match(line):
-                    output_params['timing'].append(timing.match(line).string)
+                if timing_new.match(line):
+                    output_params['timing'].append(timing_new.match(line).string)
                 elif timing_old.match(line):
                     output_params['timing'].append(timing_old.match(line).string)
+                elif timing_bugs.match(line):
+                    output_params['timing'].append(timing_bugs.match(line).string)
 
         time = re.compile('<([0-9hms-]+)>')
                 
@@ -114,7 +117,6 @@ def parse_log(log,output_params,timing):
         memory = re.compile('^\s+?<([0-9a-z-]+)> ([A-Z0-9a-z-]+)[:] (\[MEMORY\]) ')
         memory_old = re.compile('^\s+?<([0-9a-z-]+)> (\[MEMORY\]) ')
         alloc1_error = re.compile('\[ERROR\]Allocation')
-        alloc1_1_error = re.compile('\[ERROR\] Allocation')
         alloc2_error = re.compile('\[MEMORY\] Alloc')
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
@@ -129,14 +131,34 @@ def parse_log(log,output_params,timing):
                 output_params['memstats'].append(memory.match(line).string)
             elif memory_old.match(line):
                     output_params['memstats'].append(memory_old.match(line).string)
+            elif  alloc1_error.findall(line):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
+            elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
+                output_params['para_error'] = True
+            elif time_probably.findall(line):
+                output_params['errors'].append('time_most_prob')
+        try:
+            if  reading_explosion_of_memory.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
+        except:
+            pass
         
-        for line in log.lines:    
-            for k,v in errors.items():
-                for v_ in v:
-                    r = re.compile(v_)
-                    if r.findall(line):
-                        output_params[k] = True
+        try:
+            if  alloc2_error.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
+        except:
+            pass
         
+        try:
+            if  X_par_mem.findall(log.lines[-1]):
+                output_params['memory_error'] = True
+                output_params['errors'].append('X_par_allocation')
+        except:
+            pass
+            
     return output_params
 
 def parse_report(report, output_params):
