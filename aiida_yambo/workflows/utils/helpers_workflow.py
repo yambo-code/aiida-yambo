@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Classes for calcs e wfls analysis."""
 from __future__ import absolute_import
+from aiida_yambo.workflows.utils.predictor_1D import create_grid_1D
 from aiida_yambo.workflows.utils.predictor_2D import The_Predictor_2D
 import numpy as np
 from scipy.optimize import curve_fit, minimize
@@ -13,6 +14,7 @@ from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_y
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.utils.optimization_module import * 
 from aiida_yambo.workflows.utils.predictor_2D import * 
+from aiida_yambo.workflows.utils.predictor_1D import * 
 ############################# AiiDA - independent ################################
 
 #class convergence_workflow_manager:
@@ -69,6 +71,8 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
     space={}
     first = 0 
     small_space = False
+    new_grid = 0
+
     existing_inputs = copy.deepcopy(starting_inputs)
     if workflow_dict == {}:
             workflow_dict = [copy.deepcopy(calc_dict)]
@@ -79,8 +83,11 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
         l = i['var']
         if not isinstance(l,list): l = [l]
         print('SPACE,',space)
+        if hint:
+            if hint['new_grid']:
+                new_grid = 1
         if 'new_algorithm_2D' in wfl_type:
-            if hint:
+            if hint and not new_grid:
                 for v in l:
                     if i['max'][l.index(v)] < hint[v]: small_space = True
                     space[v] = [hint[v]]
@@ -98,12 +105,32 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                     start = i['start']
                     stop = i['stop']
                     metrics = i['delta']
-                space_ = create_grid(edges = start+stop,delta= metrics,var=var)
+                space_ = create_grid(edges = start+stop,delta= metrics,var=var,shift = [new_grid*2,new_grid*2],alpha=1/3)
                 space.update(space_)
                 if 'BndsRnXp' in l and 'GbndRnge' in l: space['GbndRnge'] = copy.deepcopy(space['BndsRnXp'])
                 
             continue
-            
+
+        if 'new_algorithm_1D' in wfl_type:
+            if hint and not new_grid:
+                for v in l:
+                    if v == 'kpoint_mesh': 
+                        if i['max'][0] < hint[v][0]: small_space = True
+                    else:
+                        if i['max'] < hint[v]: small_space = True
+                    
+                    space[v] = [hint[v]]
+            else:
+                var = copy.deepcopy(l)
+                start = i['start']
+                stop = i['stop']
+                metrics = i['delta']
+                
+                space_ = create_grid_1D(edges = [start,stop],delta= metrics,var=var,shift = new_grid*2,alpha=1/3)
+                space.update(space_)
+                
+            continue
+
         if 'newton' in wfl_type:
             start = i['start']
             stop = i['stop']
@@ -559,9 +586,16 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
 def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
     
     final_result = {}
-    for i in oversteps: 
+    
+    if 'new_algorithm' in calc_manager['convergence_algorithm']:
+        workflow_dict['workflow_story'].at[:,'useful']=False
+        print(oversteps)
+        workflow_dict['workflow_story'].at[oversteps[0],'useful']=True
+    else:
+        for i in oversteps: 
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['workflow_story']['uuid']==i].index
             workflow_dict['workflow_story'].at[gs,'useful']=False
+    
     if len(oversteps)>0 and calc_manager['convergence_algorithm']=='dummy':
         for i in range(calc_manager['iter']*(calc_manager['steps']-calc_manager['skipped'])-len(oversteps)):
             for j in calc_manager['var']:
@@ -617,8 +651,9 @@ def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[],var_full=[],bug_newt
             lines[k] = np.array([i[0] for i in zip(list(real[k].values))])[:]
         elif k in ['kpoint_mesh']:
             lines[k] = np.array([i[0] for i in zip(list(real[k].values))])[:,0]
+            lines['mesh'] = np.array([i for i in zip(list(real[k].values))])[:,0]
             for i in range(1,3):
-                lines[k] *= np.array([i[0] for i in zip(list(real[k].values))])[:,i]
+                lines[k] *= np.array([j[0] for j in zip(list(real[k].values))])[:,i]
         else:
             lines[k] = np.array([i for i in zip(list(real[k].values))])[:,0]
     homo = {}
@@ -684,14 +719,31 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
             y.analyse(old_hints=hints) #just convergence as before
             is_converged = y.check_passed and y.point_reached
             print(y.check_passed, y.point_reached)
-            oversteps = []
+            oversteps = y.index
             if y.check_passed:
                 hint = y.next_step
                 hint['extrapolation'] = y.extra
                 hint['extrapolation_units'] = 'eV'
-            else:
-                hint['new_grid'] = y.new_grid
         
+        elif 'new_algorithm_1D' in calc_dict['convergence_algorithm']:
+            k = workflow_manager['what'][0]
+            y = The_Predictor_1D(grid=lines,  #parameters
+                                 result=real,
+                                 bande=bande, #KS states
+                                 r=homo[k], 
+                                 calc_dict=calc_dict,
+                                )
+
+            print('old_hints:',hints)
+            y.analyse(old_hints=hints) #just convergence as before
+            is_converged = y.check_passed and y.point_reached
+            print(y.check_passed, y.point_reached)
+            oversteps = y.index
+            if y.check_passed:
+                hint = y.next_step
+                hint['extrapolation'] = y.extra
+                hint['extrapolation_units'] = 'eV'
+
         else:
             y = Convergence_evaluator(
                                 conv_array=homo, 

@@ -66,6 +66,7 @@ class The_Predictor_2D():
 
         self.var_ = copy.deepcopy(self.var) #to delete one of the band var:
         self.delta_ = copy.deepcopy(self.delta) #to delete one of the band var:
+        self.index = [0] 
 
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var and len(self.var) > 2:
             self.var_.remove('GbndRnge')
@@ -162,7 +163,7 @@ class The_Predictor_2D():
                       ydata=ydata,sigma=1/(xdata[0]*xdata[1]),
                       bounds=([-np.inf,-np.inf,-np.inf,-np.inf],[np.inf,np.inf,np.inf,np.inf]))
         
-        MAE_int = abs((np.average(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)))
+        MAE_int = np.average((abs(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)))
         print('MAE fit = {} eV'.format(MAE_int))
         self.MAE_fit = MAE_int
         
@@ -202,13 +203,13 @@ class The_Predictor_2D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where((abs(self.Zx_fit*self.delta_[0])<=thr/10) & \
-                            (abs(self.Zy_fit*self.delta_[1])<=thr/10) & \
-                            (abs(self.Zxy_fit*self.delta_[0] * self.delta_[1])<=thr/10))
+        self.condition_conv_calc = np.where((abs(self.Zx_fit*self.delta_[0])<=thr/3) & \
+                            (abs(self.Zy_fit*self.delta_[1])<=thr/3) & \
+                            (abs(self.Zxy_fit*self.delta_[0] * self.delta_[1])<=thr/3))
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
-        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0])
-        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0])
+        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0]*1.5)
+        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0]*1.5)
             
         print('b: {}\ng: {}'.format(b,g))
         
@@ -316,8 +317,13 @@ class The_Predictor_2D():
             self.var_[0]:conv_bands,
             self.var_[1]:conv_G,
             self.what: conv_z,
+            'already_computed':False,
         }
-
+        
+        if conv_bands in self.parameters[0,:] and conv_G in self.parameters[1,:]:
+            self.next_step['already_computed'] = True
+        
+        
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var and len(self.var) > 2:
             self.next_step['GbndRnge'] = copy.deepcopy(self.next_step['BndsRnXp'])
         
@@ -364,6 +370,9 @@ class The_Predictor_2D():
         self.old_discrepancy =(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
+        self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
+            (self.result[self.var_[1]]==old_hints[self.var_[1]])].index.values[0])]
+
         print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))
             
         if old_hints[self.var_[0]] == self.next_step[self.var_[0]] and old_hints[self.var_[1]] == self.next_step[self.var_[1]]:
@@ -378,16 +387,17 @@ class The_Predictor_2D():
     def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis'):
         
         self.check_passed = True
-        #error = 10
-        #for i in [1,2,]:
-        #    for j in [1,2]:
-        #        print(i,j)
-        #        self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
-        #        if self.MAE_fit<error: 
-        #            ii,jj = i,j
-        #            error = self.MAE_fit
+        error = 10
+        for i in [1,2,]:
+            for j in [1,2]:
+                print(i,j)
+                self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
+                if self.MAE_fit<error: 
+                    ii,jj = i,j
+                    error = self.MAE_fit
 
-        #print('Best power laws: {}, {}'.format(i,j))            
+        print('\nBest power laws: {}, {}\n'.format(i,j))            
+        
         self.check_passed = self.fit_space_2D(fit=True,alpha=1,beta=1,verbose=True,plot=plot,save=save_fit,colormap=colormap)
         if not self.check_passed: 
             self.point_reached = False
@@ -403,8 +413,10 @@ class The_Predictor_2D():
         self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next)
         self.point_reached = False
         
-        if old_hints:
-                self.point_reached = True
+        if old_hints or self.next_step['already_computed']:
+                if self.next_step['already_computed']: 
+                    old_hints = self.next_step
+                    self.point_reached = True
                 self.check_the_point(old_hints)
                 if reference == 'extra':
                     reference = self.extra
@@ -421,5 +433,14 @@ class The_Predictor_2D():
                 else:
                     self.check_passed = False
 
+        #1 if check not passed but point reached, you need a new grid! 
+        #2 if check passed and point reached, stop
+        #3 if not old hints, you need to compute the next point.
+        #4 if not old hints but/or already have the next point, check... follows 1 or 2
         
+        if not self.check_passed and self.point_reached:
+            self.next_step['new_grid'] = True
+        else:
+            self.next_step['new_grid'] = False
+
         return True

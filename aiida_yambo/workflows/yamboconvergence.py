@@ -275,7 +275,7 @@ class YamboConvergence(WorkChain):
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
             self.report('Success of '+self.ctx.workflow_settings['type']+' on {} reached in {} calculations, the result is {}' \
-                        .format(self.ctx.calc_manager['var'], self.ctx.calc_manager['steps']*self.ctx.calc_manager['iter'],\
+                        .format(self.ctx.calc_manager['var'], (self.ctx.calc_manager['steps']-self.ctx.calc_manager['skipped'])*self.ctx.calc_manager['iter'],\
                             df_story[df_story['useful'] == True].loc[:,self.ctx.workflow_manager['what']].values[-1:]))
 
             if self.ctx.workflow_manager['true_iter'] == [] and not 'converge_b_ratio' in self.ctx.hint.keys(): #variables to be converged are finished
@@ -406,7 +406,7 @@ class YamboConvergence(WorkChain):
         elif self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int):
             self.ctx.space_index = 0
             if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and len(self.ctx.params_space['BndsRnXp'])>0: 
-                self.report('Max #bands needed in the whole convergence = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
+                self.report('Max #bands needed in the whole convergence = {}'.format(max(self.ctx.params_space['BndsRnXp'])))
         
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
             yambo_bandsX = max(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][:self.ctx.space_index-1])

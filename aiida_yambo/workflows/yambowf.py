@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from ast import excepthandler
 import sys
 import itertools
 
@@ -267,10 +268,13 @@ class YamboWorkflow(WorkChain):
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
                 if 'band_structure' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.
-                    b = QP_bands_interface(node=Int(self.ctx.calc.called[0].pk), mapping = Dict(dict = mapping))
-                    self.report('electronic band structure computed by interpolation')
-                    for k,v in b.items():
-                        self.out(k, v)
+                    try:
+                        b = QP_bands_interface(node=Int(self.ctx.calc.called[0].pk), mapping = Dict(dict = mapping))
+                        self.report('electronic band structure computed by interpolation')
+                        for k,v in b.items():
+                            self.out(k, v)
+                    except:
+                        self.report('fail in the interpolation of the band structure')
 
             self.out_many(self.exposed_outputs(calc,YamboRestart))
             self.report("workflow completed successfully")
