@@ -14,7 +14,7 @@ from qepy.lattice import Path
 from aiida.tools.data.array.kpoints import get_kpoints_path, get_explicit_kpoints_path
 
 try:
-    from aiida.orm import Dict, Str, load_node, KpointsData, Bool
+    from aiida.orm import Dict, Str, load_node, KpointsData, Bool, StructureData
     from aiida.plugins import CalculationFactory, DataFactory
     from aiida_yambo.utils.common_helpers import *
     from aiida_yambo.utils.parallelism_finder import *
