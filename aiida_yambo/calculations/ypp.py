@@ -161,6 +161,9 @@ class YppCalculation(CalcJob):
 
         params_dict = parameters.get_dict()
 
+        if 'wannier' in params_dict['arguments']:
+            params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
+
         y = YamboIn().from_dictionary(params_dict)
 
         input_filename = tempfolder.get_abs_path(self.metadata.options.input_filename)
@@ -211,6 +214,9 @@ class YppCalculation(CalcJob):
         #calcinfo.retrieve_list.append('LOG/l*_CPU_2')
         calcinfo.retrieve_list.append('*stderr*') #standard errors
         extra_retrieved = []
+
+        if 'wannier' in params_dict['arguments']:
+            calcinfo.retrieve_list.append('*eig')
 
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
