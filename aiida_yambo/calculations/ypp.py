@@ -4,6 +4,7 @@ Plugin to create a YPP input file and run a calculation with the ypp executable.
 """
 from __future__ import absolute_import
 import os
+from tokenize import Single
 import six
 
 from aiida.engine import CalcJob
@@ -84,6 +85,14 @@ class YppCalculation(CalcJob):
                 help='Use a remote folder as parent folder (for "restarts and similar"')
         spec.input('code',valid_type=Code,
                 help='Use a main code for ypp calculation')
+        
+        spec.input(
+            "nnkp_file",
+            valid_type=SingleFileData,
+            required=False,
+            help=
+            "the nnkp file needed to obtain unsorted.eig from wannier oriented ypp run."
+        )
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -93,6 +102,8 @@ class YppCalculation(CalcJob):
                 message='failed calculation for unknown reason')
         spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
+        spec.exit_code(504, 'NNKP_NOT_PRESENT',
+                message='Nnkp file not present')
 
         #outputs definition:
 
@@ -100,6 +111,18 @@ class YppCalculation(CalcJob):
                 required=True, help='returns the output parameters')
         spec.output('array_interpolated_bands', valid_type=ArrayData,
                 required=False, help='returns the interpolated bands array')
+        spec.output(
+            'unsorted_eig_file',
+            valid_type=SinglefileData, #not necessary
+            required=False,
+            help='The ``.unsorted.eig`` file, to be post processed.'
+        )
+        spec.output(
+            'eig_file',
+            valid_type=SinglefileData, #not necessary
+            required=False,
+            help='The post processed``.sorted.eig`` file.'
+        )
 
     def prepare_for_submission(self, tempfolder):
 
@@ -162,6 +185,9 @@ class YppCalculation(CalcJob):
         params_dict = parameters.get_dict()
 
         if 'wannier' in params_dict['arguments']:
+            if not hasattr(self.inputs,'nnkp_file'): 
+                self.report('nnkp file not present in inputs, are you sure you are running a pro W90 calculation?')
+                self.exit_codes.NNKP_NOT_PRESENT
             params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
         y = YamboIn().from_dictionary(params_dict)
