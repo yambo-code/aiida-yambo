@@ -375,7 +375,7 @@ class The_Predictor_1D():
         
         if self.var_[0] == 'kpoint_mesh':
             self.old_discrepancy = \
-            (old_hints[self.what] - self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])][self.what].values[0])
+            abs(old_hints[self.what] - self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])][self.what].values[0])
             self.index = [int(self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])].index.values[0])]
 
 
@@ -389,7 +389,7 @@ class The_Predictor_1D():
             
         else:
             self.old_discrepancy = \
-            (old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])][self.what].values[0])
+            abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])][self.what].values[0])
             self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])].index.values[0])]
 
             print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))

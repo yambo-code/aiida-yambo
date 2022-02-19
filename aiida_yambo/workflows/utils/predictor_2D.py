@@ -367,7 +367,7 @@ class The_Predictor_2D():
     
     def check_the_point(self,old_hints={}):
         
-        self.old_discrepancy =(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
+        self.old_discrepancy =abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
         self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
