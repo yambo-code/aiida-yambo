@@ -696,6 +696,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
         oversteps = 0
         oversteps_1 = 0
         none_encountered = list(workflow_story.uuid[workflow_story.failed == True])
+        hint = {}
 
         real,lines,homo,bande = prepare_for_ce(workflow_dict=workflow_story,
                                          keys=workflow_manager['what'], 
@@ -724,6 +725,8 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 hint = y.next_step
                 hint['extrapolation'] = y.extra
                 hint['extrapolation_units'] = 'eV'
+            else:
+                hint = {'new_grid':True}
         
         elif 'new_algorithm_1D' in calc_dict['convergence_algorithm']:
             k = workflow_manager['what'][0]
@@ -743,6 +746,8 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 hint = y.next_step
                 hint['extrapolation'] = y.extra
                 hint['extrapolation_units'] = 'eV'
+            else:
+                hint = {'new_grid':True}
 
         else:
             y = Convergence_evaluator(
