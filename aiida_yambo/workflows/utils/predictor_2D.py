@@ -163,7 +163,7 @@ class The_Predictor_2D():
                       ydata=ydata,sigma=1/(xdata[0]*xdata[1]),
                       bounds=([-np.inf,-np.inf,-np.inf,-np.inf],[np.inf,np.inf,np.inf,np.inf]))
         
-        MAE_int = np.average((abs(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)))
+        MAE_int = np.average((abs(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)),weights=xdata[0]*xdata[1])
         print('MAE fit = {} eV'.format(MAE_int))
         self.MAE_fit = MAE_int
         
@@ -320,9 +320,8 @@ class The_Predictor_2D():
             'already_computed':False,
         }
         
-        if conv_bands in self.parameters[0,:] and conv_G in self.parameters[1,:]:
+        if conv_bands in self.parameters[0,:] and conv_G in self.parameters[1,np.where(self.parameters[0,:]==conv_bands)]:
             self.next_step['already_computed'] = True
-        
         
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var and len(self.var) > 2:
             self.next_step['GbndRnge'] = copy.deepcopy(self.next_step['BndsRnXp'])
@@ -367,6 +366,12 @@ class The_Predictor_2D():
     
     def check_the_point(self,old_hints={}):
         
+
+        print(old_hints[self.what])
+        print(self.result)
+        print(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values)
+
+
         self.old_discrepancy =abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
@@ -388,8 +393,10 @@ class The_Predictor_2D():
         
         self.check_passed = True
         error = 10
-        for i in [1,2,]:
-            for j in [1,2]:
+
+        power_laws = [1,2]
+        for i in power_laws:
+            for j in power_laws:
                 print(i,j)
                 self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
                 if self.MAE_fit<error: 

@@ -85,7 +85,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
         print('SPACE,',space)
         if hint:
             if hint['new_grid']:
-                new_grid = 1
+                new_grid = max(1,i['iter'] - 1)
         if 'new_algorithm_2D' in wfl_type:
             if hint and not new_grid:
                 for v in l:
@@ -707,50 +707,51 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
         
         is_converged = True 
 
-        if 'new_algorithm_2D' in calc_dict['convergence_algorithm']:
-            k = workflow_manager['what'][0]
-            y = The_Predictor_2D(grid=lines,  #parameters
+        for i in range(len(workflow_manager['what'])):
+            if 'new_algorithm_2D' in calc_dict['convergence_algorithm']:
+                k = workflow_manager['what'][i] #loop on all whats... and if all ok, converged, otherwise not.
+                y = The_Predictor_2D(grid=lines,  #parameters
                                  result=real,
                                  bande=bande, #KS states
                                  r=homo[k], 
                                  calc_dict=calc_dict,
                                 )
 
-            print('old_hints:',hints)
-            y.analyse(old_hints=hints) #just convergence as before
-            is_converged = y.check_passed and y.point_reached
-            print(y.check_passed, y.point_reached)
-            oversteps = y.index
-            if y.check_passed:
-                hint = y.next_step
-                hint['extrapolation'] = y.extra
-                hint['extrapolation_units'] = 'eV'
-            else:
-                hint = {'new_grid':True}
+                print('old_hints:',hints)
+                y.analyse(old_hints=hints) #just convergence as before
+                is_converged = y.check_passed and y.point_reached
+                print(y.check_passed, y.point_reached)
+                oversteps = y.index
+                if y.check_passed:
+                    hint = y.next_step
+                    hint['extrapolation'] = y.extra
+                    hint['extrapolation_units'] = 'eV'
+                else:
+                    hint = {'new_grid':True}
         
-        elif 'new_algorithm_1D' in calc_dict['convergence_algorithm']:
-            k = workflow_manager['what'][0]
-            y = The_Predictor_1D(grid=lines,  #parameters
+            elif 'new_algorithm_1D' in calc_dict['convergence_algorithm']:
+                k = workflow_manager['what'][i]
+                y = The_Predictor_1D(grid=lines,  #parameters
                                  result=real,
                                  bande=bande, #KS states
                                  r=homo[k], 
                                  calc_dict=calc_dict,
                                 )
 
-            print('old_hints:',hints)
-            y.analyse(old_hints=hints) #just convergence as before
-            is_converged = y.check_passed and y.point_reached
-            print(y.check_passed, y.point_reached)
-            oversteps = y.index
-            if y.check_passed:
-                hint = y.next_step
-                hint['extrapolation'] = y.extra
-                hint['extrapolation_units'] = 'eV'
-            else:
-                hint = {'new_grid':True}
+                print('old_hints:',hints)
+                y.analyse(old_hints=hints) #just convergence as before
+                is_converged = y.check_passed and y.point_reached
+                print(y.check_passed, y.point_reached)
+                oversteps = y.index
+                if y.check_passed:
+                    hint = y.next_step
+                    hint['extrapolation'] = y.extra
+                    hint['extrapolation_units'] = 'eV'
+                else:
+                    hint = {'new_grid': True}
 
-        else:
-            y = Convergence_evaluator(
+            else:
+                y = Convergence_evaluator(
                                 conv_array=homo, 
                                 calc_dict = calc_dict, 
                                 var = var,
@@ -760,7 +761,9 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                                 workflow_dict=workflow_story
                                 )
         
-            is_converged, oversteps, hint = y.analysis() #just convergence as before
+                is_converged, oversteps, hint = y.analysis() #just convergence as before
+            
+            if not is_converged: break
 
         if 'BndsRnXp' in calc_dict['var'] and 'GbndRnge' in calc_dict['var'] and hint: # and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
