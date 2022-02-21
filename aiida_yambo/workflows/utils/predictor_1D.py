@@ -435,6 +435,11 @@ class The_Predictor_1D():
         self.determine_next_calculation(plot=plot, save=save_next)
         self.point_reached = False
         
+        if self.conv_thr_units=='%':
+            factor = 100/abs(reference)
+        else:
+            factor=1
+
         if old_hints or self.next_step['already_computed']:
                 if self.next_step['already_computed']: 
                     old_hints = self.next_step
@@ -445,11 +450,6 @@ class The_Predictor_1D():
                     reference = self.extra
                 else:
                     reference = self.Z_fit[-1]
-                    
-                if self.conv_thr_units=='%':
-                    factor = 100/abs(reference)
-                else:
-                    factor=1
                 
                 if self.old_discrepancy < self.conv_thr*factor: 
                     self.check_passed = True
@@ -458,7 +458,9 @@ class The_Predictor_1D():
 
         if not self.check_passed and self.point_reached:
             self.next_step['new_grid'] = True
+        elif self.MAE_fit > self.conv_thr*factor:
+            self.next_step['new_grid'] = True
         else:
-            self.next_step['new_grid'] = False
+            self.next_step['new_grid'] = Falsee
 
         return True
