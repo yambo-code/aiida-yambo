@@ -419,6 +419,11 @@ class The_Predictor_2D():
             
         self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next)
         self.point_reached = False
+
+        if self.conv_thr_units=='%':
+            factor = 100/abs(reference)
+        else:
+            factor=1
         
         if old_hints or self.next_step['already_computed']:
                 if self.next_step['already_computed']: 
@@ -429,11 +434,6 @@ class The_Predictor_2D():
                     reference = self.extra
                 else:
                     reference = self.Z_fit[-1,-1]
-                    
-                if self.conv_thr_units=='%':
-                    factor = 100/abs(reference)
-                else:
-                    factor=1
                 
                 if self.old_discrepancy < self.conv_thr*factor: 
                     self.check_passed = True
@@ -446,6 +446,8 @@ class The_Predictor_2D():
         #4 if not old hints but/or already have the next point, check... follows 1 or 2
         
         if not self.check_passed and self.point_reached:
+            self.next_step['new_grid'] = True
+        elif self.MAE_fit > self.conv_thr*factor:
             self.next_step['new_grid'] = True
         else:
             self.next_step['new_grid'] = False
