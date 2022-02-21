@@ -21,6 +21,7 @@ from yamboparser.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
+from aiida_yambo.utils.gw2wannier90 import * 
 from aiida_yambo.parsers.utils import *
 
 from aiida_quantumespresso.calculations.pw import PwCalculation
@@ -155,20 +156,21 @@ class YppParser(Parser):
         
         if 'aiida.gw.unsorted.eig' in os.listdir(out_folder._repository._repo_folder.abspath):
             
-            unsorted_eig_path = os.path.join(out_folder._repository._repo_folder.abspath, 'aiida.gw.unsorted.eig')
-            if os.path.isfile(unsorted_eig_path):
-                with open(unsorted_eig_path, 'rb') as handle:
-                    node = SinglefileData(file=handle)
-                    self.out('unsorted_eig_file', node)
+            #unsorted_eig_path = os.path.join(out_folder._repository._repo_folder.abspath, 'aiida.gw.unsorted.eig')
             
-            if hasattr(self._calc,'local_input_folder'):
-                #GW2Wannier90.py and output the sorted.eig file
-                #copy all the files in a temporary folder, run 
-                #the code and then output the sorted file, remove tmp?
+            #####
+            ##RUN Gw2Wannier90.py
+            #####
+            if hasattr(self._calc.inputs,'local_input_folder'):
+                #mmn_amn_folder = self._calc.inputs.local_input_folder._repository._repo_folder.abspath+'/path'
+                gw2wannier90(
+                    seedname=Str('aiida'), 
+                    options = List(list=['mmn','amn']), 
+                    output_path=Str(out_folder._repository._repo_folder.abspath),
+                    nnkp_file = self._calc.inputs.nnkp_file, 
+                    pw2wannier_parent = self._calc.inputs.pw2wannier90_parent.outputs.retrieved,
+                )
                 
-                
-                pass 
-
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:

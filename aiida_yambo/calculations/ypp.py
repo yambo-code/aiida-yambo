@@ -18,7 +18,7 @@ from aiida.common.utils import classproperty
 
 from aiida.orm import Code
 from aiida.orm.nodes import Dict
-from aiida.orm.nodes import RemoteData, BandsData, ArrayData
+from aiida.orm.nodes import RemoteData, BandsData, ArrayData, SinglefileData, FolderData
 
 from aiida.plugins import DataFactory, CalculationFactory
 
@@ -87,11 +87,18 @@ class YppCalculation(CalcJob):
                 help='Use a main code for ypp calculation')
         
         spec.input(
-            "nnkp_file",
-            valid_type=SingleFileData,
+            'nnkp_file',
+            valid_type=SinglefileData,
             required=False,
             help=
-            "the nnkp file needed to obtain unsorted.eig from wannier oriented ypp run."
+            'The nnkp file'
+        )
+        spec.input(
+            'pw2wannier90_parent',
+            valid_type=FolderData,
+            required=False,
+            help=
+            "the pw2wannier90 retrieved folder, that has mmn and amn files as output."
         )
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
@@ -104,6 +111,8 @@ class YppCalculation(CalcJob):
                 message='Unexpected behavior of YamboFolder')
         spec.exit_code(504, 'NNKP_NOT_PRESENT',
                 message='Nnkp file not present')
+        spec.exit_code(505, 'PW2WANNIER90_PARENT_NOT_PRESENT',
+                message='mmn amn folder not present')
 
         #outputs definition:
 
@@ -112,14 +121,8 @@ class YppCalculation(CalcJob):
         spec.output('array_interpolated_bands', valid_type=ArrayData,
                 required=False, help='returns the interpolated bands array')
         spec.output(
-            'unsorted_eig_file',
-            valid_type=SinglefileData, #not necessary
-            required=False,
-            help='The ``.unsorted.eig`` file, to be post processed.'
-        )
-        spec.output(
             'eig_file',
-            valid_type=SinglefileData, #not necessary
+            valid_type=SinglefileData, #not necessary, but useful to have a node to be used by aiida-W90
             required=False,
             help='The post processed``.sorted.eig`` file.'
         )
@@ -185,9 +188,13 @@ class YppCalculation(CalcJob):
         params_dict = parameters.get_dict()
 
         if 'wannier' in params_dict['arguments']:
-            if not hasattr(self.inputs,'nnkp_file'): 
+            if not hasattr(self.inputs,'local_input_folder'): 
                 self.report('nnkp file not present in inputs, are you sure you are running a pro W90 calculation?')
                 self.exit_codes.NNKP_NOT_PRESENT
+            elif not hasattr(self.inputs,'pw2wannier90_parent'): 
+                self.report('mmn amn folder not present in inputs, are you sure you are running a pro W90 calculation?')
+                self.exit_codes.PW2WANNIER90_PARENT_NOT_PRESENT
+            
             params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
         y = YamboIn().from_dictionary(params_dict)
