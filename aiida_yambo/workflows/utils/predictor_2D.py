@@ -163,7 +163,7 @@ class The_Predictor_2D():
                       ydata=ydata,sigma=1/(xdata[0]*xdata[1]),
                       bounds=([-np.inf,-np.inf,-np.inf,-np.inf],[np.inf,np.inf,np.inf,np.inf]))
         
-        MAE_int = np.average((abs(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)))
+        MAE_int = np.average((abs(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)),weights=xdata[0]*xdata[1])
         print('MAE fit = {} eV'.format(MAE_int))
         self.MAE_fit = MAE_int
         
@@ -320,9 +320,8 @@ class The_Predictor_2D():
             'already_computed':False,
         }
         
-        if conv_bands in self.parameters[0,:] and conv_G in self.parameters[1,:]:
+        if conv_bands in self.parameters[0,:] and conv_G in self.parameters[1,np.where(self.parameters[0,:]==conv_bands)]:
             self.next_step['already_computed'] = True
-        
         
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var and len(self.var) > 2:
             self.next_step['GbndRnge'] = copy.deepcopy(self.next_step['BndsRnXp'])
@@ -367,7 +366,13 @@ class The_Predictor_2D():
     
     def check_the_point(self,old_hints={}):
         
-        self.old_discrepancy =(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
+
+        print(old_hints[self.what])
+        print(self.result)
+        print(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values)
+
+
+        self.old_discrepancy =abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
         self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
@@ -388,8 +393,10 @@ class The_Predictor_2D():
         
         self.check_passed = True
         error = 10
-        for i in [1,2,]:
-            for j in [1,2]:
+
+        power_laws = [1,2]
+        for i in power_laws:
+            for j in power_laws:
                 print(i,j)
                 self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
                 if self.MAE_fit<error: 
@@ -412,6 +419,11 @@ class The_Predictor_2D():
             
         self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next)
         self.point_reached = False
+
+        if self.conv_thr_units=='%':
+            factor = 100/abs(reference)
+        else:
+            factor=1
         
         if old_hints or self.next_step['already_computed']:
                 if self.next_step['already_computed']: 
@@ -422,11 +434,6 @@ class The_Predictor_2D():
                     reference = self.extra
                 else:
                     reference = self.Z_fit[-1,-1]
-                    
-                if self.conv_thr_units=='%':
-                    factor = 100/abs(reference)
-                else:
-                    factor=1
                 
                 if self.old_discrepancy < self.conv_thr*factor: 
                     self.check_passed = True
@@ -439,6 +446,8 @@ class The_Predictor_2D():
         #4 if not old hints but/or already have the next point, check... follows 1 or 2
         
         if not self.check_passed and self.point_reached:
+            self.next_step['new_grid'] = True
+        elif self.MAE_fit > self.conv_thr*factor:
             self.next_step['new_grid'] = True
         else:
             self.next_step['new_grid'] = False

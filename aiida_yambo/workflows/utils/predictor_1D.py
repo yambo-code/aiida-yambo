@@ -97,8 +97,8 @@ class The_Predictor_1D():
             self.var_.remove('GbndRnge')
             self.delta_.pop(self.var.index('GbndRnge'))
 
-        print('var',self.var)
-        print('var_',self.var_)
+        #print('var',self.var)
+        #print('var_',self.var_)
 
         for i in self.var_:
             setattr(self,i,copy.deepcopy(list(self.result[i].values)))
@@ -139,7 +139,7 @@ class The_Predictor_1D():
         
         #self.G = copy.deepcopy(self.G)
         
-        print('Params',self.parameters)
+        #print('Params',self.parameters)
         
     
     def addplot_info_1D(self,fig,ax,
@@ -181,14 +181,14 @@ class The_Predictor_1D():
         fx = lambda x,a: -alpha*a/(x**(alpha+1))
          
         xdata,ydata = self.parameters,self.r
-        print('fitting all simulations.')
-                    
+        #print('fitting all simulations.')
+
         popt,pcov = curve_fit(f,xdata=xdata,
                       ydata=ydata,sigma=1/xdata,
                       bounds=([-np.inf,-np.inf],[np.inf,np.inf]))
         
-        MAE_int = np.average((abs(f(xdata,popt[0],popt[1])-ydata)))
-        print('MAE fit = {} eV'.format(MAE_int))
+        MAE_int = np.average((abs(f(xdata,popt[0],popt[1])-ydata)),weights=xdata)
+        print('MAE fit = {} eV; power law = {}'.format(MAE_int,alpha))
         self.MAE_fit = MAE_int
         
         if verbose: 
@@ -212,7 +212,7 @@ class The_Predictor_1D():
                 if self.delta[i] == 0:
                     l[i] = np.ones(length)
             
-            print('AAAAAAA',length, l)
+            #print('AAAAAAA',length, l)
             self.kx_fit = l[0]
             self.ky_fit = l[1]
             self.kz_fit = l[2]
@@ -242,7 +242,7 @@ class The_Predictor_1D():
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata),self.X_fit[self.condition_conv_calc][0]*1.5)
             
-        print('b: {}\ng: {}'.format(b,g))
+        #print('b: {}\ng: {}'.format(b,g))
         
         p = f(max(xdata),popt[0],popt[1])
         p_H = f(b,popt[0],popt[1])
@@ -308,17 +308,17 @@ class The_Predictor_1D():
         else:
             thr = self.conv_thr
         
-        print(thr)
+        #print(thr)
         condition = np.where((abs(reference-self.Z_fit)<=thr) & \
                             (abs(self.Zx_fit*self.delta_)<=thr))
         
-        print(condition)
-        print(self.Z_fit[condition])
-        print('\n')
+        #print(condition)
+        #print(self.Z_fit[condition])
+        #print('\n')
         
-        print('Min G condition')
-        print(self.Z_fit[condition][0])
-        print(self.X_fit[condition][0])
+        #print('Min G condition')
+        #print(self.Z_fit[condition][0])
+        #print(self.X_fit[condition][0])
         
         self.condition = condition
          
@@ -368,14 +368,15 @@ class The_Predictor_1D():
             kz = factor*self.delta[2] + self.starting_mesh[2]
         
         self.next_step[self.var_[0]] = [int(kx),int(ky),int(kz)]
-        
+        print('guessed next step: {} \n\n\n'.format(self.next_step))
+
         return self.next_step
     
     def check_the_point(self,old_hints={}):
         
         if self.var_[0] == 'kpoint_mesh':
             self.old_discrepancy = \
-            (old_hints[self.what] - self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])][self.what].values[0])
+            abs(old_hints[self.what] - self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])][self.what].values[0])
             self.index = [int(self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])].index.values[0])]
 
 
@@ -389,7 +390,7 @@ class The_Predictor_1D():
             
         else:
             self.old_discrepancy = \
-            (old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])][self.what].values[0])
+            abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])][self.what].values[0])
             self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])].index.values[0])]
 
             print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))
@@ -407,7 +408,11 @@ class The_Predictor_1D():
         
         self.check_passed = True
         error = 10
-        for i in [1,2,]:
+        power_laws = [1,2]
+        
+        if 'kpoint_mesh' in self.var_: power_laws = [0.5,1,2]
+
+        for i in power_laws:
                 self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,)
                 if self.MAE_fit<error: 
                     ii = i
@@ -430,6 +435,11 @@ class The_Predictor_1D():
         self.determine_next_calculation(plot=plot, save=save_next)
         self.point_reached = False
         
+        if self.conv_thr_units=='%':
+            factor = 100/abs(reference)
+        else:
+            factor=1
+
         if old_hints or self.next_step['already_computed']:
                 if self.next_step['already_computed']: 
                     old_hints = self.next_step
@@ -440,11 +450,6 @@ class The_Predictor_1D():
                     reference = self.extra
                 else:
                     reference = self.Z_fit[-1]
-                    
-                if self.conv_thr_units=='%':
-                    factor = 100/abs(reference)
-                else:
-                    factor=1
                 
                 if self.old_discrepancy < self.conv_thr*factor: 
                     self.check_passed = True
@@ -453,7 +458,9 @@ class The_Predictor_1D():
 
         if not self.check_passed and self.point_reached:
             self.next_step['new_grid'] = True
+        elif self.MAE_fit > self.conv_thr*factor:
+            self.next_step['new_grid'] = True
         else:
-            self.next_step['new_grid'] = False
+            self.next_step['new_grid'] = Falsee
 
         return True
