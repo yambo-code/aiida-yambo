@@ -144,7 +144,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     gwbands = max(yambo_bandsX,yambo_bandsSc)
     message_bands = 'GW bands are: {} '.format(gwbands)
     messages.append(message_bands)
-    scf_params_def, nscf_params_def = create_quantumespresso_inputs(workchain_inputs.structure, bands_gw = gwbands)
+    #scf_params_def, nscf_params_def = create_quantumespresso_inputs(structure, bands_gw = gwbands)
 
     if hasattr(workchain_inputs,'parent_folder'):
         parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
@@ -169,17 +169,21 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     if scf_params_parent:
         message_scf = message_scf_parent
         messages.append(message_scf)
-        scf_params =  scf_params_parent 
+        scf_params = scf_params_parent 
     elif hasattr(workchain_inputs,'scf_parameters'):
+        message_scf = 'scf inputs found, old inputs'
+        messages.append(message_scf)
+        scf_params = workchain_inputs.scf_parameters    
+    elif hasattr(workchain_inputs.scf.pw,'parameters'):
         message_scf = 'scf inputs found'
         messages.append(message_scf)
-        scf_params =  workchain_inputs.scf_parameters       
-    else:
-        message_scf = 'scf inputs not found, setting defaults'
-        messages.append(message_scf)
-        scf_params = scf_params_def
-        scf_params['SYSTEM']['nbnd'] = int(scf_params_def['SYSTEM']['nbnd'])
-        scf_params = Dict(dict=scf_params)
+        scf_params = None
+    #else:
+    #    message_scf = 'scf inputs not found, setting defaults'
+    #    messages.append(message_scf)
+    #    scf_params = scf_params_def
+    #    scf_params['SYSTEM']['nbnd'] = int(scf_params_def['SYSTEM']['nbnd'])
+    #    scf_params = Dict(dict=scf_params)
     
     redo_nscf = False
         
@@ -195,7 +199,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
             nscf_params = Dict(dict=nscf_params)
             messages.append(message_nscf)  
     elif hasattr(workchain_inputs,'nscf_parameters'):
-        message_nscf = 'nscf inputs found' 
+        message_nscf = 'nscf inputs found, old inputs' 
         nscf_params =  workchain_inputs.nscf_parameters
         if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
             redo_nscf = True
@@ -203,17 +207,29 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
             nscf_params = Dict(dict=nscf_params)
+        messages.append(message_nscf)  
+    elif hasattr(workchain_inputs.nscf.pw,'parameters'):
+        message_nscf = 'nscf inputs found' 
+        nscf_params =  workchain_inputs.nscf.pw.parameters
+        if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
+            redo_nscf = True
+            message_nscf += ', and setting nbnd of the nscf calculation to b = {}'.format(gwbands)
+            nscf_params = nscf_params.get_dict()
+            nscf_params['SYSTEM']['nbnd'] = int(gwbands)
+            nscf_params = Dict(dict=nscf_params)
+        else:
+            nscf_params = None
         messages.append(message_nscf)       
-    else:
-        message_nscf = 'nscf inputs not found, setting defaults'
-        nscf_params = copy.deepcopy(scf_params.get_dict())
-        nscf_params['CONTROL']['calculation'] = nscf_params_def['CONTROL']['calculation']
-        nscf_params['SYSTEM']['nbnd'] = int(gwbands)
-        nscf_params = Dict(dict=nscf_params)
-        messages.append(message_nscf)
+    #else:
+    #    message_nscf = 'nscf inputs not found, setting defaults'
+    #    nscf_params = copy.deepcopy(scf_params.get_dict())
+    #    nscf_params['CONTROL']['calculation'] = nscf_params_def['CONTROL']['calculation']
+    #    nscf_params['SYSTEM']['nbnd'] = int(gwbands)
+    #    nscf_params = Dict(dict=nscf_params)
+    #    messages.append(message_nscf)
     
             
-    if 'defaults' in message_scf:
+    '''if 'defaults' in message_scf:
         message_scf_corr='setting scf defaults according to nscf'
         messages.append(message_scf_corr)
         scf_params = copy.deepcopy(scf_params.get_dict())
@@ -221,7 +237,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         scf_params['SYSTEM'] = copy.deepcopy(nscf_params['SYSTEM'])
         scf_params['CONTROL']['calculation'] = 'scf'
         scf_params['SYSTEM']['nbnd'] = int(bands_scf)
-        scf_params = Dict(dict=scf_params)
+        scf_params = Dict(dict=scf_params)'''
     '''
     elif 'parent' in message_scf and not 'defaults' in message_nscf and not 'parents' in message_nscf:
         message_nscf_corr = 'nscf inputs from scf parent'

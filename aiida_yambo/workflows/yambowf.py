@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from ast import excepthandler
-import sys
-import itertools
 
-from aiida.orm import RemoteData,StructureData,KpointsData,UpfData,BandsData
-from aiida.orm import Dict,Str,Code,Int
+from aiida.orm import RemoteData,BandsData
+from aiida.orm import Dict,Int
 
-from aiida.engine import WorkChain, while_, append_, if_
+from aiida.engine import WorkChain, while_, if_
 from aiida.engine import ToContext
-from aiida.engine import submit, run
 
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
-from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
+from aiida_quantumespresso.common.types import ElectronicType, SpinType
 
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
@@ -22,8 +18,9 @@ from aiida_yambo.workflows.utils.helpers_yambowf import *
 from aiida.plugins import DataFactory
 LegacyUpfData = DataFactory('upf')
 
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
-class YamboWorkflow(WorkChain):
+class YamboWorkflow(ProtocolMixin, WorkChain):
 
     """This workflow will perform yambo calculation on the top of scf+nscf or from scratch,
         using also the PwBaseWorkChain.
@@ -39,12 +36,12 @@ class YamboWorkflow(WorkChain):
         super(YamboWorkflow, cls).define(spec)
 
         spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, 
-                            exclude = ['parent_folder', 'pw.parameters', 'pw.code','pw.structure'])
+                            exclude = ['parent_folder'])
 
         spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, 
-                            exclude = ['parent_folder', 'pw.parameters', 'pw.pseudos','pw.code','pw.structure'])
+                            exclude = ['parent_folder'])
 
-        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': True}, 
+        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
         spec.input("additional_parsing", valid_type=List, required= False,
@@ -52,18 +49,7 @@ class YamboWorkflow(WorkChain):
         
         spec.input("parent_folder", valid_type=RemoteData, required= False,
                     help = 'scf, nscf or yambo remote folder')
-
-        #DFT inputs, not required
-        spec.input('scf_parameters', valid_type=Dict, required = False,
-                    help = 'scf params')
-        spec.input('nscf_parameters', valid_type=Dict, required = False,
-                    help = 'nscf params')  
-
-        #Both scf and nscf DFT inputs, required   
-        spec.input('structure', valid_type=StructureData, required= True,
-                    help = 'structure')
-        spec.input('pw_code', valid_type=Code, required= True,
-                    help = 'code for pw part')
+  
 
 ##################################### OUTLINE ####################################
 
@@ -91,6 +77,121 @@ class YamboWorkflow(WorkChain):
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
                              message='The workchain failed with an unrecoverable error.')
     
+    @classmethod
+    def get_protocol_filepath(cls):
+        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
+        from importlib_resources import files
+
+        from aiida_yambo.workflows.protocols import yambo as yamboworkflow_protocols
+        return files(yamboworkflow_protocols) / 'yamboworkflow.yaml'
+    
+    @classmethod
+    def get_builder_from_protocol(
+        cls,
+        pw_code,
+        preprocessing_code,
+        code,
+        protocol='GW_fast',
+        structure=None,
+        overrides=None,
+        parent_folder=None,
+        electronic_type=ElectronicType.INSULATOR,
+        spin_type=SpinType.NONE,
+        initial_magnetic_moments=None,
+        **_
+    ):
+        """Return a builder prepopulated with inputs selected according to the chosen protocol.
+        :return: a process builder instance with all inputs defined ready for launch.
+        """
+        from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
+
+        if isinstance(code, str):
+            
+            pw_code = orm.load_code(pw_code)
+            preprocessing_code = orm.load_code(preprocessing_code)
+            code = orm.load_code(code)
+
+        if electronic_type not in [ElectronicType.METAL, ElectronicType.INSULATOR]:
+            raise NotImplementedError(f'electronic type `{electronic_type}` is not supported.')
+
+        if spin_type not in [SpinType.NONE, SpinType.COLLINEAR]:
+            raise NotImplementedError(f'spin type `{spin_type}` is not supported.')
+
+        inputs = cls.get_protocol_inputs(protocol, overrides={})
+
+        meta_parameters = inputs.pop('meta_parameters')
+        
+        builder = cls.get_builder()
+
+        overrides_scf = overrides.pop('scf',{})
+        overrides_nscf = overrides.pop('nscf',{})
+        overrides_yres = overrides.pop('yres',{})
+
+        for override in [overrides_scf,overrides_nscf]:
+            override['clean_workdir'] = override.pop('clean_workdir',False)
+        
+        overrides_nscf['pw'] = overrides_nscf.pop('pw',{'parameters':{}})
+        overrides_nscf['pw']['parameters']['CONTROL'] = overrides_nscf['pw']['parameters'].pop('CONTROL',{'calculation':'nscf'})
+
+        try:
+            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
+            PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
+            nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
+        except:
+            nelectrons, PW_cutoff = periodical(structure.get_ase())
+            overrides_yres['nelectrons'] = nelectrons
+            overrides_yres['PW_cutoff'] = PW_cutoff
+
+        #########SCF and NSCF PROTOCOLS 
+        builder.scf = PwBaseWorkChain.get_builder_from_protocol(
+                pw_code,
+                structure,
+                protocol=meta_parameters['qe_protocol'],
+                overrides=overrides_scf,
+                electronic_type=electronic_type,
+                spin_type=spin_type,
+                initial_magnetic_moments=initial_magnetic_moments,
+                )
+
+        builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
+                pw_code,
+                structure,
+                protocol=meta_parameters['qe_protocol'],
+                overrides=overrides_nscf,
+                electronic_type=electronic_type,
+                spin_type=spin_type,
+                initial_magnetic_moments=initial_magnetic_moments,
+                )
+        
+        nelectrons = 0
+        for site in builder.nscf['pw']['structure'].sites:
+            nelectrons += builder.nscf['pw']['pseudos'][site.kind_name].z_valence
+        
+        overrides_yres['nelectrons'] = nelectrons
+        overrides_yres['PW_cutoff'] = builder.nscf['pw']['parameters'].get_dict()['SYSTEM']['ecutwfc']
+
+        #########YAMBO PROTOCOL, with or without parent folder.
+        if not parent_folder: parent_folder = 'YWFL_scratch'
+
+        builder.yres = YamboRestart.get_builder_from_protocol(
+                preprocessing_code=preprocessing_code,
+                code=code,
+                protocol=protocol,
+                parent_folder=parent_folder,
+                overrides=overrides.pop('yres',{})
+            )
+
+        yambo_bandsX = builder.yres['yambo']['parameters'].get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+        yambo_bandsSc = builder.yres['yambo']['parameters'].get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
+        gwbands = max(yambo_bandsX,yambo_bandsSc)
+        parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
+        parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
+        builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
+        # pylint: enable=no-member
+
+        return builder
+
+
     def validate_parameters(self):
 
         self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')        
@@ -98,20 +199,11 @@ class YamboWorkflow(WorkChain):
         #quantumespresso common inputs
         self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
         self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
-
-        self.ctx.scf_inputs.pw.structure = self.inputs.structure
-        self.ctx.nscf_inputs.pw.structure = self.inputs.structure
-
-        #self.ctx.scf_inputs.pw.pseudos = self.inputs.pseudos
-        self.ctx.nscf_inputs.pw.pseudos = self.ctx.scf_inputs.pw.pseudos
-
-        self.ctx.scf_inputs.pw.code = self.inputs.pw_code
-        self.ctx.nscf_inputs.pw.code = self.inputs.pw_code
         
-        #quantumespresso input parameters
+        #quantumespresso input parameters check from parents, if any.
         scf_params, nscf_params, redo_nscf, gwbands, messages = quantumespresso_input_validator(self.inputs,)
-        self.ctx.scf_inputs.pw.parameters = scf_params
-        self.ctx.nscf_inputs.pw.parameters = nscf_params
+        if scf_params: self.ctx.scf_inputs.pw.parameters = scf_params
+        if nscf_params: self.ctx.nscf_inputs.pw.parameters = nscf_params
         self.ctx.redo_nscf = redo_nscf
         self.ctx.gwbands = gwbands
         for i in messages:

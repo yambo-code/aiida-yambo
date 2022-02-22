@@ -16,6 +16,7 @@ from aiida.engine.processes.workchains.utils import ProcessHandlerReport, proces
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.workflows.utils.helpers_yamborestart import *
 from aiida_yambo.utils.parallel_namelists import *
+from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.utils.common_helpers import *
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
@@ -41,7 +42,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         super(YamboRestart, cls).define(spec)
         spec.expose_inputs(YamboCalculation, namespace='yambo', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
-        spec.input("parent_folder", valid_type=RemoteData, required=True)
+        spec.input("parent_folder", valid_type=RemoteData, required=False) #false to build the ywfl protocols
         spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
         spec.input("max_number_of_nodes", valid_type=Int, default=lambda: Int(0),
                     help = 'max number of nodes for restarts; if 0, it does not increase the number of nodes')
@@ -73,6 +74,8 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             message='not enough bands in the Nscf dft step - nbnd - .')
         spec.exit_code(302, 'EMPTY_PARENT',
             message='parent is empty in the remote computer.')
+        spec.exit_code(303, 'NO_PARENT',
+            message='parent is not provided.')
     
     @classmethod
     def get_protocol_filepath(cls):
@@ -123,14 +126,16 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
 
         meta_parameters = inputs.pop('meta_parameters')
 
-        pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
-        structure = pw_parent.inputs.structure
-        PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
-        nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
+        try:
+            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
+            PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
+            nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
+        except:
+            nelectrons, PW_cutoff = overrides.pop('nelectrons',0), overrides.pop('PW_cutoff',0)
 
         # Update the parameters based on the protocol inputs
         parameters = inputs['yambo']['parameters']
-        metadata = inputs['metadata']
+        metadata = inputs['yambo']['metadata']
         
         #if protocols GW
         screening_PW_cutoff = int(PW_cutoff*meta_parameters['ratio_PW_cutoff'])
@@ -166,7 +171,12 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             builder.yambo['settings'] = Dict(dict=inputs['yambo']['settings'])
         builder.clean_workdir = Bool(inputs['clean_workdir'])
 
-        builder.parent_folder = parent_folder
+        if not parent_folder:
+            RaiseError('You must provide a parent folder calculation, either QE or YAMBO') 
+        elif isinstance(parent_folder,str):
+            pass
+        else:
+            builder.parent_folder = parent_folder
         # pylint: enable=no-member
 
         return builder
@@ -209,9 +219,12 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
     def validate_parent(self):
         """validation of the parent calculation --> should be at least nscf/p2y
         """
-        self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
-        if self.ctx.inputs['parent_folder'].is_empty: 
-            return self.exit_codes.EMPTY_PARENT
+        if not hasattr(self.inputs,'parent_folder'):
+            return self.exit_codes.NO_PARENT
+        else:
+            self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+            if self.ctx.inputs['parent_folder'].is_empty: 
+                return self.exit_codes.EMPTY_PARENT
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.

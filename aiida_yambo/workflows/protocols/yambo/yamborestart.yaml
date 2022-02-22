@@ -3,13 +3,15 @@ default_inputs:
     meta_parameters:
         ratio_bands_electrons: 25
         ratio_PW_cutoff: 0.1
-    metadata:
+    yambo:
+        metadata:
             options:
                 resources:
                     num_machines: 1
+                    num_mpiprocs_per_machine: 16
+                    num_cores_per_mpiproc: 1
                 max_wallclock_seconds: 43200  # Twelve hours
                 withmpi: True
-    yambo:
         parameters:
             arguments: [
             'dipoles', 
