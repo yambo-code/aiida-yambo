@@ -11,7 +11,7 @@ import copy
 from aiida.orm import ArrayData
 from aiida.orm import BandsData
 from aiida.orm import KpointsData
-from aiida.orm import Dict
+from aiida.orm import Dict, Str
 from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
@@ -21,7 +21,6 @@ from yamboparser.yambofolder import *
 
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
-from aiida_yambo.utils.gw2wannier90 import * 
 from aiida_yambo.parsers.utils import *
 
 from aiida_quantumespresso.calculations.pw import PwCalculation
@@ -86,11 +85,11 @@ class YppParser(Parser):
         self._logger = AIIDA_LOGGER.getChild('parser').getChild(
             self.__class__.__name__)
        # check for valid input
-        if calculation.process_type=='aiida.calculations:yambo.yambo':
+        if calculation.process_type=='aiida.calculations:yambo.ypp':
             yambo_parent=True
         else:
             raise OutputParsingError(
-                "Input calculation must be a YamboCalculation, not {}".format(calculation.process_type))
+                "Input calculation must be a YppCalculation, not {}".format(calculation.process_type))
 
         self._calc = calculation
         self.last_job_info = self._calc.get_last_job_info()
@@ -149,27 +148,10 @@ class YppParser(Parser):
         ndbqp = {}
         ndbhf = {}
 
-        for file in os.listdir(out_folder._repository._repo_folder.abspath):
+        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path/'):
             if 'stderr' in file:
-                with open(file,'r') as stderr:
+                with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
-        
-        if 'aiida.gw.unsorted.eig' in os.listdir(out_folder._repository._repo_folder.abspath):
-            
-            #unsorted_eig_path = os.path.join(out_folder._repository._repo_folder.abspath, 'aiida.gw.unsorted.eig')
-            
-            #####
-            ##RUN Gw2Wannier90.py
-            #####
-            if hasattr(self._calc.inputs,'local_input_folder'):
-                #mmn_amn_folder = self._calc.inputs.local_input_folder._repository._repo_folder.abspath+'/path'
-                gw2wannier90(
-                    seedname=Str('aiida'), 
-                    options = List(list=['mmn','amn']), 
-                    output_path=Str(out_folder._repository._repo_folder.abspath),
-                    nnkp_file = self._calc.inputs.nnkp_file, 
-                    pw2wannier_parent = self._calc.inputs.pw2wannier90_parent.outputs.retrieved,
-                )
                 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)

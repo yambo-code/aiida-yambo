@@ -1,15 +1,17 @@
 [aiida.calculations]
 yambo.yambo = aiida_yambo.calculations.yambo:YamboCalculation
-yambo.ypp = aiida_yambo.calculations.ypp.YppCalculation
+yambo.ypp = aiida_yambo.calculations.ypp:YppCalculation
 
 [aiida.data]
 
 
 [aiida.parsers]
 yambo.yambo = aiida_yambo.parsers.parsers:YamboParser
+yambo.ypp = aiida_yambo.parsers.yppparser:YppParser
 
 [aiida.workflows]
 yambo.yambo.yamboconvergence = aiida_yambo.workflows.yamboconvergence:YamboConvergence
 yambo.yambo.yamborestart = aiida_yambo.workflows.yamborestart:YamboRestart
 yambo.yambo.yambowf = aiida_yambo.workflows.yambowf:YamboWorkflow
+yambo.ypp.ypprestart = aiida_yambo.workflows.ypprestart:YppRestart
 

@@ -54,7 +54,7 @@ class YppCalculation(CalcJob):
         spec.input('metadata.options.output_filename', valid_type=six.string_types, default=cls._DEFAULT_OUTPUT_FILE)
 
        # Default output parser provided by AiiDA
-        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='yambo.yambo')
+        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='yambo.ypp')
 
        # self._SCRATCH_FOLDER = 'SAVE'
         spec.input('metadata.options.scratch_folder', valid_type=six.string_types, default='SAVE')
@@ -87,19 +87,13 @@ class YppCalculation(CalcJob):
                 help='Use a main code for ypp calculation')
         
         spec.input(
-            'nnkp_file',
-            valid_type=SinglefileData,
+            'wannier90_pp_parent',
+            valid_type=RemoteData,
             required=False,
             help=
-            'The nnkp file'
+            'The wannier90_pp that produced the nnkp file'
         )
-        spec.input(
-            'pw2wannier90_parent',
-            valid_type=FolderData,
-            required=False,
-            help=
-            "the pw2wannier90 retrieved folder, that has mmn and amn files as output."
-        )
+
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -109,10 +103,8 @@ class YppCalculation(CalcJob):
                 message='failed calculation for unknown reason')
         spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
-        spec.exit_code(504, 'NNKP_NOT_PRESENT',
+        spec.exit_code(504, 'WANNIER90_PP_PARENT_NOT_PRESENT',
                 message='Nnkp file not present')
-        spec.exit_code(505, 'PW2WANNIER90_PARENT_NOT_PRESENT',
-                message='mmn amn folder not present')
 
         #outputs definition:
 
@@ -188,13 +180,13 @@ class YppCalculation(CalcJob):
         params_dict = parameters.get_dict()
 
         if 'wannier' in params_dict['arguments']:
-            if not hasattr(self.inputs,'local_input_folder'): 
-                self.report('nnkp file not present in inputs, are you sure you are running a pro W90 calculation?')
-                self.exit_codes.NNKP_NOT_PRESENT
-            elif not hasattr(self.inputs,'pw2wannier90_parent'): 
-                self.report('mmn amn folder not present in inputs, are you sure you are running a pro W90 calculation?')
-                self.exit_codes.PW2WANNIER90_PARENT_NOT_PRESENT
-            
+            copy_dbs = True
+            if not hasattr(self.inputs,'wannier90_pp_parent'): 
+                self.report('WARNING: wannier90 pp (which generates aiida.nnkp file) not present in inputs, Needed.')
+                return self.exit_codes.WANNIER90_PP_PARENT_NOT_PRESENT
+            else:
+                remote_copy_list.append((self.inputs.wannier90_pp_parent.computer.uuid,self.inputs.wannier90_pp_parent.get_remote_path()+"/aiida.nnkp",'./aiida.nnkp'))
+
             params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
         y = YamboIn().from_dictionary(params_dict)
@@ -250,6 +242,7 @@ class YppCalculation(CalcJob):
 
         if 'wannier' in params_dict['arguments']:
             calcinfo.retrieve_list.append('*eig')
+            calcinfo.retrieve_list.append('*nnkp')
 
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:

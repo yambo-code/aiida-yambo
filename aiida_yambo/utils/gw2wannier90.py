@@ -30,6 +30,7 @@ import sys
 import glob
 
 from aiida.engine import calcfunction
+from aiida.orm import Str, List
 argv = sys.argv
 
 @calcfunction
