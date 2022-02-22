@@ -458,7 +458,7 @@ class The_Predictor_1D():
 
         if not self.check_passed and self.point_reached:
             self.next_step['new_grid'] = True
-        elif self.MAE_fit > self.conv_thr*factor:
+        elif self.MAE_fit > 10*self.conv_thr*factor:
             self.next_step['new_grid'] = True
         else:
             self.next_step['new_grid'] = Falsee
