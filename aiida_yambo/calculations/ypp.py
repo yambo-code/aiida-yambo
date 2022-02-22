@@ -4,6 +4,7 @@ Plugin to create a YPP input file and run a calculation with the ypp executable.
 """
 from __future__ import absolute_import
 import os
+from tokenize import Single
 import six
 
 from aiida.engine import CalcJob
@@ -17,7 +18,7 @@ from aiida.common.utils import classproperty
 
 from aiida.orm import Code
 from aiida.orm.nodes import Dict
-from aiida.orm.nodes import RemoteData, BandsData, ArrayData
+from aiida.orm.nodes import RemoteData, BandsData, ArrayData, SinglefileData, FolderData
 
 from aiida.plugins import DataFactory, CalculationFactory
 
@@ -53,7 +54,7 @@ class YppCalculation(CalcJob):
         spec.input('metadata.options.output_filename', valid_type=six.string_types, default=cls._DEFAULT_OUTPUT_FILE)
 
        # Default output parser provided by AiiDA
-        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='yambo.yambo')
+        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='yambo.ypp')
 
        # self._SCRATCH_FOLDER = 'SAVE'
         spec.input('metadata.options.scratch_folder', valid_type=six.string_types, default='SAVE')
@@ -84,6 +85,15 @@ class YppCalculation(CalcJob):
                 help='Use a remote folder as parent folder (for "restarts and similar"')
         spec.input('code',valid_type=Code,
                 help='Use a main code for ypp calculation')
+        
+        spec.input(
+            'wannier90_pp_parent',
+            valid_type=RemoteData,
+            required=False,
+            help=
+            'The wannier90_pp that produced the nnkp file'
+        )
+
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -93,6 +103,8 @@ class YppCalculation(CalcJob):
                 message='failed calculation for unknown reason')
         spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
+        spec.exit_code(504, 'WANNIER90_PP_PARENT_NOT_PRESENT',
+                message='Nnkp file not present')
 
         #outputs definition:
 
@@ -100,6 +112,12 @@ class YppCalculation(CalcJob):
                 required=True, help='returns the output parameters')
         spec.output('array_interpolated_bands', valid_type=ArrayData,
                 required=False, help='returns the interpolated bands array')
+        spec.output(
+            'eig_file',
+            valid_type=SinglefileData, #not necessary, but useful to have a node to be used by aiida-W90
+            required=False,
+            help='The post processed``.sorted.eig`` file.'
+        )
 
     def prepare_for_submission(self, tempfolder):
 
@@ -146,7 +164,7 @@ class YppCalculation(CalcJob):
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
         else:
-            raise InputValidationError("parent must be a YamboCalculation")
+            raise InputValidationError("YppCalculation parent MUST be a YamboCalculation")
 
         # TODO: check that remote data must be on the same computer
 
@@ -160,6 +178,16 @@ class YppCalculation(CalcJob):
         ###################################################
 
         params_dict = parameters.get_dict()
+
+        if 'wannier' in params_dict['arguments']:
+            copy_dbs = True
+            if not hasattr(self.inputs,'wannier90_pp_parent'): 
+                self.report('WARNING: wannier90 pp (which generates aiida.nnkp file) not present in inputs, Needed.')
+                return self.exit_codes.WANNIER90_PP_PARENT_NOT_PRESENT
+            else:
+                remote_copy_list.append((self.inputs.wannier90_pp_parent.computer.uuid,self.inputs.wannier90_pp_parent.get_remote_path()+"/aiida.nnkp",'./aiida.nnkp'))
+
+            params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
         y = YamboIn().from_dictionary(params_dict)
 
@@ -178,10 +206,7 @@ class YppCalculation(CalcJob):
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
         if copy_save:
-            try:
-                remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
-            except:
-                remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"out/aiida.save/SAVE/",'./SAVE/'))
+            remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
         else:
             try:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
@@ -215,6 +240,10 @@ class YppCalculation(CalcJob):
         calcinfo.retrieve_list.append('*stderr*') #standard errors
         extra_retrieved = []
 
+        if 'wannier' in params_dict['arguments']:
+            calcinfo.retrieve_list.append('*eig')
+            calcinfo.retrieve_list.append('*nnkp')
+
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
             extra_retrieved.append(additional)
@@ -225,6 +254,9 @@ class YppCalculation(CalcJob):
         c = CodeInfo()
         c.withmpi = True
         #c.withmpi = self.get_withmpi()
+
+        # Here we need something more flexible, because it is not always like that. 
+        # Like something automatic, where you specify 'interpolate bands' or 'excitonic wavefunctions...'
         c.cmdline_params = [
             "-F", self.metadata.options.input_filename, \
             '-J', self.metadata.options.output_filename, \

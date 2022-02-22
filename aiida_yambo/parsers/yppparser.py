@@ -11,7 +11,7 @@ import copy
 from aiida.orm import ArrayData
 from aiida.orm import BandsData
 from aiida.orm import KpointsData
-from aiida.orm import Dict
+from aiida.orm import Dict, Str
 from aiida.orm import StructureData
 from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
@@ -85,26 +85,21 @@ class YppParser(Parser):
         self._logger = AIIDA_LOGGER.getChild('parser').getChild(
             self.__class__.__name__)
        # check for valid input
-        if calculation.process_type=='aiida.calculations:yambo.yambo':
+        if calculation.process_type=='aiida.calculations:yambo.ypp':
             yambo_parent=True
         else:
             raise OutputParsingError(
-                "Input calculation must be a YamboCalculation, not {}".format(calculation.process_type))
+                "Input calculation must be a YppCalculation, not {}".format(calculation.process_type))
 
         self._calc = calculation
         self.last_job_info = self._calc.get_last_job_info()
-        self._eels_array_linkname = 'array_eels'
-        self._eps_array_linkname = 'array_eps'
-        self._alpha_array_linkname = 'array_alpha'
+        self._unsorted_eig_wannier = 'unsorted_eig'
+        self._sorted_eig_wannier = 'sorted_eig'
         self._qp_array_linkname = 'array_qp'
-        self._ndb_linkname = 'array_ndb'
-        self._ndb_QP_linkname = 'array_ndb_QP'
-        self._ndb_HF_linkname = 'array_ndb_HFlocXC'
-        self._lifetime_bands_linkname = 'bands_lifetime'
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
         self._system_info_linkname = 'system_info'
-        super(YamboParser, self).__init__(calculation)
+        super(YppParser, self).__init__(calculation)
 
     def parse(self, retrieved, **kwargs):
         """Parses the datafolder, stores results.
@@ -145,29 +140,19 @@ class YppParser(Parser):
         # retrieve the cell: if parent_calc is a YamboCalculation we must find the original PwCalculation
         # going back through the graph tree.
 
-        parent_calc = find_pw_parent(self._calc)
-        cell = parent_calc.inputs.structure.cell
-        try:
-            parent_save_path = take_calc_from_remote(self._calc.inputs.parent_folder).outputs.output_parameters.get_dict().pop('ns.db1_path','')
-        except:
-            parent_save_path = '.'
-
         output_params = {'warnings': [], 'errors': [], 'yambo_wrote_dbs': False, 'game_over': False,
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path}
+        'yambo_version':'5.x', 'Fermi(eV)':0,}
         ndbqp = {}
         ndbhf = {}
 
-        for file in os.listdir(out_folder._repository._repo_folder.abspath):
+        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path/'):
             if 'stderr' in file:
-                with open(file,'r') as stderr:
+                with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
-        
-        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath):
-            output_params['ns.db1_path'] = out_folder._repository._repo_folder.abspath
-
+                
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
@@ -185,23 +170,7 @@ class YppParser(Parser):
             if result.type=='report':
                 parse_report(result, output_params)
 
-            if 'eel' in result.filename:
-                eels_array = self._aiida_array(result.data)
-                self.out(self._eels_array_linkname, eels_array)
-            elif 'eps' in result.filename:
-                eps_array = self._aiida_array(result.data)
-                self.out(self._eps_array_linkname, eps_array)
-            elif 'alpha' in result.filename:
-                alpha_array = self._aiida_array(result.data)
-                self.out(self._alpha_array_linkname,alpha_array)
-
-            elif 'ndb.QP' == result.filename:
-                ndbqp = copy.deepcopy(result.data)
-
-            elif 'ndb.HF_and_locXC' == result.filename:
-                ndbhf = copy.deepcopy(result.data)
-
-            elif 'electrons' in input_params['arguments'] and 'interpolated' in result.filename:
+            if 'electrons' in input_params['arguments'] and 'interpolated' in result.filename:
                 if self._aiida_bands_data(result.data, cell, result.kpoints):
                     arr = self._aiida_bands_data(result.data, cell,
                                                  result.kpoints)
@@ -209,15 +178,6 @@ class YppParser(Parser):
                         self.out(self._quasiparticle_bands_linkname,arr)
                     if type(arr) == ArrayData:  #
                         self.out(self._qp_array_linkname,arr)
-
-            elif 'life___' in input_params['arguments']:
-                if self._aiida_bands_data(result.data, cell, result.kpoints):
-                    arr = self._aiida_bands_data(result.data, cell,
-                                                 result.kpoints)
-                    if type(arr) == BandsData:
-                        self.out(self._alpha_array_linkname+'_bands',arr)
-                    elif type(arr) == ArrayData:
-                        self.out(self._alpha_array_linkname + '_arr', arr)
         
         yambo_wrote_dbs(output_params)
 
@@ -248,134 +208,4 @@ class YppParser(Parser):
         self.out(self._parameter_linkname,params)  # output_parameters
 
         if success == False:
-
-            if 'time_most_prob' in output_params['errors']:
-                return self.exit_codes.WALLTIME_ERROR
-            elif output_params['para_error']:
-                return self.exit_codes.PARA_ERROR
-            elif output_params['memory_error'] and 'X_par_allocation' in output_params['errors']:
-                return self.exit_codes.X_par_MEMORY_ERROR              
-            elif output_params['memory_error']:
-                return self.exit_codes.MEMORY_ERROR
-            elif output_params['time_error']:
-                return self.exit_codes.WALLTIME_ERROR
-            else:
-                return self.exit_codes.NO_SUCCESS
-
-    def _aiida_array(self, data):
-        arraydata = ArrayData()
-        for ky in data.keys():
-            arraydata.set_array(ky.replace('-','_minus_'), data[ky])
-        return arraydata
-
-    def _aiida_bands_data(self, data, cell, kpoints_dict):
-        if not data:
-            return False
-        kpt_idx = sorted(data.keys())  #  list of kpoint indices
-        try:
-            k_list = [kpoints_dict[i]
-                      for i in kpt_idx]  # list of k-point triplet
-        except KeyError:
-            # kpoint triplets are not present (true  for .qp and so on, can not use BandsData)
-            # We use the internal Yambo Format  [ [Eo_1, Eo_2,... ], ...[So_1,So_2,] ]
-            #                                  QP_TABLE  [[ib_1,ik_1,isp_1]      ,[ib_n,ik_n,isp_n]]
-            # Each entry in DATA has corresponding legend in QP_TABLE that defines its details
-            # like   ib= Band index,  ik= kpoint index,  isp= spin polarization index.
-            #  Eo_1 =>  at ib_1, ik_1 isp_1.
-            pdata = ArrayData()
-            QP_TABLE = []
-            ORD = []
-            Eo = []
-            E_minus_Eo = []
-            So = []
-            Z = []
-            for ky in data.keys():  # kp == kpoint index as a string  1,2,..
-                for ind in range(len(data[ky]['Band'])):
-                    try:
-                        Eo.append(data[ky]['Eo'][ind])
-                    except KeyError:
-                        pass
-                    try:
-                        E_minus_Eo.append(data[ky]['E-Eo'][ind])
-                    except KeyError:
-                        pass
-                    try:
-                        So.append(data[ky]['Sc|Eo'][ind])
-                    except KeyError:
-                        pass
-                    try:
-                        Z.append(data[ky]['Z'][ind])
-                    except KeyError:
-                        pass
-                    ik = int(ky)
-                    ib = data[ky]['Band'][ind]
-                    isp = 0
-                    if 'Spin_Pol' in list(data[ky].keys()):
-                        isp = data[ky]['Spin_Pol'][ind]
-                    QP_TABLE.append([ik, ib, isp])
-            pdata.set_array('Eo', numpy.array(Eo))
-            pdata.set_array('E_minus_Eo', numpy.array(E_minus_Eo))
-            pdata.set_array('So', numpy.array(So))
-            pdata.set_array('Z', numpy.array(Z))
-            pdata.set_array('qp_table', numpy.array(QP_TABLE))
-            return pdata
-        quasiparticle_bands = BandsData()
-        quasiparticle_bands.set_cell(cell)
-        quasiparticle_bands.set_kpoints(k_list, cartesian=True)
-        # labels will come from any of the keys in the nested  kp_point data,
-        # there is a uniform set of observables for each k-point, ie Band, Eo, ...
-        # ***FIXME BUG does not seem to handle spin polarizes at all when constructing bandsdata***
-        bands_labels = [
-            legend for legend in sorted(data[list(data.keys())[0]].keys())
-        ]
-        append_list = [[] for i in bands_labels]
-        for kp in kpt_idx:
-            for i in range(len(bands_labels)):
-                append_list[i].append(data[kp][bands_labels[i]])
-        generalised_bands = [numpy.array(it) for it in append_list]
-        quasiparticle_bands.set_bands(
-            bands=generalised_bands, units='eV', labels=bands_labels)
-        return quasiparticle_bands
-
-    def _aiida_ndb_qp(self, data):
-        """
-        Save the data from ndb.QP to the db
-        """
-        pdata = ArrayData()
-        for quantity in data.keys():
-            name_quantity = quantity.replace('-','_minus_')
-            pdata.set_array(name_quantity, numpy.array(data[quantity]))
-        return pdata
-
-    def _aiida_ndb_hf(self, data):
-        """Save the data from ndb.HF_and_locXC
-
-        """
-        pdata = ArrayData()
-        for quantity in data.keys():
-            name_quantity = quantity.replace('-','_minus_')
-            pdata.set_array(name_quantity, numpy.array(data[quantity]))
-        return pdata
-
-    def _sigma_c(self, ndbqp, ndbhf):
-        """Calculate S_c if missing from  information parsed from the  ndb.*
-
-         Sc = 1/Z[ E-Eo] -S_x + Vxc
-        """
-        Z = numpy.array(ndbqp['Z'])
-        E_minus_Eo = numpy.array(ndbqp['E-Eo'])
-        Sx = numpy.array(ndbhf['Sx'])
-        Vxc = numpy.array(ndbhf['Vxc'])
-        try:
-            Sc = numpy.array(ndbqp['So'])
-        except KeyError:
-            Sc = 1 / Z * E_minus_Eo - Sx + Vxc
-        pdata = ArrayData()
-        for quantity in ndbqp.keys():
-            name_quantity = quantity.replace('-','_minus_')
-            pdata.set_array(name_quantity, numpy.array(ndbqp[quantity]))
-        for quantity in ndbhf.keys():
-            name_quantity = quantity.replace('-','_minus_')
-            pdata.set_array(name_quantity, numpy.array(ndbhf[quantity]))
-        pdata.set_array('Sc', Sc)
-        return pdata
+            return self.exit_codes.NO_SUCCESS
