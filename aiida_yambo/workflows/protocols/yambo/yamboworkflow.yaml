@@ -1,6 +1,4 @@
 default_inputs:
-    meta_parameters:
-        qe_protocol: 'fast'
     yres:
         protocol:'GW_fast'
 default_protocol: GW_fast
@@ -9,5 +7,5 @@ protocols:
         description: 'GW fast Protocol, under converged for most materials, but fast'
     GW_moderate:
         description: 'GW moderate Protocol, meta converged for most materials, higher computation cost than GW_fast'
-        meta_parameters:
-            qe_protocol: 'moderate'
+        yres:
+            protocol:'GW_fast'

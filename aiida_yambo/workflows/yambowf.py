@@ -44,10 +44,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
-        spec.input("additional_parsing", valid_type=List, required= False,
+        spec.input("additional_parsing", valid_type=List, required = False,
                     help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1]...')
         
-        spec.input("parent_folder", valid_type=RemoteData, required= False,
+        spec.input("parent_folder", valid_type=RemoteData, required = False,
                     help = 'scf, nscf or yambo remote folder')
   
 
@@ -91,6 +91,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         pw_code,
         preprocessing_code,
         code,
+        protocol_qe='fast',
         protocol='GW_fast',
         structure=None,
         overrides=None,
@@ -119,7 +120,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         inputs = cls.get_protocol_inputs(protocol, overrides={})
 
-        meta_parameters = inputs.pop('meta_parameters')
+        meta_parameters = inputs.pop('meta_parameters',{})
         
         builder = cls.get_builder()
 
@@ -146,7 +147,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         builder.scf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
-                protocol=meta_parameters['qe_protocol'],
+                protocol=protocol_qe,
                 overrides=overrides_scf,
                 electronic_type=electronic_type,
                 spin_type=spin_type,
@@ -156,7 +157,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
-                protocol=meta_parameters['qe_protocol'],
+                protocol=protocol_qe,
                 overrides=overrides_nscf,
                 electronic_type=electronic_type,
                 spin_type=spin_type,
@@ -171,19 +172,33 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         overrides_yres['PW_cutoff'] = builder.nscf['pw']['parameters'].get_dict()['SYSTEM']['ecutwfc']
 
         #########YAMBO PROTOCOL, with or without parent folder.
-        if not parent_folder: parent_folder = 'YWFL_scratch'
+        if not parent_folder: 
+            parent_folder = 'YWFL_scratch'
+        else:
+            builder.parent_folder = parent_folder
+            parent_folder = 'YWFL_super_parent'
+
 
         builder.yres = YamboRestart.get_builder_from_protocol(
                 preprocessing_code=preprocessing_code,
                 code=code,
                 protocol=protocol,
                 parent_folder=parent_folder,
-                overrides=overrides.pop('yres',{})
+                overrides=overrides_yres,
             )
 
-        yambo_bandsX = builder.yres['yambo']['parameters'].get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
-        yambo_bandsSc = builder.yres['yambo']['parameters'].get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
+        if 'BndsRnXp' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
+            yambo_bandsX = builder.yres['yambo']['parameters'].get_dict()['variables']['BndsRnXp'][0][-1]
+        else: 
+            yambo_bandsX = 0 
+        
+        if 'GbndRnge' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
+            yambo_bandsSc = builder.yres['yambo']['parameters'].get_dict()['variables']['GbndRnge'][0][-1]
+        else: 
+            yambo_bandsSc = 0 
+        
         gwbands = max(yambo_bandsX,yambo_bandsSc)
+
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
