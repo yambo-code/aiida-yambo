@@ -461,6 +461,6 @@ class The_Predictor_1D():
         elif self.MAE_fit > 10*self.conv_thr*factor:
             self.next_step['new_grid'] = True
         else:
-            self.next_step['new_grid'] = Falsee
+            self.next_step['new_grid'] = False
 
         return True

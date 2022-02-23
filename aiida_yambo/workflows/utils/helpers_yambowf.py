@@ -299,7 +299,7 @@ def parse_qp_level(calc, level_map):
 
     level_gw = (level_dft + level_corr)*27.2114
 
-    return level_gw, level_dft
+    return level_gw, level_dft*27.2114
 
 def parse_qp_gap(calc, gap_map): #post proc 
 
@@ -313,7 +313,9 @@ def parse_qp_gap(calc, gap_map): #post proc
     _vb_level_gw = (_vb_level_dft + _vb_level_corr)*27.2114
     _cb_level_gw = (_cb_level_dft + _cb_level_corr)*27.2114
 
-    return _cb_level_gw-_vb_level_gw, _cb_level_dft-_vb_level_dft
+
+
+    return _cb_level_gw-_vb_level_gw, _cb_level_dft*27.2114-_vb_level_dft*27.2114
 
 def parse_excitons(calc, what): #post proc 
 
@@ -387,7 +389,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                 parsed_dict['homo_'+key[-2]] =  homo_gw
                 parsed_dict['lumo_'+key[-1]] =  lumo_gw
 
-                parsed_dict[key] =  lumo_dft-homo_dft
+                parsed_dict[key+'_dft'] =  lumo_dft-homo_dft
                 parsed_dict['homo_'+key[-2]+'_dft'] =  homo_dft
                 parsed_dict['lumo_'+key[-1]+'_dft'] =  lumo_dft
             
