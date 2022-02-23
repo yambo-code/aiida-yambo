@@ -13,6 +13,9 @@ from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
 from aiida.engine import submit
 
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.common.types import ElectronicType, SpinType
+
 from aiida.plugins import WorkflowFactory
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import *
 from aiida_yambo.workflows.utils.helpers_aiida_yambo import calc_manager_aiida_yambo as calc_manager
@@ -20,9 +23,11 @@ from aiida_yambo.workflows.utils.helpers_workflow import *
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
 
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
+
 YamboWorkflow = WorkflowFactory('yambo.yambo.yambowf')
 
-class YamboConvergence(WorkChain):
+class YamboConvergence(ProtocolMixin, WorkChain):
 
     """This workflow will perform yambo convergences with respect to some parameter. It can be used also to run multi-parameter
        calculations.
@@ -77,9 +82,137 @@ class YamboConvergence(WorkChain):
         spec.exit_code(400, 'CONVERGENCE_NOT_REACHED',
                              message='The workchain failed to reach convergence.')
 
+    @classmethod
+    def get_protocol_filepath(cls):
+        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
+        from importlib_resources import files
+
+        from aiida_yambo.workflows.protocols import yambo as yamboconvergence_protocols
+        return files(yamboconvergence_protocols) / 'yamboconvergence.yaml'
+    
+    @classmethod
+    def get_builder_from_protocol(
+        cls,
+        pw_code,
+        preprocessing_code,
+        code,
+        protocol_qe='fast',
+        protocol='GW_fast',
+        structure=None,
+        overrides=None,
+        parent_folder=None,
+        electronic_type=ElectronicType.INSULATOR,
+        spin_type=SpinType.NONE,
+        initial_magnetic_moments=None,
+        **_
+    ):
+        """Return a builder prepopulated with inputs selected according to the chosen protocol.
+        :return: a process builder instance with all inputs defined ready for launch.
+        """
+        from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
+
+        if isinstance(code, str):
+            
+            pw_code = orm.load_code(pw_code)
+            preprocessing_code = orm.load_code(preprocessing_code)
+            code = orm.load_code(code)
+
+        if electronic_type not in [ElectronicType.METAL, ElectronicType.INSULATOR]:
+            raise NotImplementedError(f'electronic type `{electronic_type}` is not supported.')
+
+        if spin_type not in [SpinType.NONE, SpinType.COLLINEAR]:
+            raise NotImplementedError(f'spin type `{spin_type}` is not supported.')
+
+        inputs = cls.get_protocol_inputs(protocol, overrides={})
+
+        meta_parameters = inputs.pop('meta_parameters',{})
+        
+        builder = cls.get_builder()
+
+        overrides_scf = overrides.pop('scf',{})
+        overrides_nscf = overrides.pop('nscf',{})
+        overrides_yres = overrides.pop('yres',{})
+
+        for override in [overrides_scf,overrides_nscf]:
+            override['clean_workdir'] = override.pop('clean_workdir',False)
+        
+        overrides_nscf['pw'] = overrides_nscf.pop('pw',{'parameters':{}})
+        overrides_nscf['pw']['parameters']['CONTROL'] = overrides_nscf['pw']['parameters'].pop('CONTROL',{'calculation':'nscf'})
+
+        try:
+            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
+            PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
+            nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
+        except:
+            nelectrons, PW_cutoff = periodical(structure.get_ase())
+            overrides_yres['nelectrons'] = nelectrons
+            overrides_yres['PW_cutoff'] = PW_cutoff
+
+        #########SCF and NSCF PROTOCOLS 
+        builder.scf = PwBaseWorkChain.get_builder_from_protocol(
+                pw_code,
+                structure,
+                protocol=protocol_qe,
+                overrides=overrides_scf,
+                electronic_type=electronic_type,
+                spin_type=spin_type,
+                initial_magnetic_moments=initial_magnetic_moments,
+                )
+
+        builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
+                pw_code,
+                structure,
+                protocol=protocol_qe,
+                overrides=overrides_nscf,
+                electronic_type=electronic_type,
+                spin_type=spin_type,
+                initial_magnetic_moments=initial_magnetic_moments,
+                )
+        
+        nelectrons = 0
+        for site in builder.nscf['pw']['structure'].sites:
+            nelectrons += builder.nscf['pw']['pseudos'][site.kind_name].z_valence
+        
+        overrides_yres['nelectrons'] = nelectrons
+        overrides_yres['PW_cutoff'] = builder.nscf['pw']['parameters'].get_dict()['SYSTEM']['ecutwfc']
+
+        #########YAMBO PROTOCOL, with or without parent folder.
+        if not parent_folder: 
+            parent_folder = 'YWFL_scratch'
+        else:
+            builder.parent_folder = parent_folder
+            parent_folder = 'YWFL_super_parent'
+
+
+        builder.yres = YamboRestart.get_builder_from_protocol(
+                preprocessing_code=preprocessing_code,
+                code=code,
+                protocol=protocol,
+                parent_folder=parent_folder,
+                overrides=overrides_yres,
+            )
+
+        if 'BndsRnXp' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
+            yambo_bandsX = builder.yres['yambo']['parameters'].get_dict()['variables']['BndsRnXp'][0][-1]
+        else: 
+            yambo_bandsX = 0 
+        
+        if 'GbndRnge' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
+            yambo_bandsSc = builder.yres['yambo']['parameters'].get_dict()['variables']['GbndRnge'][0][-1]
+        else: 
+            yambo_bandsSc = 0 
+        
+        gwbands = max(yambo_bandsX,yambo_bandsSc)
+
+        parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
+        parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
+        builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
+        # pylint: enable=no-member
+
+        return builder
+        
     def start_workflow(self):
         """Initialize the workflow"""
-        time.sleep(5)
         self.ctx.small_space = False
         self.ctx.ratio = []   #ratio between Ecut and EmaxC
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
