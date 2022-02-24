@@ -315,7 +315,7 @@ def parse_qp_level(calc, level_map):
 
     level_gw = (level_dft + level_corr)*27.2114
 
-    return level_gw, level_dft
+    return level_gw, level_dft*27.2114
 
 def parse_qp_gap(calc, gap_map): #post proc 
 
@@ -329,17 +329,19 @@ def parse_qp_gap(calc, gap_map): #post proc
     _vb_level_gw = (_vb_level_dft + _vb_level_corr)*27.2114
     _cb_level_gw = (_cb_level_dft + _cb_level_corr)*27.2114
 
-    return _cb_level_gw-_vb_level_gw, _cb_level_dft-_vb_level_dft
+
+
+    return _cb_level_gw-_vb_level_gw, _cb_level_dft*27.2114-_vb_level_dft*27.2114
 
 def parse_excitons(calc, what): #post proc 
 
     if what == 'brightest':
-        brightest = calc.outputs.array_excitonic_states.get_array('intensities').argmax()
-        brightest = calc.outputs.array_excitonic_states.get_array('energies')[brightest]
-        return brightest
+        index = calc.outputs.array_excitonic_states.get_array('intensities').argmax()
+        brightest = calc.outputs.array_excitonic_states.get_array('energies')[index]
+        return brightest, index+1
     elif what == 'lowest':
         lowest = calc.outputs.array_excitonic_states.get_array('energies')[0]
-        return lowest 
+        return lowest, 1 
 
 def additional_parsed(calc, additional_parsing_List, mapping): #post proc 
     
@@ -403,21 +405,23 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                 parsed_dict['homo_'+key[-2]] =  homo_gw
                 parsed_dict['lumo_'+key[-1]] =  lumo_gw
 
-                parsed_dict[key] =  lumo_dft-homo_dft
+                parsed_dict[key+'_dft'] =  lumo_dft-homo_dft
                 parsed_dict['homo_'+key[-2]+'_dft'] =  homo_dft
                 parsed_dict['lumo_'+key[-1]+'_dft'] =  lumo_dft
             
             elif key=='brightest_exciton':
 
-                exciton = parse_excitons(calc, 'brightest')
+                exciton, index = parse_excitons(calc, 'brightest')
 
                 parsed_dict['brightest_exciton'] =  exciton
+                parsed_dict['brightest_exciton_index'] =  index
             
             elif key=='lowest_exciton':
 
-                exciton = parse_excitons(calc, 'lowest')
+                exciton, index = parse_excitons(calc, 'lowest')
 
                 parsed_dict['lowest_exciton'] =  exciton
+                parsed_dict['lowest_exciton_index'] =  index
             
             
             elif key in mapping.keys():
