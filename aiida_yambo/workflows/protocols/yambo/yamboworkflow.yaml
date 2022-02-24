@@ -1,0 +1,11 @@
+default_inputs:
+    yres:
+        protocol:'GW_fast'
+default_protocol: GW_fast
+protocols:
+    GW_fast:
+        description: 'GW fast Protocol, under converged for most materials, but fast'
+    GW_moderate:
+        description: 'GW moderate Protocol, meta converged for most materials, higher computation cost than GW_fast'
+        yres:
+            protocol:'GW_fast'

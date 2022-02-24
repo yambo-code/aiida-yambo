@@ -1,2 +1,3 @@
 include README.md
 include setup.json
+include aiida_yambo/workflows/protocols/yambo/*.yaml

@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 
 from aiida.orm import RemoteData
-from aiida.orm import Str, Dict, Int
+from aiida.orm import Str, Dict, Int, Bool, StructureData
 
 from aiida.common import ValidationError
 
@@ -16,9 +16,12 @@ from aiida.engine.processes.workchains.utils import ProcessHandlerReport, proces
 from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.workflows.utils.helpers_yamborestart import *
 from aiida_yambo.utils.parallel_namelists import *
+from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.utils.common_helpers import *
 
-class YamboRestart(BaseRestartWorkChain):
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
+
+class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
 
     """This module interacts directly with the yambo plugin to submit calculations
 
@@ -39,7 +42,7 @@ class YamboRestart(BaseRestartWorkChain):
         super(YamboRestart, cls).define(spec)
         spec.expose_inputs(YamboCalculation, namespace='yambo', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
-        spec.input("parent_folder", valid_type=RemoteData, required=True)
+        spec.input("parent_folder", valid_type=RemoteData, required=False) #false to build the ywfl protocols
         spec.input("max_walltime", valid_type=Int, default=lambda: Int(86400))
         spec.input("max_number_of_nodes", valid_type=Int, default=lambda: Int(0),
                     help = 'max number of nodes for restarts; if 0, it does not increase the number of nodes')
@@ -71,7 +74,114 @@ class YamboRestart(BaseRestartWorkChain):
             message='not enough bands in the Nscf dft step - nbnd - .')
         spec.exit_code(302, 'EMPTY_PARENT',
             message='parent is empty in the remote computer.')
+        spec.exit_code(303, 'NO_PARENT',
+            message='parent is not provided.')
+    
+    @classmethod
+    def get_protocol_filepath(cls):
+        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
+        from importlib_resources import files
 
+        from aiida_yambo.workflows.protocols import yambo as yamborestart_protocols
+        return files(yamborestart_protocols) / 'yamborestart.yaml'
+    
+    @classmethod
+    def get_builder_from_protocol(
+        cls,
+        preprocessing_code,
+        code,
+        protocol='GW_fast',
+        overrides=None,
+        parent_folder=None,
+        #electronic_type=ElectronicType.METAL,
+        #spin_type=SpinType.NONE,
+        #initial_magnetic_moments=None,
+        **_
+    ):
+        """Return a builder prepopulated with inputs selected according to the chosen protocol.
+        :return: a process builder instance with all inputs defined ready for launch.
+        """
+        from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
+
+        if isinstance(code, str):
+            
+            preprocessing_code = orm.load_code(preprocessing_code)
+            code = orm.load_code(code)
+
+        #type_check(precode, orm.Code)
+        #type_check(code, orm.Code)
+        #type_check(electronic_type, ElectronicType)
+        #type_check(spin_type, SpinType)
+
+        #if electronic_type not in [ElectronicType.METAL, ElectronicType.INSULATOR]:
+        #    raise NotImplementedError(f'electronic type `{electronic_type}` is not supported.')
+
+        #if spin_type not in [SpinType.NONE, SpinType.COLLINEAR]:
+        #    raise NotImplementedError(f'spin type `{spin_type}` is not supported.')
+
+        #if initial_magnetic_moments is not None and spin_type is not SpinType.COLLINEAR:
+        #    raise ValueError(f'`initial_magnetic_moments` is specified but spin type `{spin_type}` is incompatible.')
+
+        inputs = cls.get_protocol_inputs(protocol, overrides={})
+
+        meta_parameters = inputs.pop('meta_parameters')
+
+        try:
+            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
+            PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
+            nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
+        except:
+            nelectrons, PW_cutoff = overrides.pop('nelectrons',0), overrides.pop('PW_cutoff',0)
+
+        # Update the parameters based on the protocol inputs
+        parameters = inputs['yambo']['parameters']
+        metadata = inputs['yambo']['metadata']
+        
+        #if protocols GW
+        screening_PW_cutoff = int(PW_cutoff*meta_parameters['ratio_PW_cutoff'])
+        screening_PW_cutoff -= screening_PW_cutoff%2 
+        parameters['variables']['NGsBlkXp'] = [max(1,screening_PW_cutoff),'Ry']
+        
+        bands = int(nelectrons * meta_parameters['ratio_bands_electrons']/2)
+
+        parameters['variables']['BndsRnXp'] = [[1, bands], '']
+        parameters['variables']['GbndRnge'] = parameters['variables']['BndsRnXp']
+
+        # If overrides are provided, they are considered absolute
+        if overrides:
+            parameter_arguments_overrides = overrides.get('yambo', {}).get('parameters', {}).get('arguments', [])
+            parameters['arguments'] += parameter_arguments_overrides
+            
+            parameter_variables_overrides = overrides.get('yambo', {}).get('parameters', {}).get('variables', {})
+            parameters['variables'] = recursive_merge(parameters['variables'], parameter_variables_overrides)
+
+            metadata_overrides = overrides.get('metadata', {})
+            metadata = recursive_merge(metadata, metadata_overrides)
+
+        if not 'QPkrange' in parameters['variables'].keys(): 
+            parameters['variables']['QPkrange'] = [[[1, 1, int(nelectrons/2), int(nelectrons/2)+1,]], '']
+
+        # pylint: disable=no-member
+        builder = cls.get_builder()
+        builder.yambo['preprocessing_code'] = preprocessing_code
+        builder.yambo['code'] = code
+        builder.yambo['parameters'] = Dict(dict=parameters)
+        builder.yambo['metadata'] = metadata
+        if 'settings' in inputs['yambo']:
+            builder.yambo['settings'] = Dict(dict=inputs['yambo']['settings'])
+        builder.clean_workdir = Bool(inputs['clean_workdir'])
+
+        if not parent_folder:
+            RaiseError('You must provide a parent folder calculation, either QE or YAMBO') 
+        elif isinstance(parent_folder,str):
+            pass
+        else:
+            builder.parent_folder = parent_folder
+        # pylint: enable=no-member
+
+        return builder
+    
+    #############################################################################
     def setup(self):
         """setup of the calculation and run
         """
@@ -109,9 +219,12 @@ class YamboRestart(BaseRestartWorkChain):
     def validate_parent(self):
         """validation of the parent calculation --> should be at least nscf/p2y
         """
-        self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
-        if self.ctx.inputs['parent_folder'].is_empty: 
-            return self.exit_codes.EMPTY_PARENT
+        if not hasattr(self.inputs,'parent_folder'):
+            return self.exit_codes.NO_PARENT
+        else:
+            self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+            if self.ctx.inputs['parent_folder'].is_empty: 
+                return self.exit_codes.EMPTY_PARENT
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.
