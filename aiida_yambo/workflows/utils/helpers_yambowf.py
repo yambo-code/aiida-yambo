@@ -320,12 +320,12 @@ def parse_qp_gap(calc, gap_map): #post proc
 def parse_excitons(calc, what): #post proc 
 
     if what == 'brightest':
-        brightest = calc.outputs.array_excitonic_states.get_array('intensities').argmax()
-        brightest = calc.outputs.array_excitonic_states.get_array('energies')[brightest]
-        return brightest
+        index = calc.outputs.array_excitonic_states.get_array('intensities').argmax()
+        brightest = calc.outputs.array_excitonic_states.get_array('energies')[index]
+        return brightest, index+1
     elif what == 'lowest':
         lowest = calc.outputs.array_excitonic_states.get_array('energies')[0]
-        return lowest 
+        return lowest, 1 
 
 def additional_parsed(calc, additional_parsing_List, mapping): #post proc 
     
@@ -395,15 +395,17 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
             
             elif key=='brightest_exciton':
 
-                exciton = parse_excitons(calc, 'brightest')
+                exciton, index = parse_excitons(calc, 'brightest')
 
                 parsed_dict['brightest_exciton'] =  exciton
+                parsed_dict['brightest_exciton_index'] =  index
             
             elif key=='lowest_exciton':
 
-                exciton = parse_excitons(calc, 'lowest')
+                exciton, index = parse_excitons(calc, 'lowest')
 
                 parsed_dict['lowest_exciton'] =  exciton
+                parsed_dict['lowest_exciton_index'] =  index
             
             
             elif key in mapping.keys():
