@@ -238,10 +238,10 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             self.report('group: {}'.format(self.inputs.group_label.value))
         else:
             try:
-                self.ctx.workflow_manager['group'] = load_group("convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_formula()))
+                self.ctx.workflow_manager['group'] = load_group("convergence_tests_{}".format(self.ctx.calc_inputs.scf.pw.structure.get_formula()))
             except:
-                self.ctx.workflow_manager['group'] = Group(label="convergence_tests_{}".format(self.ctx.calc_inputs.structure.get_formula()))
-                self.report('creating group: {}'.format(self.ctx.calc_inputs.structure.get_formula()))
+                self.ctx.workflow_manager['group'] = Group(label="convergence_tests_{}".format(self.ctx.calc_inputs.scf.pw.structure.get_formula()))
+                self.report('creating group: {}'.format(self.ctx.calc_inputs.scf.pw.structure.get_formula()))
             if not self.ctx.workflow_manager['group'].is_stored: self.ctx.workflow_manager['group'].store()
             #here shold be added the YC to the group, not the single YWFLS
         
