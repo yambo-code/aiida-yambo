@@ -420,6 +420,11 @@ class The_Predictor_2D():
         self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next)
         self.point_reached = False
 
+        if reference == 'extra':
+            reference = self.extra
+        else:
+            reference = self.Z_fit[-1]
+            
         if self.conv_thr_units=='%':
             factor = 100/abs(reference)
         else:
