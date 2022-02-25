@@ -30,7 +30,7 @@ def set_parallelism(instructions_, inputs):
     new_parallelism, new_resources = False, False
     instructions = copy.deepcopy(instructions_)
     resources = inputs.yres.yambo.metadata.options.resources
-    structure = inputs.structure.get_ase()
+    structure = inputs.scf.pw.structure.get_ase()
     mesh = inputs.nscf.kpoints.get_kpoints_mesh()[0]
     kpoints = mesh[0]*mesh[1]*mesh[2]/2  #moreless... to fi
 
@@ -169,7 +169,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
             k_quantity_shift = inp_to_update.nscf.kpoints.get_kpoints_mesh()[1]
 
             inp_to_update.nscf.kpoints = KpointsData()
-            inp_to_update.nscf.kpoints.set_cell_from_structure(inp_to_update.structure) #to count the PBC...
+            inp_to_update.nscf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
             if isinstance(k_quantity,tuple) or isinstance(k_quantity,list):
                 inp_to_update.nscf.kpoints.set_kpoints_mesh(k_quantity,k_quantity_shift) 
             else:
