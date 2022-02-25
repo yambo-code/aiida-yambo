@@ -30,8 +30,46 @@ import sys
 import glob
 
 from aiida.engine import calcfunction
-from aiida.orm import Str, List
+from aiida.orm import Str, List, Dict
 argv = sys.argv
+
+@calcfunction
+def k_mapper(dense_mesh, coarse_mesh,VbM,Cbm):
+    '''calcfunction to map k points of a coarse mesh in 
+    a denser one. 
+    the two inputs dense and coarse mesh are calc.outputs.output_band
+    for each of the two calculations with the dense and coarse grid.
+    then we have valence and conduction extrema, to be provided as Int()
+
+    The output is then ready to update the key,val pair QPkrange,val in the
+    yambo input parameters['variables'].
+    '''
+    
+    VbM = VbM.value
+    Cbm = Cbm.value
+    coarse_mesh = coarse_mesh.get_kpoints()
+    dense_mesh = dense_mesh.get_kpoints()
+    import numpy as np
+    opt = np.array([0, 1, -1])
+    k_list = []
+    for i in coarse_mesh:
+        count = 1
+        for j in dense_mesh:
+            q = i - j
+            q = np.around(q, decimals=5)
+            if (q[0] in opt and q[1] in opt and q[2] in opt):
+                k_list.append(count)
+            count = count + 1
+    if len(coarse_mesh) == len(dense_mesh[np.array(k_list)-1]):
+        print('Grids are commensurate')
+    else:
+        print('Grids are not commensurate')
+        
+    qp_list = []
+    for i in k_list:
+        qp_list.append([i,i,VbM,Cbm])
+
+    return Dict(dict={'QPkrange': [qp_list, '']})
 
 @calcfunction
 def gw2wannier90(
