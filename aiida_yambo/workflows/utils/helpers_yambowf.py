@@ -142,7 +142,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     yambo_bandsX = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
     yambo_bandsSc = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
     gwbands = max(yambo_bandsX,yambo_bandsSc)
-    message_bands = 'GW bands are: {} '.format(gwbands)
+    message_bands = 'GW bands are: {}'.format(gwbands)
     messages.append(message_bands)
     #scf_params_def, nscf_params_def = create_quantumespresso_inputs(structure, bands_gw = gwbands)
 
@@ -160,7 +160,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
         try:
             nscf_params_parent = find_pw_parent(parent_calc, calc_type=['nscf']).inputs.parameters
-            message_nscf_parent = 'found nscf inputs from parent'
+            message_nscf_parent = 'found nscf inputs from parent\n'
         except:
             nscf_params_parent = False
     else:
@@ -171,11 +171,11 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         messages.append(message_scf)
         scf_params = scf_params_parent 
     elif hasattr(workchain_inputs,'scf_parameters'):
-        message_scf = 'scf inputs found, old inputs'
+        message_scf = 'scf inputs found, old inputs\n'
         messages.append(message_scf)
         scf_params = workchain_inputs.scf_parameters    
-    elif hasattr(workchain_inputs.scf.pw,'parameters'):
-        message_scf = 'scf inputs found'
+    elif hasattr(workchain_inputs.scf.pw,'parameters\n'):
+        message_scf = 'scf inputs found\n'
         messages.append(message_scf)
         scf_params = None
     #else:
@@ -193,27 +193,27 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         nscf_params =  nscf_params_parent
         if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
             redo_nscf = True
-            message_nscf += 'setting nbnd of the nscf calculation to b = {}'.format(gwbands)
+            message_nscf += 'setting nbnd of the nscf calculation to b = {}\n'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
             nscf_params = Dict(dict=nscf_params)
             messages.append(message_nscf)  
     elif hasattr(workchain_inputs,'nscf_parameters'):
-        message_nscf = 'nscf inputs found, old inputs' 
+        message_nscf = 'nscf inputs found, old inputs\n' 
         nscf_params =  workchain_inputs.nscf_parameters
         if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
             redo_nscf = True
-            message_nscf += ', and setting nbnd of the nscf calculation to b = {}'.format(gwbands)
+            message_nscf += ', and setting nbnd of the nscf calculation to b = {}\n'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
             nscf_params = Dict(dict=nscf_params)
         messages.append(message_nscf)  
     elif hasattr(workchain_inputs.nscf.pw,'parameters'):
-        message_nscf = 'nscf inputs found' 
+        message_nscf = 'nscf inputs found\n' 
         nscf_params =  workchain_inputs.nscf.pw.parameters
         if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
             redo_nscf = True
-            message_nscf += ', and setting nbnd of the nscf calculation to b = {}'.format(gwbands)
+            message_nscf += ', and setting nbnd of the nscf calculation to b = {}\n'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
             nscf_params = Dict(dict=nscf_params)

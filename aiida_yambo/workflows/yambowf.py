@@ -108,7 +108,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         if isinstance(code, str):
             
-            pw_code = orm.load_code(pw_code)
             preprocessing_code = orm.load_code(preprocessing_code)
             code = orm.load_code(code)
 
@@ -210,7 +209,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
     def validate_parameters(self):
 
         self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')        
-
+        self.report(self.ctx.yambo_inputs.yambo.parameters.get_dict())
         #quantumespresso common inputs
         self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
         self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
