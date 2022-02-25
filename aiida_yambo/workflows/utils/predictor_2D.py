@@ -423,8 +423,8 @@ class The_Predictor_2D():
         if reference == 'extra':
             reference = self.extra
         else:
-            reference = self.Z_fit[-1]
-            
+            reference = self.Z_fit[-1,-1]
+
         if self.conv_thr_units=='%':
             factor = 100/abs(reference)
         else:
