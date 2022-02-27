@@ -144,6 +144,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     gwbands = max(yambo_bandsX,yambo_bandsSc)
     message_bands = 'GW bands are: {}'.format(gwbands)
     messages.append(message_bands)
+    scf_params, nscf_params = None, None
     #scf_params_def, nscf_params_def = create_quantumespresso_inputs(structure, bands_gw = gwbands)
 
     if hasattr(workchain_inputs,'parent_folder'):
@@ -298,12 +299,14 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
             #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
             #else:
                 new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
+                break
         
         elif 'band_structure' in name:    #should provide as 'band_structure_vN_cM', where N, M are the amount of valence and conduction bands included 
             #if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
             #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
             #else:
                 new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-int(name[-4])+1,cond+int(name[-1])-1]
+                break
     
     return mapping, Dict(dict=new_params)
 
