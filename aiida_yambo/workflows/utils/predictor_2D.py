@@ -85,7 +85,7 @@ class The_Predictor_2D():
         self.res = copy.deepcopy(self.result[self.what].values[:] + self.Fermi)
         
         try:
-            self.bb_Ry = copy.deepcopy(self.bande[0,np.array(self.result.BndsRnXp.values)-1]/13.6)
+            self.bb_Ry = copy.deepcopy(self.bande[0,np.array(self.result.BndsRnXp.values,dtype='int64')-1]/13.6)
         except:
             self.bb_Ry = copy.deepcopy(self.bande[0,-1]/13.6)
             
