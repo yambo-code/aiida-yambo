@@ -211,13 +211,17 @@ class The_Predictor_1D():
             for i in range(3):
                 if self.delta[i] == 0:
                     l[i] = np.ones(length)
-            
-            #print('AAAAAAA',length, l)
+
             self.kx_fit = l[0]
             self.ky_fit = l[1]
             self.kz_fit = l[2]
-            
-            self.X_fit = l[0]*l[1]*l[2]
+
+            l_min = min(len(l[0]),len(l[1]),len(l[2])) #this is needed to match if some kx,ky,kz created with np.arange have different lengths
+            self.kx_fit = l[0][:l_min]
+            self.ky_fit = l[1][:l_min]
+            self.kz_fit = l[2][:l_min]
+
+            self.X_fit = l[0][:l_min]*l[1][:l_min]*l[2][:l_min]
         
         self.Zx_fit = fx(self.X_fit,popt[0])
         
