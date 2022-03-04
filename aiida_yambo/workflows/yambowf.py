@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from curses import meta
 
 from aiida.orm import RemoteData,BandsData
 from aiida.orm import Dict,Int
@@ -35,10 +36,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         super(YamboWorkflow, cls).define(spec)
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': True}, 
+        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': True}, 
+        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
@@ -92,7 +93,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         preprocessing_code,
         code,
         protocol_qe='fast',
-        protocol='GW_fast',
+        protocol='fast',
         structure=None,
         overrides=None,
         parent_folder=None,
@@ -162,6 +163,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
                 )
+
+        builder.nscf['kpoints'] = KpointsData()
+        builder.nscf['kpoints'].set_cell_from_structure(builder.scf['pw']['structure'])
+        builder.nscf['kpoints'].set_kpoints_mesh_from_density(meta_parameters['k_density'],force_parity=True)
         
         nelectrons = 0
         for site in builder.nscf['pw']['structure'].sites:
@@ -201,7 +206,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
-        # pylint: enable=no-member
 
         return builder
 

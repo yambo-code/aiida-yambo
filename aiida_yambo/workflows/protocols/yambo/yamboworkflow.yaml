@@ -1,11 +1,21 @@
 default_inputs:
+    meta_parameters:
+        k_density: 0.4
     yres:
-        protocol:'GW_fast'
-default_protocol: GW_fast
+        protocol:'fast'
+default_protocol: fast
 protocols:
-    GW_fast:
-        description: 'GW fast Protocol, under converged for most materials, but fast'
-    GW_moderate:
-        description: 'GW moderate Protocol, meta converged for most materials, higher computation cost than GW_fast'
+    fast:
+        description: 'Under converged for most materials, but fast'
+    moderate:
+        description: 'Meta converged for most materials, higher computational cost than fast'
+        meta_parameters:
+            k_density: 0.3
         yres:
-            protocol:'GW_fast'
+            protocol:'moderate'
+    accurate:
+        description: 'Converged for most materials, higher computational cost than moderate'
+        meta_parameters:
+            k_density: 0.2
+        yres:
+            protocol:'accurate'

@@ -27,66 +27,15 @@ default_inputs:
             }
 default_protocol: GW_fast
 protocols:
-    GW_fast:
-        description: 'GW Protocol, under converged for most materials, but fast'
-    GW_moderate:
-        description: 'GW Protocol, meta converged for most materials, higher computation cost than GW_fast'
+    fast:
+        description: 'Under converged for most materials, but fast'
+    moderate:
+        description: 'Meta converged for most materials, higher computational cost than fast'
         meta_parameters:
             ratio_bands_electrons: 50
             ratio_PW_cutoff: 0.2
-    BSE_fast:
-        description: 'BSE protocol, under converged for most materials, but fast'
+    converged:
+        description: 'Converged for most materials, higher computational cost than moderate'
         meta_parameters:
-            cutoff_VBM: 2
-            cutoff_CBm: 2
-            cutoff_description: 'the energy cutoff for valence and conduction bands, in eV'
-            cutoff_units: 'eV'
-            ratio_PW_cutoff: 0.1
-        parameters:
-            arguments: [
-            'dipoles',
-            'bse',
-            'bss',
-            'em1s',
-            'optics',
-            ]
-            variables: [
-            'BSEmod': 'resonant',
-            'BSKmod': 'SEX',
-            'BSSmod': 'd',
-            'Lkind': 'full',
-            'Chimod': 'hartree',
-            'BEnRange': [[0.0, 20.0],'eV'],
-            'BSEQptR': [[1, 1],''],
-            'BDmRange': [[0.1, 0.1],'eV'],
-            'DysSolver': "n",            
-            'PAR_def_mode': 'balanced',
-            ]
-    BSE_moderate:
-        description: 'BSE protocol, meta converged for most materials, higher computation cost than BSE_fast'
-        meta_parameters:
-            cutoff_VBM: 4
-            cutoff_CBm: 4
-            cutoff_description: 'the energy cutoff for valence and conduction bands, in eV'
-            cutoff_units: 'eV'
-            ratio_PW_cutoff: 0.2
-        parameters:
-            arguments: [
-            'dipoles',
-            'bse',
-            'bss',
-            'em1s',
-            'optics',
-            ]
-            variables: [
-            'BSEmod': 'resonant',
-            'BSKmod': 'SEX',
-            'BSSmod': 'd',
-            'Lkind': 'full',
-            'Chimod': 'hartree',
-            'BEnRange': [[0.0, 20.0],'eV'],
-            'BSEQptR': [[1, 1],''],
-            'BDmRange': [[0.1, 0.1],'eV'],
-            'DysSolver': "n",            
-            'PAR_def_mode': 'balanced',
-            ]
+            ratio_bands_electrons: 100
+            ratio_PW_cutoff: 0.3

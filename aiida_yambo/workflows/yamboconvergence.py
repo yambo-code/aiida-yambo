@@ -96,8 +96,8 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         pw_code,
         preprocessing_code,
         code,
-        protocol_qe='fast',
-        protocol='GW_fast',
+        protocol_qe='moderate',
+        protocol='moderate',
         structure=None,
         overrides=None,
         parent_folder=None,
@@ -129,85 +129,95 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
         builder = cls.get_builder()
 
-        overrides_scf = overrides.pop('scf',{})
-        overrides_nscf = overrides.pop('nscf',{})
-        overrides_yres = overrides.pop('yres',{})
+        overrides_ywfl = overrides.pop('ywfl',{})
 
-        for override in [overrides_scf,overrides_nscf]:
-            override['clean_workdir'] = override.pop('clean_workdir',False)
-        
-        overrides_nscf['pw'] = overrides_nscf.pop('pw',{'parameters':{}})
-        overrides_nscf['pw']['parameters']['CONTROL'] = overrides_nscf['pw']['parameters'].pop('CONTROL',{'calculation':'nscf'})
+        overrides_ywfl['clean_workdir'] = overrides_ywfl.pop('clean_workdir',False)
 
-        try:
-            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
-            PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
-            nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
-        except:
-            nelectrons, PW_cutoff = periodical(structure.get_ase())
-            overrides_yres['nelectrons'] = nelectrons
-            overrides_yres['PW_cutoff'] = PW_cutoff
-
-        #########SCF and NSCF PROTOCOLS 
-        builder.scf = PwBaseWorkChain.get_builder_from_protocol(
+        #########YWFL PROTOCOLS 
+        builder.ywfl = YamboWorkflow.get_builder_from_protocol(
                 pw_code,
-                structure,
-                protocol=protocol_qe,
-                overrides=overrides_scf,
-                electronic_type=electronic_type,
-                spin_type=spin_type,
-                initial_magnetic_moments=initial_magnetic_moments,
-                )
-
-        builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
-                pw_code,
-                structure,
-                protocol=protocol_qe,
-                overrides=overrides_nscf,
-                electronic_type=electronic_type,
-                spin_type=spin_type,
-                initial_magnetic_moments=initial_magnetic_moments,
-                )
-        
-        nelectrons = 0
-        for site in builder.nscf['pw']['structure'].sites:
-            nelectrons += builder.nscf['pw']['pseudos'][site.kind_name].z_valence
-        
-        overrides_yres['nelectrons'] = nelectrons
-        overrides_yres['PW_cutoff'] = builder.nscf['pw']['parameters'].get_dict()['SYSTEM']['ecutwfc']
-
-        #########YAMBO PROTOCOL, with or without parent folder.
-        if not parent_folder: 
-            parent_folder = 'YWFL_scratch'
-        else:
-            builder.parent_folder = parent_folder
-            parent_folder = 'YWFL_super_parent'
-
-
-        builder.yres = YamboRestart.get_builder_from_protocol(
-                preprocessing_code=preprocessing_code,
-                code=code,
+                preprocessing_code,
+                code,
+                structure=structure,
+                protocol_qe=protocol_qe,
                 protocol=protocol,
+                overrides=overrides_ywfl,
+                electronic_type=electronic_type,
+                spin_type=spin_type,
+                initial_magnetic_moments=initial_magnetic_moments,
                 parent_folder=parent_folder,
-                overrides=overrides_yres,
-            )
+                )
 
-        if 'BndsRnXp' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
-            yambo_bandsX = builder.yres['yambo']['parameters'].get_dict()['variables']['BndsRnXp'][0][-1]
-        else: 
-            yambo_bandsX = 0 
-        
-        if 'GbndRnge' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
-            yambo_bandsSc = builder.yres['yambo']['parameters'].get_dict()['variables']['GbndRnge'][0][-1]
-        else: 
-            yambo_bandsSc = 0 
-        
-        gwbands = max(yambo_bandsX,yambo_bandsSc)
+        ######### convergence settings
 
-        parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
-        parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
-        builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
-        # pylint: enable=no-member
+        ################ K mesh
+        builder.ywfl['nscf']['kpoints'] = KpointsData()
+        builder.ywfl['nscf']['kpoints'].set_cell_from_structure(builder.ywfl['nscf']['pw']['structure'])
+
+        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kmesh_density']['max'],force_parity=True)
+        k_end = builder.ywfl['nscf']['kpoints'].get_kpoints_mesh()[0]
+        
+        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kmesh_density']['stop'],force_parity=True)
+        k_stop = builder.ywfl['nscf']['kpoints'].get_kpoints_mesh()[0]
+
+        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kmesh_density']['start'],force_parity=True)
+        k_start = builder.ywfl['nscf']['kpoints'].get_kpoints_mesh()[0]
+        
+        k_delta = np.zeros(3,dtype='int64')
+        k_delta[np.where(builder.ywfl['nscf']['pw']['structure'].pbc)] = int(meta_parameters['kmesh_density']['delta'])
+        k_delta = list(k_delta)
+
+        ################ Bands
+        b_start=meta_parameters['bands']['start']
+        b_stop=meta_parameters['bands']['stop']
+        b_max=meta_parameters['bands']['max']
+        b_delta=meta_parameters['bands']['delta']
+
+        yambo_parameters = builder.ywfl['yres']['yambo']['parameters'].get_dict()
+        for b in ['BndsRnXp','GbndRnge']:
+            yambo_parameters['variables'][b] = [[1,b_start],'']
+        
+        ################ G cutoff
+        G_start=meta_parameters['G_vectors']['start']
+        G_stop=meta_parameters['G_vectors']['stop']
+        G_max=meta_parameters['G_vectors']['max']
+        G_delta=meta_parameters['G_vectors']['delta']
+
+        yambo_parameters['variables']['NGsBlkXp'] = [G_start,'Ry']
+
+        builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
+
+        builder.parameters_space =  List(list=[  {
+                           'var':['kpoint_mesh'],
+                           'start': k_start,
+                           'stop': k_stop ,
+                           'delta': k_delta,
+                           'max':k_end,
+                           'steps': 4, 
+                           'max_iterations': 4, \
+                           'conv_thr': meta_parameters['conv_thr_k'],
+                           'conv_thr_units':'%',
+                           'convergence_algorithm':'new_algorithm_1D',
+                           },  
+                           
+                           {
+                           'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
+                           'start': [b_start,b_start,G_start],
+                           'stop':[b_stop,b_stop,G_stop] ,
+                           'delta':[b_delta,b_delta,G_delta],
+                           'max':[b_max,b_max,G_max],
+                           'steps': 6, 
+                           'max_iterations': 8, \
+                           'conv_thr': meta_parameters['conv_thr_bG'],
+                           'conv_thr_units':'%',
+                           'convergence_algorithm':'new_algorithm_2D',
+                           },
+                        
+                        ])
+        
+        builder.workflow_settings = Dict(dict=inputs['workflow_settings'])
+
+
 
         return builder
         
@@ -677,7 +687,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             self.report('the pre calc was not succesful, exiting...')
             return self.exit_codes.PRECALC_FAILED
 
-        self.report('setting the pre calc as parent')
+        self.report('setting the pre calc remote folder {} as parent'.format(self.ctx.PRE.outputs.remote_folder.pk))
         set_parent(self.ctx.calc_inputs, self.ctx.PRE.outputs.remote_folder)
 
 

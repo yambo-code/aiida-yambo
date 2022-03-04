@@ -90,7 +90,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         cls,
         preprocessing_code,
         code,
-        protocol='GW_fast',
+        protocol='fast',
         overrides=None,
         parent_folder=None,
         #electronic_type=ElectronicType.METAL,
@@ -142,7 +142,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         screening_PW_cutoff -= screening_PW_cutoff%2 
         parameters['variables']['NGsBlkXp'] = [max(1,screening_PW_cutoff),'Ry']
         
-        bands = int(nelectrons * meta_parameters['ratio_bands_electrons']/2)
+        bands = int(nelectrons * meta_parameters['ratio_bands_electrons']/2) #want something also Volume dependent.
 
         parameters['variables']['BndsRnXp'] = [[1, bands], '']
         parameters['variables']['GbndRnge'] = parameters['variables']['BndsRnXp']
@@ -223,8 +223,11 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             return self.exit_codes.NO_PARENT
         else:
             self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+        try: #sometimes "Authentication timeout".
             if self.ctx.inputs['parent_folder'].is_empty: 
                 return self.exit_codes.EMPTY_PARENT
+        except:
+            self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.

@@ -148,7 +148,11 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     #scf_params_def, nscf_params_def = create_quantumespresso_inputs(structure, bands_gw = gwbands)
 
     if hasattr(workchain_inputs,'parent_folder'):
-        parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
+        try:
+            parent_calc = workchain_inputs.parent_folder.creator #take_calc_from_remote(workchain_inputs.parent_folder)
+        except:
+            parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
+           
         try:
             scf_params_parent = find_pw_parent(parent_calc, calc_type=['scf']).inputs.parameters
             message_scf_parent = 'found scf inputs from parent'
@@ -158,7 +162,10 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         scf_params_parent = False
 
     if hasattr(workchain_inputs,'parent_folder'):
-        parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
+        try:
+            parent_calc = workchain_inputs.parent_folder.creator #take_calc_from_remote(workchain_inputs.parent_folder)
+        except:
+            parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
         try:
             nscf_params_parent = find_pw_parent(parent_calc, calc_type=['nscf']).inputs.parameters
             message_nscf_parent = 'found nscf inputs from parent\n'
@@ -194,7 +201,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         nscf_params =  nscf_params_parent
         if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
             redo_nscf = True
-            message_nscf += 'setting nbnd of the nscf calculation to b = {}\n'.format(gwbands)
+            message_nscf += ' and setting nbnd of the nscf calculation to b = {}'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
             nscf_params = Dict(dict=nscf_params)
