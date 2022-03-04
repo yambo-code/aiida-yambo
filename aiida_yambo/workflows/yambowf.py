@@ -208,6 +208,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
 
+        print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
+
+
         return builder
 
 

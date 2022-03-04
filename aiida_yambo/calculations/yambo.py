@@ -76,7 +76,7 @@ class YamboCalculation(CalcJob):
 )
 
         spec.input('settings',valid_type=Dict,
-                default=Dict())
+                default=lambda: Dict(dict={}))
         spec.input('parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters')
         spec.input('parent_folder',valid_type=RemoteData,
@@ -84,7 +84,7 @@ class YamboCalculation(CalcJob):
         spec.input('preprocessing_code',valid_type=Code,
                 help='Use a preprocessing code for starting yambo',required=False)
         spec.input('precode_parameters',valid_type=Dict,
-                default=Dict(),
+                default=lambda: Dict(dict={}),
                 help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
