@@ -161,7 +161,9 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         if not 'QPkrange' in parameters['variables'].keys(): 
             parameters['variables']['QPkrange'] = [[[1, 1, int(nelectrons/2), int(nelectrons/2)+1,]], '']
 
-        # pylint: disable=no-member
+        print('Summary of the main inputs:\nBndsRnXp = {}\nGbndRnge = {}\nNGsBlkXp = {} {}\n'\
+            .format(parameters['variables']['BndsRnXp'][0][1],parameters['variables']['GbndRnge'][0][1],parameters['variables']['NGsBlkXp'][0],parameters['variables']['NGsBlkXp'][1]))
+
         builder = cls.get_builder()
         builder.yambo['preprocessing_code'] = preprocessing_code
         builder.yambo['code'] = code

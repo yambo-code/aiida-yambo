@@ -34,8 +34,8 @@ protocols:
         meta_parameters:
             ratio_bands_electrons: 50
             ratio_PW_cutoff: 0.2
-    converged:
+    accurate:
         description: 'Converged for most materials, higher computational cost than moderate'
         meta_parameters:
             ratio_bands_electrons: 100
-            ratio_PW_cutoff: 0.3
+            ratio_PW_cutoff: 0.4

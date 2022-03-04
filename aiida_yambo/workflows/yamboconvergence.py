@@ -217,8 +217,6 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
         builder.workflow_settings = Dict(dict=inputs['workflow_settings'])
 
-
-
         return builder
         
     def start_workflow(self):
