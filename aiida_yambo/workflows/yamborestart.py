@@ -223,8 +223,11 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             return self.exit_codes.NO_PARENT
         else:
             self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
+        try: #sometimes "Authentication timeout".
             if self.ctx.inputs['parent_folder'].is_empty: 
                 return self.exit_codes.EMPTY_PARENT
+        except:
+            self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.
