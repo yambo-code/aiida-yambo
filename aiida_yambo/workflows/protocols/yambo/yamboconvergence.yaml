@@ -1,0 +1,54 @@
+default_inputs:
+    meta_parameters:
+        conv_thr_k: 10
+        conv_thr_bG: 10
+        conv_thr_units: 'percentage of relative error'
+        bands: {
+            'start': 200,
+            'stop': 800,
+            'delta': 200,
+            'max': 2000,
+        }
+        G_vectors: {
+            'start': 8,
+            'stop': 18,
+            'delta': 2,
+            'max': 36,
+        }
+        kmesh_density: {
+            'start': 0.4,
+            'stop': 0.15,
+            'delta': 2,
+            'max': 0.1,
+        }
+    ywfl:
+        protocol: 'fast'
+    workflow_settings:
+                    {
+                        'type': '1D_convergence',
+                        'what': ['gap_GG'],
+                        'bands_nscf_update': 'all-at-once',
+                        'skip_pre': False,
+                    }
+    parameters_space: []
+
+default_protocol: fast
+protocols:
+    fast:
+        description: 'Fast protocol for a GW convergence, it will do it within a convergence threshold of 10% of the quantity that you want to converge'
+    moderate:
+        description: 'Moderate protocol for a GW convergence, it will do it within a convergence threshold of 5% of the quantity that you want to converge'
+        meta_parameters:
+            conv_thr_k: 5
+            conv_thr_bG: 5
+            conv_thr_units: 'percentage of relative error'
+        ywfl:
+            protocol:'moderate'
+    accurate:
+        description: 'Accurate protocol for a GW convergence, it will do it within a convergence threshold of 1% of the quantity that you want to converge'
+        meta_parameters:
+            conv_thr_k: 1
+            conv_thr_bG: 1
+            conv_thr_units: 'percentage of relative error'
+        ywfl:
+            protocol:'moderate'
