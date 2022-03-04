@@ -544,7 +544,7 @@ class YamboConvergence(WorkChain):
             self.report('the pre calc was not succesful, exiting...')
             return self.exit_codes.PRECALC_FAILED
 
-        self.report('setting the pre calc as parent')
+        self.report('setting the pre calc remote folder {} as parent'.format(self.ctx.PRE.outputs.remote_folder.pk))
         set_parent(self.ctx.calc_inputs, self.ctx.PRE.outputs.remote_folder)
 
 

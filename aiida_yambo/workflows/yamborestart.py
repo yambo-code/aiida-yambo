@@ -110,8 +110,11 @@ class YamboRestart(BaseRestartWorkChain):
         """validation of the parent calculation --> should be at least nscf/p2y
         """
         self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
-        if self.ctx.inputs['parent_folder'].is_empty: 
-            return self.exit_codes.EMPTY_PARENT
+        try: #sometimes "Authentication timeout".
+            if self.ctx.inputs['parent_folder'].is_empty: 
+                return self.exit_codes.EMPTY_PARENT
+        except:
+            self.ctx.inputs['parent_folder'] = self.inputs.parent_folder
 
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.
