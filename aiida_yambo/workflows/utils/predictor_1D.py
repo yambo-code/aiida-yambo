@@ -42,7 +42,8 @@ def create_grid_1D(edges=[],delta=[],alpha=1/3,add = [],var=['BndsRnXp',],shift=
             b.append(i)
 
         for i in add:
-            b.append(i)
+            if add != []:
+                b.append(i)
 
         return {'kpoint_mesh':b} #A,B,C,D,E,F
 
@@ -114,12 +115,19 @@ class The_Predictor_1D():
             for i in self.result['kpoint_mesh']:
                 kx.append(i[0])
                 k3.append(i[0]*i[1]*i[2])
+            
+            k_true=[]
+            for i in self.result['uuid']:
+                k_true.append(find_pw_parent(load_node(i)).outputs.output_parameters.get_dict()['number_of_k_points'])
 
             self.result['kx'] = kx
             self.result['k^3'] = k3
+            self.result['nk'] = k_true
             
-            self.p = self.parameters
+            
             self.starting_mesh = self.parameters[0]
+            self.parameters = np.array(self.parameters)
+            self.p = self.parameters
             self.parameters = self.parameters[:,0]*self.parameters[:,1]*self.parameters[:,2]
             self.delta_z = max(1,self.delta_[2])
             self.delta_y = max(1,self.delta_[1])
@@ -211,7 +219,8 @@ class The_Predictor_1D():
             for i in range(3):
                 if self.delta[i] == 0:
                     l[i] = np.ones(length)
-
+            
+            #print('AAAAAAA',length, l)
             self.kx_fit = l[0]
             self.ky_fit = l[1]
             self.kz_fit = l[2]
@@ -241,7 +250,7 @@ class The_Predictor_1D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where(abs(self.Zx_fit*self.delta_)<=thr/3)
+        self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-3)
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata),self.X_fit[self.condition_conv_calc][0]*1.5)
@@ -313,8 +322,7 @@ class The_Predictor_1D():
             thr = self.conv_thr
         
         #print(thr)
-        condition = np.where((abs(reference-self.Z_fit)<=thr) & \
-                            (abs(self.Zx_fit*self.delta_)<=thr))
+        condition = np.where((abs(reference-self.Z_fit)<=thr))
         
         #print(condition)
         #print(self.Z_fit[condition])

@@ -203,9 +203,9 @@ class The_Predictor_2D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where((abs(self.Zx_fit*self.delta_[0])<=thr/3) & \
-                            (abs(self.Zy_fit*self.delta_[1])<=thr/3) & \
-                            (abs(self.Zxy_fit*self.delta_[0] * self.delta_[1])<=thr/3))
+        self.condition_conv_calc = np.where((abs(self.Zx_fit)<5e-3) & \
+                            (abs(self.Zy_fit)<5e-3) & \
+                            (abs(self.Zxy_fit)<1e-7))
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0]*1.5)
@@ -293,10 +293,7 @@ class The_Predictor_2D():
             thr = self.conv_thr
         
         print(thr)
-        condition = np.where((abs(reference-self.Z_fit)<=thr) & \
-                            (abs(self.Zx_fit*self.delta_[0])<=thr) & \
-                            (abs(self.Zy_fit*self.delta_[1])<=thr) & \
-                            (abs(self.Zxy_fit*self.delta_[0]*self.delta_[1])<=thr))
+        condition = np.where((abs(reference-self.Z_fit)<=thr))
         print(condition)
         print(self.Z_fit[condition])
         print('\n')
