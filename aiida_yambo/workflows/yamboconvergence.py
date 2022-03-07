@@ -405,12 +405,13 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         #self.report(self.ctx.hint)
         # self.report(self.ctx.workflow_manager['parameter_space'])
         self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
+        self.report('HINTS: {}'.format(self.ctx.hint))
 
         if self.ctx.calc_manager['success']:
 
             self.report('Success, updating the history... ')
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, success=True, workflow_dict=self.ctx.workflow_manager)
             
             #self.report(self.ctx.final_result)
 
@@ -449,14 +450,19 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             self.report('Some calculations failed, updating the history and exiting... ')
             
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered,success=False, workflow_dict=self.ctx.workflow_manager)
             self.ctx.calc_manager['iter'] = self.ctx.calc_manager['max_iterations']+1 #exiting the workflow
 
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], (self.ctx.calc_manager['steps']-self.ctx.calc_manager['skipped'])*self.ctx.calc_manager['iter']))
-                        
+            
+
             if self.ctx.hint: 
+                if 'new_grid' in self.ctx.hint.keys():
+                    if self.ctx.hint['new_grid']: 
+                        self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
+                        self.ctx.calc_manager, oversteps, self.ctx.none_encountered,success='new_grid', workflow_dict=self.ctx.workflow_manager)
                 #self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.infos = self.ctx.hint
                 if 'converge_b_ratio' in self.ctx.hint.keys(): 

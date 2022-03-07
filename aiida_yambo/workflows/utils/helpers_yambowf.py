@@ -315,6 +315,10 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
                 new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-int(name[-4])+1,cond+int(name[-1])-1]
                 break
     
+    for i in new_params['variables']['QPkrange'][0]:
+        if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
+            new_params['variables']['QPkrange'][0].pop(new_params['variables']['QPkrange'][0].index(i))
+
     return mapping, Dict(dict=new_params)
 
 def parse_qp_level(calc, level_map):
