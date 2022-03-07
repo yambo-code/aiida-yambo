@@ -18,7 +18,7 @@ from aiida.common.utils import classproperty
 
 from aiida.orm import Code
 from aiida.orm.nodes import Dict
-from aiida.orm.nodes import RemoteData, BandsData, ArrayData, SinglefileData, FolderData
+from aiida.orm.nodes import RemoteData, BandsData, ArrayData, FolderData
 
 from aiida.plugins import DataFactory, CalculationFactory
 
@@ -31,6 +31,7 @@ from yambopy.io.inputfile import YamboIn
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 YamboCalculation = CalculationFactory('yambo.yambo')
+SingleFileData = DataFactory('singlefile')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Nicola Spallanzani" \
@@ -87,11 +88,11 @@ class YppCalculation(CalcJob):
                 help='Use a main code for ypp calculation')
         
         spec.input(
-            'wannier90_pp_parent',
-            valid_type=RemoteData,
+            'nnkp_file',
+            valid_type=SingleFileData,
             required=False,
             help=
-            'The wannier90_pp that produced the nnkp file'
+            'The nnkp file'
         )
 
 
@@ -103,8 +104,8 @@ class YppCalculation(CalcJob):
                 message='failed calculation for unknown reason')
         spec.exit_code(503, 'PARSER_ANOMALY',
                 message='Unexpected behavior of YamboFolder')
-        spec.exit_code(504, 'WANNIER90_PP_PARENT_NOT_PRESENT',
-                message='Nnkp file not present')
+        spec.exit_code(504, 'NNKP_NOT_PRESENT',
+                message='nnkp file not present')
 
         #outputs definition:
 
@@ -113,10 +114,10 @@ class YppCalculation(CalcJob):
         spec.output('array_interpolated_bands', valid_type=ArrayData,
                 required=False, help='returns the interpolated bands array')
         spec.output(
-            'eig_file',
-            valid_type=SinglefileData, #not necessary, but useful to have a node to be used by aiida-W90
+            'unsorted_eig_file',
+            valid_type=SingleFileData,
             required=False,
-            help='The post processed``.sorted.eig`` file.'
+            help='The ``.unsorted.eig`` file.'
         )
 
     def prepare_for_submission(self, tempfolder):
@@ -181,11 +182,11 @@ class YppCalculation(CalcJob):
 
         if 'wannier' in params_dict['arguments']:
             copy_dbs = True
-            if not hasattr(self.inputs,'wannier90_pp_parent'): 
-                self.report('WARNING: wannier90 pp (which generates aiida.nnkp file) not present in inputs, Needed.')
-                return self.exit_codes.WANNIER90_PP_PARENT_NOT_PRESENT
+            if not hasattr(self.inputs,'nnkp_file'): 
+                self.report('WARNING: aiida.nnkp file not present in inputs, Needed.')
+                return self.exit_codes.NNKP_NOT_PRESENT
             else:
-                remote_copy_list.append((self.inputs.wannier90_pp_parent.computer.uuid,self.inputs.wannier90_pp_parent.get_remote_path()+"/aiida.nnkp",'./aiida.nnkp'))
+                local_copy_list.append((self.inputs.nnkp_file.uuid, self.inputs.nnkp_file.filename, 'aiida.nnkp'))
 
             params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
@@ -226,7 +227,7 @@ class YppCalculation(CalcJob):
 
         calcinfo.uuid = self.uuid
 
-        calcinfo.local_copy_list = []
+        calcinfo.local_copy_list = local_copy_list   #here I need to append the nnkp_file...
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.remote_symlink_list = remote_symlink_list
 

@@ -39,6 +39,7 @@ __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Michael Atambo (michaelontita.atambo@unimore.it)", \
               " and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
+SingleFileData = DataFactory('singlefile')
 
 class YppParser(Parser):
     """This class is a wrapper class for the Parser class for Yambo calculators from yambopy.
@@ -93,8 +94,7 @@ class YppParser(Parser):
 
         self._calc = calculation
         self.last_job_info = self._calc.get_last_job_info()
-        self._unsorted_eig_wannier = 'unsorted_eig'
-        self._sorted_eig_wannier = 'sorted_eig'
+        self._unsorted_eig_wannier = 'unsorted_eig_file'
         self._qp_array_linkname = 'array_qp'
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
@@ -152,6 +152,10 @@ class YppParser(Parser):
             if 'stderr' in file:
                 with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
                     parse_scheduler_stderr(stderr, output_params)
+            if 'unsorted' in file:
+                unsorted_eig = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
+                self.out(self._unsorted_eig_wannier,unsorted_eig)
+                #self.report('stored the unsorted.eig file as SingleFileData')
                 
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
