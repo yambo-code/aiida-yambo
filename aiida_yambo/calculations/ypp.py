@@ -45,7 +45,7 @@ class YppCalculation(CalcJob):
     """
 
     # Default input and output files
-    _DEFAULT_INPUT_FILE = 'aiida.in'
+    _DEFAULT_INPUT_FILE = 'ypp.in'
     _DEFAULT_OUTPUT_FILE = 'aiida.out'
 
     @classmethod
@@ -224,7 +224,7 @@ class YppCalculation(CalcJob):
                 j+=1
                 qp = load_node(calc).outputs.QP_db
                 local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
-                list_of_dbs.append(["E","+","1",'ndb.QP_'+str(j)])
+                list_of_dbs.append(['"E"','"+"','"1"','"'+'ndb.QP_'+str(j)+'"'])
             params_dict['variables']['Actions_and_names'] = [list_of_dbs,'']
             
         y = YamboIn().from_dictionary(params_dict)
