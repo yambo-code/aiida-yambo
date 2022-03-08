@@ -212,7 +212,7 @@ class YppCalculation(CalcJob):
             params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
         if 'QPDB_merge' in params_dict['arguments']:
-            link_dbs, copy_save = True, True
+            copy_save = True
             
             if not hasattr(self.inputs,'QP_calculations'): 
                 self.report('WARNING: QP_calculations list not present in inputs, Needed.')
