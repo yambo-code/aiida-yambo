@@ -225,7 +225,7 @@ class YppCalculation(CalcJob):
                 qp = load_node(calc).outputs.QP_db
                 local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
                 list_of_dbs.append(["E","+","1",'ndb.QP_'+str(j)])
-            params_dict['variables'] = [list_of_dbs,'']
+            params_dict['variables']['Actions_and_names'] = [list_of_dbs,'']
             
         y = YamboIn().from_dictionary(params_dict)
 
