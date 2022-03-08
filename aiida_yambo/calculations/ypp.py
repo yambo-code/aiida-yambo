@@ -108,7 +108,7 @@ class YppCalculation(CalcJob):
             'QP_calculations',
             valid_type=List,
             required=False,
-            help='List of QP calculations that you want to merge. or use in the Wannier')
+            help='List of QP pk/uuid calculations that you want to merge. or use in the Wannier')
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -222,7 +222,7 @@ class YppCalculation(CalcJob):
             list_of_dbs = []
             for calc in self.inputs.QP_calculations.get_list():
                 j+=1
-                qp = calc.outputs.QP_db
+                qp = load_node(calc).outputs.QP_db
                 local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
                 list_of_dbs.append(["E","+","1",'ndb.QP_'+str(j)])
             params_dict['variables'] = [list_of_dbs,'']
