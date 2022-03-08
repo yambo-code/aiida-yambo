@@ -29,6 +29,7 @@ from six.moves import range
 import cmath
 import netCDF4
 
+SingleFileData = DataFactory('singlefile')
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
