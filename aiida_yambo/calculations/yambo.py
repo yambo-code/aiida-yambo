@@ -327,7 +327,7 @@ class YamboCalculation(CalcJob):
         c2.code_uuid = main_code.uuid
 
         # if the parent calculation is a yambo calculation skip the interface (c1) and the initialization (c2)
-        if yambo_parent:
+        '''if yambo_parent:
             try:
                 parent_settings = _uppercase_dict(
                     parent_calc.inputs.settings.get_dict(),
@@ -338,9 +338,9 @@ class YamboCalculation(CalcJob):
             #c1 = None
             #if not parent_initialise:
             #    c2 = None
-        else:
-            c1.cmdline_params = precode_params_list
-            c1.code_uuid = preproc_code.uuid
+        else:'''
+        c1.cmdline_params = precode_params_list
+        c1.code_uuid = preproc_code.uuid
 
         # c3 = yambo calculation
         c3 = CodeInfo()
