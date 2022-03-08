@@ -16,20 +16,20 @@ from aiida.common.exceptions import UniquenessError, InputValidationError, Valid
 from aiida.common.utils import classproperty
 
 from aiida.orm import Code
-from aiida.orm.nodes import Dict
-from aiida.orm.nodes import RemoteData, BandsData, ArrayData
+from aiida.orm import Dict
+from aiida.orm import RemoteData, BandsData, ArrayData
 
 from aiida.plugins import DataFactory, CalculationFactory
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common import LinkType
-from aiida_yambo.calculations.ypp import SingleFileData
 
 from aiida_yambo.utils.common_helpers import * 
 
 from yambopy.io.inputfile import YamboIn
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
+SingleFileData = DataFactory('singlefile')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
