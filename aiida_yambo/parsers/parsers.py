@@ -97,6 +97,7 @@ class YamboParser(Parser):
         self._eps_array_linkname = 'array_eps'
         self._alpha_array_linkname = 'array_alpha'
         self._qp_array_linkname = 'array_qp'
+        self._QP_db_linkname = 'QP_db'
         self._ndb_linkname = 'array_ndb'
         self._ndb_QP_linkname = 'array_ndb_QP'
         self._ndb_CHI_linkname = 'array_chi'
@@ -210,6 +211,9 @@ class YamboParser(Parser):
             
             if 'ndb.QP' == result.filename:
                 ndbqp = copy.deepcopy(result.data)
+                
+                QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+result.filename)
+                self.out(self._QP_db_linkname,QP_db)
 
             elif 'ndb.HF_and_locXC' == result.filename:
                 ndbhf = copy.deepcopy(result.data)

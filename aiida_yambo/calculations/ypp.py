@@ -84,6 +84,7 @@ class YppCalculation(CalcJob):
                 help='Use a node that specifies the input parameters')
         spec.input('parent_folder',valid_type=RemoteData,
                 help='Use a remote folder as parent folder (for "restarts and similar"')
+        
         spec.input('code',valid_type=Code,
                 help='Use a main code for ypp calculation')
         
@@ -95,6 +96,19 @@ class YppCalculation(CalcJob):
             'The nnkp file'
         )
 
+        spec.input(
+            'QP_DB',
+            valid_type=SingleFileData,
+            required=False,
+            help=
+            'The QP_DB file'
+        )
+
+        spec.input(
+            'QP_calculations',
+            valid_type=List,
+            required=False,
+            help='List of QP calculations that you want to merge. or use in the Wannier')
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -106,6 +120,8 @@ class YppCalculation(CalcJob):
                 message='Unexpected behavior of YamboFolder')
         spec.exit_code(504, 'NNKP_NOT_PRESENT',
                 message='nnkp file not present')
+        spec.exit_code(505, 'QP_LIST_NOT_PRESENT',
+                message='QP list not present')
 
         #outputs definition:
 
@@ -119,6 +135,8 @@ class YppCalculation(CalcJob):
             required=False,
             help='The ``.unsorted.eig`` file.'
         )
+        spec.output('QP_merged', valid_type=SingleFileData,
+                required=False, help='returns the singlefiledata for ndbQP')
 
     def prepare_for_submission(self, tempfolder):
 
@@ -187,9 +205,28 @@ class YppCalculation(CalcJob):
                 return self.exit_codes.NNKP_NOT_PRESENT
             else:
                 local_copy_list.append((self.inputs.nnkp_file.uuid, self.inputs.nnkp_file.filename, 'aiida.nnkp'))
-
+            
+            if hasattr(self.inputs,'QP_DB'): 
+                local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))
+            
             params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
+        if 'QPDB_merge' in params_dict['arguments']:
+            link_dbs, copy_save = True, True
+            
+            if not hasattr(self.inputs,'QP_calculations'): 
+                self.report('WARNING: QP_calculations list not present in inputs, Needed.')
+                return self.exit_codes.QP_LIST_NOT_PRESENT
+            
+            j=0
+            list_of_dbs = []
+            for calc in self.inputs.QP_calculations.get_list():
+                j+=1
+                qp = calc.outputs.QP_db
+                local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
+                list_of_dbs.append(["E","+","1",'ndb.QP_'+str(j)])
+            params_dict['variables'] = [list_of_dbs,'']
+            
         y = YamboIn().from_dictionary(params_dict)
 
         input_filename = tempfolder.get_abs_path(self.metadata.options.input_filename)
@@ -244,6 +281,9 @@ class YppCalculation(CalcJob):
         if 'wannier' in params_dict['arguments']:
             calcinfo.retrieve_list.append('*eig')
             calcinfo.retrieve_list.append('*nnkp')
+
+        if 'QPDB_merge' in params_dict['arguments']:
+            calcinfo.retrieve_list.append('SAVE/ndb.QP_DB*')
 
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:

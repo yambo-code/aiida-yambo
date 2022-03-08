@@ -23,6 +23,7 @@ from aiida.plugins import DataFactory, CalculationFactory
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common import LinkType
+from aiida_yambo.calculations.ypp import SingleFileData
 
 from aiida_yambo.utils.common_helpers import * 
 
@@ -135,7 +136,8 @@ class YamboCalculation(CalcJob):
                 required=False, help='returns the array for excitonic states')
         spec.output('system_info', valid_type=Dict,
                 required=False, help='returns some system information after a p2y')
-
+        spec.output('QP_db', valid_type=SingleFileData,
+                required=False, help='returns the singlefiledata for ndbQP')
 
 
     def prepare_for_submission(self, tempfolder):
