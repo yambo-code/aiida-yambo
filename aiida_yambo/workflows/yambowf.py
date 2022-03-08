@@ -237,8 +237,10 @@ class YamboWorkflow(WorkChain):
 
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('updating yambo parameters to parse more results')
+                self.report(self.ctx.yambo_inputs.yambo.parameters.get_dict())
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
+                self.report(yambo_parameters.get_dict())
 
             self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
