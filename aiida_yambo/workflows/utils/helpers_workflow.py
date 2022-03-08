@@ -724,6 +724,8 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 if 'new_grid' in hints.keys():
                     if hints['new_grid']: 
                         y.analyse(old_hints={})
+                    else:
+                        y.analyse(old_hints=hints)
                 else:
                     y.analyse(old_hints=hints) #just convergence as before
                 is_converged = y.check_passed and y.point_reached

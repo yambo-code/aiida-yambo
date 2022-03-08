@@ -264,7 +264,7 @@ def find_gw_info(inputs):
     return bands, qp, last_qp, runlevels
 
 def understand_valence_metal_wise(bands, fermi, index):
-    return len(np.where(bands[index-1]-fermi<0.001)[0])
+    return len(np.where(bands[index-1]<=fermi)[0])
 
 def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
     s = load_node(nscf_pk)
@@ -281,9 +281,9 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                 valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-2]])
                 conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]]) + 1 + 1*int(mapping['soc'])
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
-                        mapping['valence'],mapping['valence']],
+                        valence,valence],
                         [maps[quantity[-1]],maps[quantity[-1]],
-                         mapping['conduction'],mapping['conduction']]]
+                         conduction,conduction]]
         else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
