@@ -20,7 +20,7 @@ from aiida_yambo.utils.k_path_utils import *
 def find_parent(calc):
 
     try:
-        parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
+        parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[0] #to load the node from a workchain...
     except:
         try:
             parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
