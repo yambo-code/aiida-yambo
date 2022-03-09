@@ -163,7 +163,7 @@ class YppParser(Parser):
                 #self.report('stored the unsorted.eig file as SingleFileData')
             if 'ndb.QP_merged' in file:
                 if count_merged>1:
-                    pass
+                    return self.exit_codes.MERGE_NOT_COMPLETE
                 else:
                     QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
                     self.out(self._QP_merged_linkname,QP_db)  
