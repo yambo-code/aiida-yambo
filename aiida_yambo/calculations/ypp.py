@@ -135,8 +135,9 @@ class YppCalculation(CalcJob):
             required=False,
             help='The ``.unsorted.eig`` file.'
         )
-        spec.output('QP_db', valid_type=SingleFileData,
+        spec.output('QP_DB', valid_type=SingleFileData,
                 required=False, help='returns the singlefiledata for ndbQP')
+
 
     def prepare_for_submission(self, tempfolder):
 
@@ -180,8 +181,13 @@ class YppCalculation(CalcJob):
 
         parent_calc = take_calc_from_remote(parent_calc_folder)
 
+        yambo_parent = False
+        ypp_parent=True
+
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
+        elif parent_calc.process_type=='aiida.calculations:yambo.ypp':
+            ypp_parent=True
         else:
             raise InputValidationError("YppCalculation parent MUST be a YamboCalculation")
 
@@ -214,17 +220,28 @@ class YppCalculation(CalcJob):
         if 'QPDB_merge' in params_dict['arguments']:
             copy_save = True
             
-            if not hasattr(self.inputs,'QP_calculations'): 
-                self.report('WARNING: QP_calculations list not present in inputs, Needed.')
+            if not hasattr(self.inputs,'QP_calculations') and not ypp_parent: 
+                self.report('WARNING: QP_calculations list or folders not present in inputs, Needed.')
                 return self.exit_codes.QP_LIST_NOT_PRESENT
             
             j=0
             list_of_dbs = []
-            for calc in self.inputs.QP_calculations.get_list():
-                j+=1
-                qp = load_node(calc).outputs.QP_db
-                local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
-                list_of_dbs.append(['"E"','"+"','"1"','"'+'ndb.QP_'+str(j)+'"'])
+            if hasattr(self.inputs,'QP_calculations') and not ypp_parent:
+                for calc in self.inputs.QP_calculations.get_list():
+                    j+=1
+                    qp = load_node(calc).outputs.QP_db
+                    local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
+                    list_of_dbs.append(['"E"','"+"','"1"','"'+'ndb.QP_'+str(j)+'"'])
+
+            elif not hasattr(self.inputs,'QP_calculations') and ypp_parent:
+                ypp_parent_calc = take_calc_from_remote(self.inputs.parent_folder)
+                for file in os.listdir(ypp_parent_calc._repository._repo_folder.abspath+'/path/'):
+                    if 'ndb.QP' in file:
+                    #qp = load_node(calc).outputs.QP_db
+                        #local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
+                        list_of_dbs.append(['"E"','"+"','"1"','"SAVE/'+file+'"'])
+            
+            
             params_dict['variables']['Actions_and_names'] = [list_of_dbs,'']
             
         y = YamboIn().from_dictionary(params_dict)

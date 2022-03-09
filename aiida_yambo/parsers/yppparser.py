@@ -99,7 +99,7 @@ class YppParser(Parser):
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
         self._system_info_linkname = 'system_info'
-        self._QP_merged_linkname = 'QP_db'
+        self._QP_merged_linkname = 'QP_DB'
         super(YppParser, self).__init__(calculation)
 
     def parse(self, retrieved, **kwargs):
@@ -149,6 +149,10 @@ class YppParser(Parser):
         ndbqp = {}
         ndbhf = {}
 
+        count_merged = 0
+        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path/'):
+            if 'ndb.QP_merged' in file:
+                count_merged +=1
         for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path/'):
             if 'stderr' in file:
                 with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
@@ -158,8 +162,11 @@ class YppParser(Parser):
                 self.out(self._unsorted_eig_wannier,unsorted_eig)
                 #self.report('stored the unsorted.eig file as SingleFileData')
             if 'ndb.QP_merged' in file:
-                QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
-                self.out(self._QP_merged_linkname,QP_db)  
+                if count_merged>1:
+                    pass
+                else:
+                    QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
+                    self.out(self._QP_merged_linkname,QP_db)  
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
         except Exception as e:
