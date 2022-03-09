@@ -264,7 +264,7 @@ def find_gw_info(inputs):
     return bands, qp, last_qp, runlevels
 
 def understand_valence_metal_wise(bands, fermi, index):
-    return len(np.where(bands[index-1]<=fermi)[0])
+    return len(np.where((bands[index-1]-fermi)<=1e-2)[0])
 
 def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
     s = load_node(nscf_pk)
