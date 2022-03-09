@@ -283,7 +283,7 @@ class YppCalculation(CalcJob):
             calcinfo.retrieve_list.append('*nnkp')
 
         if 'QPDB_merge' in params_dict['arguments']:
-            calcinfo.retrieve_list.append('SAVE/ndb.QP_DB*')
+            calcinfo.retrieve_list.append('SAVE/ndb.QP_merged*')
 
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
