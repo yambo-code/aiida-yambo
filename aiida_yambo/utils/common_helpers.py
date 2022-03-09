@@ -20,7 +20,7 @@ from aiida_yambo.utils.k_path_utils import *
 def find_parent(calc):
 
     try:
-        parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
+        parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[0] #to load the node from a workchain...
     except:
         try:
             parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
@@ -264,7 +264,7 @@ def find_gw_info(inputs):
     return bands, qp, last_qp, runlevels
 
 def understand_valence_metal_wise(bands, fermi, index):
-    return len(np.where(bands[index-1]<=fermi)[0])
+    return len(np.where((bands[index-1]-fermi)<=1e-2)[0])
 
 def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
     s = load_node(nscf_pk)
