@@ -72,7 +72,7 @@ class YppRestart(BaseRestartWorkChain):
 
 ###################################################################################
 
-        #spec.expose_outputs(YppCalculation)
+        spec.expose_outputs(YppCalculation)
 
         spec.exit_code(300, 'ERROR_UNRECOVERABLE_FAILURE',
             message='The calculation failed with an unrecoverable error.')
