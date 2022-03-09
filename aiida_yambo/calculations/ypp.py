@@ -205,7 +205,8 @@ class YppCalculation(CalcJob):
         params_dict = parameters.get_dict()
 
         if 'wannier' in params_dict['arguments']:
-            copy_dbs = True
+            #copy_dbs = True
+            copy_save = True
             if not hasattr(self.inputs,'nnkp_file'): 
                 self.report('WARNING: aiida.nnkp file not present in inputs, Needed.')
                 return self.exit_codes.NNKP_NOT_PRESENT
@@ -215,7 +216,7 @@ class YppCalculation(CalcJob):
             if hasattr(self.inputs,'QP_DB'): 
                 local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))
             
-            params_dict['variables']['Seed'] = self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
+            params_dict['variables']['Seed'] = 'aiida' #self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
         if 'QPDB_merge' in params_dict['arguments']:
             copy_save = True
@@ -226,7 +227,7 @@ class YppCalculation(CalcJob):
             
             j=0
             list_of_dbs = []
-            if hasattr(self.inputs,'QP_calculations') and not ypp_parent:
+            if hasattr(self.inputs,'QP_calculations'):
                 for calc in self.inputs.QP_calculations.get_list():
                     j+=1
                     qp = load_node(calc).outputs.QP_db
@@ -235,11 +236,11 @@ class YppCalculation(CalcJob):
 
             elif not hasattr(self.inputs,'QP_calculations') and ypp_parent:
                 ypp_parent_calc = take_calc_from_remote(self.inputs.parent_folder)
-                for file in os.listdir(ypp_parent_calc._repository._repo_folder.abspath+'/path/'):
+                for file in os.listdir(ypp_parent_calc.outputs.retrieved._repository._repo_folder.abspath+'/path/'):
                     if 'ndb.QP' in file:
                     #qp = load_node(calc).outputs.QP_db
                         #local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
-                        list_of_dbs.append(['"E"','"+"','"1"','"SAVE/'+file+'"'])
+                        list_of_dbs.append(['"E"','"+"','"1"','"'+file+'"'])
             
             
             params_dict['variables']['Actions_and_names'] = [list_of_dbs,'']
@@ -261,7 +262,7 @@ class YppCalculation(CalcJob):
             parent_calc = parent_calc_folder.get_incoming().get_node_by_label('remote_folder')
 
         if copy_save:
-            remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
+                remote_copy_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
         else:
             try:
                 remote_symlink_list.append((parent_calc_folder.computer.uuid,parent_calc_folder.get_remote_path()+"/SAVE/",'./SAVE/'))
@@ -319,6 +320,7 @@ class YppCalculation(CalcJob):
             "-F", self.metadata.options.input_filename, \
             '-J', self.metadata.options.output_filename, \
         ]
+
         c.code_uuid = main_code.uuid
 
         #logic of the execution
