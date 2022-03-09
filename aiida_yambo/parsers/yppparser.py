@@ -99,7 +99,7 @@ class YppParser(Parser):
         self._quasiparticle_bands_linkname = 'bands_quasiparticle'
         self._parameter_linkname = 'output_parameters'
         self._system_info_linkname = 'system_info'
-        self._QP_merged_linkname = 'QP_merged'
+        self._QP_merged_linkname = 'QP_db'
         super(YppParser, self).__init__(calculation)
 
     def parse(self, retrieved, **kwargs):

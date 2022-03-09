@@ -135,7 +135,7 @@ class YppCalculation(CalcJob):
             required=False,
             help='The ``.unsorted.eig`` file.'
         )
-        spec.output('QP_merged', valid_type=SingleFileData,
+        spec.output('QP_db', valid_type=SingleFileData,
                 required=False, help='returns the singlefiledata for ndbQP')
 
     def prepare_for_submission(self, tempfolder):
