@@ -158,7 +158,7 @@ class YppParser(Parser):
                 self.out(self._unsorted_eig_wannier,unsorted_eig)
                 #self.report('stored the unsorted.eig file as SingleFileData')
             if 'ndb.QP_merged' in file:
-                QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+result.filename)
+                QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
                 self.out(self._QP_merged_linkname,QP_db)  
         try:
             results = YamboFolder(out_folder._repository._repo_folder.abspath)
