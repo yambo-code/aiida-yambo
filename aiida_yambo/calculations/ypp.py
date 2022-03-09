@@ -122,6 +122,8 @@ class YppCalculation(CalcJob):
                 message='nnkp file not present')
         spec.exit_code(505, 'QP_LIST_NOT_PRESENT',
                 message='QP list not present')
+        spec.exit_code(506, 'MERGE_NOT_COMPLETE',
+                message='QP merging is not completed.')
 
         #outputs definition:
 

@@ -164,3 +164,16 @@ class YppRestart(BaseRestartWorkChain):
         if calculation.exit_status < 400 and not calculation.is_finished_ok:
             self.report_error_handled(calculation, 'unrecoverable error, aborting...')
             return ProcessHandlerReport(True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+    
+    @process_handler(priority = 559, exit_codes = [YppCalculation.exit_codes.MERGE_NOT_COMPLETE])
+    def _handle_walltime_error(self, calculation):
+        """
+        Handle calculations for a walltime error; 
+        we increase the simulation time and copy the database already created.
+        """
+        
+        self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
+        if hasattr(self.ctx.inputs,'QP_calculations'): del self.ctx.inputs.QP_calculations
+                
+        self.report_error_handled(calculation, 'merge not completed error, so we try to finish it')
+        return ProcessHandlerReport(True)
