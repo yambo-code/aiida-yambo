@@ -97,6 +97,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         structure=None,
         overrides=None,
         parent_folder=None,
+        NLCC=False,
+        RIM_v=False,
+        RIM_W=False,
         electronic_type=ElectronicType.INSULATOR,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
@@ -130,6 +133,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         for override in [overrides_scf,overrides_nscf]:
             override['clean_workdir'] = override.pop('clean_workdir',False)
+            if 'pseudo_family' in override.keys():
+                if 'PseudoDojo' in override['pseudo_family']: NLCC = True
         
         overrides_nscf['pw'] = overrides_nscf.pop('pw',{'parameters':{}})
         overrides_nscf['pw']['parameters']['CONTROL'] = overrides_nscf['pw']['parameters'].pop('CONTROL',{'calculation':'nscf'})
@@ -182,13 +187,15 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             builder.parent_folder = parent_folder
             parent_folder = 'YWFL_super_parent'
 
-
         builder.yres = YamboRestart.get_builder_from_protocol(
                 preprocessing_code=preprocessing_code,
                 code=code,
                 protocol=protocol,
                 parent_folder=parent_folder,
                 overrides=overrides_yres,
+                NLCC=NLCC,
+                RIM_v=RIM_v,
+                RIM_W=RIM_W,
             )
 
         if 'BndsRnXp' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
