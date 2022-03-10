@@ -93,9 +93,9 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         protocol='fast',
         overrides=None,
         parent_folder=None,
-        #electronic_type=ElectronicType.METAL,
-        #spin_type=SpinType.NONE,
-        #initial_magnetic_moments=None,
+        NLCC=False,
+        RIM_v=False,
+        RIM_W=False,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -107,20 +107,6 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             
             preprocessing_code = orm.load_code(preprocessing_code)
             code = orm.load_code(code)
-
-        #type_check(precode, orm.Code)
-        #type_check(code, orm.Code)
-        #type_check(electronic_type, ElectronicType)
-        #type_check(spin_type, SpinType)
-
-        #if electronic_type not in [ElectronicType.METAL, ElectronicType.INSULATOR]:
-        #    raise NotImplementedError(f'electronic type `{electronic_type}` is not supported.')
-
-        #if spin_type not in [SpinType.NONE, SpinType.COLLINEAR]:
-        #    raise NotImplementedError(f'spin type `{spin_type}` is not supported.')
-
-        #if initial_magnetic_moments is not None and spin_type is not SpinType.COLLINEAR:
-        #    raise ValueError(f'`initial_magnetic_moments` is specified but spin type `{spin_type}` is incompatible.')
 
         inputs = cls.get_protocol_inputs(protocol, overrides={})
 
@@ -136,7 +122,23 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         # Update the parameters based on the protocol inputs
         parameters = inputs['yambo']['parameters']
         metadata = inputs['yambo']['metadata']
+
+        # NLCC check:
+        if NLCC and not 'NLCC' in parameters['arguments']:
+            parameters['arguments'].append('NLCC')
         
+        # RIM_v check:
+        if RIM_v and not 'rim_cut' in parameters['arguments']:
+            parameters['arguments'].append('rim_cut')
+            parameters['variables']['RandQpts'] = [5000000, '']
+            parameters['variables']['RandGvec'] = [100, 'RL']
+
+        # RIM_W check:
+        if RIM_W and not 'RIM_W' in parameters['arguments']:
+            parameters['arguments'].append('RIM_W')
+            parameters['variables']['CUTGeo'] = 'slab Z'
+            parameters['variables']['RandGvecW'] = [13, 'RL']
+
         #if protocols GW
         screening_PW_cutoff = int(PW_cutoff*meta_parameters['ratio_PW_cutoff'])
         screening_PW_cutoff -= screening_PW_cutoff%2 
