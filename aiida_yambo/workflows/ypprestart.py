@@ -19,8 +19,9 @@ from aiida_yambo.utils.parallel_namelists import *
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.utils.gw2wannier90 import * 
 
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
-class YppRestart(BaseRestartWorkChain):
+class YppRestart(ProtocolMixin, BaseRestartWorkChain):
 
     """This module interacts directly with the yambo plugin to submit calculations
 
@@ -84,6 +85,72 @@ class YppRestart(BaseRestartWorkChain):
                 message='Nnkp file not present')
         spec.exit_code(305, 'PW2WANNIER90_PARENT_NOT_PRESENT',
                 message='mmn amn folder not present')
+
+        @classmethod
+    def get_protocol_filepath(cls):
+        """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
+        from importlib_resources import files
+
+        from aiida_yambo.workflows.protocols import ypp as ypprestart_protocols
+        return files(ypprestart_protocols) / 'ypprestart.yaml'
+    
+    @classmethod
+    def get_builder_from_protocol(
+        cls,
+        code,
+        protocol='merge_QP',
+        overrides=None,
+        parent_folder=None,
+        **_
+    ):
+        """Return a builder prepopulated with inputs selected according to the chosen protocol.
+        :return: a process builder instance with all inputs defined ready for launch.
+        """
+        from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
+
+        if isinstance(code, str):           
+            code = orm.load_code(code)
+
+        inputs = cls.get_protocol_inputs(protocol, overrides={})
+
+        meta_parameters = inputs.pop('meta_parameters')
+
+
+        # Update the parameters based on the protocol inputs
+        parameters = inputs['ypp']['parameters']
+        metadata = inputs['ypp']['metadata']
+
+        # If overrides are provided, they are considered absolute
+        if overrides:
+            parameter_arguments_overrides = overrides.get('ypp', {}).get('parameters', {}).get('arguments', [])
+            parameters['arguments'] += parameter_arguments_overrides
+            
+            parameter_variables_overrides = overrides.get('ypp', {}).get('parameters', {}).get('variables', {})
+            parameters['variables'] = recursive_merge(parameters['variables'], parameter_variables_overrides)
+
+            metadata_overrides = overrides.get('metadata', {})
+            metadata = recursive_merge(metadata, metadata_overrides)
+
+        print('Summary of the inputs:{}\n'\
+            .format(parameters))
+
+        builder = cls.get_builder()
+        builder.ypp['code'] = code
+        builder.ypp['parameters'] = Dict(dict=parameters)
+        builder.ypp['metadata'] = metadata
+        if 'settings' in inputs['ypp']:
+            builder.ypp['settings'] = Dict(dict=inputs['ypp']['settings'])
+        builder.clean_workdir = Bool(inputs['clean_workdir'])
+
+        if not parent_folder:
+            RaiseError('You must provide a parent folder calculation, either YPP or YAMBO') 
+        elif isinstance(parent_folder,str):
+            pass
+        else:
+            builder.parent_folder = parent_folder
+        # pylint: enable=no-member
+
+        return builder
 
     def setup(self):
         """setup of the calculation and run
