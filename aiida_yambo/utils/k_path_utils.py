@@ -72,8 +72,8 @@ class k_path_dealer():
                     maps[point] = ind
                     break
                 ind += 1
-            if not found:
-                if point not in missing: missing.append(point)
+            #if not found:
+            #    if point not in missing: missing.append(point)
         
         return missing, maps
 
@@ -100,7 +100,7 @@ class k_path_dealer():
                     found = False
 
                 ind += 1
-            if not found:
-                if point not in missing: missing.append(point)
+            #if not found:
+            #    if point not in missing: missing.append(point)
                     
         return missing, maps
