@@ -19,7 +19,7 @@ from aiida_yambo.workflows.utils.predictor_1D import *
 
 #class convergence_workflow_manager:
 def conversion_wrapper(func):
-    def wrapper(*args, workflow_dict = {}):
+    def wrapper(*args, workflow_dict = {},success=False):
 
         try: 
             workflow_dict['array_conv'] = np.array(workflow_dict['array_conv']) 
@@ -29,7 +29,7 @@ def conversion_wrapper(func):
             workflow_dict['workflow_story'] = pd.DataFrame.from_dict(workflow_dict['workflow_story']) 
         except: 
             pass
-        output = func(*args, workflow_dict = workflow_dict)
+        output = func(*args, workflow_dict = workflow_dict,success=success)
         try: 
             workflow_dict['array_conv'] = workflow_dict['array_conv'].tolist()
         except: 
@@ -66,7 +66,7 @@ def collect_inputs(inputs, kpoints, ideal_iter):
 
     return starting_inputs
 
-def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1D_convergence',hint=None,):
+def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='heavy',hint=None,):
     
     space={}
     first = 0 
@@ -85,7 +85,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
         print('SPACE,',space)
         if hint:
             if hint['new_grid']:
-                new_grid = max(1,i['iter'] - 1)
+                new_grid = i['iter']+1
         if 'new_algorithm_2D' in wfl_type:
             if hint and not new_grid:
                 for v in l:
@@ -105,7 +105,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
                     start = i['start']
                     stop = i['stop']
                     metrics = i['delta']
-                space_ = create_grid(edges = start+stop,delta= metrics,var=var,shift = [new_grid*2,new_grid*2],alpha=1/3)
+                space_ = create_grid(edges = start+stop,delta= metrics,var=var,shift = [new_grid,new_grid],alpha=1/3)
                 space.update(space_)
                 if 'BndsRnXp' in l and 'GbndRnge' in l: space['GbndRnge'] = copy.deepcopy(space['BndsRnXp'])
                 
@@ -296,7 +296,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
 
     return space, existing_inputs,small_space
 
-def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hint=0,
+def update_space(starting_inputs={}, calc_dict={}, wfl_type='heavy',hint=0,
                  existing_inputs={}, convergence_algorithm='smart',
                  ):
     
@@ -509,7 +509,8 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['type'] = 'AiiDA_calculation'
     
     copy_wfl_sett = copy.deepcopy(wfl_settings)
-    workflow_dict['type'] = copy_wfl_sett.pop('type','1D_convergence')
+    workflow_dict['type'] = copy_wfl_sett.pop('type','heavy') #if cheap, it will do the optimization maintaining the other params as input (so: minimal)
+    if workflow_dict['type'] == '1D_convergence': workflow_dict['type'] = 'heavy'
     workflow_dict['what'] = copy_wfl_sett.pop('what','gap_')
 
     workflow_dict['global_step'] = 0
@@ -522,7 +523,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     return workflow_dict
 
 @conversion_wrapper
-def build_story_global(calc_manager, quantities, workflow_dict = {}):
+def build_story_global(calc_manager, quantities, workflow_dict = {},success=False):
 
     if calc_manager['iter'] == 1:
         try:
@@ -535,7 +536,7 @@ def build_story_global(calc_manager, quantities, workflow_dict = {}):
         workflow_dict['array_conv'] = np.column_stack((workflow_dict['array_conv'],quantities[:,:,1]))
 
 @conversion_wrapper
-def update_story_global(calc_manager, quantities, inputs, workflow_dict):
+def update_story_global(calc_manager, quantities, inputs, workflow_dict,success=False):
 
     errors = False  
     final_result = {}
@@ -583,14 +584,17 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict):
     return final_result
 
 @conversion_wrapper
-def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {}, hint=None):
+def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, workflow_dict = {},success=False):
     
     final_result = {}
     
     if 'new_algorithm' in calc_manager['convergence_algorithm']:
         workflow_dict['workflow_story'].at[:,'useful']=False
         print(oversteps)
-        workflow_dict['workflow_story'].at[oversteps[0],'useful']=True
+        if success == 'new_grid': 
+            return {}
+        elif success:
+            workflow_dict['workflow_story'].at[oversteps[0],'useful']=True
     else:
         for i in oversteps: 
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['workflow_story']['uuid']==i].index
@@ -715,10 +719,17 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                                  bande=bande, #KS states
                                  r=homo[k], 
                                  calc_dict=calc_dict,
+                                 k = k
                                 )
 
                 print('old_hints:',hints)
-                y.analyse(old_hints=hints) #just convergence as before
+                if 'new_grid' in hints.keys():
+                    if hints['new_grid']: 
+                        y.analyse(old_hints={})
+                    else:
+                        y.analyse(old_hints=hints)
+                else:
+                    y.analyse(old_hints=hints) #just convergence as before
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index
@@ -736,10 +747,17 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                                  bande=bande, #KS states
                                  r=homo[k], 
                                  calc_dict=calc_dict,
+                                 k = k
                                 )
 
                 print('old_hints:',hints)
-                y.analyse(old_hints=hints) #just convergence as before
+                if 'new_grid' in hints.keys():
+                    if hints['new_grid']: 
+                        y.analyse(old_hints={})
+                    else:
+                        y.analyse(old_hints=hints)
+                else:
+                    y.analyse(old_hints=hints) #just convergence as before
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index
@@ -748,7 +766,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                     hint['extrapolation'] = y.extra
                     hint['extrapolation_units'] = 'eV'
                 else:
-                    hint = {'new_grid': True}
+                    hint = {'new_grid': True,'next_step':y.next_step,'reached':y.point_reached,'check':y.check_passed}
 
             else:
                 y = Convergence_evaluator(

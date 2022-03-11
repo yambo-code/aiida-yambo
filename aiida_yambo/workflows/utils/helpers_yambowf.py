@@ -278,40 +278,51 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     sub_val = 3 
     sup_cond = 3 #so, for now 3+3 bands
 
-    new_params = workchain_inputs.yambo.parameters.get_dict()
-    for name in parsing_List:
-        if not 'exciton' in name and 'QPkrange' in new_params['variables'].keys():
-            new_params['variables']['QPkrange'] = new_params['variables'].pop('QPkrange', [[],''])
-
+    new_params = copy.deepcopy(workchain_inputs.yambo.parameters.get_dict())
+    
+    QP = []
+    for i in new_params['variables']['QPkrange'][0]:
+        if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
+            pass
+        else:
+            QP.append(i)
+    try:
+        QP = [QP[0]]
+    except:
+        QP = []
     for name in parsing_List:
 
         if 'exciton' in parsing_List:
             pass
         elif isinstance(name,list) and name[0] in mapping.keys():
             for i in mapping[name[0]]:
-                if not i in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append(i) 
+                if not i in QP: QP.append(i) 
         elif isinstance(name,str) and name in mapping.keys():
             for i in mapping[name]:
-                if not i in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append(i) 
+                if not i in QP: QP.append(i) 
     
         elif name == 'homo':
-           if not [homo_k, homo_k, val,val] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([homo_k, homo_k, val,val])
+           if not [homo_k, homo_k, val,val] in QP: QP.append([homo_k, homo_k, val,val])
     
         elif name == 'lumo':
-            if not [lumo_k,lumo_k, cond,cond] in new_params['variables']['QPkrange'][0]: new_params['variables']['QPkrange'][0].append([lumo_k,lumo_k, cond,cond])
+            if not [lumo_k,lumo_k, cond,cond] in QP: QP.append([lumo_k,lumo_k, cond,cond])
         
         elif name == 'band_structure':
             #if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
             #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
             #else:
-                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
+                QP = [1,number_of_kpoints, val-sub_val,cond+sup_cond]
         
         elif 'band_structure' in name:    #should provide as 'band_structure_vN_cM', where N, M are the amount of valence and conduction bands included 
             #if 'QPkrange' in new_params['variables'].keys() and new_params['variables']['QPkrange'][0][3]-new_params['variables']['QPkrange'][0][2]>0:
             #    new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, new_params['variables']['QPkrange'][0][2],new_params['variables']['QPkrange'][0][3]]
             #else:
-                new_params['variables']['QPkrange'][0] = [1,number_of_kpoints, val-int(name[-4])+1,cond+int(name[-1])-1]
+                QP = [1,number_of_kpoints, val-int(name[-4])+1,cond+int(name[-1])-1]
     
+    
+
+    new_params['variables']['QPkrange']= [QP,'']
+
     return mapping, Dict(dict=new_params)
 
 def parse_qp_level(calc, level_map):

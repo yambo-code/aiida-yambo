@@ -318,9 +318,14 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                                                                         hint=self.ctx.hint,
                                                                         )
                 self.ctx.workflow_manager['parameter_space'] = copy.deepcopy(self.ctx.params_space)
-                self.report('netwon_1D_ratio')
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
             self.ctx.hint = {}
+            if self.ctx.workflow_manager['type'] == 'cheap':
+                self.report('Mode is "cheap", so we reset the other parameters to the initial ones.')
+                self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+            else:
+                self.report('Mode is "heavy", so we mantain the other parameters as the converged ones, if any.')
+            
             return True
       
         elif not self.ctx.calc_manager['success']:
@@ -339,19 +344,15 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         """This function will submit the next step"""
         self.ctx.calc_manager['iter'] +=1
         self.ctx.calc_manager['skipped'] = 0
-        self.report('ITER {}'.format(self.ctx.calc_manager['iter']))
 
         #loop on the given steps of given variables
         calc = {}
         self.ctx.workflow_manager['values'] = []
         if self.ctx.calc_manager['iter'] == 1: self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
-        #self.report('SPACE: {}'.format(self.ctx.params_space))
         l = len(self.ctx.params_space[self.ctx.calc_manager['var'][0]])
         for i in range(self.ctx.calc_manager['steps']):
-            #self.report(self.ctx.params_space)
 
             if 'new_algorithm' in self.ctx.calc_manager['convergence_algorithm'] and i > l-1:
-                #self.report('skipping...')
                 self.ctx.calc_manager['skipped'] += 1
                 continue
 
@@ -363,16 +364,15 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                                     
             self.ctx.workflow_manager['values'].append(value)
             self.report('New parameters are: {}'.format(value))
-            #self.report('Preparing iteration #{} on: {}'.format((self.ctx.calc_manager['iter']-1)*self.ctx.calc_manager['steps']+i+1,
-                        #value))
+            
             if not already_done:
                 self.ctx.calc_inputs.metadata.call_link_label = 'iteration_'+str(self.ctx.workflow_manager['global_step']+i)
-                if parent_nscf and not hasattr(self.ctx.calc_inputs,'parent_folder'):
-                    self.report('Recovering NSCF/P2Y parent: {}'.format(parent_nscf))
+                #if parent_nscf and not hasattr(self.ctx.calc_inputs,'parent_folder'):
+                    #self.report('Recovering NSCF/P2Y parent: {}'.format(parent_nscf))
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
                 self.ctx.workflow_manager['group'].add_nodes(future.caller)
             else:
-                self.report('Calculation already done: {}'.format(already_done))
+                #self.report('Calculation already done: {}'.format(already_done))
                 future = load_node(already_done)
 
             calc[str(i+1)] = future
@@ -385,9 +385,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
     def data_analysis(self):
         
         self.report('Data analysis, we will try to parse some result and decide what next')
-        #self.report(self.ctx.calc_manager)
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
-        #self.report('quantities: {}'.format(quantities))
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
         
@@ -397,20 +395,17 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             self.ctx.calc_manager['iter'] = 2*self.ctx.calc_manager['max_iterations']
             return
 
-        #self.report(self.ctx.workflow_manager['workflow_story'])
         self.ctx.calc_manager['success'], oversteps, self.ctx.none_encountered, quantityes, self.ctx.hint = \
                 analysis_and_decision(self.ctx.calc_manager, self.ctx.workflow_manager, hints = self.ctx.hint)
         
-        #self.report(oversteps)
-        #self.report(self.ctx.hint)
-        # self.report(self.ctx.workflow_manager['parameter_space'])
         self.report('results {}\n:{}'.format(self.ctx.workflow_manager['what'], quantityes))
+        self.report('HINTS: {}'.format(self.ctx.hint))
 
         if self.ctx.calc_manager['success']:
 
             self.report('Success, updating the history... ')
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, success=True, workflow_dict=self.ctx.workflow_manager)
             
             #self.report(self.ctx.final_result)
 
@@ -449,14 +444,19 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             self.report('Some calculations failed, updating the history and exiting... ')
             
             self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
-                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered, workflow_dict=self.ctx.workflow_manager)
+                 self.ctx.calc_manager, oversteps, self.ctx.none_encountered,success=False, workflow_dict=self.ctx.workflow_manager)
             self.ctx.calc_manager['iter'] = self.ctx.calc_manager['max_iterations']+1 #exiting the workflow
 
         else:
             self.report('Success on {} not reached yet in {} calculations' \
                         .format(self.ctx.calc_manager['var'], (self.ctx.calc_manager['steps']-self.ctx.calc_manager['skipped'])*self.ctx.calc_manager['iter']))
-                        
+            
+
             if self.ctx.hint: 
+                if 'new_grid' in self.ctx.hint.keys():
+                    if self.ctx.hint['new_grid']: 
+                        self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
+                        self.ctx.calc_manager, oversteps, self.ctx.none_encountered,success='new_grid', workflow_dict=self.ctx.workflow_manager)
                 #self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.infos = self.ctx.hint
                 if 'converge_b_ratio' in self.ctx.hint.keys(): 
@@ -526,31 +526,31 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
         if not hasattr(self.ctx,'params_space'):
             self.ctx.params_space = copy.deepcopy(self.ctx.workflow_manager['parameter_space'])
-        self.report('detecting if we need a starting calculation...')
+        #self.report('detecting if we need a starting calculation...')
         self.report(self.ctx.workflow_manager['parameter_space'])        
         
         if self.ctx.how_bands == 'all-at-once' or  isinstance(self.ctx.how_bands, int) or 'new_alg' in self.ctx.calc_manager['convergence_algorithm']:
             self.ctx.space_index = 0
-            if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and len(self.ctx.params_space['BndsRnXp'])>0: 
-                self.report('Max #bands needed in the whole convergence = {}'.format(max(self.ctx.params_space['BndsRnXp'])))
+            #if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and len(self.ctx.params_space['BndsRnXp'])>0: 
+                #self.report('Max #bands needed in the whole convergence = {}'.format(max(self.ctx.params_space['BndsRnXp'])))
                 
         elif self.ctx.how_bands == 'single-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this step = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
+            #self.report('Max #bands needed in this step = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         elif self.ctx.how_bands == 'single-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*(1+self.ctx.calc_manager['iter'])
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this step = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
+            #self.report('Max #bands needed in this step = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         elif self.ctx.how_bands == 'full-step' and 'BndsRnXp' in self.ctx.calc_manager['var']:
-            self.report(self.ctx.params_space['BndsRnXp'])
+            #self.report(self.ctx.params_space['BndsRnXp'])
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
+            #self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         elif self.ctx.how_bands == 'full-step' and 'GbndRnge' in self.ctx.calc_manager['var']:
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
-            self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
+            #self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
         
         if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
             yambo_bandsX = max(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][:self.ctx.space_index-1])
@@ -568,16 +568,16 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
 
         if 'kpoint_mesh' in self.ctx.calc_manager['var'] or 'kpoint_density' in self.ctx.calc_manager['var']:
-            self.report('Not needed, we start with k-points')
+            #self.report('Not needed, we start with k-points')
             return False
 
         try:    
             already_done, parent_nscf, parent_scf = search_in_group(self.ctx.calc_inputs, 
                                                self.ctx.workflow_manager['group'], up_to_p2y = True)
 
-            self.report(already_done,)
-            self.report(parent_nscf)
-            self.report(parent_scf)
+            #self.report(already_done,)
+            #self.report(parent_nscf)
+            #self.report(parent_scf)
 
             if already_done:
                 try:
@@ -603,17 +603,17 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             nbnd = nscf_params.get_dict()['SYSTEM']['nbnd']
 
             if nbnd < self.ctx.gwbands:
-                self.report('we have to compute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.gwbands))
+                #self.report('we have to compute the nscf part: not enough bands, we need {} bands to complete all the calculations'.format(self.ctx.gwbands))
                 set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
                 return True
             elif parent_calc.process_type=='aiida.calculations:yambo.yambo' and not hasattr(self.inputs, 'precalc_inputs'):
-                self.report('not required, yambo parent and no precalc requested')   
+                #self.report('not required, yambo parent and no precalc requested')   
                 return False         
             elif hasattr(self.inputs, 'precalc_inputs'):
-                self.report('yes, precalc requested in the inputs')
+                #self.report('yes, precalc requested in the inputs')
                 return True
             else:
-                self.report('yes, no yambo parent')
+                #self.report('yes, no yambo parent')
                 return True
         except:
             try:
@@ -622,21 +622,21 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             
                 if already_done: 
                     set_parent(self.ctx.calc_inputs, load_node(already_done))
-                    self.report('yambo parent found in group: p2y not needed')
+                    #self.report('yambo parent found in group: p2y not needed')
                     return False
                 
                 elif parent_nscf: 
                     set_parent(self.ctx.calc_inputs, load_node(parent_nscf))
-                    self.report('yes, no yambo parent, setting parent nscf found in group')
+                    #self.report('yes, no yambo parent, setting parent nscf found in group')
                     return True
                 
                 else: 
                     parent_calc = take_calc_from_remote(self.ctx.calc_inputs.parent_folder)              
                     set_parent(self.ctx.calc_inputs, find_pw_parent(parent_calc, calc_type = ['scf']))
-                    self.report('yes, no yambo parent, setting parent scf')
+                    #self.report('yes, no yambo parent, setting parent scf')
                     return True
             except:
-                self.report('no available parent folder, so we start from scratch')
+                #self.report('no available parent folder, so we start from scratch')
                 return True
 
     def do_pre(self):

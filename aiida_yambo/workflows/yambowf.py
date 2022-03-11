@@ -235,8 +235,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         if nscf_params: self.ctx.nscf_inputs.pw.parameters = nscf_params
         self.ctx.redo_nscf = redo_nscf
         self.ctx.gwbands = gwbands
-        for i in messages:
-            self.report(i)
+        #for i in messages:
+            #self.report(i)
         
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
@@ -357,7 +357,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
             if hasattr(self.inputs, 'additional_parsing'):
-                self.report('updating yambo parameters to parse more results')
+                #self.report('updating yambo parameters to parse more results')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
@@ -376,13 +376,13 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
     def report_wf(self):
 
-        self.report('Final step.')
+        #self.report('Final step.')
 
         calc = self.ctx.calc
         if calc.is_finished_ok:
 
             if hasattr(self.inputs, 'additional_parsing'):
-                self.report('parsing additional quantities')
+                #self.report('parsing additional quantities')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
                 self.out('nscf_mapping', store_Dict(mapping))
