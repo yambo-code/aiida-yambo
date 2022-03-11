@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt, style
 import pandas as pd
 import copy
 import os
+from itertools import permutations
 
 try:
     from aiida.orm import Dict, Str, List, load_node, KpointsData, RemoteData, Group
@@ -88,15 +89,15 @@ class k_path_dealer():
             ind = 1 
             found = False
             for g in qe_grid:
-                if np.allclose(abs(high_symmetry[point]),abs(g),1e-4,1e-4):    #1e-4,1e-4):
-                    found = True
-                    maps[point] = ind
-                    break
-                elif abs(high_symmetry[point][0])-abs(g[1])<1e-4 and abs(high_symmetry[point][1])-abs(g[0])<1e-4 \
-                        and abs(high_symmetry[point][2])-abs(g[2])<1e-4 :    #1e-4,1e-4):
-                    found = True
-                    maps[point] = ind
-                    break
+                for k in permutations(g):
+                    test = abs(abs(np.array(k))-abs(high_symmetry[point]))
+                    if test.dot(test) < 1e-4:
+                        print(point,ind)
+                        found = True
+                        maps[point] = ind
+                        break
+                else:
+                    found = False
 
                 ind += 1
             if not found:
