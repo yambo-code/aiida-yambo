@@ -210,6 +210,8 @@ class YamboParser(Parser):
             
             if 'ndb.QP' == result.filename:
                 ndbqp = copy.deepcopy(result.data)
+                if len(numpy.where(numpy.isnan(ndbqp['E-Eo'].data))[0])>0:
+                    return self.exit_codes.NaN_AS_OUTPUT
 
             elif 'ndb.HF_and_locXC' == result.filename:
                 ndbhf = copy.deepcopy(result.data)

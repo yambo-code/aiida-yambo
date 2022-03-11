@@ -66,7 +66,7 @@ def collect_inputs(inputs, kpoints, ideal_iter):
 
     return starting_inputs
 
-def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1D_convergence',hint=None,):
+def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='heavy',hint=None,):
     
     space={}
     first = 0 
@@ -296,7 +296,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='1
 
     return space, existing_inputs,small_space
 
-def update_space(starting_inputs={}, calc_dict={}, wfl_type='1D_convergence',hint=0,
+def update_space(starting_inputs={}, calc_dict={}, wfl_type='heavy',hint=0,
                  existing_inputs={}, convergence_algorithm='smart',
                  ):
     
@@ -509,7 +509,8 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
     workflow_dict['type'] = 'AiiDA_calculation'
     
     copy_wfl_sett = copy.deepcopy(wfl_settings)
-    workflow_dict['type'] = copy_wfl_sett.pop('type','1D_convergence')
+    workflow_dict['type'] = copy_wfl_sett.pop('type','heavy') #if cheap, it will do the optimization maintaining the other params as input (so: minimal)
+    if workflow_dict['type'] == '1D_convergence': workflow_dict['type'] = 'heavy'
     workflow_dict['what'] = copy_wfl_sett.pop('what','gap_')
 
     workflow_dict['global_step'] = 0
@@ -718,6 +719,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                                  bande=bande, #KS states
                                  r=homo[k], 
                                  calc_dict=calc_dict,
+                                 k = k
                                 )
 
                 print('old_hints:',hints)
@@ -745,6 +747,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                                  bande=bande, #KS states
                                  r=homo[k], 
                                  calc_dict=calc_dict,
+                                 k = k
                                 )
 
                 print('old_hints:',hints)

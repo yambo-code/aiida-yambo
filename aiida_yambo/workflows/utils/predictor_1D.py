@@ -86,7 +86,7 @@ class The_Predictor_1D():
         #print(kwargs['calc_dict'])
         
         if isinstance(self.what,list):
-            self.what = self.what[0]
+            self.what = self.k
         
         if not hasattr(self,'Fermi'): self.Fermi=0
 
