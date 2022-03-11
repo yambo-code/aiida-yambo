@@ -36,7 +36,7 @@ def create_grid(edges=[],delta=[],alpha=0.25,add = [[],[]],var=['BndsRnXp','NGsB
     b = []
     G = []
     
-    for i in [A,B,C,D,E,F]:
+    for i in [A,B,D,E,F,C]:
         b.append(i[0])
         G.append(i[1])
     
@@ -60,7 +60,7 @@ class The_Predictor_2D():
         #print(kwargs['calc_dict'])
         
         if isinstance(self.what,list):
-            self.what = self.what[0]
+            self.what = self.k
         
         if not hasattr(self,'Fermi'): self.Fermi=0
 

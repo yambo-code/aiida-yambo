@@ -104,6 +104,8 @@ class YamboCalculation(CalcJob):
                 message='general memory error')
         spec.exit_code(506, 'X_par_MEMORY_ERROR',
                 message='x_par allocation memory error')
+        spec.exit_code(507, 'NaN_AS_OUTPUT',
+                message='NaN error')
 
 
         #outputs definition:

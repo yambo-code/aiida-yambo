@@ -132,7 +132,17 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         overrides_yres = overrides.pop('yres',{})
 
         for override in [overrides_scf,overrides_nscf]:
-            override['clean_workdir'] = override.pop('clean_workdir',False)
+            override['clean_workdir'] = override.pop('clean_workdir',False) #required to have a valid parent folder
+            
+            if not 'pw' in override.keys():
+                override['pw'] = {'parameters':{'SYSTEM':{'force_symmorphic':True}}}
+            elif not 'parameters' in override['pw'].keys():
+                override['pw']['parameters'] = {'SYSTEM':{'force_symmorphic':True}} 
+            elif not 'SYSTEM' in override['pw']['parameters'].keys():
+                override['pw']['parameters']['SYSTEM'] = {'force_symmorphic':True} 
+            else:
+                override['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
+            
             if 'pseudo_family' in override.keys():
                 if 'PseudoDojo' in override['pseudo_family']: NLCC = True
         
@@ -233,8 +243,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         if nscf_params: self.ctx.nscf_inputs.pw.parameters = nscf_params
         self.ctx.redo_nscf = redo_nscf
         self.ctx.gwbands = gwbands
-        for i in messages:
-            self.report(i)
+        #for i in messages:
+            #self.report(i)
         
     def start_workflow(self):
         """Initialize the workflow, set the parent calculation
@@ -355,11 +365,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
             if hasattr(self.inputs, 'additional_parsing'):
-                self.report('updating yambo parameters to parse more results')
-                self.report(self.ctx.yambo_inputs.yambo.parameters.get_dict())
+                #self.report('updating yambo parameters to parse more results')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
-                self.report(yambo_parameters.get_dict())
 
             self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
@@ -376,13 +384,13 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
     def report_wf(self):
 
-        self.report('Final step.')
+        #self.report('Final step.')
 
         calc = self.ctx.calc
         if calc.is_finished_ok:
 
             if hasattr(self.inputs, 'additional_parsing'):
-                self.report('parsing additional quantities')
+                #self.report('parsing additional quantities')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
                 self.out('nscf_mapping', store_Dict(mapping))

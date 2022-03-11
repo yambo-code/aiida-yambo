@@ -86,7 +86,7 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
         spec.exit_code(305, 'PW2WANNIER90_PARENT_NOT_PRESENT',
                 message='mmn amn folder not present')
 
-        @classmethod
+    @classmethod
     def get_protocol_filepath(cls):
         """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
         from importlib_resources import files

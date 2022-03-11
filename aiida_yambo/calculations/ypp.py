@@ -82,7 +82,7 @@ class YppCalculation(CalcJob):
                 help='Use an additional node for special settings')
         spec.input('parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters')
-        spec.input('parent_folder',valid_type=RemoteData,
+        spec.input('parent_folder',valid_type=RemoteData,required=False,
                 help='Use a remote folder as parent folder (for "restarts and similar"')
         
         spec.input('code',valid_type=Code,
@@ -124,7 +124,8 @@ class YppCalculation(CalcJob):
                 message='QP list not present')
         spec.exit_code(506, 'MERGE_NOT_COMPLETE',
                 message='QP merging is not completed.')
-
+        spec.exit_code(507, 'PARENT_NOT_VALID',
+                message='parent folder not valid. It has not a QP_DB node as output..')
         #outputs definition:
 
         spec.output('output_parameters', valid_type=Dict,
@@ -217,6 +218,11 @@ class YppCalculation(CalcJob):
             
             if hasattr(self.inputs,'QP_DB'): 
                 local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))
+            if not hasattr(self.inputs,'QP_DB') and hasattr(self.inputs,'parent_folder'): 
+                try:
+                    local_copy_list.append((take_calc_from_remote(self.inputs.parent_folder).outputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))
+                except:
+                    return self.exit_codes.PARENT_NOT_VALID
             
             params_dict['variables']['Seed'] = 'aiida' #self.metadata.options.input_filename.replace('.in','') # depends on the QE seedname, I guess
 
