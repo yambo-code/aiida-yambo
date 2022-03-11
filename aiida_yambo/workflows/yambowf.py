@@ -133,7 +133,17 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         overrides_yres = overrides.pop('yres',{})
 
         for override in [overrides_scf,overrides_nscf]:
-            override['clean_workdir'] = override.pop('clean_workdir',False)
+            override['clean_workdir'] = override.pop('clean_workdir',False) #required to have a valid parent folder
+            
+            if not 'pw' in override.keys():
+                override['pw'] = {'parameters':{'SYSTEM':{'force_symmorphic':True}}}
+            elif not 'parameters' in override['pw'].keys():
+                override['pw']['parameters'] = {'SYSTEM':{'force_symmorphic':True}} 
+            elif not 'SYSTEM' in override['pw']['parameters'].keys():
+                override['pw']['parameters']['SYSTEM'] = {'force_symmorphic':True} 
+            else:
+                override['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
+            
             if 'pseudo_family' in override.keys():
                 if 'PseudoDojo' in override['pseudo_family']: NLCC = True
         
