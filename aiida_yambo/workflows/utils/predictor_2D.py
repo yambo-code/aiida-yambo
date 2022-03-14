@@ -203,13 +203,13 @@ class The_Predictor_2D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where((abs(self.Zx_fit)<5e-3) & \
-                            (abs(self.Zy_fit)<5e-3) & \
+        self.condition_conv_calc = np.where((abs(self.Zx_fit)<5e-4) & \
+                            (abs(self.Zy_fit)<5e-4) & \
                             (abs(self.Zxy_fit)<1e-7))
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
-        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0]*1.5)
-        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0]*1.5)
+        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0])
+        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0])
             
         print('b: {}\ng: {}'.format(b,g))
         
@@ -293,7 +293,8 @@ class The_Predictor_2D():
             thr = self.conv_thr
         
         print(thr)
-        condition = np.where((abs(reference-self.Z_fit)<=thr))
+        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(thr),0))))
+        condition = np.where((discrepancy<=thr))
         print(condition)
         print(self.Z_fit[condition])
         print('\n')
@@ -369,7 +370,7 @@ class The_Predictor_2D():
         print(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values)
 
 
-        self.old_discrepancy =abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
+        self.old_discrepancy = abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
         self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
@@ -395,14 +396,14 @@ class The_Predictor_2D():
         for i in power_laws:
             for j in power_laws:
                 print(i,j)
-                self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
+                self.check_passed = self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
                 if self.MAE_fit<error: 
                     ii,jj = i,j
                     error = self.MAE_fit
 
         print('\nBest power laws: {}, {}\n'.format(i,j))            
         
-        self.check_passed = self.fit_space_2D(fit=True,alpha=1,beta=1,verbose=True,plot=plot,save=save_fit,colormap=colormap)
+        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=True,plot=plot,save=save_fit,colormap=colormap)
         if not self.check_passed: 
             self.point_reached = False
             self.new_grid = create_grid(
@@ -437,7 +438,7 @@ class The_Predictor_2D():
                 else:
                     reference = self.Z_fit[-1,-1]
                 
-                if self.old_discrepancy < self.conv_thr*factor: 
+                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(self.conv_thr/factor),0)))) <= self.conv_thr/factor: 
                     self.check_passed = True
                 else:
                     self.check_passed = False

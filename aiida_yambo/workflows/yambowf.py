@@ -365,8 +365,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
 
             if hasattr(self.inputs, 'additional_parsing'):
-                #self.report('updating yambo parameters to parse more results')
+                self.report('updating yambo parameters to parse more results')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
+                self.report(mapping)
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
             self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'

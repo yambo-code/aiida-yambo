@@ -250,10 +250,10 @@ class The_Predictor_1D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-3)
+        self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-4)
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
-        if not b: b = max(max(xdata),self.X_fit[self.condition_conv_calc][0]*1.5)
+        if not b: b = max(max(xdata),self.X_fit[self.condition_conv_calc][0])
             
         #print('b: {}\ng: {}'.format(b,g))
         
@@ -322,7 +322,8 @@ class The_Predictor_1D():
             thr = self.conv_thr
         
         #print(thr)
-        condition = np.where((abs(reference-self.Z_fit)<=thr))
+        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(thr),0))))
+        condition = np.where((discrepancy<=thr))
         
         #print(condition)
         #print(self.Z_fit[condition])
@@ -425,14 +426,14 @@ class The_Predictor_1D():
         if 'kpoint_mesh' in self.var_: power_laws = [0.5,1,2]
 
         for i in power_laws:
-                self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,)
+                self.check_passed = self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,)
                 if self.MAE_fit<error: 
                     ii = i
                     error = self.MAE_fit
 
         print('Best power law: {}'.format(i))  
         
-        self.check_passed = self.fit_space_1D(fit=True,alpha=i,beta=1,verbose=True,plot=plot,save=save_fit)
+        self.check_passed = self.fit_space_1D(fit=True,alpha=ii,beta=1,verbose=True,plot=plot,save=save_fit)
         if not self.check_passed: 
             self.point_reached = False
             self.new_grid = create_grid_1D(
@@ -468,7 +469,7 @@ class The_Predictor_1D():
                 else:
                     reference = self.Z_fit[-1]
                 
-                if self.old_discrepancy < self.conv_thr*factor: 
+                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(self.conv_thr/factor),0)))) <= self.conv_thr/factor: 
                     self.check_passed = True
                 else:
                     self.check_passed = False

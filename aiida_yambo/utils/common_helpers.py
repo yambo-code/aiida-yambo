@@ -283,7 +283,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
                         valence,valence],
                         [maps[quantity[-1]],maps[quantity[-1]],
-                         conduction,conduction]]
+                         valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])]]
         else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
@@ -293,15 +293,15 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                 valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]])
                 if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
-                         mapping['valence'],mapping['valence']],]
+                         valence,valence],]
                 elif '_c' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
-                         mapping['conduction'],mapping['conduction']],]
+                         valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
                 
                 return quantity,[[maps[quantity],maps[quantity],
-                         mapping['valence'],mapping['valence']],
+                         valence,valence],
                         [maps[quantity],maps[quantity],
-                         mapping['conduction'],mapping['conduction']]]
+                         valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
             
     elif isinstance(quantity,list):
         if 'gap_' in quantity[0]:
@@ -313,9 +313,9 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
             valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0][-2]])
             conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[0][-1]]) + 1
             return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
-                     mapping['valence'],mapping['valence']],
+                    valence,valence],
                     [maps[quantity[0][-1]],maps[quantity[0][-1]],
-                     mapping['conduction'],mapping['conduction']]]
+                    valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
         else:
             m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase(),k_list={quantity[0]:np.array(quantity[1]),
@@ -325,16 +325,16 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
             valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]])
             if '_v' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     mapping['valence'],mapping['valence']],]
+                     valence,valence],]
             elif '_c' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     mapping['conduction'],mapping['conduction']],]
+                     valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
             
             
             return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     mapping['valence'],mapping['valence']],
+                     valence,valence],
                     [maps[quantity[0]],maps[quantity[0]],
-                     mapping['conduction'],mapping['conduction']]]     
+                     valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]    
     else:
         return 0, 0
 
@@ -389,7 +389,10 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
             dft_predicted = 'semimetal'
     
     L_H = (round((min(bands[:,conduction-1])-max(bands[:,valence-1])),3))
-    if L_H<=0.02 and L_H>=-0.02: #and (valence%2 == 0 or (soc and valence%2 == 1)):
+    Crossing = len(np.where(abs(bands[:,valence-1]-fermi)>1e-2)[0])
+    if Crossing > 0:
+        dft_predicted = 'metal'
+    elif L_H<=0.02 and L_H>=-0.02: #and (valence%2 == 0 or (soc and valence%2 == 1)):
         dft_predicted = 'semimetal'
     elif L_H>0.02: # and (valence%2 == 0 or (soc and valence%2 == 1)):
         dft_predicted = 'semiconductor/insulator'

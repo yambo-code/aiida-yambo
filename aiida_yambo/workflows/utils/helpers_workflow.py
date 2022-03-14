@@ -733,12 +733,12 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index
-                if y.check_passed:
-                    hint = y.next_step
-                    hint['extrapolation'] = y.extra
-                    hint['extrapolation_units'] = 'eV'
-                else:
-                    hint = {'new_grid':True}
+                #if y.check_passed:
+                hint = y.next_step
+                hint['extrapolation'] = y.extra
+                hint['extrapolation_units'] = 'eV'
+                #else:
+                #    hint = {'new_grid':True}
         
             elif 'new_algorithm_1D' in calc_dict['convergence_algorithm']:
                 k = workflow_manager['what'][i]
@@ -761,12 +761,12 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index
-                if y.check_passed:
-                    hint = y.next_step
-                    hint['extrapolation'] = y.extra
-                    hint['extrapolation_units'] = 'eV'
-                else:
-                    hint = {'new_grid': True,'next_step':y.next_step,'reached':y.point_reached,'check':y.check_passed}
+                #if y.check_passed:
+                hint = y.next_step
+                hint['extrapolation'] = y.extra
+                hint['extrapolation_units'] = 'eV'
+                #else:
+                #    hint = {'new_grid':True}
 
             else:
                 y = Convergence_evaluator(
@@ -783,7 +783,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
             
             if not is_converged: break
 
-        if 'BndsRnXp' in calc_dict['var'] and 'GbndRnge' in calc_dict['var'] and hint: # and len(var_)==2:
+        if 'BndsRnXp' in calc_dict['var'] and 'GbndRnge' in calc_dict['var'] and hint and 'BndsRnXp' in hint.keys(): # and len(var_)==2:
              hint['GbndRnge'] =  hint['BndsRnXp']
                 
     return is_converged, oversteps, none_encountered, homo, hint            

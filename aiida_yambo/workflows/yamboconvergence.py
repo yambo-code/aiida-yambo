@@ -378,7 +378,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 future = self.submit(YamboWorkflow, **self.ctx.calc_inputs)
                 self.ctx.workflow_manager['group'].add_nodes(future.caller)
             else:
-                #self.report('Calculation already done: {}'.format(already_done))
+                self.report('Calculation already done: {}'.format(already_done))
                 future = load_node(already_done)
 
             calc[str(i+1)] = future
