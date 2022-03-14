@@ -134,15 +134,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         for override in [overrides_scf,overrides_nscf]:
             override['clean_workdir'] = override.pop('clean_workdir',False) #required to have a valid parent folder
             
-            if not 'pw' in override.keys():
-                override['pw'] = {'parameters':{'SYSTEM':{'force_symmorphic':True}}}
-            elif not 'parameters' in override['pw'].keys():
-                override['pw']['parameters'] = {'SYSTEM':{'force_symmorphic':True}} 
-            elif not 'SYSTEM' in override['pw']['parameters'].keys():
-                override['pw']['parameters']['SYSTEM'] = {'force_symmorphic':True} 
-            else:
-                override['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
-            
             if 'pseudo_family' in override.keys():
                 if 'PseudoDojo' in override['pseudo_family']: NLCC = True
         
@@ -182,6 +173,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         builder.nscf['kpoints'] = KpointsData()
         builder.nscf['kpoints'].set_cell_from_structure(builder.scf['pw']['structure'])
         builder.nscf['kpoints'].set_kpoints_mesh_from_density(meta_parameters['k_density'],force_parity=True)
+
+        builder.scf['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
+        builder.nscf['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
         
         nelectrons = 0
         for site in builder.nscf['pw']['structure'].sites:
