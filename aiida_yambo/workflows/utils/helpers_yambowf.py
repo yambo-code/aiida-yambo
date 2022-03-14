@@ -177,10 +177,10 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
         message_scf = message_scf_parent
         messages.append(message_scf)
         scf_params =  scf_params_parent 
-    elif hasattr(workchain_inputs,'scf_parameters'):
+    elif hasattr(workchain_inputs.scf.pw,'parameters'):
         message_scf = 'scf inputs found'
         messages.append(message_scf)
-        scf_params =  workchain_inputs.scf_parameters       
+        scf_params =  workchain_inputs.scf.pw.parameters
     else:
         message_scf = 'scf inputs not found, setting defaults'
         messages.append(message_scf)
@@ -201,9 +201,9 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
             nscf_params = Dict(dict=nscf_params)
             messages.append(message_nscf)  
-    elif hasattr(workchain_inputs,'nscf_parameters'):
+    elif hasattr(workchain_inputs.nscf.pw,'parameters'):
         message_nscf = 'nscf inputs found' 
-        nscf_params =  workchain_inputs.nscf_parameters
+        nscf_params =  workchain_inputs.nscf.pw.parameters
         if nscf_params.get_dict()['SYSTEM']['nbnd'] < gwbands:
             redo_nscf = True
             message_nscf += ', and setting nbnd of the nscf calculation to b = {}'.format(gwbands)
