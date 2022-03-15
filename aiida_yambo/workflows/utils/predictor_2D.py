@@ -60,7 +60,7 @@ class The_Predictor_2D():
         #print(kwargs['calc_dict'])
         
         if isinstance(self.what,list):
-            self.what = self.k
+            self.what = self.what[0]
         
         if not hasattr(self,'Fermi'): self.Fermi=0
 
@@ -208,8 +208,8 @@ class The_Predictor_2D():
                             (abs(self.Zxy_fit)<1e-7))
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
-        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0])
-        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0])
+        if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0]*1.25)
+        if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0]*1.25)
             
         print('b: {}\ng: {}'.format(b,g))
         
@@ -289,25 +289,26 @@ class The_Predictor_2D():
             
         if self.conv_thr_units=='%':
             thr = self.conv_thr*abs(reference)/100
+            print(thr)
         else:
             thr = self.conv_thr
         
-        print(thr)
-        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(thr),0))))
+        #print(thr)
+        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(1%thr),0))))
         condition = np.where((discrepancy<=thr))
         print(condition)
-        print(self.Z_fit[condition])
-        print('\n')
+        self.discrepancy=discrepancy
+        #print(self.Z_fit[condition])
+        #print('\n')
         
-        print('Min G condition')
-        print(self.Z_fit[condition][0])
-        print(self.X_fit[condition][0])
-        print(self.Y_fit[condition][0])
+        #print('Min G condition')
+        #print(self.Z_fit[condition][0])
+        #print(self.X_fit[condition][0])
+        #print(self.Y_fit[condition][0])
         
         self.condition = condition
-        self.rectangle = ((self.X_fit[-1,-1]-self.X_fit[condition][0])/self.delta_[0])*((self.Y_fit[-1,-1]-self.Y_fit[condition][0])/self.delta_[1])
-        self.rectangle = int(self.rectangle)
-         
+        
+        #self.X_fit,self.Y_fit = np.meshgrid(self.X_fit,self.Y_fit)
         conv_bands,conv_G = self.X_fit[condition][0],self.Y_fit[condition][0]
         conv_z = self.Z_fit[condition][0]
         
@@ -370,7 +371,7 @@ class The_Predictor_2D():
         print(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values)
 
 
-        self.old_discrepancy = abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
+        self.old_discrepancy =abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
         self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
@@ -396,26 +397,22 @@ class The_Predictor_2D():
         for i in power_laws:
             for j in power_laws:
                 print(i,j)
-                self.check_passed = self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis')
+                self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis',reference=reference)
                 if self.MAE_fit<error: 
                     ii,jj = i,j
                     error = self.MAE_fit
 
         print('\nBest power laws: {}, {}\n'.format(i,j))            
         
-        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=True,plot=plot,save=save_fit,colormap=colormap)
-        if not self.check_passed: 
+        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=True,plot=plot,save=save_fit,colormap=colormap,reference=reference)
+        
+        if not self.check_passed:
             self.point_reached = False
-            self.new_grid = create_grid(
-                edges=[min(self.parameters[0]),min(self.parameters[1]),max(self.parameters[0]),max(self.parameters[1])],
-                delta=self.delta_,
-                alpha=0.25,
-                add = [[],[]],
-                var=self.var_,
-                shift=[2,2])
+            self.next_step = {'new_grid':True}
             return
-            
-        self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next)
+        else:
+            self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next,reference=reference)
+        
         self.point_reached = False
 
         if reference == 'extra':
@@ -438,7 +435,7 @@ class The_Predictor_2D():
                 else:
                     reference = self.Z_fit[-1,-1]
                 
-                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(self.conv_thr/factor),0)))) <= self.conv_thr/factor: 
+                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(1%(self.conv_thr/factor)),0)))) <= self.conv_thr/factor:  
                     self.check_passed = True
                 else:
                     self.check_passed = False

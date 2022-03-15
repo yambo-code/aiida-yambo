@@ -322,7 +322,7 @@ class The_Predictor_1D():
             thr = self.conv_thr
         
         #print(thr)
-        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(thr),0))))
+        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(1%thr),0))))
         condition = np.where((discrepancy<=thr))
         
         #print(condition)
@@ -434,18 +434,14 @@ class The_Predictor_1D():
         print('Best power law: {}'.format(i))  
         
         self.check_passed = self.fit_space_1D(fit=True,alpha=ii,beta=1,verbose=True,plot=plot,save=save_fit)
-        if not self.check_passed: 
+        
+        if not self.check_passed:
             self.point_reached = False
-            self.new_grid = create_grid_1D(
-                edges=[min(self.parameters[0]),max(self.parameters[0])],
-                delta=self.delta_,
-                alpha=0.25,
-                add = [[]],
-                var=self.var_,
-                shift=[2])
+            self.next_step = {'new_grid':True}
             return
-            
-        self.determine_next_calculation(plot=plot, save=save_next)
+        else:
+            self.determine_next_calculation(plot=plot,save=save_next,reference=reference)
+        
         self.point_reached = False
         
         if reference == 'extra':
@@ -469,7 +465,7 @@ class The_Predictor_1D():
                 else:
                     reference = self.Z_fit[-1]
                 
-                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(self.conv_thr/factor),0)))) <= self.conv_thr/factor: 
+                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(1%(self.conv_thr/factor)),0)))) <= self.conv_thr/factor: 
                     self.check_passed = True
                 else:
                     self.check_passed = False

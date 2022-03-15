@@ -58,8 +58,9 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
     #mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
     #kpoints = gap_mapping_from_nscf(nscf.pk,)['number_of_kpoints']
 
-    tot_cores = resources['num_mpiprocs_per_machine']*resources['num_cores_per_mpiproc']
-    if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu'] or iteration > 1: #there should be a limit
+    tot_cores = resources['num_machines']*resources['num_mpiprocs_per_machine']*resources['num_cores_per_mpiproc']
+    
+    '''if resources['num_mpiprocs_per_machine']==1 or failed_calc.outputs.output_parameters.get_dict()['has_gpu'] or iteration > 1: #there should be a limit
         
         new_nodes = int(2*resources['num_machines'])
         #new_nodes += new_nodes%2
@@ -69,11 +70,11 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
         elif max_nodes==0:
             resources['num_machines'] = int(1)
         else:
-            resources['num_machines'] = int(max_nodes)
+            resources['num_machines'] = int(max_nodes)'''
         
-    if resources['num_cores_per_mpiproc']>1:
-        resources['num_mpiprocs_per_machine'] = int(resources['num_mpiprocs_per_machine']*2)
-        resources['num_cores_per_mpiproc'] = int(tot_cores/resources['num_mpiprocs_per_machine'])
+    if resources['num_mpiprocs_per_machine']>1:
+        resources['num_cores_per_mpiproc'] = int(resources['num_cores_per_mpiproc']*2)
+        resources['num_mpiprocs_per_machine'] = int(resources['num_mpiprocs_per_machine']/2)
 
 
     pop_list = []
