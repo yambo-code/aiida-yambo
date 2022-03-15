@@ -7,9 +7,9 @@ default_inputs:
                     num_machines: 1
                     num_mpiprocs_per_machine: 1
                     num_cores_per_mpiproc: 1
-                max_wallclock_seconds: 30*60  # 30 min
+                max_wallclock_seconds: 1800  # 30 min
                 withmpi: True
-                prepend_text: 'mv ./SAVE/ndb.QP* .',
+                prepend_text: 'mv ./SAVE/ndb.QP* .'
         parameters:
             arguments: ['infver','QPDBs','QPDB_merge']
             variables: {'BoseTemp': [0,'eV'],}
@@ -28,6 +28,6 @@ protocols:
                     num_machines: 1
                     num_mpiprocs_per_machine: 1
                     num_cores_per_mpiproc: 1
-                max_wallclock_seconds: 30*60  # 30 min
+                max_wallclock_seconds: 1800  # 30 min
                 withmpi: True
-                prepend_text: 'cp ndb.QP ./SAVE/.',
+                prepend_text: 'cp ndb.QP ./SAVE/.'

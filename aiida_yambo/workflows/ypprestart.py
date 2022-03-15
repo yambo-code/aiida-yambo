@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import sys
+import warnings
 
 from aiida.orm import RemoteData
-from aiida.orm import Str, Dict, Int
+from aiida.orm import Str, Dict, Int, Bool, load_code
 
 from aiida.common import ValidationError
 
@@ -109,11 +110,11 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
         from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
 
         if isinstance(code, str):           
-            code = orm.load_code(code)
+            code = load_code(code)
 
         inputs = cls.get_protocol_inputs(protocol, overrides={})
 
-        meta_parameters = inputs.pop('meta_parameters')
+        meta_parameters = inputs.pop('meta_parameters', None)
 
 
         # Update the parameters based on the protocol inputs
@@ -143,7 +144,7 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
         builder.clean_workdir = Bool(inputs['clean_workdir'])
 
         if not parent_folder:
-            RaiseError('You must provide a parent folder calculation, either YPP or YAMBO') 
+            warnings.warn('You must provide a parent folder calculation, either YPP or YAMBO') 
         elif isinstance(parent_folder,str):
             pass
         else:
