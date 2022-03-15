@@ -126,7 +126,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         if spin_type not in [SpinType.NONE, SpinType.COLLINEAR]:
             raise NotImplementedError(f'spin type `{spin_type}` is not supported.')
 
-        inputs = cls.get_protocol_inputs(protocol, overrides={})
+        if overrides is None:
+            overrides = {}
+        inputs = cls.get_protocol_inputs(protocol, overrides=overrides)
 
         meta_parameters = inputs.pop('meta_parameters',{})
         
