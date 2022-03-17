@@ -67,7 +67,7 @@ class The_Predictor_2D():
         self.var_ = copy.deepcopy(self.var) #to delete one of the band var:
         self.delta_ = copy.deepcopy(self.delta) #to delete one of the band var:
         self.index = [0] 
-
+            
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var and len(self.var) > 2:
             self.var_.remove('GbndRnge')
             self.delta_.pop(self.var.index('GbndRnge'))
@@ -164,7 +164,7 @@ class The_Predictor_2D():
                       bounds=([-np.inf,-np.inf,-np.inf,-np.inf],[np.inf,np.inf,np.inf,np.inf]))
         
         MAE_int = np.average((abs(f(xdata,popt[0],popt[1],popt[2],popt[3],)-ydata)),weights=xdata[0]*xdata[1])
-        print('MAE fit = {} eV'.format(MAE_int))
+        #print('MAE fit = {} eV'.format(MAE_int))
         self.MAE_fit = MAE_int
         
         #if self.MAE_fit > 2*self.conv_thr: 
@@ -173,10 +173,10 @@ class The_Predictor_2D():
         #else:
         #    print('Fit reliable, continue...')
         
-        if verbose: 
-            print(max(xdata[0,:]),max(xdata[1,:])) #,popt[1]*popt[3])
-            print('conv_thr, ',self.conv_thr)
-        ###########Preliminary fit#################################
+        #if verbose: 
+            #print(max(xdata[0,:]),max(xdata[1,:])) #,popt[1]*popt[3])
+            #print('conv_thr, ',self.conv_thr)
+        ############Preliminary fit#################################
         
         self.X_fit = np.arange(min(xdata[0]),max(xdata[0])*10,self.delta_[0])
         self.Y_fit = np.arange(min(xdata[1]),max(xdata[1])*10,self.delta_[1])
@@ -203,15 +203,19 @@ class The_Predictor_2D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where((abs(self.Zx_fit)<5e-4) & \
-                            (abs(self.Zy_fit)<5e-4) & \
-                            (abs(self.Zxy_fit)<1e-7))
+        self.condition_conv_calc = np.where((abs(self.Zx_fit)<5e-5) & \
+                            (abs(self.Zy_fit)<5e-5) & \
+                            (abs(self.Zxy_fit)<1e-8))
+        
+        self.old_X_fit =self.X_fit
+        self.old_Y_fit =self.Y_fit
+        self.old_Z_fit =self.Z_fit
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0]*1.25)
         if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0]*1.25)
             
-        print('b: {}\ng: {}'.format(b,g))
+        #print('b: {}\ng: {}'.format(b,g))
         
         p = f(np.array((max(xdata[0,:]),max(xdata[1,:]))),popt[0],popt[1],popt[2],popt[3])
         p_H = f(np.array((b,g)),popt[0],popt[1],popt[2],popt[3])
@@ -220,12 +224,12 @@ class The_Predictor_2D():
         except:
             l = ydata[-1]
         
-        print('extra={} eV, \nlast calculation={} eV \nlast calculation from fit={} eV'.format(round(popt[3]*popt[1],3),
-                                                                                          round(l,2),round(p,3)))
+        #print('extra={} eV, \nlast calculation={} eV \nlast calculation from fit={} eV'.format(round(popt[3]*popt[1],3),
+                                                                                         # round(l,2),round(p,3)))
         
-        if verbose: print('({},{}) highest point from fit = {} eV\n'.format(b,g,round(p_H,3)))
-        if verbose: print('\nrelative err extra - last calculation = {}%'.format(round(100*abs((popt[3]*popt[1]-l)/(l)),3)))      
-        if verbose: print('relative err extra - highest point from fit = {}%'.format(round(100*abs((popt[3]*popt[1]-p_H)/(p_H)),3)))
+        #if verbose: print('({},{}) highest point from fit = {} eV\n'.format(b,g,round(p_H,3)))
+        #if verbose: print('\nrelative err extra - last calculation = {}%'.format(round(100*abs((popt[3]*popt[1]-l)/(l)),3)))      
+        #if verbose: print('relative err extra - highest point from fit = {}%'.format(round(100*abs((popt[3]*popt[1]-p_H)/(p_H)),3)))
         
         self.X_fit = np.arange(min(xdata[0]),b+1,self.delta_[0])
         self.Y_fit = np.arange(min(xdata[1]),g+1,self.delta_[1])
@@ -244,7 +248,7 @@ class The_Predictor_2D():
         
         if plot:
             lw=10
-            print('res min {}, res max {}'.format(min(self.res),max(self.res)))
+            #print('res min {}, res max {}'.format(min(self.res),max(self.res)))
             fig,ax = plt.subplots(figsize=[8,8])
             
             self.plot_scatter_contour_2D(fig,ax,
@@ -289,14 +293,14 @@ class The_Predictor_2D():
             
         if self.conv_thr_units=='%':
             thr = self.conv_thr*abs(reference)/100
-            print(thr)
+            #print(thr)
         else:
             thr = self.conv_thr
         
         #print(thr)
         discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(1%thr),0))))
         condition = np.where((discrepancy<=thr))
-        print(condition)
+        #print(condition)
         self.discrepancy=discrepancy
         #print(self.Z_fit[condition])
         #print('\n')
@@ -318,6 +322,9 @@ class The_Predictor_2D():
             self.what: conv_z,
             'already_computed':False,
         }
+        
+        if self.next_step[self.var_[0]] > self.max[0] or self.next_step[self.var_[1]] > self.max[-1]:
+            self.next_step['new_grid'] = True
         
         if conv_bands in self.parameters[0,:] and conv_G in self.parameters[1,np.where(self.parameters[0,:]==conv_bands)]:
             self.next_step['already_computed'] = True
@@ -361,21 +368,23 @@ class The_Predictor_2D():
             
             if save : plt.savefig('plot_next.png')
         
+        print(self.next_step)
+
         return self.next_step
     
     def check_the_point(self,old_hints={}):
         
-
-        print(old_hints[self.what])
-        print(self.result)
-        print(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values)
-
-
         self.old_discrepancy =abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0])
         
         self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])].index.values[0])]
+        
+        
+        print('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL')
+        print(old_hints)
+        print(self.next_step)
+        print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
 
         print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))
             
@@ -404,7 +413,7 @@ class The_Predictor_2D():
 
         print('\nBest power laws: {}, {}\n'.format(i,j))            
         
-        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=True,plot=plot,save=save_fit,colormap=colormap,reference=reference)
+        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=False,plot=plot,save=save_fit,colormap=colormap,reference=reference)
         
         if not self.check_passed:
             self.point_reached = False
@@ -412,6 +421,12 @@ class The_Predictor_2D():
             return
         else:
             self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next,reference=reference)
+        
+        if 'new_grid' in self.next_step.keys():
+            if self.next_step['new_grid']: 
+                self.check_passed = False
+                self.point_reached = False
+                return
         
         self.point_reached = False
 

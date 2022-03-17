@@ -104,6 +104,7 @@ class The_Predictor_1D():
         for i in self.var_:
             setattr(self,i,copy.deepcopy(list(self.result[i].values)))
         
+        
         self.parameters = np.array(self.grid[self.var_[0]]) #per i k, griglia specifica da inputs.
         #ci vuole un k adapter
         if 'kpoint_mesh' in self.var_:
@@ -250,7 +251,7 @@ class The_Predictor_1D():
             thr = self.conv_thr
             
         
-        self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-4)
+        self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-5)
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata),self.X_fit[self.condition_conv_calc][0])
@@ -307,7 +308,7 @@ class The_Predictor_1D():
     def determine_next_calculation(self,
                                    overconverged_values=[],
                                    plot=False,
-                                   reference = None,save=False):
+                                   reference = None,save=False,):
         
         print('last point:{} eV'.format(self.Z_fit[-1]))
         
@@ -381,6 +382,12 @@ class The_Predictor_1D():
             kz = factor*self.delta[2] + self.starting_mesh[2]
         
         self.next_step[self.var_[0]] = [int(kx),int(ky),int(kz)]
+        
+        for k in range(3):
+            if self.next_step[self.var_[0]][k] > self.max[k]:
+                self.next_step['new_grid'] = True
+                break
+            
         print('guessed next step: {} \n\n\n'.format(self.next_step))
 
         return self.next_step
@@ -440,8 +447,14 @@ class The_Predictor_1D():
             self.next_step = {'new_grid':True}
             return
         else:
-            self.determine_next_calculation(plot=plot,save=save_next,reference=reference)
+            self.determine_next_calculation(plot=plot, save=save_next,reference=reference)
         
+        if 'new_grid' in self.next_step.keys():
+            if self.next_step['new_grid']: 
+                self.check_passed = False
+                self.point_reached = False
+                return
+            
         self.point_reached = False
         
         if reference == 'extra':
