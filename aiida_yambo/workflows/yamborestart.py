@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import sys
+import warnings
 
 from aiida.orm import RemoteData
 from aiida.orm import Str, Dict, Int, Bool, StructureData
@@ -176,7 +177,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         builder.clean_workdir = Bool(inputs['clean_workdir'])
 
         if not parent_folder:
-            RaiseError('You must provide a parent folder calculation, either QE or YAMBO') 
+            warnings.warn('You must provide a parent folder calculation, either QE or YAMBO')
         elif isinstance(parent_folder,str):
             pass
         else:
