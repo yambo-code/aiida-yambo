@@ -160,7 +160,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             metadata_overrides = overrides.get('metadata', {})
             metadata = recursive_merge(metadata, metadata_overrides)
 
-        if not 'QPkrange' in parameters['variables'].keys() and 'gw0' in parameters['arguments'].keys():
+        if not 'QPkrange' in parameters['variables'].keys() and 'gw0' in parameters['arguments']:
             parameters['variables']['QPkrange'] = [[[1, 1, 32, 32,]], ''] #fictitious
 
         print('Summary of the main inputs:\nBndsRnXp = {}\nGbndRnge = {}\nNGsBlkXp = {} {}\n'\
