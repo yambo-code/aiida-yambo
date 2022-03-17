@@ -85,7 +85,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='h
         print('SPACE,',space)
         if hint:
             if hint['new_grid']:
-                new_grid = i['iter']+1
+                new_grid = i['iter']
         if 'new_algorithm_2D' in wfl_type:
             if hint and not new_grid:
                 for v in l:
