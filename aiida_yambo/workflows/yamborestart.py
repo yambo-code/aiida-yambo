@@ -92,7 +92,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         preprocessing_code,
         code,
         protocol='fast',
-        overrides=None,
+        overrides={},
         parent_folder=None,
         NLCC=False,
         RIM_v=False,

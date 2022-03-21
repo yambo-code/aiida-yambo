@@ -100,7 +100,7 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
         cls,
         code,
         protocol='merge_QP',
-        overrides=None,
+        overrides={},
         parent_folder=None,
         **_
     ):

@@ -95,7 +95,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         protocol_qe='fast',
         protocol='fast',
         structure=None,
-        overrides=None,
+        overrides={},
         parent_folder=None,
         NLCC=False,
         RIM_v=False,

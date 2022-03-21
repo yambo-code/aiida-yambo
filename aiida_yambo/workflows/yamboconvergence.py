@@ -99,7 +99,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         protocol_qe='moderate',
         protocol='moderate',
         structure=None,
-        overrides=None,
+        overrides={},
         NLCC=False,
         RIM_v=False,
         RIM_W=False,
