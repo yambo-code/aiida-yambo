@@ -43,7 +43,7 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
         super(YppRestart, cls).define(spec)
         spec.expose_inputs(YppCalculation, namespace='ypp', namespace_options={'required': True}, \
                             exclude = ['parent_folder'])
-        spec.input("parent_folder", valid_type=RemoteData, required=True)
+        spec.input("parent_folder", valid_type=RemoteData, required=False)
 
         spec.input(
             'pw2wannier90_parent',
