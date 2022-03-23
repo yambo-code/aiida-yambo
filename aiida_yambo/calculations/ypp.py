@@ -192,9 +192,9 @@ class YppCalculation(CalcJob):
 
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
-        elif parent_calc.process_type=='aiida.calculations:yambo.yambo.yambowf':
+        elif parent_calc.process_type=='aiida.workflows:yambo.yambo.yambowf':
             yambo_parent=True
-        elif parent_calc.process_type=='aiida.calculations:yambo.yambo.yamboconvergence':
+        elif parent_calc.process_type=='aiida.workflows:yambo.yambo.yamboconvergence':
             yambo_parent=True
         elif parent_calc.process_type=='aiida.calculations:yambo.ypp':
             ypp_parent=True
