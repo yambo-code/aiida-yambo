@@ -61,11 +61,9 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
             cls.validate_parameters,
             cls.validate_resources,
             cls.validate_parent,
-            if_(cls.should_run_ypp)(
-                while_(cls.should_run_process)(
+            while_(cls.should_run_process)(
                     cls.run_process,
                     cls.inspect_process,
-                ),
                 ),
             cls.post_processing,
             if_(cls.should_run_ypp)(cls.results),

@@ -12,7 +12,8 @@ if __name__ == '__main__':
         reentry_register=True,
 	zip_safe = True,
         packages=find_packages(
-            where='.', exclude=("yambo.*", "parser.*", "yambo*", "parser*","ypp.*", "yppparser.*", "ypp*", "yppparser*")),
+            where='.', exclude=("yambo.*", "parser.*", "yambo*", "parser*","ypp.*",
+            "yppparser.*", "ypp*", "yppparser*")),
         **kwargs)
     #import reentry
     #reentry.manager.scan()

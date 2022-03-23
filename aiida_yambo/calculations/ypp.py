@@ -182,7 +182,10 @@ class YppCalculation(CalcJob):
 
         main_code = self.inputs.code
 
-        parent_calc = take_calc_from_remote(parent_calc_folder)
+        try:
+            parent_calc = take_calc_from_remote(parent_calc_folder,level=-1)
+        except:
+            parent_calc = take_calc_from_remote(parent_calc_folder,level=0)
 
         yambo_parent = False
         ypp_parent=True
@@ -192,7 +195,7 @@ class YppCalculation(CalcJob):
         elif parent_calc.process_type=='aiida.calculations:yambo.ypp':
             ypp_parent=True
         else:
-            raise InputValidationError("YppCalculation parent MUST be a YamboCalculation")
+            raise InputValidationError("YppCalculation parent MUST be a YamboCalculation, not {}".format(parent_calc.process_type))
 
         # TODO: check that remote data must be on the same computer
 
@@ -343,5 +346,10 @@ class YppCalculation(CalcJob):
 
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append(extra)
+
+        self.report(
+            'calcinfo.uuid is {}'.format(calcinfo.uuid)
+        )
+
 
         return calcinfo

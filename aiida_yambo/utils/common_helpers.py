@@ -157,9 +157,9 @@ def take_super(node = 0, what = 'WorkChainNode'):
 
      return workchain_node
 
-def take_calc_from_remote(parent_folder):
+def take_calc_from_remote(parent_folder,level=0):
         try:
-            parent_calc = parent_folder.get_incoming().all_nodes()[0] #to load the node from a workchain...
+            parent_calc = parent_folder.get_incoming().all_nodes()[level] #to load the node from a workchain...
         except:
             parent_calc = parent_folder.get_incoming().get_node_by_label('remote_folder')
         return parent_calc
