@@ -66,7 +66,7 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
                     cls.inspect_process,
                 ),
             cls.post_processing,
-            if_(cls.should_run_ypp)(cls.results),
+            cls.results,
         )
 
 

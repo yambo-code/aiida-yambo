@@ -108,7 +108,7 @@ class YppCalculation(CalcJob):
             'QP_calculations',
             valid_type=List,
             required=False,
-            help='List of QP pk/uuid calculations that you want to merge. or use in the Wannier')
+            help='List of QP pk/uuid calculations that you want to merge.')
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -342,18 +342,8 @@ class YppCalculation(CalcJob):
         calcinfo.codes_info = [c]
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
 
-        if settings:
-            raise InputValidationError(
-                "The following keys have been found in "
-                "the settings input node, but were not understood: {}".format(
-                    ",".join(list(settings.keys()))))
-
         for extra in extra_retrieved:
             calcinfo.retrieve_list.append(extra)
-
-        self.report(
-            'calcinfo.uuid is {}'.format(calcinfo.uuid)
-        )
 
 
         return calcinfo
