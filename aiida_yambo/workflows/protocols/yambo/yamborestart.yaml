@@ -24,6 +24,7 @@ default_inputs:
             'DysSolver': 'n',
             'GTermKind': 'BG',
             'PAR_def_mode': 'balanced',
+            'X_and_IO_nCPU_LinAlg_INV': [1, ''],
             }
 default_protocol: GW_fast
 protocols:
