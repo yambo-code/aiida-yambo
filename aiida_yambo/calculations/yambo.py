@@ -194,7 +194,11 @@ class YamboCalculation(CalcJob):
 
         parent_calc = take_calc_from_remote(parent_calc_folder)
 
-        if parent_calc.process_type=='aiida.calculations:yambo.yambo':
+        if parent_calc.process_type in [
+            'aiida.calculations:yambo.yambo',
+            'aiida.workflows:yambo.yambo.yamborestart',
+            'aiida.workflows:yambo.yambo.yambowf',
+        ]:
             yambo_parent=True
         else:
             yambo_parent=False
