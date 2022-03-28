@@ -192,11 +192,15 @@ class YppCalculation(CalcJob):
 
         if parent_calc.process_type=='aiida.calculations:yambo.yambo':
             yambo_parent=True
+        elif parent_calc.process_type=='aiida.workflows:yambo.yambo.yamborestart':
+            yambo_parent=True
         elif parent_calc.process_type=='aiida.workflows:yambo.yambo.yambowf':
             yambo_parent=True
         elif parent_calc.process_type=='aiida.workflows:yambo.yambo.yamboconvergence':
             yambo_parent=True
         elif parent_calc.process_type=='aiida.calculations:yambo.ypp':
+            ypp_parent=True
+        elif parent_calc.process_type=='aiida.workflows:yambo.ypp.ypprestart':
             ypp_parent=True
         else:
             raise InputValidationError("YppCalculation parent MUST be a YamboCalculation, not {}".format(parent_calc.process_type))
