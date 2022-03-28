@@ -502,7 +502,7 @@ def check_identical_calculation(YamboWorkflow_inputs,
 
     return already_done, parent_nscf 
 
-def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,full=True,additional=[]):
+def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,full=True,additional=[], bands=None):
     l = 0 
     already_done = False
     try:
@@ -510,6 +510,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
             old_params = node.inputs.yres__yambo__parameters.get_dict()['variables']
             was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
+            if bands : enough_b = node.inputs.nscf__pw__parameters.get_dict()['SYSTEM']['nbnd'] >= bands
             for p in what:
                 if 'CPU' in p or 'ROLEs' in p: 
                     already_done = node.pk
@@ -517,19 +518,19 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
-                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
+                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
                                 already_done = node.pk
                             else:                          
                                 already_done = False
                                 break 
                     else: 
-                        if additional==[] and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty): 
+                        if additional==[] and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)): 
                             already_done = node.pk
                         else:
                             already_done = False
                             break 
 
-                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
+                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
                     already_done = node.pk
                 else:
                     already_done = False
@@ -538,17 +539,17 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             
             over = abs(len(params_to_calc)-len(old_params))
 
-            if already_done and full and (over == l or over == 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
+            if already_done and full and (over == l or over == 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
                 already_done = node.pk
                 print('ok')
 
-            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
+            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
                 already_done = False
                 print(node.pk)
                 print(len(params_to_calc),len(old_params))
                 print(l,over)
                 
-            if up_to_p2y and same_k and not node.called[0].called[0].outputs.remote_folder.is_empty:
+            if up_to_p2y and same_k and not node.called[0].called[0].outputs.remote_folder.is_empty and (not bands or (bands and enough_b)):
                     already_done = node.pk
                     return already_done
     
@@ -557,7 +558,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
     
     return already_done
 
-def check_same_pw(node, k_mesh_to_calc, already_done):
+def check_same_pw(node, k_mesh_to_calc, already_done, bands = None):
     parent_nscf = False
     parent_scf = False
     try:
@@ -566,11 +567,14 @@ def check_same_pw(node, k_mesh_to_calc, already_done):
             parent_nscf_try = find_pw_parent(node, calc_type=['nscf'])
             parent_scf_try = find_pw_parent(node, calc_type=['scf'])
             same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
+            if bands : enough_b = node.inputs.nscf__pw__parameters.get_dict()['SYSTEM']['nbnd'] >= bands
             if node.is_finished_ok:
                 try:
                     y = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
                     if 'ns.db1' in  os.listdir(y) and same_k and not node.outputs.remote_folder.is_empty:
-                        parent_nscf = node.pk                    
+                        if (bands and enough_b) or not bands:
+                            parent_nscf = node.pk      
+
                 except:
                     pass
             if same_k and parent_nscf_try.is_finished_ok and not parent_nscf_try.outputs.remote_folder.is_empty: 
@@ -588,7 +592,8 @@ def search_in_group(YamboWorkflow_inputs,
                                 what=['BndsRnXp','GbndRnge','NGsBlkXp'],
                                 full = True,
                                 exclude = [],
-                                up_to_p2y = False):
+                                up_to_p2y = False,
+                                bands=None):
 
     already_done = False
     parent_nscf = False
@@ -627,21 +632,21 @@ def search_in_group(YamboWorkflow_inputs,
     for old in YamboWorkflow_group.nodes:
         if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
             for i in old.called:
-                already_done = check_same_yambo(i, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full)
+                already_done = check_same_yambo(i, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full, bands=bands)
                 if already_done: break
 
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full,additional = additional)        
+            already_done = check_same_yambo(old, params_to_calc,k_mesh_to_calc,what,up_to_p2y=up_to_p2y,full=full,additional = additional, bands=bands)        
         if already_done: break
             
     for old in YamboWorkflow_group.nodes:
         if old.process_type == 'aiida.workflows:yambo.yambo.yamboconvergence':
             for i in old.called:
-                parent_nscf, parent_scf = check_same_pw(i, k_mesh_to_calc, already_done)
+                parent_nscf, parent_scf = check_same_pw(i, k_mesh_to_calc, already_done, bands=bands)
                 if parent_nscf: break
         
         elif old.process_type == 'aiida.workflows:yambo.yambo.yambowf':
-            parent_nscf, parent_scf = check_same_pw(old, k_mesh_to_calc, already_done)
+            parent_nscf, parent_scf = check_same_pw(old, k_mesh_to_calc, already_done, bands=bands)
         
         if parent_nscf: break
 

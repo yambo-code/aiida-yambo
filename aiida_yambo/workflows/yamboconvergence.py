@@ -581,7 +581,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         try:    
             already_done, parent_nscf, parent_scf = search_in_group(self.ctx.calc_inputs, 
-                                               self.ctx.workflow_manager['group'], up_to_p2y = True)
+                                               self.ctx.workflow_manager['group'], up_to_p2y = True, bands = self.ctx.gwbands)
 
             #self.report(already_done,)
             #self.report(parent_nscf)
