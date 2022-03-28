@@ -25,7 +25,7 @@ def find_parent(calc):
         try:
             parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         except:
-            parent_calc = calc.called[0] #nscf_workchain...??
+            parent_calc = calc.called[-1] #nscf_workchain...??
     return parent_calc
 
 def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
@@ -36,7 +36,7 @@ def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
             has_found_pw = False
             parent_calc = find_parent(parent_calc)
             if parent_calc.process_type=='aiida.workflows:quantumespresso.pw.base':
-                parent_calc = parent_calc.called[0]
+                parent_calc = parent_calc.called[-1]
             if parent_calc.process_type=='aiida.calculations:quantumespresso.pw' and \
                 find_pw_type(parent_calc) in calc_type:
                 has_found_pw = True
