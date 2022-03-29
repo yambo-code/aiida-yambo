@@ -264,7 +264,12 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
 
 def start_from_converged(inputs, node_uuid, mesh=False):
     node = load_node(node_uuid)
-    inputs.yres.yambo.parameters = node.called[0].get_builder_restart().yambo['parameters']
-    if mesh: inputs.nscf.kpoints = node.inputs.nscf__kpoints
-    inputs.yres.yambo.metadata.options.resources = node.called[0].called[0].get_options()['resources']
-    inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[0].called[0].get_options()['max_wallclock_seconds']
+    for i in range(1,len(node.called)+1):
+        try:
+            inputs.yres.yambo.parameters = node.called[-i].get_builder_restart().yambo['parameters']
+            if mesh: inputs.nscf.kpoints = node.inputs.nscf__kpoints
+            inputs.yres.yambo.metadata.options.resources = node.called[-i].called[-1].get_options()['resources']
+            inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[-i].called[-1].get_options()['max_wallclock_seconds']
+            break
+        except:
+            pass
