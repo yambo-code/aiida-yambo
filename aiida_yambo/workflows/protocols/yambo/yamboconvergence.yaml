@@ -35,17 +35,35 @@ default_inputs:
 default_protocol: fast
 protocols:
     fast:
-        description: 'Fast protocol for a GW convergence, it will do it within a convergence threshold of 10% of the quantity that you want to converge'
+        description: 'Fast protocol for a GW convergence: grid -> poor; thresholds -> poor'
     moderate:
-        description: 'Moderate protocol for a GW convergence, it will do it within a convergence threshold of 5% of the quantity that you want to converge'
+        description: 'Moderate protocol for a GW convergence: grid -> enough good for standard materials; thresholds -> moderate (5 percent)'
         meta_parameters:
             conv_thr_k: 5
             conv_thr_bG: 5
             conv_thr_units: 'percentage of relative error'
+            bands: {
+                'start': 400,
+                'stop': 1000,
+                'delta': 200,
+                'max': 2000,
+            }
+            G_vectors: {
+                'start': 8,
+                'stop': 20,
+                'delta': 2,
+                'max': 40,
+            }
+            kmesh_density: {
+                'start': 0.5,
+                'stop': 0.2,
+                'delta': 2,
+                'max': 0.1,
+            }
         ywfl:
             protocol:'moderate'
     accurate:
-        description: 'Accurate protocol for a GW convergence, it will do it within a convergence threshold of 1% of the quantity that you want to converge'
+        description: 'Accurate protocol for a GW convergence: grid -> same as moderate; thresholds -> accurate (1 percent)'
         meta_parameters:
             conv_thr_k: 1
             conv_thr_bG: 1

@@ -1,6 +1,6 @@
 default_inputs:
     meta_parameters:
-        k_density: 0.4
+        k_density: 0.5
     yres:
         protocol:'fast'
 default_protocol: fast

@@ -62,7 +62,7 @@ def parse_log(log,output_params,timing):
             if p2y_completed.findall(line):
                 output_params['p2y_completed'] = True
     
-    elif 'setup' in log.filename:
+    elif 'l_setup' in log.filename or 'l-setup' in log.filename:
         pass
     
     else:

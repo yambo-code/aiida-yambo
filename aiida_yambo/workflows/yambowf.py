@@ -214,7 +214,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         
         gwbands = max(yambo_bandsX,yambo_bandsSc)
 
+        parameters_scf = builder.nscf['pw']['parameters'].get_dict()
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
+        
+        parameters_scf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']*1.3 #this is done in case we need many empty states.
+        parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
+        
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
 
