@@ -543,7 +543,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 already_done = node.pk
                 print('ok')
 
-            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
+            elif already_done and full and (over != l or over != 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty):
                 already_done = False
                 print(node.pk)
                 print(len(params_to_calc),len(old_params))
@@ -578,9 +578,11 @@ def check_same_pw(node, k_mesh_to_calc, already_done, bands = None):
                 except:
                     pass
             if same_k and parent_nscf_try.is_finished_ok and not parent_nscf_try.outputs.remote_folder.is_empty: 
-                parent_nscf = parent_nscf_try.pk     
+                if (bands and enough_b) or not bands:
+                    parent_nscf = parent_nscf_try.pk     
             if parent_scf_try.is_finished_ok and not parent_scf_try.outputs.remote_folder.is_empty: 
-                parent_scf = parent_scf_try.pk 
+                if (bands and enough_b) or not bands:
+                    parent_scf = parent_scf_try.pk 
    
     except:
         pass
