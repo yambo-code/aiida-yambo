@@ -100,7 +100,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         NLCC=False,
         RIM_v=False,
         RIM_W=False,
-        electronic_type=ElectronicType.INSULATOR,
+        electronic_type=ElectronicType.METAL,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
         **_
