@@ -136,9 +136,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             
             if 'pseudo_family' in override.keys():
                 if 'PseudoDojo' in override['pseudo_family']: NLCC = True
-        
-        overrides_nscf['pw'] = overrides_nscf.pop('pw',{'parameters':{}})
-        overrides_nscf['pw']['parameters']['CONTROL'] = overrides_nscf['pw']['parameters'].pop('CONTROL',{'calculation':'nscf'})
 
         try:
             pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
@@ -220,6 +217,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_scf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']*1.3 #this is done in case we need many empty states.
         parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
         
+        parameters_nscf['CONTROL']['calculation'] = 'nscf'
+
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
 
