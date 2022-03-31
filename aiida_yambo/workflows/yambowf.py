@@ -284,6 +284,17 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     else:
                         self.ctx.calc_to_do = 'yambo'
 
+            elif parent.process_type=='aiida.workflows:yambo.yambo.yambowf':
+                    parent=parent.called[0].called[0]
+                    nbnd = find_pw_parent(parent, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
+                    if self.ctx.redo_nscf or nbnd < self.ctx.gwbands:
+                        parent = find_pw_parent(parent, calc_type = ['scf'])
+                        self.report('Recomputing NSCF step, not enough bands. Starting from scf at pk < {} >'.format(parent.pk))
+                        self.ctx.calc_to_do = 'nscf'
+                        self.ctx.redo_nscf = False
+                    else:
+                        self.ctx.calc_to_do = 'yambo'
+
             elif parent.process_type=='aiida.calculations:yambo.yambo':
                     nbnd = find_pw_parent(parent, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
                     if self.ctx.redo_nscf or nbnd < self.ctx.gwbands:
