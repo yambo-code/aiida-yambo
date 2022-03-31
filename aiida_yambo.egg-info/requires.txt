@@ -3,6 +3,8 @@ aiida-quantumespresso<4.0,>=3.0.0a6
 netcdf4
 h5py
 pytest
+pandas==1.2.2
+numpy==1.20.1
 
 [docs]
 Sphinx
