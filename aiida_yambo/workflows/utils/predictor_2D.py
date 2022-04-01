@@ -411,7 +411,7 @@ class The_Predictor_2D():
                     ii,jj = i,j
                     error = self.MAE_fit
 
-        print('\nBest power laws: {}, {}\n'.format(i,j))            
+        print('\nBest power laws: {}, {}\n'.format(ii,jj))            
         
         self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=False,plot=plot,save=save_fit,colormap=colormap,reference=reference)
         

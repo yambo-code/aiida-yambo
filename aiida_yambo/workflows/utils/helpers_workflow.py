@@ -125,6 +125,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='h
                 start = i['start']
                 stop = i['stop']
                 metrics = i['delta']
+                if not isinstance(metrics,list): metrics = [metrics]
                 
                 space_ = create_grid_1D(edges = [start,stop],delta= metrics,var=var,shift = new_grid*2,alpha=1/3)
                 space.update(space_)

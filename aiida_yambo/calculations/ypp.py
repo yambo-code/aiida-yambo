@@ -110,6 +110,12 @@ class YppCalculation(CalcJob):
             required=False,
             help='List of QP pk/uuid calculations that you want to merge.')
 
+        spec.input(
+            'QP_DB_List',
+            valid_type=List,
+            required=False,
+            help='List of QP pk/uuid SingleFileData that you want to merge.')
+
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
         spec.exit_code(501, 'WALLTIME_ERROR',
@@ -250,6 +256,13 @@ class YppCalculation(CalcJob):
                 for calc in self.inputs.QP_calculations.get_list():
                     j+=1
                     qp = load_node(calc).outputs.QP_db
+                    local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
+                    list_of_dbs.append(['"E"','"+"','"1"','"'+'ndb.QP_'+str(j)+'"'])
+            
+            elif hasattr(self.inputs,'QP_DB_List'):
+                for calc in self.inputs.QP_DB_List.get_list():
+                    j+=1
+                    qp = load_node(calc)
                     local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
                     list_of_dbs.append(['"E"','"+"','"1"','"'+'ndb.QP_'+str(j)+'"'])
 

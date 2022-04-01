@@ -381,12 +381,15 @@ class The_Predictor_1D():
             ky = factor*self.delta[1] + self.starting_mesh[1]
             kz = factor*self.delta[2] + self.starting_mesh[2]
         
-        self.next_step[self.var_[0]] = [int(kx),int(ky),int(kz)]
+            self.next_step[self.var_[0]] = [int(kx),int(ky),int(kz)]
         
-        for k in range(3):
-            if self.next_step[self.var_[0]][k] > self.max[k]:
+            for k in range(3):
+                if self.next_step[self.var_[0]][k] > self.max[k]:
+                    self.next_step['new_grid'] = True
+                    break
+        else:
+            if self.next_step[self.var_[0]] > self.max:
                 self.next_step['new_grid'] = True
-                break
             
         print('guessed next step: {} \n\n\n'.format(self.next_step))
 
@@ -438,7 +441,7 @@ class The_Predictor_1D():
                     ii = i
                     error = self.MAE_fit
 
-        print('Best power law: {}'.format(i))  
+        print('Best power law: {}'.format(ii))  
         
         self.check_passed = self.fit_space_1D(fit=True,alpha=ii,beta=1,verbose=True,plot=plot,save=save_fit)
         
