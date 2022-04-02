@@ -25,7 +25,7 @@ def find_parent(calc):
         try:
             parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
         except:
-            parent_calc = calc.called[-1] #nscf_workchain...??
+            parent_calc = calc.called[0] #nscf_workchain...??
     return parent_calc
 
 def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
