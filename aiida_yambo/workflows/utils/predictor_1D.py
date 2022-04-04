@@ -48,8 +48,11 @@ def create_grid_1D(edges=[],delta=[],alpha=1/3,add = [],var=['BndsRnXp',],shift=
         return {'kpoint_mesh':b} #A,B,C,D,E,F
 
     else:
-        b_min = edges[0]+shift*delta[0]
-        b_max = edges[1]+shift*delta[0]
+        try:
+            b_min = edges[0]+shift*delta[0]
+            b_max = edges[1]+shift*delta[0]
+        except:
+            raise Exception(edges,delta)
 
         A = b_min
         B = b_max
