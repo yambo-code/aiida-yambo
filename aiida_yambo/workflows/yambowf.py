@@ -13,7 +13,6 @@ from aiida_quantumespresso.common.types import ElectronicType, SpinType
 
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
-from aiida_yambo.workflows.ypprestart import YppRestart
 
 from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
@@ -21,6 +20,58 @@ from aiida.plugins import DataFactory
 LegacyUpfData = DataFactory('upf')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
+
+def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
+    if bb_f-bb_i<nnk_f-nnk_i:
+        n = int(min(qp_for_subset,nnk_f-nnk_i+1)/3)+1
+        m = bb_f-bb_i+1
+    else:
+        m = int(min(qp_for_subset,bb_f-bb_i+1)/3)+1
+        n = nnk_f-nnk_i+1
+
+    print(n,m)
+
+    #n=58  #length of a set
+    #m=3
+    groups=[]
+    sets_k = int((nnk_f-nnk_i)/n+1)
+    sets_b = int((bb_f-bb_i)/m+1)
+    print(sets_k,sets_b)
+    for i in range(sets_k):
+        k_i=1+i*n + (nnk_i-1)
+        k_f=k_i+n-1 
+        if k_f > nnk_f: k_f = nnk_f
+        for j in range(sets_b):
+            b_i=1+j*m + (bb_i-1)
+            b_f=b_i+m-1
+            if b_f > bb_f: b_f = bb_f
+
+            print(k_i,k_f,b_i,b_f)
+            groups.append([k_i,k_f,b_i,b_f])
+
+    return groups
+
+def QP_list_merger(l=[],qp_per_subset=10):
+    ll=[]
+    lg = []
+    split = False
+    First = True
+    order=0
+    for i in l:
+        #print(i,(i[1]-i[0]+1)*(i[3]-i[2]+1),order)
+        if First: 
+            lg.append(i)
+            First = False
+            order +=(i[1]-i[0]+1)*(i[3]-i[2]+1)
+        elif order + (i[1]-i[0]+1)*(i[3]-i[2]+1) < qp_per_subset:
+            lg.append(i)
+            order +=(i[1]-i[0]+1)*(i[3]-i[2]+1)
+        else:
+            ll.append(lg)
+            lg = [i]
+            order = 0 
+    return ll
+
 
 class YamboWorkflow(ProtocolMixin, WorkChain):
 
@@ -44,9 +95,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                             exclude = ['parent_folder'])
 
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
-                            exclude = ['parent_folder'])
-
-        spec.expose_inputs(YppRestart, namespace='yres', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
         spec.input("additional_parsing", valid_type=List, required = False,
@@ -206,8 +254,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 RIM_W=RIM_W,
             )
 
-        print(yres_builder)
-
         builder.yres = yres_builder
 
         if 'BndsRnXp' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
@@ -235,7 +281,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
 
-
+        print('modificato')
         return builder
 
 
@@ -262,10 +308,14 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
-        try:
-
-            parent = take_calc_from_remote(self.inputs.parent_folder)
+        
+        #try
+        # :
+        if 1:
+            parent = take_calc_from_remote(self.inputs.parent_folder,level=-1)
             
+            self.report('parent is: {}'.format(parent.process_type))
+
             if parent.process_type=='aiida.workflows:quantumespresso.pw.base':
                 parent = parent.called[0]
             
@@ -297,6 +347,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
             elif parent.process_type=='aiida.workflows:yambo.yambo.yambowf':
                     parent=parent.called[0].called[0]
+                    self.report('parent is: {}'.format(parent.process_type))
                     nbnd = find_pw_parent(parent, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
                     if self.ctx.redo_nscf or nbnd < self.ctx.gwbands:
                         parent = find_pw_parent(parent, calc_type = ['scf'])
@@ -306,7 +357,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     else:
                         self.ctx.calc_to_do = 'yambo'
 
+                    if self.ctx.calc_to_do == 'yambo' and hasattr(self.inputs,'QP_subset_dict'): self.ctx.calc_to_do = 'QP_splitter'
+
             elif parent.process_type=='aiida.calculations:yambo.yambo':
+                    self.report('HERE')
                     nbnd = find_pw_parent(parent, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
                     if self.ctx.redo_nscf or nbnd < self.ctx.gwbands:
                         parent = find_pw_parent(parent, calc_type = ['scf'])
@@ -315,6 +369,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                         self.ctx.redo_nscf = False
                     else:
                         self.ctx.calc_to_do = 'yambo'
+                    
+                    if self.ctx.calc_to_do == 'yambo' and hasattr(self.inputs,'QP_subset_dict'): self.ctx.calc_to_do = 'QP_splitter'
 
             else:
                 self.ctx.previous_pw = False
@@ -323,10 +379,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             
             self.ctx.calc = parent
 
-        except:
+        #except:
 
-            self.report('no previous pw calculation found, we will start from scratch')
-            self.ctx.calc_to_do = 'scf'
+        #    self.report('no previous pw calculation found, we will start from scratch')
+        #    self.ctx.calc_to_do = 'scf'
         
         self.ctx.qp_splitter = 0
         self.report(" workflow initilization step completed.")
@@ -408,8 +464,18 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 except:
                     self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
                 
+                self.ctx.yambo_inputs.yambo.parameters = take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1).inputs.parameters
                 self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
-                #self.ctx.yambo_inputs
+                self.ctx.yambo_inputs.clean_workdir = Bool(True)
+                
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
+
+                if not 'subsets' in self.ctx.QP_subsets.keys():
+                    if 'explicit' in self.ctx.QP_subsets.keys():
+                        self.ctx.QP_subsets['subsets'] = QP_list_merger(self.ctx.QP_subsets['explicit'],self.ctx.QP_subsets['qp_per_subset'])
+                    elif 'boundaries' in self.ctx.QP_subsets.keys():
+                        self.ctx.QP_subsets['subsets'] = QP_subset_groups(1,mapping['number_of_kpoints'],self.ctx.QP_subsets['boundaries']['bi'],self.ctx.QP_subsets['boundaries']['bf'],self.ctx.QP_subsets['qp_per_subset'])
+
 
             self.ctx.qp_splitter += 1
 
