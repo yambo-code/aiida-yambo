@@ -23,11 +23,12 @@ protocols:
             parameters:
                 arguments: ['wannier']
                 variables: {'WriteAMU': '',}           
-            options:
-                resources:
-                    num_machines: 1
-                    num_mpiprocs_per_machine: 1
-                    num_cores_per_mpiproc: 1
-                max_wallclock_seconds: 1800  # 30 min
-                withmpi: True
-                prepend_text: 'cp ndb.QP ./SAVE/.'
+            metadata:
+                options:
+                    resources:
+                        num_machines: 1
+                        num_mpiprocs_per_machine: 1
+                        num_cores_per_mpiproc: 1
+                    max_wallclock_seconds: 1800  # 30 min
+                    withmpi: True
+                    prepend_text: 'cp ndb.QP ./SAVE/.'
