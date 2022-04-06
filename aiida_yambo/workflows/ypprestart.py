@@ -90,7 +90,7 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
         """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
         from importlib_resources import files
 
-        from aiida_yambo.workflows.protocols import ypp as ypprestart_protocols
+        from aiida_yambo.workflows.protocols import yambo as ypprestart_protocols
         return files(ypprestart_protocols) / 'ypprestart.yaml'
     
     @classmethod
