@@ -13,6 +13,7 @@ from aiida_quantumespresso.common.types import ElectronicType, SpinType
 
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
+from aiida_yambo.workflows.ypprestart import YppRestart
 
 from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
@@ -45,9 +46,15 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
+        spec.expose_inputs(YppRestart, namespace='yres', namespace_options={'required': False}, 
+                            exclude = ['parent_folder'])
+
         spec.input("additional_parsing", valid_type=List, required = False,
-                    help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1]...')
+                    help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1], excitons: [lowest, brightes]')
         
+        spec.input("QP_subset_dict", valid_type=Dict, required = False,
+                    help = 'subset of QP that you want to compute, useful if you need to obtain a large number of QP corrections')
+
         spec.input("parent_folder", valid_type=RemoteData, required = False,
                     help = 'scf, nscf or yambo remote folder')
   
@@ -188,7 +195,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             builder.parent_folder = parent_folder
             parent_folder = 'YWFL_super_parent'
 
-        builder.yres = YamboRestart.get_builder_from_protocol(
+        yres_builder = YamboRestart.get_builder_from_protocol(
                 preprocessing_code=preprocessing_code,
                 code=code,
                 protocol=protocol,
@@ -198,6 +205,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 RIM_v=RIM_v,
                 RIM_W=RIM_W,
             )
+
+        print(yres_builder)
+
+        builder.yres = yres_builder
 
         if 'BndsRnXp' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
             yambo_bandsX = builder.yres['yambo']['parameters'].get_dict()['variables']['BndsRnXp'][0][-1]
@@ -316,7 +327,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
             self.report('no previous pw calculation found, we will start from scratch')
             self.ctx.calc_to_do = 'scf'
-
+        
+        self.ctx.qp_splitter = 0
         self.report(" workflow initilization step completed.")
 
     def can_continue(self):
@@ -382,14 +394,45 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             self.ctx.yambo_inputs.metadata.call_link_label = 'yambo'
             future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
-            self.ctx.calc_to_do = 'the workflow is finished'
+            if hasattr(self.inputs,'QP_subset_dict'):
+                self.ctx.calc_to_do = 'QP splitter'
+                self.ctx.QP_subsets = self.inputs.QP_subset_dict.get_dict()
+            else:
+                self.ctx.calc_to_do = 'workflow is finished'
+        
+        elif self.ctx.calc_to_do == 'QP splitter':
 
+            if self.ctx.qp_splitter == 0:
+                try:
+                    self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.called[0].outputs.remote_folder
+                except:
+                    self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
+                
+                self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
+                #self.ctx.yambo_inputs
+
+            self.ctx.qp_splitter += 1
+
+            for i in range(len(self.ctx.QP_subsets['parallel_runs'])):
+                if len(self.ctx.QP_subsets['subsets']) > 0:
+                    self.ctx.yambo_inputs.yambo.parameters = update_dict(self.ctx.yambo_inputs.yambo.parameters,'QPkrange',[[self.ctx.QP_subsets['subsets'].pop()],''],sublevel='variables')
+
+                    self.ctx.yambo_inputs.metadata.call_link_label = 'yambo_QP_splitted_#'.format(i+self.ctx.qp_splitter)
+                    future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
+                else:
+                    self.ctx.calc_to_do = 'workflow is finished'
+            
+            if len(self.ctx.QP_subsets['subsets']) > 0: self.ctx.calc_to_do = 'workflow is finished'
+        
         return ToContext(calc = future)
     
     def post_processing_needed(self):
+        #in case of multiple QP calculations, yes
         return False
 
     def ypp_action(self):
+        #ypp restart in case of multiple QP calculations to be merged.
+        # or others, but for now just use the merge mode (also BSE inspections like WFcs...)
         pass
 
     def report_wf(self):
