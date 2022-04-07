@@ -23,7 +23,7 @@ default_inputs:
             'Chimod': 'hartree',
             'DysSolver': 'n',
             'GTermKind': 'BG',
-            'PAR_def_mode': 'balanced',
+            'PAR_def_mode': 'workload',
             'X_and_IO_nCPU_LinAlg_INV': [1, ''],
             }
 default_protocol: fast

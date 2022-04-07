@@ -334,7 +334,8 @@ class YppCalculation(CalcJob):
 
         if 'QPDB_merge' in params_dict['arguments']:
             calcinfo.retrieve_list.append('SAVE/ndb.QP_merged*')
-
+            calcinfo.retrieve_list.append('aiida.out/ndb.QP_merged*')
+        
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
             extra_retrieved.append(additional)
