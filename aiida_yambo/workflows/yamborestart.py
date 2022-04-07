@@ -114,7 +114,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         meta_parameters = inputs.pop('meta_parameters')
 
         try:
-            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
+            pw_parent = find_pw_parent(take_calc_from_remote(parent_folder,level=-1))
             PW_cutoff = pw_parent.inputs.parameters.get_dict()['SYSTEM']['ecutwfc']
             nelectrons = int(pw_parent.outputs.output_parameters.get_dict()['number_of_electrons'])
         except:
@@ -205,9 +205,9 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             self.report('adjusting parallelism namelist... please check yambo documentation')
         
         try:
-            nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder))
+            nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder,level=-1))
         except:
-            nscf_parent = take_calc_from_remote(self.inputs.parent_folder)
+            nscf_parent = take_calc_from_remote(self.inputs.parent_folder,level=-1)
         yambo_bandsX = self.ctx.inputs.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
         yambo_bandsSc = self.ctx.inputs.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
 
