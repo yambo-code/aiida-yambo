@@ -234,7 +234,7 @@ class YppCalculation(CalcJob):
                 local_copy_list.append((self.inputs.nnkp_file.uuid, self.inputs.nnkp_file.filename, 'aiida.nnkp'))
             
             if hasattr(self.inputs,'QP_DB'): 
-                local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))
+                local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP')) #in this way also "ndb.QP_merged_ppa" should be copied ok.
             if not hasattr(self.inputs,'QP_DB') and hasattr(self.inputs,'parent_folder'): 
                 try:
                     local_copy_list.append((take_calc_from_remote(self.inputs.parent_folder).outputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))

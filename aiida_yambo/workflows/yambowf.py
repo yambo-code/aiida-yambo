@@ -47,7 +47,7 @@ def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
             if b_f > bb_f: b_f = bb_f
 
             print(k_i,k_f,b_i,b_f)
-            groups.append([k_i,k_f,b_i,b_f])
+            groups.append([[k_i,k_f,b_i,b_f]])
 
     return groups
 
@@ -70,6 +70,7 @@ def QP_list_merger(l=[],qp_per_subset=10):
             ll.append(lg)
             lg = [i]
             order = 0 
+    ll.append(lg)
     return ll
 
 
@@ -125,6 +126,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         
         spec.output('output_ywfl_parameters', valid_type = Dict, required = False)
         spec.output('nscf_mapping', valid_type = Dict, required = False)
+
+        spec.output('splitted_QP_calculations', valid_type = List, required = False)
         
         spec.output('scissor', valid_type = List, required = False)
         spec.output('band_structure_GW', valid_type = BandsData, required = False)
@@ -380,6 +383,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             self.report('no previous pw calculation found, we will start from scratch')
             self.ctx.calc_to_do = 'scf'
         
+        self.ctx.splitted_QP = []
         self.ctx.qp_splitter = 0
         self.report(" workflow initilization step completed.")
 
@@ -474,11 +478,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
             for i in range(1,1+self.ctx.QP_subsets['parallel_runs']):
                 if len(self.ctx.QP_subsets['subsets']) > 0:
-                    self.ctx.yambo_inputs.yambo.parameters = update_dict(self.ctx.yambo_inputs.yambo.parameters,['QPkrange'],[[[self.ctx.QP_subsets['subsets'].pop()],'']],sublevel='variables')
+                    self.ctx.yambo_inputs.yambo.parameters = update_dict(self.ctx.yambo_inputs.yambo.parameters,['QPkrange'],[[self.ctx.QP_subsets['subsets'].pop(),'']],sublevel='variables')
 
                     self.ctx.yambo_inputs.metadata.call_link_label = 'yambo_QP_splitted_{}'.format(i+self.ctx.qp_splitter)
                     future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
                     self.report('launchiing YamboRestart <{}> for QP, iteration#{}'.format(future.pk,i+self.ctx.qp_splitter))
+                    self.ctx.splitted_QP.append(future.uuid)
                 else:
                     self.ctx.calc_to_do = 'workflow is finished'
             
@@ -521,6 +526,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                         self.report('fail in the interpolation of the band structure')
 
             self.out_many(self.exposed_outputs(calc,YamboRestart))
+
+            if len(self.ctx.splitted_QP) > 0:
+                self.out('splitted_QP_calculations', store_List(self.ctx.splitted_QP))
+
             self.report("workflow completed successfully")
         else:
             self.report("workflow NOT completed successfully")
