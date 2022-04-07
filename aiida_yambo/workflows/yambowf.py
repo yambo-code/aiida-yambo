@@ -281,7 +281,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
 
-        print('modificato')
+        print('modificato ancora')
         return builder
 
 
@@ -308,7 +308,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         there is no submission done here, only setting up the neccessary inputs the workchain needs in the next
         steps to decide what are the subsequent steps"""
 
-        
+        self.report('HERE')
+        sd
         #try
         # :
         if 1:
