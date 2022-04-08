@@ -69,7 +69,7 @@ def QP_list_merger(l=[],qp_per_subset=10):
         else:
             ll.append(lg)
             lg = [i]
-            order = 0 
+            order = (i[1]-i[0]+1)*(i[3]-i[2]+1) 
     ll.append(lg)
     return ll
 
