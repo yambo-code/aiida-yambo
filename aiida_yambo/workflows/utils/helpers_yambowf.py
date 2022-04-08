@@ -265,7 +265,7 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     parsing_List = additional_parsing_List
     qp_list = []
     #take mapping from nscf
-    parent_calc = take_calc_from_remote(workchain_inputs.parent_folder)
+    parent_calc = take_calc_from_remote(workchain_inputs.parent_folder,level=-1)
     try:
         nscf = find_pw_parent(parent_calc, calc_type=['nscf'])
     except:

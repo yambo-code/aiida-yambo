@@ -192,7 +192,7 @@ class YamboCalculation(CalcJob):
 
         preproc_code = self.inputs.preprocessing_code
 
-        parent_calc = take_calc_from_remote(parent_calc_folder)
+        parent_calc = take_calc_from_remote(parent_calc_folder,level=-1)
 
         if parent_calc.process_type in [
             'aiida.calculations:yambo.yambo',

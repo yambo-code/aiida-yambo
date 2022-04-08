@@ -20,7 +20,7 @@ from aiida_yambo.utils.k_path_utils import *
 def find_parent(calc):
 
     try:
-        parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[0] #to load the node from a workchain...
+        parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
     except:
         try:
             parent_calc = calc.inputs.parent_folder.get_incoming().get_node_by_label('remote_folder')
@@ -165,9 +165,10 @@ def take_super(node = 0, what = 'WorkChainNode'):
 
 def take_calc_from_remote(parent_folder,level=0):
         try:
-            parent_calc = parent_folder.get_incoming().all_nodes()[level] #to load the node from a workchain...
+            parent_calc = parent_folder.creator
+            #parent_calc = parent_folder.get_incoming().all_nodes()[level] #to load the node from a workchain...
         except:
-            parent_calc = parent_folder.get_incoming().get_node_by_label('remote_folder')
+            parent_calc = parent_folder.get_incoming(link_label_filter='remote_folder').one().node
         return parent_calc
 
 def take_fermi(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
