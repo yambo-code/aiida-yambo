@@ -579,9 +579,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             #self.report('Not needed, we start with k-points')
             return False
 
-        try:    
+        try:
             already_done, parent_nscf, parent_scf = search_in_group(self.ctx.calc_inputs, 
-                                               self.ctx.workflow_manager['group'], up_to_p2y = True,)
+                                                self.ctx.workflow_manager['group'], up_to_p2y = True,)
 
             #self.report(already_done,)
             #self.report(parent_nscf)

@@ -269,10 +269,12 @@ def find_gw_info(inputs):
     
     return bands, qp, last_qp, runlevels
 
-def understand_valence_metal_wise(bands, fermi, index):
-    return len(np.where((bands[index-1]-fermi)<=1e-2)[0])
+def understand_valence_metal_wise(bands, fermi, index, valence):
+    hp_valence = len(np.where((bands[index-1]-fermi)<=1e-2)[0])
+    if hp_valence < valence - 1: hp_valence = valence
+    return hp_valence
 
-def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
+def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
     s = load_node(nscf_pk)
     if isinstance(quantity,str):
         if 'gap_' in quantity:
@@ -281,11 +283,11 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
             else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase()) #m stands for missing
-                
                 if quantity[-1] in m or quantity[-2] in m: return quantity, 0
                 if not quantity[-1] in maps.keys() or not quantity[-2] in maps.keys(): return quantity, 0
-                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-2]])
-                conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]]) + 1 + 1*int(mapping['soc'])
+                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-2]],valence)
+                print(valence)
+                conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]],valence) + 1 + 1*int(mapping['soc'])
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
                         valence,valence],
                         [maps[quantity[-1]],maps[quantity[-1]],
@@ -296,7 +298,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                 
                 if quantity in m : return quantity, 0
                 if not quantity in maps.keys(): return quantity, 0
-                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]])
+                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]],valence)
                 if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          valence,valence],]
@@ -316,8 +318,8 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                                                                             quantity[0][-1]:np.array(quantity[1][-1])})
 
             if quantity[0] in m : return quantity[0], 0    
-            valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0][-2]])
-            conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[0][-1]]) + 1
+            valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0][-2]],valence)
+            conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[0][-1]],valence) + 1
             return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
                     valence,valence],
                     [maps[quantity[0][-1]],maps[quantity[0][-1]],
@@ -328,7 +330,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
                                                                             quantity[0]:np.array(quantity[1])})
             
             if quantity[0] in m : return quantity[0], 0
-            valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]])
+            valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]],valence)
             if '_v' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
                      valence,valence],]
@@ -345,7 +347,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi):
         return 0, 0
 
 def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
-    
+    print('START')
     nscf = load_node(nscf_pk)
     bands = nscf.outputs.output_band.get_array('bands')
     occ = nscf.outputs.output_band.get_array('occupations')
@@ -358,13 +360,17 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     try:
         try:
             nscf.inputs.pw__structure.get.ase()
+            print('HERE0')
         except:
             nscf.inputs.structure.get.ase()
+            print('HERE1')
         cell = structure.get_cell()
         k = cell.bandpath()
         high_symmetry = k.special_points
+        print('HERE2')
     except:
         high_symmetry = []
+        print('HERE3')
     if valence%2 != 0:
         valence = int(valence+0.5) #may be a metal
     else:
@@ -428,7 +434,8 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         if i == 'homo' or i == 'lumo' or i == 'gap_':
             pass
         else:
-            name, additional = build_list_QPkrange(mapping, i, nscf_pk, bands, fermi)
+            print(i)
+            name, additional = build_list_QPkrange(mapping, i, nscf_pk, bands, fermi,valence)
             if additional == 0: 
                 pass
             else:
@@ -518,7 +525,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
             if bands : enough_b = node.inputs.nscf__pw__parameters.get_dict()['SYSTEM']['nbnd'] >= bands
             for p in what:
-                if 'CPU' in p or 'ROLEs' in p: 
+                if 'CPU' in p or 'ROLEs' in p or 'PAR_' in p: 
                     already_done = node.pk
                     l += 1
                 elif 'QPkrange' in p:
