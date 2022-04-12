@@ -235,9 +235,13 @@ class YppCalculation(CalcJob):
             
             if hasattr(self.inputs,'QP_DB'): 
                 local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP')) #in this way also "ndb.QP_merged_ppa" should be copied ok.
+                local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'aiida.out/ndb.QP')) #in this way also "ndb.QP_merged_ppa" should be copied ok.
+                local_copy_list.append((self.inputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'SAVE/ndb.QP')) #in this way also "ndb.QP_merged_ppa" should be copied ok.
             if not hasattr(self.inputs,'QP_DB') and hasattr(self.inputs,'parent_folder'): 
                 try:
                     local_copy_list.append((take_calc_from_remote(self.inputs.parent_folder).outputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'ndb.QP'))
+                    local_copy_list.append((take_calc_from_remote(self.inputs.parent_folder).outputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'aiida.out/ndb.QP'))
+                    local_copy_list.append((take_calc_from_remote(self.inputs.parent_folder).outputs.QP_DB.uuid, self.inputs.QP_DB.filename, 'SAVE/ndb.QP'))
                 except:
                     return self.exit_codes.PARENT_NOT_VALID
             
