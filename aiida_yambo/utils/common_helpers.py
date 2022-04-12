@@ -19,6 +19,33 @@ from aiida_yambo.utils.k_path_utils import *
 
 def find_parent(calc):
 
+    if 'workflows' in calc.process_type:
+        parent_calc = calc.outputs.remote_folder.creator
+    else:
+        parent_calc = calc.inputs.parent_folder.creator
+    if not parent_calc:
+        raise Exception('No creator found for parent_folder {}'.format(parent_calc))
+    return parent_calc
+
+def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
+
+    has_found_pw = False
+    while (not has_found_pw):
+        if parent_calc.process_type=='aiida.calculations:yambo.yambo' or 'workflows' in parent_calc.process_type:
+            has_found_pw = False
+            parent_calc = find_parent(parent_calc)
+
+        if parent_calc.process_type=='aiida.calculations:quantumespresso.pw' and \
+            find_pw_type(parent_calc) in calc_type:
+            has_found_pw = True
+            break
+        else:
+            parent_calc = find_parent(parent_calc)
+
+    return parent_calc
+    
+def old_find_parent(calc):
+
     try:
         parent_calc = calc.inputs.parent_folder.get_incoming().all_nodes()[-1] #to load the node from a workchain...
     except:
@@ -28,7 +55,7 @@ def find_parent(calc):
             parent_calc = calc.called[0] #nscf_workchain...??
     return parent_calc
 
-def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
+def old_find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
 
     has_found_pw = False
     while (not has_found_pw):
