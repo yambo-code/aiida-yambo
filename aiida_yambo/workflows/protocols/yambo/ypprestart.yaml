@@ -31,4 +31,4 @@ protocols:
                         num_cores_per_mpiproc: 1
                     max_wallclock_seconds: 1800  # 30 min
                     withmpi: True
-                    prepend_text: 'cp ndb.QP ./SAVE/.'
+                    prepend_text: 'cp ndb.QP ./SAVE/. \n cp ndb.QP ./aiida.out/.'
