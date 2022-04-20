@@ -24,12 +24,13 @@ SingleFileData = DataFactory('singlefile')
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 @calcfunction
-def merge_QP(filenames_List,output_name): #just to have something that works, but is not correct to proceed this way
+def merge_QP(filenames_List,output_name): #just to have something that works, but it is not correct to proceed this way
         string_run = 'yambopy mergeqp'
         for i in filenames_List.get_list():
             j = load_node(i).outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP'
             string_run+=' '+j
         string_run+=' -o '+output_name.value
+        print(string_run)
         os.system(string_run)
         QP_db = SingleFileData(output_name.value)
         return QP_db
@@ -511,7 +512,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.report('run merge QP')
         splitted = store_List(self.ctx.splitted_QP)
         self.out('splitted_QP_calculations', splitted)
-        output_name = Str(self.ctx.calc.outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP_merged')
+        output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
         QP_db = merge_QP(splitted,output_name)
         self.out('merged_QP',QP_db)
 
