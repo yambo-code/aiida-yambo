@@ -31,7 +31,7 @@ def merge_QP(filenames_List,output_name): #just to have something that works, bu
             string_run+=' '+j
         string_run+=' -o '+output_name.value
         os.system(string_run)
-        QP_db = SingleFileData(output_name)
+        QP_db = SingleFileData(output_name.value)
         return QP_db
 
 def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
@@ -503,6 +503,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         if len(self.ctx.splitted_QP) > 0:
             self.report('merge QP needed')
             return True
+        self.report('no post processing needed')
         return False
 
     def run_post_process(self):
