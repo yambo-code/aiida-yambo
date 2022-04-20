@@ -317,7 +317,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             
 
             if parent.process_type=='aiida.workflows:quantumespresso.pw.base':
-                parent = parent.called[0]
+                parent = parent.outputs.remote_folder.creator
             
             if parent.outputs.remote_folder.is_empty: 
                 for i in range(2):
@@ -346,7 +346,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                         self.ctx.calc_to_do = 'yambo'
 
             elif parent.process_type=='aiida.workflows:yambo.yambo.yambowf':
-                    parent=parent.called[0].called[0]
+                    parent=parent.outputs.remote_folder.creator
                     self.report('parent is: {}'.format(parent.process_type))
                     nbnd = find_pw_parent(parent, calc_type = ['nscf']).inputs.parameters.get_dict()['SYSTEM']['nbnd']
                     if self.ctx.redo_nscf or nbnd < self.ctx.gwbands:
@@ -424,10 +424,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         elif self.ctx.calc_to_do == 'nscf':
 
-            try:
-                self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.called[0].outputs.remote_folder
-            except:
-                self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
+            self.ctx.nscf_inputs.pw.parent_folder = self.ctx.calc.outputs.remote_folder
             
             self.ctx.nscf_inputs.metadata.call_link_label = 'nscf'  
             future = self.submit(PwBaseWorkChain, **self.ctx.nscf_inputs)
@@ -436,11 +433,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         elif self.ctx.calc_to_do == 'yambo':
 
-            try:
-                self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.called[0].outputs.remote_folder
-            except:
-                self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
-
+            self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
+            
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('updating yambo parameters to parse more results')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
@@ -459,10 +453,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         elif self.ctx.calc_to_do == 'QP splitter':
 
             if self.ctx.qp_splitter == 0:
-                try:
-                    self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.called[0].outputs.remote_folder
-                except:
-                    self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
+                self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
                 
                 self.ctx.yambo_inputs.yambo.parameters = take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1).inputs.parameters
                 self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
