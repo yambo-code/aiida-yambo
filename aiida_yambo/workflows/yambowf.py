@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from curses import meta
+import os
 
 from aiida.orm import RemoteData,BandsData
-from aiida.orm import Dict,Int
+from aiida.orm import Dict,Int,List
 
 from aiida.engine import WorkChain, while_, if_
 from aiida.engine import ToContext
@@ -18,8 +19,20 @@ from aiida_yambo.utils.defaults.create_defaults import *
 from aiida_yambo.workflows.utils.helpers_yambowf import *
 from aiida.plugins import DataFactory
 LegacyUpfData = DataFactory('upf')
+SingleFileData = DataFactory('singlefile')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
+
+@calcfunction
+def merge_QP(filenames_List,output_name): #just to have something that works, but is not correct to proceed this way
+        string_run = 'yambopy mergeqp'
+        for i in filenames_List.get_list():
+            j = load_node(i).outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP'
+            string_run+=' '+j
+        string_run+=' -o '+output_name.value
+        os.system(string_run)
+        QP_db = SingleFileData(output_name)
+        return QP_db
 
 def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
     if bb_f-bb_i<nnk_f-nnk_i:
@@ -116,7 +129,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                            cls.perform_next,
                     ),
                     if_(cls.post_processing_needed)(
-                        cls.ypp_action,
+                        cls.run_post_process,
                     ),
                     cls.report_wf,)
 
@@ -128,6 +141,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.output('nscf_mapping', valid_type = Dict, required = False)
 
         spec.output('splitted_QP_calculations', valid_type = List, required = False)
+        spec.output('merged_QP', valid_type = SingleFileData, required = False)
         
         spec.output('scissor', valid_type = List, required = False)
         spec.output('band_structure_GW', valid_type = BandsData, required = False)
@@ -486,12 +500,21 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
     
     def post_processing_needed(self):
         #in case of multiple QP calculations, yes
+        if len(self.ctx.splitted_QP) > 0:
+            self.report('merge QP needed')
+            return True
         return False
 
-    def ypp_action(self):
-        #ypp restart in case of multiple QP calculations to be merged.
-        # or others, but for now just use the merge mode (also BSE inspections like WFcs...)
-        pass
+    def run_post_process(self):
+        #merge
+        self.report('run merge QP')
+        splitted = store_List(self.ctx.splitted_QP)
+        self.out('splitted_QP_calculations', splitted)
+        output_name = Str(self.ctx.calc.outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP_merged')
+        QP_db = merge_QP(splitted,output_name)
+        self.out('merged_QP',QP_db)
+
+        return
 
     def report_wf(self):
 
@@ -517,9 +540,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                         self.report('fail in the interpolation of the band structure')
 
             self.out_many(self.exposed_outputs(calc,YamboRestart))
-
-            if len(self.ctx.splitted_QP) > 0:
-                self.out('splitted_QP_calculations', store_List(self.ctx.splitted_QP))
 
             self.report("workflow completed successfully")
         else:
