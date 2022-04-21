@@ -215,7 +215,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
             inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
         except:
             pass
-    elif parent_scf:
+    elif parent_scf and not hasattr(inp_to_update, 'parent_folder'):
         try:
             inp_to_update.parent_folder =  load_node(parent_nscf).outputs.remote_folder 
         except:
