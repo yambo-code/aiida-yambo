@@ -30,7 +30,9 @@ def find_parent(calc):
 def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
 
     has_found_pw = False
+    tentatives=0
     while (not has_found_pw):
+        tentatives+=1
         if parent_calc.process_type=='aiida.calculations:yambo.yambo' or 'workflows' in parent_calc.process_type:
             has_found_pw = False
             parent_calc = find_parent(parent_calc)
@@ -41,6 +43,9 @@ def find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
             break
         else:
             parent_calc = find_parent(parent_calc)
+        if tentatives==10000: 
+            print('too much tentatives to find the parent')
+            break
 
     return parent_calc
     

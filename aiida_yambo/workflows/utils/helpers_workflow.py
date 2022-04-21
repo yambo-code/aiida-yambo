@@ -676,18 +676,10 @@ def prepare_for_ce(workflow_dict={},keys=['gap_GG'],var_=[],var_full=[],bug_newt
                         homo[key] = np.delete(homo[key],where)
 
     try:
-        pw = find_pw_parent(load_node(load_node(real.uuid.values[-1]).called[0].called[0].pk))
+        pw = find_pw_parent(load_node(real.uuid.values[-1]).outputs.remote_folder.creator.pk)
         bande = pw.outputs.output_band.get_bands()
     except:
-        try:
-            pw = find_pw_parent(load_node(load_node(real.uuid.values[-1]).called[0].pk))
-            bande = pw.outputs.output_band.get_bands()
-        except:
-            try:
-                pw = find_pw_parent(load_node(load_node(real.uuid.values[-1]).pk))
-                bande = pw.outputs.output_band.get_bands()
-            except:
-                bande = 0
+        bande=0
 
     return real,lines,homo,bande
 
