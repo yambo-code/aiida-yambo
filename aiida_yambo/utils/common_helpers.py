@@ -19,7 +19,7 @@ from aiida_yambo.utils.k_path_utils import *
 
 def find_parent(calc):
 
-    if calc.is_finished:
+    if calc.is_finished and 'workflows' in calc.process_type:
         parent_calc = calc.outputs.remote_folder.creator
     else:
         parent_calc = calc.inputs.parent_folder.creator
