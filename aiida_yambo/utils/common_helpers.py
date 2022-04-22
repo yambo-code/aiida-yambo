@@ -332,8 +332,8 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                                        s.inputs.structure.get_ase())
                 
                 if quantity in m : return quantity, 0
-                if not quantity in maps.keys(): return quantity, 0
-                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]],valence)
+                if not quantity[-1] in maps.keys(): return quantity, 0
+                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]],valence)
                 if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          valence,valence],]
@@ -341,9 +341,9 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
                 
-                return quantity,[[maps[quantity],maps[quantity],
+                return quantity,[[maps[quantity[-1]],maps[quantity[-1]],
                          valence,valence],
-                        [maps[quantity],maps[quantity],
+                        [maps[quantity[-1]],maps[quantity[-1]],
                          valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
             
     elif isinstance(quantity,list):
