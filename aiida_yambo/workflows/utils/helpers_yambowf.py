@@ -452,8 +452,12 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                         parsed_dict['homo_'+key[-1]] =  homo_gw
                         parsed_dict['lumo_'+key[-1]] =  lumo_gw
 
+                        parsed_dict['gap_'+key[-1]+key[-1]] =  lumo_gw-homo_gw
+
                         parsed_dict['homo_'+key[-1]+'_dft'] =  homo_dft
                         parsed_dict['lumo_'+key[-1]+'_dft'] =  lumo_dft
+
+                        parsed_dict['gap_'+key[-1]+key[-1]+'_dft'] =  lumo_dft-homo_dft
                     else:
                         level_gw, level_dft = parse_qp_level(calc, mapping[key][0])
                         parsed_dict[key] =  level_gw
