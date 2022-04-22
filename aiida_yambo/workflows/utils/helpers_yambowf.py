@@ -449,11 +449,11 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                     if len(mapping[key]) == 2:
                         homo_gw, homo_dft = parse_qp_level(calc, mapping[key][0])
                         lumo_gw, lumo_dft = parse_qp_level(calc, mapping[key][1])
-                        parsed_dict['homo_'+key+'_v'] =  homo_gw
-                        parsed_dict['lumo_'+key+'_c'] =  lumo_gw
+                        parsed_dict['homo_'+key[-1]] =  homo_gw
+                        parsed_dict['lumo_'+key[-1]] =  lumo_gw
 
-                        parsed_dict['homo_'+key+'_v_dft'] =  homo_dft
-                        parsed_dict['lumo_'+key+'_c_dft'] =  lumo_dft
+                        parsed_dict['homo_'+key[-1]+'_dft'] =  homo_dft
+                        parsed_dict['lumo_'+key[-1]+'_dft'] =  lumo_dft
                     else:
                         level_gw, level_dft = parse_qp_level(calc, mapping[key][0])
                         parsed_dict[key] =  level_gw
