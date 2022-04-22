@@ -467,7 +467,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.calc_to_do = 'workflow is finished'
         
         elif self.ctx.calc_to_do == 'QP splitter':
-
+            calc = {}
             if self.ctx.qp_splitter == 0:
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
                 
@@ -491,13 +491,16 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
                     self.report('launchiing YamboRestart <{}> for QP, iteration#{}'.format(future.pk,i+self.ctx.qp_splitter))
                     self.ctx.splitted_QP.append(future.uuid)
+                    calc[str(i+1)] = future
                 else:
                     self.ctx.calc_to_do = 'workflow is finished'
             
             self.ctx.qp_splitter += self.ctx.QP_subsets['parallel_runs']
 
             if len(self.ctx.QP_subsets['subsets']) == 0: self.ctx.calc_to_do = 'workflow is finished'
-        
+
+            return ToContext(calc) #wait for all splitted calculations....
+
         return ToContext(calc = future)
     
     def post_processing_needed(self):
