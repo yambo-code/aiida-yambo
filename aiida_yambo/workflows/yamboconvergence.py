@@ -244,7 +244,13 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                                                                 )
 
         if hasattr(self.ctx.calc_inputs,'additional_parsing'):
-            l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
+            l = self.ctx.workflow_settings['what']
+            for i in self.ctx.calc_inputs.additional_parsing.get_list():
+                if 'homo' in i or 'lumo' in i and i[-1] != 'o':
+                    adding_parse = i.replace(i[:-2],'gap')+i[-1]
+                else:
+                    adding_parse = i 
+                l = l + adding_parse
             self.ctx.calc_inputs.additional_parsing = List(list=list(dict.fromkeys(l)))
         else:
             self.ctx.calc_inputs.additional_parsing = List(list=list(self.ctx.workflow_settings['what']))
