@@ -467,13 +467,14 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
 
     for i in additional_parsing_List + high_symmetry:
         if i == 'homo' or i == 'lumo' or i == 'gap_':
-            pass
+            name, additional = build_list_QPkrange(mapping, 'gap_', nscf_pk, bands, fermi,valence)
         else:
             print(i)
             if 'homo' in i or 'lumo' in i: 
                 what = i.replace(i[:-2],'gap')+i[-1]
             else:
                 what = i
+            print(i)
             name, additional = build_list_QPkrange(mapping, what, nscf_pk, bands, fermi,valence)
             if additional == 0: 
                 pass
