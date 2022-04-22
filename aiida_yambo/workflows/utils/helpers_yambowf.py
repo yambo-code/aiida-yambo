@@ -292,7 +292,7 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     except:
         QP = []
     for name in parsing_List:
-
+        print('adding ',name,mapping[name])
         if 'exciton' in parsing_List:
             pass
         elif isinstance(name,list) and name[0] in mapping.keys():

@@ -334,10 +334,10 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                 if quantity in m : return quantity, 0
                 if not quantity in maps.keys(): return quantity, 0
                 valence = understand_valence_metal_wise(bands, fermi, maps[quantity[0]],valence)
-                if '_v' in quantity or 'homo_' in quantity:
+                if '_v' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          valence,valence],]
-                elif '_c' in quantity or 'lumo_' in quantity:
+                elif '_c' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
                          valence + 1 + 1*int(mapping['soc']),valence + 1 + 1*int(mapping['soc'])],]
                 
@@ -471,7 +471,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         else:
             print(i)
             name, additional = build_list_QPkrange(mapping, i, nscf_pk, bands, fermi,valence)
-            print('name,additional:',name, additional)
+            print(name,additional)
             if additional == 0: 
                 pass
             else:
