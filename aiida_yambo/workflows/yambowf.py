@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from curses import meta
 import os
 
+from aiida import orm
 from aiida.orm import RemoteData,BandsData
 from aiida.orm import Dict,Int,List
 
