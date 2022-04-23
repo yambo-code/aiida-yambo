@@ -424,6 +424,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         try:
             calc = self.ctx.calc
             if not calc.is_finished_ok:
+                if '.yambo' in calc.process_type:
+                    if 'COPY_DBS' in self.ctx.yambo_inputs.yres.yambo.settings.get_dict().keys():
+                        if self.ctx.yambo_inputs.yres.yambo.settings.get_dict()['COPY_DBS']: pass
                 self.report("last calculation failed, exiting the workflow")
                 return self.exit_codes.ERROR_WORKCHAIN_FAILED
         except:
