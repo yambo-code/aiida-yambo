@@ -444,7 +444,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         dft_predicted = 'metal'
     elif L_H<=0.1 and L_H>=-0.2: #and (valence%2 == 0 or (soc and valence%2 == 1)):
         dft_predicted = 'semimetal'
-    elif L_H>0.2: # and (valence%2 == 0 or (soc and valence%2 == 1)):
+    elif L_H>0.1: # and (valence%2 == 0 or (soc and valence%2 == 1)):
         dft_predicted = 'semiconductor/insulator'
     else:
         dft_predicted = 'metal'
