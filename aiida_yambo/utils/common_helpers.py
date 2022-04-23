@@ -320,9 +320,12 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                                        s.inputs.structure.get_ase()) #m stands for missing
                 if quantity[-1] in m or quantity[-2] in m: return quantity, 0
                 if not quantity[-1] in maps.keys() or not quantity[-2] in maps.keys(): return quantity, 0
-                valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-2]],valence)
-                print(valence)
-                conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]],valence) + 1 + 1*int(mapping['soc'])
+                if mapping['dft_predicted']=='metal':
+                    valence = understand_valence_metal_wise(bands, fermi, maps[quantity[-2]],valence)
+                    print(valence)
+                    conduction = understand_valence_metal_wise(bands, fermi, maps[quantity[-1]],valence) + 1 + 1*int(mapping['soc'])
+                else:
+                    valence = mapping['valence']
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
                         valence,valence],
                         [maps[quantity[-1]],maps[quantity[-1]],
