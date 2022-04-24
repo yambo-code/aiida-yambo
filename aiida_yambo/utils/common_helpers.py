@@ -424,19 +424,9 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     above_fermi = np.where(touch_fermi>0)[0]
     below_fermi = np.where(touch_fermi<=0)[0]
     print(len(above_fermi),len(below_fermi))
-    if len(above_fermi)>1 and len(below_fermi)>1: #metal??
-        ind_val = abs(touch_fermi).argmin()
-        ind_cond = ind_val
-        dft_predicted = 'metal'
-    else:
-        if min(abs(touch_fermi_C)) > 0.02 and abs(max(bands[:,valence-1])-min(bands[:,valence])) > 0.02: #semiconductor, insulator??
-            ind_val = bands[:,valence-1].argmax()
-            ind_cond = bands[:,conduction-1].argmin()
-            dft_predicted = 'semiconductor/insulator'
-        else: #semimetal??
-            ind_val = bands[:,valence-1].argmax()
-            ind_cond = bands[:,conduction-1].argmin()
-            dft_predicted = 'semimetal'
+
+    ind_val = bands[:,valence-1].argmax()
+    ind_cond = bands[:,conduction-1].argmin()
     
     L_H = (round((min(bands[:,conduction-1])-max(bands[:,valence-1])),3))
     Crossing = len(np.where((bands[:,valence-1]-fermi)>1e-2)[0])
