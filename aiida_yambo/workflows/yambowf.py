@@ -289,7 +289,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         
         gwbands = max(yambo_bandsX,yambo_bandsSc)
 
-        parameters_scf = builder.nscf['pw']['parameters'].get_dict()
+        parameters_scf = builder.scf['pw']['parameters'].get_dict()
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
         
 
