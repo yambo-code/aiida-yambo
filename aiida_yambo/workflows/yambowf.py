@@ -294,12 +294,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         
 
         parameters_scf['SYSTEM']['ecutrho'] = max(parameters_scf['SYSTEM'].pop('ecutrho',0),4*parameters_scf['SYSTEM']['ecutwfc'])
-        parameters_nscf['SYSTEM']['ecutrho'] = max(parameters_nscf['SYSTEM'].pop('ecutrho',0),4*parameters_nscf['SYSTEM']['ecutwfc'])
-        #parameters_scf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']*1.3 #this is done in case we need many empty states.
-        #parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
+        
+        parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
+        parameters_nscf['SYSTEM']['ecutrho'] = parameters_scf['SYSTEM']['ecutrho']        
         
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        parameters_scf['SYSTEM']['nbnd'].pop() #safety measure, for some system creates chaos in conjunction with smearing
+        parameters_scf['SYSTEM'].pop('nbnd') #safety measure, for some system creates chaos in conjunction with smearing
 
 
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
