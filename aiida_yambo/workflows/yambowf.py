@@ -290,8 +290,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_scf = builder.nscf['pw']['parameters'].get_dict()
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
         
-        parameters_scf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']*1.3 #this is done in case we need many empty states.
-        parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
+        #parameters_scf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']*1.3 #this is done in case we need many empty states.
+        #parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
         
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
 
