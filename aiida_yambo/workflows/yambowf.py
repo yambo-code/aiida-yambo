@@ -292,13 +292,19 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_scf = builder.nscf['pw']['parameters'].get_dict()
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
         
+
+        parameters_scf['SYSTEM']['ecutrho'] = max(parameters_scf['SYSTEM'].pop('ecutrho',0),4*parameters_scf['SYSTEM']['ecutwfc'])
+        parameters_nscf['SYSTEM']['ecutrho'] = max(parameters_nscf['SYSTEM'].pop('ecutrho',0),4*parameters_nscf['SYSTEM']['ecutwfc'])
         #parameters_scf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']*1.3 #this is done in case we need many empty states.
         #parameters_nscf['SYSTEM']['ecutwfc'] = parameters_scf['SYSTEM']['ecutwfc']
         
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
+        parameters_scf['SYSTEM']['nbnd'].pop() #safety measure, for some system creates chaos in conjunction with smearing
+
 
         parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
+        builder.scf['pw']['parameters'] = Dict(dict = parameters_scf)
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
 
