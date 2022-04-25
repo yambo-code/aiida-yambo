@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 from curses import meta
 import os
+import time
 
 from aiida import orm
 from aiida.orm import RemoteData,BandsData
@@ -33,6 +34,7 @@ def merge_QP(filenames_List,output_name): #just to have something that works, bu
         string_run+=' -o '+output_name.value
         print(string_run)
         os.system(string_run)
+        time.sleep(10)
         QP_db = SingleFileData(output_name.value)
         return QP_db
 
@@ -521,6 +523,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.out('splitted_QP_calculations', splitted)
         output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
         QP_db = merge_QP(splitted,output_name)
+        
         self.out('merged_QP',QP_db)
 
         return
