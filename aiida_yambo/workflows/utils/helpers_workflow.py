@@ -83,7 +83,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='h
         l = i['var']
         if not isinstance(l,list): l = [l]
         print('SPACE,',space)
-        if hint:
+        if hint and wfl_type != 'newton_2D_extra':
             if hint['new_grid']:
                 new_grid = i['iter']
         if 'new_algorithm_2D' in wfl_type:
