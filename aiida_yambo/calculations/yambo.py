@@ -89,6 +89,8 @@ class YamboCalculation(CalcJob):
                 help='Use a node that specifies the input parameters for the yambo precode')
         spec.input('code',valid_type=Code,
                 help='Use a main code for yambo calculation')
+        spec.input('QP_corrections', valid_type=SingleFileData,
+                required=False, help='ndb.QP for BSE calculations.')
 
         spec.exit_code(500, 'ERROR_NO_RETRIEVED_FOLDER',
                 message='The retrieved folder data node could not be accessed.')
@@ -153,6 +155,8 @@ class YamboCalculation(CalcJob):
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
 
+        if hasattr(self.inputs,'QP_corrections'): local_copy_list.append((self.inputs.QP_corrections.uuid, self.inputs.QP_corrections.filename, 'ndb.QP'))
+        
         settings = self.inputs.settings.get_dict()
 
         initialise = settings.pop('INITIALISE', None)
