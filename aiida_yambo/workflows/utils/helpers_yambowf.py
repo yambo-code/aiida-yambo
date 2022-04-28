@@ -265,7 +265,6 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     parsing_List = additional_parsing_List
     qp_list = []
     #take mapping from nscf
-    excitonic = False
     parent_calc = take_calc_from_remote(workchain_inputs.parent_folder,level=-1)
     try:
         nscf = find_pw_parent(parent_calc, calc_type=['nscf'])
@@ -282,22 +281,20 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
 
     new_params = copy.deepcopy(workchain_inputs.yambo.parameters.get_dict())
     
-    if 'bse' in new_params['arguments']: excitonic = True
-
     QP = []
-    if not excitonic:
+    if 'QPkrange' in new_params['variables'].keys():
         for i in new_params['variables']['QPkrange'][0]:
             if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
                 pass
             else:
                 QP.append(i)
-    try:
-        QP = [QP[0]]
-    except:
-        QP = []
+        try:
+            QP = [QP[0]]
+        except:
+            QP = []
     for name in parsing_List:
         #print('adding ',name,mapping[name])
-        if not excitonic:
+        if 'exciton' in parsing_List:
             pass
         elif isinstance(name,list) and name[0] in mapping.keys():
             for i in mapping[name[0]]:
@@ -327,7 +324,7 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
                 break
     
 
-    if not excitonic: new_params['variables']['QPkrange']= [QP,'']
+    if 'QPkrange' in new_params['variables'].keys(): new_params['variables']['QPkrange']= [QP,'']
 
     return mapping, Dict(dict=new_params)
 
