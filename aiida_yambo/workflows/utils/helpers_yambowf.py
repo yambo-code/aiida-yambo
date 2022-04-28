@@ -282,11 +282,12 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     new_params = copy.deepcopy(workchain_inputs.yambo.parameters.get_dict())
     
     QP = []
-    for i in new_params['variables']['QPkrange'][0]:
-        if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
-            pass
-        else:
-            QP.append(i)
+    if not 'exciton' in parsing_List:
+        for i in new_params['variables']['QPkrange'][0]:
+            if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
+                pass
+            else:
+                QP.append(i)
     try:
         QP = [QP[0]]
     except:
@@ -323,7 +324,7 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
                 break
     
 
-    new_params['variables']['QPkrange']= [QP,'']
+    if not 'exciton' in parsing_List: new_params['variables']['QPkrange']= [QP,'']
 
     return mapping, Dict(dict=new_params)
 
