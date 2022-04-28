@@ -38,6 +38,49 @@ def merge_QP(filenames_List,output_name): #just to have something that works, bu
         QP_db = SingleFileData(output_name.value)
         return QP_db
 
+def QP_mapper(ywfl,tol=1):
+    fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
+    SOC = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['spin_orbit_calculation']
+    nelectrons = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['number_of_electrons']
+    kpoints = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
+    bands = find_pw_parent(ywfl).outputs.output_band.get_bands()
+    
+    if SOC:
+        valence = int(nelectrons) - 1
+        conduction = valence + 2
+    else:
+        valence = int(nelectrons/2) + int(nelectrons%2)
+        conduction = valence + 1
+    print('valence: {}'.format(valence))    
+    
+    #tol = 10*(-max(bands[:,valence-1])+(min(bands[:,conduction-1])))/2
+    tol = tol
+    mid_gap_energy = max(bands[:,valence-1])+(min(bands[:,conduction-1])-max(bands[:,valence-1]))/2
+    
+    QP = []
+    for i,j in zip(np.where(abs(bands-mid_gap_energy)<tol)[0],np.where(abs(bands-mid_gap_energy)<tol)[1]):
+        QP.append([i+1,i+1,j+1,j+1])
+        
+    v,c = False,False
+    
+    for i in QP:
+        if valence == i[-1]: v = True
+        if conduction == i[-1]: c = True
+    
+    if not v or not c:
+        print('redoing analysis incrementing the energy range of 50%. new tol='.format(tol*1.5))
+        QP = QP_mapper(ywfl,tol=tol*1.5)
+        
+    print('Found {} QPs'.format(len(QP
+                                   )))
+    
+    #plt.plot(bands-mid_gap_energy,'-o')
+    #plt.plot(np.where(abs(bands-mid_gap_energy)<tol)[0],bands[np.where(abs(bands-mid_gap_energy)<tol)]-mid_gap_energy,'o',label='to be computed explicitely')
+    #plt.ylim(-0.25,0.25)
+    
+    print('Fermi level={} eV'.format(fermi))
+    return QP
+
 def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
     if bb_f-bb_i<nnk_f-nnk_i:
         n = int(min(qp_for_subset,nnk_f-nnk_i+1)/3)+1
@@ -486,6 +529,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
                 self.ctx.yambo_inputs.clean_workdir = Bool(True)
                 mapping = gap_mapping_from_nscf(find_pw_parent(take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1)).pk)
+
+                if 'range_QP' in self.ctx.QP_subsets.keys(): #the name can be changed..
+                    Energy_region = max(self.ctx.QP_subsets['range_QP'],0)
+                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,Energy_region = Energy_region)
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
