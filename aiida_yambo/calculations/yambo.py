@@ -298,7 +298,7 @@ class YamboCalculation(CalcJob):
 
         calcinfo.uuid = self.uuid
 
-        calcinfo.local_copy_list = []
+        calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.remote_symlink_list = remote_symlink_list
 
