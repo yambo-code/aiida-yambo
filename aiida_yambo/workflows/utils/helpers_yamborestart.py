@@ -78,9 +78,9 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
     if resources['num_mpiprocs_per_machine']>1:
         if increase_nodes: resources['num_machines'] = max(max_nodes,int(resources['num_machines']*1.5))
 
-        resources['num_cores_per_mpiproc'] = int(resources['num_cores_per_mpiproc']*2)
-        resources['num_mpiprocs_per_machine'] = int(resources['num_mpiprocs_per_machine']/2)
-
+        if not failed_calc.outputs.output_parameters.get_dict()['has_gpu']:
+            resources['num_cores_per_mpiproc'] = int(resources['num_cores_per_mpiproc']*2)
+            resources['num_mpiprocs_per_machine'] = int(resources['num_mpiprocs_per_machine']/2)
 
     pop_list = []
     for p in failed_calc.inputs.parameters.get_dict()['variables']:
