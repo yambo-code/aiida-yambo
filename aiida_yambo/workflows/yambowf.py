@@ -38,7 +38,7 @@ def merge_QP(filenames_List,output_name): #just to have something that works, bu
         QP_db = SingleFileData(output_name.value)
         return QP_db
 
-def QP_mapper(ywfl,tol=1):
+def QP_mapper(ywfl,tol=1,full_bands=False):
     fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
     SOC = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['spin_orbit_calculation']
     nelectrons = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['number_of_electrons']
@@ -58,9 +58,15 @@ def QP_mapper(ywfl,tol=1):
     mid_gap_energy = max(bands[:,valence-1])+(min(bands[:,conduction-1])-max(bands[:,valence-1]))/2
     
     QP = []
-    for i,j in zip(np.where(abs(bands-mid_gap_energy)<tol)[0],np.where(abs(bands-mid_gap_energy)<tol)[1]):
-        QP.append([i+1,i+1,j+1,j+1])
-        
+    if not full_bands:
+        for i,j in zip(np.where(abs(bands-mid_gap_energy)<tol)[0],np.where(abs(bands-mid_gap_energy)<tol)[1]):
+            QP.append([i+1,i+1,j+1,j+1])
+    else:
+        b_min = np.where(abs(bands-mid_gap_energy)<tol)[1].min()
+        b_max = np.where(abs(bands-mid_gap_energy)<tol)[1].max()
+        for i in range(len(kpoints)):
+            QP.append([b_min+1,b_max+1,i+1,i+1])
+                
     v,c = False,False
     
     for i in QP:
@@ -74,9 +80,9 @@ def QP_mapper(ywfl,tol=1):
     print('Found {} QPs'.format(len(QP
                                    )))
     
-    #plt.plot(bands-mid_gap_energy,'-o')
-    #plt.plot(np.where(abs(bands-mid_gap_energy)<tol)[0],bands[np.where(abs(bands-mid_gap_energy)<tol)]-mid_gap_energy,'o',label='to be computed explicitely')
-    #plt.ylim(-0.25,0.25)
+    plt.plot(bands-mid_gap_energy,'-o')
+    plt.plot(np.where(abs(bands-mid_gap_energy)<tol)[0],bands[np.where(abs(bands-mid_gap_energy)<tol)]-mid_gap_energy,'o',label='to be computed explicitely')
+    plt.ylim(-0.25,0.25)
     
     print('Fermi level={} eV'.format(fermi))
     return QP
@@ -532,7 +538,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
                 if 'range_QP' in self.ctx.QP_subsets.keys(): #the name can be changed..
                     Energy_region = max(self.ctx.QP_subsets['range_QP'],0)
-                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,Energy_region = Energy_region)
+                    self.report('range of energy for QP: {} eV'.format(Energy_region))
+                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,Energy_region = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False))
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
