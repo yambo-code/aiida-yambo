@@ -54,10 +54,18 @@ def QP_mapper(ywfl,tol=1,full_bands=False):
     print('valence: {}'.format(valence))    
     
     #tol = 10*(-max(bands[:,valence-1])+(min(bands[:,conduction-1])))/2
-    tol = tol
     mid_gap_energy = max(bands[:,valence-1])+(min(bands[:,conduction-1])-max(bands[:,valence-1]))/2
     
     QP = []
+    print(tol,QP,np.where(abs(bands-mid_gap_energy)<tol)[1])
+    if len(np.where(abs(bands-mid_gap_energy)<tol)[1])<2:
+        print('#1 redoing analysis incrementing the energy range of 50%. new tol={}'.format(tol*1.5))
+        tol=tol*1.5
+    
+        return QP_mapper(ywfl,tol=tol,full_bands=full_bands)
+    
+    print('test passato')
+        
     if not full_bands:
         for i,j in zip(np.where(abs(bands-mid_gap_energy)<tol)[0],np.where(abs(bands-mid_gap_energy)<tol)[1]):
             QP.append([i+1,i+1,j+1,j+1])
@@ -65,17 +73,22 @@ def QP_mapper(ywfl,tol=1,full_bands=False):
         b_min = np.where(abs(bands-mid_gap_energy)<tol)[1].min()
         b_max = np.where(abs(bands-mid_gap_energy)<tol)[1].max()
         for i in range(len(kpoints)):
-            QP.append([b_min+1,b_max+1,i+1,i+1])
+            QP.append([i+1,i+1,b_min+1,b_max+1])
                 
     v,c = False,False
+    if len(QP)<1:
+        print('#2 redoing analysis incrementing the energy range of 50%. new tol={}'.format(tol*1.5))
+        return QP_mapper(ywfl,tol=tol*1.5,full_bands=full_bands)
     
     for i in QP:
-        if valence == i[-1]: v = True
-        if conduction == i[-1]: c = True
+        if valence >= i[-1]: v = True
+        if conduction <= i[-1]: c = True
+        if valence >= i[-2]: v = True
+        if conduction <= i[-2]: c = True
     
     if not v or not c:
-        print('redoing analysis incrementing the energy range of 50%. new tol='.format(tol*1.5))
-        QP = QP_mapper(ywfl,tol=tol*1.5)
+        print('#3 redoing analysis incrementing the energy range of 50%. new tol={}'.format(tol*1.5))
+        return QP_mapper(ywfl,tol=tol*1.5,full_bands=full_bands)
         
     print('Found {} QPs'.format(len(QP
                                    )))
@@ -85,6 +98,7 @@ def QP_mapper(ywfl,tol=1,full_bands=False):
     plt.ylim(-0.25,0.25)
     
     print('Fermi level={} eV'.format(fermi))
+    
     return QP
 
 def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
@@ -539,7 +553,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 if 'range_QP' in self.ctx.QP_subsets.keys(): #the name can be changed..
                     Energy_region = max(self.ctx.QP_subsets['range_QP'],0)
                     self.report('range of energy for QP: {} eV'.format(Energy_region))
-                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,Energy_region = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False))
+                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,tol = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False))
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
