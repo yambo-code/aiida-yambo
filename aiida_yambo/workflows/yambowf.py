@@ -211,8 +211,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.output('merged_QP', valid_type = SingleFileData, required = False)
         
         spec.output('scissor', valid_type = List, required = False)
-        spec.output('band_structure_GW', valid_type = BandsData, required = False)
-        spec.output('band_structure_DFT', valid_type = BandsData, required = False)
 
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
                              message='The workchain failed with an unrecoverable error.')
@@ -543,6 +541,11 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         elif self.ctx.calc_to_do == 'QP splitter':
             calc = {}
             if self.ctx.qp_splitter == 0:
+                calc = self.ctx.calc
+                if not calc.is_finished_ok:
+                    self.report("last calculation failed, exiting the workflow")
+                    return self.exit_codes.ERROR_WORKCHAIN_FAILED
+                    
                 self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
                 
                 self.ctx.yambo_inputs.yambo.parameters = take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1).inputs.parameters
@@ -596,9 +599,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         splitted = store_List(self.ctx.splitted_QP)
         self.out('splitted_QP_calculations', splitted)
         output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
-        QP_db = merge_QP(splitted,output_name)
+        self.ctx.QP_db = merge_QP(splitted,output_name)
         
-        self.out('merged_QP',QP_db)
+        self.out('merged_QP',self.ctx.QP_db)
 
         return
 
@@ -616,14 +619,17 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.out('nscf_mapping', store_Dict(mapping))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
-                if 'band_structure' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.
+                if 'scissor' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.
                     try:
-                        b = QP_bands_interface(node=Int(self.ctx.calc.called[0].pk), mapping = Dict(dict = mapping))
+                        if hasattr(self.ctx,'QP_db'):
+                            b = QP_bands_interface(node=Int(self.ctx.calc.pk), QP_merged = self.ctx.QP_db,mapping = Dict(dict = mapping))
+                        else:
+                            b = QP_bands_interface(node=Int(self.ctx.calc.pk), mapping = Dict(dict = mapping))
                         self.report('electronic band structure computed by interpolation')
                         for k,v in b.items():
                             self.out(k, v)
                     except:
-                        self.report('fail in the interpolation of the band structure')
+                        self.report('fail in the scissor evaluation')
 
             self.out_many(self.exposed_outputs(calc,YamboRestart))
 

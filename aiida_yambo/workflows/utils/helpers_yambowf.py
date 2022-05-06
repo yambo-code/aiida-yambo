@@ -23,7 +23,7 @@ except:
 
 from aiida_yambo.utils.defaults.create_defaults import *
 
-def QP_bands(node,mapping=None,only_scissor=False, plot=False):
+def QP_bands(node,QP_merged=None,mapping=None,only_scissor=False, plot=False):
     
     x = node
 
@@ -32,7 +32,10 @@ def QP_bands(node,mapping=None,only_scissor=False, plot=False):
     
     lat  = YamboSaveDB.from_db_file(folder=save_dir,filename='ns.db1')  
     ydb  = YamboQPDB.from_db(filename='ndb.QP',folder=qp_dir)
-        
+    if QP_merged: 
+        qp_dir = QP_merged._repository._repo_folder.abspath+'/path'
+        ydb  = YamboQPDB.from_db(filename='ndb.QP_merged',folder=qp_dir)
+
     if mapping: 
         valence = mapping.get_dict()['valence']
         kpoints=  mapping.get_dict()['number_of_kpoints']
