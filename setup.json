@@ -27,7 +27,7 @@
           ]
       },
     "install_requires": [
-        "aiida_core[docs,atomic_tools]>=1.0.0a2",
+        "aiida_core[docs,atomic_tools]>=1.6.4,<3",
         "aiida-quantumespresso>=3.0.0a6,<4.0",
        	"netcdf4",
 	    "h5py",
@@ -35,21 +35,24 @@
         "pandas==1.2.2",
         "numpy==1.20.1"
         ],
+    "dependencies": {
+            "yambopy": "yambo-code/yambopy#aiida-parsing"
+            },
     "keywords": "yambo aiida workflows",
     "entry_points": {
         "aiida.calculations": [
             "yambo.yambo =  aiida_yambo.calculations.yambo:YamboCalculation",
-	    "yambo.ypp = aiida_yambo.calculations.ypp:YppCalculation"
+	        "yambo.ypp = aiida_yambo.calculations.ypp:YppCalculation"
         ],
         "aiida.parsers": [
             "yambo.yambo = aiida_yambo.parsers.parsers:YamboParser",
-	    "yambo.ypp = aiida_yambo.parsers.yppparser:YppParser"
+	        "yambo.ypp = aiida_yambo.parsers.yppparser:YppParser"
         ],
         "aiida.workflows": [
             "yambo.yambo.yamboconvergence = aiida_yambo.workflows.yamboconvergence:YamboConvergence",
             "yambo.yambo.yambowf = aiida_yambo.workflows.yambowf:YamboWorkflow",
             "yambo.yambo.yamborestart = aiida_yambo.workflows.yamborestart:YamboRestart",
-	    "yambo.ypp.ypprestart = aiida_yambo.workflows.ypprestart:YppRestart"
+	        "yambo.ypp.ypprestart = aiida_yambo.workflows.ypprestart:YppRestart"
         ],
         "aiida.data":[]
     }
