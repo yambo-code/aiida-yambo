@@ -18,6 +18,7 @@ from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.workflows.yamborestart import YamboRestart
 
 from aiida_yambo.utils.defaults.create_defaults import *
+
 from aiida_yambo.workflows.utils.helpers_yambowf import *
 from aiida.plugins import DataFactory
 LegacyUpfData = DataFactory('upf')
@@ -178,6 +179,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
                             exclude = ['parent_folder'])
 
+        spec.expose_inputs(YamboRestart, namespace='qp', namespace_options={'required': False,'populate_defaults': False}, 
+                            exclude = ['parent_folder'])
+
         spec.input("additional_parsing", valid_type=List, required = False,
                     help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1], excitons: [lowest, brightes]')
         
@@ -197,6 +201,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     ),
                     if_(cls.post_processing_needed)(
                         cls.run_post_process,
+                    ),
+                    if_(cls.should_run_bse)(
+                        cls.prepare_and_run_bse,
                     ),
                     cls.report_wf,)
 
@@ -374,7 +381,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
     def validate_parameters(self):
 
-        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')        
+        if hasattr(self.inputs, 'qp'):
+            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'qp')
+        else:
+            self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres')        
         #quantumespresso common inputs
         self.ctx.scf_inputs = self.exposed_inputs(PwBaseWorkChain, 'scf')
         self.ctx.nscf_inputs = self.exposed_inputs(PwBaseWorkChain, 'nscf')
@@ -526,6 +536,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             if hasattr(self.inputs, 'additional_parsing'):
                 self.report('updating yambo parameters to parse more results')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
+                self.ctx.mapping = mapping
                 self.report(mapping)
                 self.ctx.yambo_inputs.yambo.parameters = yambo_parameters
 
@@ -539,22 +550,23 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.calc_to_do = 'workflow is finished'
         
         elif self.ctx.calc_to_do == 'QP splitter':
-            calc = {}
+            QP = {}
             if self.ctx.qp_splitter == 0:
                 calc = self.ctx.calc
                 if not calc.is_finished_ok:
                     self.report("last calculation failed, exiting the workflow")
                     return self.exit_codes.ERROR_WORKCHAIN_FAILED
                     
-                self.ctx.yambo_inputs['parent_folder'] = self.ctx.calc.outputs.remote_folder
+                self.ctx.yambo_inputs.parent_folder= self.ctx.calc.outputs.remote_folder
                 
                 self.ctx.yambo_inputs.yambo.parameters = take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1).inputs.parameters
                 self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
                 self.ctx.yambo_inputs.clean_workdir = Bool(True)
                 mapping = gap_mapping_from_nscf(find_pw_parent(take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1)).pk)
+                self.ctx.mapping = mapping
 
                 if 'range_QP' in self.ctx.QP_subsets.keys(): #the name can be changed..
-                    Energy_region = max(self.ctx.QP_subsets['range_QP'],0)
+                    Energy_region = max(self.ctx.QP_subsets['range_QP'],mapping['nscf_gap_eV']*1.2)
                     self.report('range of energy for QP: {} eV'.format(Energy_region))
                     self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,tol = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False))
 
@@ -573,7 +585,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
                     self.report('launchiing YamboRestart <{}> for QP, iteration#{}'.format(future.pk,i+self.ctx.qp_splitter))
                     self.ctx.splitted_QP.append(future.uuid)
-                    calc[str(i+1)] = future
+                    QP[str(i+1)] = future
                 else:
                     self.ctx.calc_to_do = 'workflow is finished'
             
@@ -581,13 +593,13 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
             if len(self.ctx.QP_subsets['subsets']) == 0: self.ctx.calc_to_do = 'workflow is finished'
 
-            return ToContext(calc) #wait for all splitted calculations....
+            return ToContext(QP) #wait for all splitted calculations....
 
         return ToContext(calc = future)
     
     def post_processing_needed(self):
         #in case of multiple QP calculations, yes
-        if len(self.ctx.splitted_QP) > 0:
+        if len(self.ctx.splitted_QP) > 0 and not self.ctx.yambo_inputs.yambo.settings.get_dict()['INITIALISE']:
             self.report('merge QP needed')
             return True
         self.report('no post processing needed')
@@ -605,6 +617,36 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         return
 
+    def should_run_bse(self):
+        #in case of BSE on top of GW just done, yes
+        if hasattr(self.inputs, 'qp') and hasattr(self.ctx,'QP_db') and not self.ctx.yambo_inputs.yambo.settings.get_dict()['INITIALISE']:
+            self.report('We run BSE@GW')
+            return True
+        return False
+
+    def prepare_and_run_bse(self):
+        
+        self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres') 
+        bse_params = self.ctx.yambo_inputs.yambo.parameters.get_dict()
+
+        self.ctx.yambo_inputs.yambo.QP_corrections = self.ctx.QP_db
+        bse_params['variables']['KfnQPdb'] = "E < ./ndb.QP"
+
+        self.ctx.yambo_inputs.parent_folder = self.ctx.calc.outputs.remote_folder
+        self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
+
+        BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
+
+        bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
+        if not 'BSEQptR' in bse_params['variables'].keys():
+            bse_params['variables']['BSEQptR'] = [[BSE_map['q_ind'],BSE_map['q_ind']],'']
+
+        self.ctx.yambo_inputs.yambo.parameters = Dict(dict=bse_params)
+        
+        future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
+
+        return ToContext(bse = future) 
+
     def report_wf(self):
 
         #self.report('Final step.')
@@ -617,6 +659,14 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
                 self.out('nscf_mapping', store_Dict(mapping))
+                if hasattr(self.ctx,'bse'):
+                    if self.ctx.bse.is_finished_ok:
+                        parsed_bse = additional_parsed(self.ctx.bse, self.inputs.additional_parsing.get_list(), mapping)
+                        parsed.update(parsed_bse)
+                    else:
+                        self.report("workflow NOT completed successfully")
+                        return self.exit_codes.ERROR_WORKCHAIN_FAILED
+                
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
                 if 'scissor' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.
@@ -631,8 +681,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     except:
                         self.report('fail in the scissor evaluation')
 
-            self.out_many(self.exposed_outputs(calc,YamboRestart))
-
+            if hasattr(self.ctx,'bse'):
+                if self.ctx.bse.is_finished_ok:
+                    self.out_many(self.exposed_outputs(self.ctx.bse,YamboRestart))
+            else:
+                self.out_many(self.exposed_outputs(calc,YamboRestart))
+                
             self.report("workflow completed successfully")
         else:
             self.report("workflow NOT completed successfully")

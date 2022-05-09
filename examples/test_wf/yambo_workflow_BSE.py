@@ -161,7 +161,7 @@ def main(options):
 
     KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([8,8,1])
+    kpoints.set_kpoints_mesh([6,6,2])
 
     ###### setting the scf parameters ######
 
@@ -173,7 +173,7 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 60.,
+            'ecutwfc': 80.,
             'force_symmorphic': True,
             'nbnd': 20
         },
@@ -186,7 +186,6 @@ def main(options):
         },
     }
 
-    parameter_scf = Dict(dict=params_scf)
 
     params_nscf = {
         'CONTROL': {
@@ -195,13 +194,13 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 60.,
+            'ecutwfc': 80.,
             'force_symmorphic': True,
-            'nbnd': 50
+            'nbnd': 100,
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
-            'mixing_beta': 0.6,
+            'mixing_beta': 0.7,
             'conv_thr': 1.e-8,
             'diagonalization': 'david',
             'diago_thr_init': 5.0e-6,
@@ -209,22 +208,31 @@ def main(options):
         },
     }
 
-    parameter_nscf = Dict(dict=params_nscf)
 
-    params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
-                 'variables':{
-                'GTermEn': [250.0, 'mHa'],
-                'NGsBlkXp': [1.0, 'Ry'],
-                'PPAPntXp': [30.0, 'eV'],
-                'CUTRadius': [13.228083, ''],
-                'CUTGeo': 'sphere xyz',
+    params_gw = {'arguments':['em1s','bse','bss','optics', 'dipoles',],
+                'variables':{
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'NGsBlkXs': [2, 'Ry'],
+                'BSENGBlk': [2, 'Ry'],
                 'Chimod': 'hartree',
                 'DysSolver': 'n',
-                'GTermKind': 'BG',
-                'BndsRnXp': [[1, 50], ''],
-                'GbndRnge': [[1, 50], ''],
-                'QPkrange': [[[1, 1, 25, 25], [1, 1, 4, 4,]], ''],
-                }}
+                'BEnSteps': [10,''],
+                'BSEQptR': [[1,1],''],
+                'BSEBands': [[8,9],''],
+                'BEnRange': [[0.0, 10.0],'eV'],
+                'BDmRange': [[0.1, 0.1],'eV'],
+                'BLongDir': [[1.0, 1.0, 1.0],''],
+                'LongDrXp': [[1.0, 1.0, 1.0],''],
+                'LongDrXd': [[1.0, 1.0, 1.0],''],
+                'LongDrXs': [[1.0, 1.0, 1.0],''],
+                'BndsRnXs': [[1,50], ''],
+                'KfnQP_E':[[1.5,1,1],''],
+                'BS_CPU':str(int(options['resources']["num_machines"]*options['resources']["num_mpiprocs_per_machine"]/2))+' 2 1',
+                'BS_ROLEs':'k eh t',
+                },}
 
 
     params_gw = Dict(dict=params_gw)
@@ -234,7 +242,8 @@ def main(options):
 
 
     ##################scf+nscf part of the builder
-    builder.structure = structure
+    builder.scf.pw.structure = structure
+    builder.nscf.pw.structure = structure
     #builder.scf_parameters = parameter_scf
     builder.scf.kpoints = kpoints
     builder.nscf.kpoints = kpoints
@@ -254,15 +263,17 @@ def main(options):
 
     builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
-    #builder.structure = builder.structure
-    #builder.nscf_parameters = parameter_nscf
-    #builder.nscf.kpoints = builder.scf.kpoints
+    builder.scf.pw.parameters = Dict(dict=params_scf)
+    builder.nscf.pw.parameters = Dict(dict=params_nscf)
+
     builder.nscf.pw.metadata = builder.scf.pw.metadata
 
-    builder.pw_code = load_code(options['pwcode_id'])
-    #builder.nscf.pw.code = load_code(options['pwcode_id'])
-    builder.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.structure, pseudo_family = Str(options['pseudo_family']))
+    builder.scf.pw.code = load_code(options['pwcode_id'])
+    builder.nscf.pw.code = load_code(options['pwcode_id'])
+
+    family = load_group(options['pseudo_family'])
+    builder.scf.pw.pseudos = family.get_pseudos(structure=structure) 
+    builder.nscf.pw.pseudos = family.get_pseudos(structure=structure) 
 
     ##################yambo part of the builder
     builder.yres.yambo.metadata.options.max_wallclock_seconds = \
@@ -282,9 +293,9 @@ def main(options):
     builder.yres.yambo.parameters = params_gw
     builder.yres.yambo.precode_parameters = Dict(dict={})
     builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
-    builder.yres.max_iterations = Int(5)
+    builder.yres.max_iterations = Int(2)
 
-    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM',('O',[0.125,0.125,0.0]),('gap_ok',[[0,0.5,0],[0.125,0.125,0.0]]) ])
+    builder.additional_parsing = List(list=['lowest_exciton','brightest_exciton'])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])
@@ -292,6 +303,7 @@ def main(options):
         builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
     except:
         pass
+
 
     return builder
 

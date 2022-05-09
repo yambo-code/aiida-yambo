@@ -77,7 +77,7 @@ class YamboCalculation(CalcJob):
 )
 
         spec.input('settings',valid_type=Dict,
-                default=lambda: Dict(dict={}))
+                default=lambda: Dict(dict={'INITIALISE':False}))
         spec.input('parameters',valid_type=Dict,
                 help='Use a node that specifies the input parameters')
         spec.input('parent_folder',valid_type=RemoteData,

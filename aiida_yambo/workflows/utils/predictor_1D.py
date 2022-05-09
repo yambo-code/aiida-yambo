@@ -327,7 +327,9 @@ class The_Predictor_1D():
             thr = self.conv_thr
         
         #print(thr)
-        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(1%thr),0))))
+        d = 1%thr
+        if d == 0: d = 1
+        discrepancy = np.round(abs(reference-self.Z_fit),abs(int(np.round(np.log10(d),0))))
         condition = np.where((discrepancy<=thr))
         
         #print(condition)
@@ -485,7 +487,9 @@ class The_Predictor_1D():
                 else:
                     reference = self.Z_fit[-1]
                 
-                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(1%(self.conv_thr/factor)),0)))) <= self.conv_thr/factor: 
+                d = 1%(self.conv_thr/factor)
+                if d == 0 : d = 1
+                if np.round(abs(self.old_discrepancy),abs(int(np.round(np.log10(d),0)))) <= self.conv_thr/factor: 
                     self.check_passed = True
                 else:
                     self.check_passed = False

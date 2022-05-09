@@ -5,9 +5,9 @@ from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import List, Dict
+from aiida.orm import List, Dict, Str,UpfData
 from aiida.engine import submit
-from aiida_yambo.workflows.yamboconvergence import YamboConvergence
+from aiida_yambo.workflows.yambowf import YamboWorkflow
 from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 import argparse
@@ -173,7 +173,7 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 80.,
             'force_symmorphic': True,
             'nbnd': 20
         },
@@ -186,7 +186,6 @@ def main(options):
         },
     }
 
-    parameter_scf = Dict(dict=params_scf)
 
     params_nscf = {
         'CONTROL': {
@@ -195,13 +194,13 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 80.,
             'force_symmorphic': True,
-            'nbnd': 500
+            'nbnd': 100,
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
-            'mixing_beta': 0.6,
+            'mixing_beta': 0.7,
             'conv_thr': 1.e-8,
             'diagonalization': 'david',
             'diago_thr_init': 5.0e-6,
@@ -209,135 +208,126 @@ def main(options):
         },
     }
 
-    parameter_nscf = Dict(dict=params_nscf)
-
-    KpointsData = DataFactory('array.kpoints')
-    kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
-
-    alat = 2.4955987320 # Angstrom
-    the_cell = [[1.000000*alat,   0.000000,   0.000000],
-                [-0.500000*alat,  0.866025*alat,   0.000000],
-                [0.000000,   0.000000,  6.4436359260]]
-
-    atoms = Atoms('BNNB', [(1.2477994910, 0.7204172280, 0.0000000000),
-    (-0.0000001250, 1.4408346720, 0.0000000000),
-    (1.2477994910, 0.7204172280, 3.2218179630),
-    (-0.0000001250,1.4408346720, 3.2218179630)],
-    cell = [1,1,1])
-    atoms.set_cell(the_cell, scale_atoms=False)
-    atoms.set_pbc([True,True,True])
-
-    StructureData = DataFactory('structure')
-    structure = StructureData(ase=atoms)
-
-
-    params_gw = {
-            'HF_and_locXC': True,
-            'dipoles': True,
-            'ppa': True,
-            'gw0': True,
-            'em1d': True,
-            'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 10],
-            'NGsBlkXp': 2,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 10],
-            'DysSolver': "n",
-            'QPkrange': [[1, 1, 8, 9]],
-            'DIP_CPU': "1 1 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 1 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 1",
-            'SE_ROLEs': "q qp b",
-        }
-    params_gw = Dict(dict=params_gw)
+    bse_params = {'arguments':['em1s','bse','bss','optics', 'dipoles',],
+                'variables':{
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'NGsBlkXs': [2, 'Ry'],
+                'BSENGBlk': [2, 'Ry'],
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'BEnSteps': [10,''],
+                #'BSEQptR': [[q,q],''],
+                #'BSEBands': [[v,c],''],
+                'BEnRange': [[0.0, 10.0],'eV'],
+                'BDmRange': [[0.1, 0.1],'eV'],
+                'BLongDir': [[1.0, 1.0, 1.0],''],
+                'LongDrXp': [[1.0, 1.0, 1.0],''],
+                'LongDrXd': [[1.0, 1.0, 1.0],''],
+                'LongDrXs': [[1.0, 1.0, 1.0],''],
+                'BndsRnXs': [[1,50], ''],
+                },}
 
 
-    builder = YamboConvergence.get_builder()
+    
+
+    builder = YamboWorkflow.get_builder()
+
+    builder.yres.yambo.parameters = Dict(dict=bse_params)
 
 
     ##################scf+nscf part of the builder
-    builder.ywfl.scf.pw.structure = structure
-    builder.ywfl.scf.pw.parameters = parameter_scf
-    builder.kpoints = kpoints
-    builder.ywfl.scf.pw.metadata.options.max_wallclock_seconds = \
+    builder.scf.pw.structure = structure
+    builder.nscf.pw.structure = structure
+    #builder.scf_parameters = parameter_scf
+    builder.scf.kpoints = kpoints
+    builder.nscf.kpoints = kpoints
+    builder.scf.pw.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.ywfl.scf.pw.metadata.options.resources = \
+    builder.scf.pw.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.ywfl.scf.pw.metadata.options.queue_name = options['queue_name']
+        builder.scf.pw.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.ywfl.scf.pw.metadata.options.qos = options['qos']
+        builder.scf.pw.metadata.options.qos = options['qos']
 
     if 'account' in options:
-        builder.ywfl.scf.pw.metadata.options.account = options['account']
+        builder.scf.pw.metadata.options.account = options['account']
 
-    builder.ywfl.scf.pw.metadata.options.prepend_text = options['prepend_text']
+    builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
-    builder.ywfl.nscf.pw.structure = builder.ywfl.scf.pw.structure
-    builder.ywfl.nscf.pw.parameters = parameter_nscf
-    builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
+    builder.scf.pw.parameters = Dict(dict=params_scf)
+    builder.nscf.pw.parameters = Dict(dict=params_nscf)
 
-    builder.ywfl.scf.pw.code = load_code(options['pwcode_id'])
-    builder.ywfl.nscf.pw.code = load_code(options['pwcode_id'])
-    builder.ywfl.scf.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.ywfl.scf.pw.structure, pseudo_family = Str(options['pseudo_family']))
-    builder.ywfl.nscf.pw.pseudos = builder.ywfl.scf.pw.pseudos
+    builder.nscf.pw.metadata = builder.scf.pw.metadata
+
+    builder.scf.pw.code = load_code(options['pwcode_id'])
+    builder.nscf.pw.code = load_code(options['pwcode_id'])
+
+    family = load_group(options['pseudo_family'])
+    builder.scf.pw.pseudos = family.get_pseudos(structure=structure) 
+    builder.nscf.pw.pseudos = family.get_pseudos(structure=structure) 
 
     ##################yambo part of the builder
-    builder.ywfl.yres.yambo.metadata.options.max_wallclock_seconds = \
+    builder.yres.yambo.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.ywfl.yres.yambo.metadata.options.resources = \
+    builder.yres.yambo.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.ywfl.yres.yambo.metadata.options.queue_name = options['queue_name']
+        builder.yres.yambo.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.ywfl.yres.yambo.metadata.options.qos = options['qos']
+        builder.yres.yambo.metadata.options.qos = options['qos']
 
     if 'account' in options:
-        builder.ywfl.yres.yambo.metadata.options.account = options['account']
+        builder.yres.yambo.metadata.options.account = options['account']
 
-    builder.ywfl.yres.yambo.parameters = params_gw
-    builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
-    builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
-    builder.ywfl.yres.max_iterations = Int(5)
+    builder.yres.yambo.precode_parameters = Dict(dict={})
+    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
+    builder.yres.max_iterations = Int(2)
 
-    builder.ywfl.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
-    builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
+    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM','lowest_exciton','brightest_exciton'])
+
+    builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
+    builder.yres.yambo.code = load_code(options['yambocode_id'])
     try:
         builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
     except:
         pass
 
-    builder.p2y = builder.ywfl
-    builder.precalc = builder.ywfl #for simplicity, to specify if PRE_CALC is True
+    builder.QP_subset_dict= Dict(dict={
+                                            'qp_per_subset':20,
+                                            'parallel_runs':4,
+                                            'range_QP':5,
+    })
 
-    builder.workflow_settings = Dict(dict={'type':'2D_space','what':'gap','where':[(1,8,1,9)],
-                                           'PRE_CALC':False})
-    
-    #'what': 'single-levels','where':[(1,8),(1,9)]
-    para_space = [{'var':['BndsRnXp','GbndRnge'],    
-                    'space': [[[1,10],[1,10]], \
-                              [[1,50],[1,75]], \
-                              [[1,75],[1,50]]], \
-                                 'max_iterations': 1,},
-                  {'var':['BndsRnXp','GbndRnge'],
-                    'space': [[[1,75],[1,75]]],
-                                 'max_iterations': 1,}]
+    builder.qp = builder.yres
+
+    params_gw = {
+        'arguments': [
+            'dipoles',
+            'HF_and_locXC',
+            'dipoles',
+            'gw0',
+            'ppa',],
+        'variables': {
+            'Chimod': 'hartree',
+            'DysSolver': 'n',
+            'GTermKind': 'BG',
+            'NGsBlkXp': [2, 'Ry'],
+            'BndsRnXp': [[1, 50], ''],
+            'GbndRnge': [[1, 50], ''],
+            'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
 
-    for i in range(len(para_space)):
-        print('{}-th variable will be {}'.format(i+1,para_space[i]['var']))
-        print('{}-th values will be {}'.format(i+1,para_space[i]['space']))
-    builder.parameters_space = List(list = para_space)  
+    params_gw = Dict(dict=params_gw)
+    builder.qp.yambo.parameters = params_gw
+
 
     return builder
 
@@ -345,14 +335,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboConvergence; with pk=< {} >".format(running.pk))
-
-
-'''
-another example of space can be:
-
-para_space = [{'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                'space': [[[1, 50], [1, 50], 2], [[1, 50], [1, 50], 3]],'max_iterations': 1,},
-              {'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
-                'space': [[[1, 55], [1, 55], 2], [[1, 55], [1, 55], 3]],'max_iterations': 1,},]
-'''
+    print("Submitted YamboWorkflow workchain; with pk=< {} >".format(running.pk))

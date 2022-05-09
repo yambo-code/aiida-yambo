@@ -47,6 +47,11 @@ def set_parallelism(instructions_, inputs):
         yambo_bandsX = inputs.yres.yambo.parameters.get_dict()['variables']['BndsRnXp'][0][-1]
     else:
         yambo_bandsX = 0 
+
+    if 'BndsRnXs' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_bandsXs = inputs.yres.yambo.parameters.get_dict()['variables']['BndsRnXs'][0][-1]
+    else:
+        yambo_bandsXs = 0 
     
     if 'GbndRnge' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
         yambo_bandsSc = inputs.yres.yambo.parameters.get_dict()['variables']['GbndRnge'][0][-1]
@@ -58,26 +63,43 @@ def set_parallelism(instructions_, inputs):
     else:
         yambo_cutG = 0
 
-    bands = max(yambo_bandsX,yambo_bandsSc)
+    if 'NGsBlkXs' in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
+        yambo_cutGs = inputs.yres.yambo.parameters.get_dict()['variables']['NGsBlkXs'][0]
+    else:
+        yambo_cutGs = 0
 
+    bands = max(yambo_bandsX,yambo_bandsSc,yambo_bandsXs)
+    yambo_cutG = max(yambo_cutG,yambo_cutGs)
 
     pop_list = []
     
-
+    print(instructions)
     if instructions['automatic']: # and ('gw0' or 'HF_and_locXC' in runlevels):
         #standard
-        '''new_parallelism, new_resources = find_parallelism_qp(resources['num_machines'], resources['num_mpiprocs_per_machine'], \
-                                                        resources['num_cores_per_mpiproc'], bands, \
-                                                        occupied, qp, kpoints,\
-                                                        last_qp, namelist = {})'''
-        if isinstance(instructions['automatic'],bool):
-            instructions['automatic'] = 'balanced'
 
         for p in inputs.yres.yambo.parameters.get_dict()['variables'].keys():
             for k in ['CPU','ROLEs']:
                 if k in p and not 'LinAlg' in p:
                     pop_list.append(p)
-        new_parallelism, new_resources = {'PAR_def_mode': instructions['automatic']}, resources
+        #new_parallelism, new_resources = {'PAR_def_mode': instructions['automatic']}, resources
+        for i in instructions['automatic'].keys():
+            BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXp', [0])
+            if BndsRnXp_hint == [0]: BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXs', [0])
+            GbndRnge_hint = instructions['automatic'][i].pop('GbndRnge', [0])
+            NGsBlkXp_hint = instructions['automatic'][i].pop('NGsBlkXp', [0])
+            if NGsBlkXp_hint == [0]: instructions['automatic'][i].pop('NGsBlkXs', [0])
+            kpoints_hint = instructions['automatic'][i].pop('kpoints', [0])
+
+            X = (yambo_bandsX >= min(BndsRnXp_hint) and yambo_bandsX <= max(BndsRnXp_hint)) or len(BndsRnXp_hint)==1 
+            Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
+            G = (yambo_cutG >= min(NGsBlkXp_hint) and yambo_cutG <= max(NGsBlkXp_hint)) or len(NGsBlkXp_hint)==1 
+            K = (kpoints >= min(kpoints_hint) and kpoints <= max(kpoints_hint)) or len(kpoints_hint)==1 
+            if X and Sc and G and K:
+                new_parallelism = {'PAR_def_mode': instructions['automatic'][i].pop('mode','balanced')}
+                new_resources = instructions['automatic'][i]['resources']
+                break
+            else: 
+                pass
     
     
     elif instructions['semi-automatic'] and ('gw0' or 'HF_and_locXC' in runlevels):
@@ -94,10 +116,12 @@ def set_parallelism(instructions_, inputs):
         # 
         #main parameters...
         for i in instructions['manual'].keys():
-            BndsRnXp_hint = instructions['manual'][i].pop('BndsRnXp', [0])
-            GbndRnge_hint = instructions['manual'][i].pop('GbndRnge', [0])
-            NGsBlkXp_hint = instructions['manual'][i].pop('NGsBlkXp', [0])
-            kpoints_hint = instructions['manual'][i].pop('kpoints', [0])
+            BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXp', [0])
+            if BndsRnXp_hint == [0]: BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXs', [0])
+            GbndRnge_hint = instructions['automatic'][i].pop('GbndRnge', [0])
+            NGsBlkXp_hint = instructions['automatic'][i].pop('NGsBlkXp', [0])
+            if NGsBlkXp_hint == [0]: instructions['automatic'][i].pop('NGsBlkXs', [0])
+            kpoints_hint = instructions['automatic'][i].pop('kpoints', [0])
 
             X = (yambo_bandsX >= min(BndsRnXp_hint) and yambo_bandsX <= max(BndsRnXp_hint)) or len(BndsRnXp_hint)==1 
             Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 

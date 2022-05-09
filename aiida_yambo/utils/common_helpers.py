@@ -552,27 +552,30 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             same_k = k_mesh_to_calc == node.inputs.nscf__kpoints.get_kpoints_mesh()
             old_params = node.inputs.yres__yambo__parameters.get_dict()['variables']
             was_p2y = node.inputs.yres__yambo__settings.get_dict().pop('INITIALISE', False)
-            if bands : enough_b = node.inputs.nscf__pw__parameters.get_dict()['SYSTEM']['nbnd'] >= bands
+            if bands : 
+                enough_b = node.inputs.nscf__pw__parameters.get_dict()['SYSTEM']['nbnd'] >= bands
+            else:
+                enough_b = True
             for p in what:
                 if 'CPU' in p or 'ROLEs' in p or 'PAR_' in p: 
-                    already_done = node.pk
-                    l += 1
+                    pass #already_done = node.pk
+                    #l += 1
                 elif 'QPkrange' in p:
                     if hasattr(node.inputs,'additional_parsing'):
                         for i in additional:
-                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
+                            if i in node.inputs.additional_parsing.get_list() and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and enough_b:
                                 already_done = node.pk
                             else:                          
                                 already_done = False
                                 break 
                     else: 
-                        if additional==[] and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)): 
+                        if additional==[] and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and enough_b: 
                             already_done = node.pk
                         else:
                             already_done = False
                             break 
 
-                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
+                elif params_to_calc[p][0] == old_params[p][0] and same_k and not was_p2y and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and enough_b:
                     already_done = node.pk
                 else:
                     already_done = False
@@ -581,7 +584,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
             
             over = abs(len(params_to_calc)-len(old_params))
 
-            if already_done and full and (over == l or over == 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and (not bands or (bands and enough_b)):
+            '''if already_done and full and (over == l or over == 0) and not (up_to_p2y and not node.called[0].called[0].outputs.remote_folder.is_empty) and enough_b:
                 already_done = node.pk
                 print('ok')
 
@@ -589,9 +592,9 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
                 already_done = False
                 print(node.pk)
                 print(len(params_to_calc),len(old_params))
-                print(l,over)
+                print(l,over)'''
                 
-            if up_to_p2y and same_k and not node.called[0].called[0].outputs.remote_folder.is_empty and (not bands or (bands and enough_b)):
+            if up_to_p2y and same_k and not node.called[0].called[0].outputs.remote_folder.is_empty and enough_b:
                     already_done = node.pk
                     return already_done
     
@@ -603,6 +606,7 @@ def check_same_yambo(node, params_to_calc, k_mesh_to_calc,what,up_to_p2y=False,f
 def check_same_pw(node, k_mesh_to_calc, already_done, bands = None):
     parent_nscf = False
     parent_scf = False
+    enough_b = True
     try:
         if not already_done:
             
@@ -614,16 +618,16 @@ def check_same_pw(node, k_mesh_to_calc, already_done, bands = None):
                 try:
                     y = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
                     if 'ns.db1' in  os.listdir(y) and same_k and not node.outputs.remote_folder.is_empty:
-                        if (bands and enough_b) or not bands:
+                        if enough_b:
                             parent_nscf = node.pk      
 
                 except:
                     pass
             if same_k and parent_nscf_try.is_finished_ok and not parent_nscf_try.outputs.remote_folder.is_empty: 
-                if (bands and enough_b) or not bands:
+                if enough_b:
                     parent_nscf = parent_nscf_try.pk     
             if parent_scf_try.is_finished_ok and not parent_scf_try.outputs.remote_folder.is_empty: 
-                if (bands and enough_b) or not bands:
+                if enough_b:
                     parent_scf = parent_scf_try.pk 
    
     except:

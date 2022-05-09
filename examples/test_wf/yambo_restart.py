@@ -38,7 +38,7 @@ def get_options():
         '--restarts',
         type=int,
         dest='max_iterations',
-        required=True,
+        required=False,
         default=2,
         help='maximum number of restarts')
 
@@ -114,8 +114,8 @@ def get_options():
         'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
-    if args.parent_pk:
-        options['parent_pk']=args.parent_pk
+    
+    options['parent_pk']=args.parent_pk
 
     if args.queue_name:
         options['queue_name']=args.queue_name
@@ -134,20 +134,21 @@ def main(options):
 
     Dict = DataFactory('dict')
 
-    params_gw = {'arguments':['rim_cut', 'dipoles', 'gw0', 'HF_and_locXC', 'ppa'],
-                 'variables':{
-                'GTermEn': [250.0, 'mHa'],
-                'NGsBlkXp': [1.0, 'Ry'],
-                'PPAPntXp': [30.0, 'eV'],
-                'CUTRadius': [13.228083, ''],
-                'CUTGeo': 'sphere xyz',
-                'Chimod': 'hartree',
-                'DysSolver': 'n',
-                'GTermKind': 'BG',
-                'BndsRnXp': [[1, 30], ''],
-                'GbndRnge': [[1, 30], ''],
-                'QPkrange': [[[1, 1, 25, 25], [1, 1, 4, 4,]], ''],
-                }}
+    params_gw = {
+        'arguments': [
+            'dipoles',
+            'HF_and_locXC',
+            'dipoles',
+            'gw0',
+            'ppa',],
+        'variables': {
+            'Chimod': 'hartree',
+            'DysSolver': 'n',
+            'GTermKind': 'BG',
+            'NGsBlkXp': [2, 'Ry'],
+            'BndsRnXp': [[1, 50], ''],
+            'GbndRnge': [[1, 50], ''],
+            'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
     params_gw = Dict(dict=params_gw)
 
@@ -172,8 +173,7 @@ def main(options):
 
     builder.yambo.parameters = params_gw
 
-    #builder.yambo.precode_parameters = Dict(dict={})
-    #builder.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
     builder.yambo.code = load_code(options['yambocode_id'])
     builder.yambo.preprocessing_code = load_code(options['yamboprecode_id'])

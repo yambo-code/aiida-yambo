@@ -145,7 +145,7 @@ def main(options):
             'wf_collect': True
         },
         'SYSTEM': {
-            'ecutwfc': 130.,
+            'ecutwfc': 80.,
             'force_symmorphic': True,
             'nbnd': 20
         },
@@ -170,7 +170,7 @@ def main(options):
     builder.pw.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
     builder.pw.metadata.options.resources = \
-            dict = options['resources']
+            options['resources']
 
     if 'queue_name' in options:
         builder.pw.metadata.options.queue_name = options['queue_name']
@@ -181,12 +181,15 @@ def main(options):
     if 'account' in options:
         builder.metadata.options.account = options['account']
 
-    builder.pw.metadata.options.prepend_text = options['prepend_text']
+    if 'prepend_text' in options:
+        builder.pw.metadata.options.prepend_text = options['prepend_text']
 
     builder.pw.code = load_code(options['code_id'])
-    builder.pw.pseudos = validate_and_prepare_pseudos_inputs(
-                builder.pw.structure, pseudo_family = Str(options['pseudo_family']))
+    
+    family = load_group(options['pseudo_family'])
 
+    builder.pw.pseudos = family.get_pseudos(structure=structure) 
+    
     return builder
 
 

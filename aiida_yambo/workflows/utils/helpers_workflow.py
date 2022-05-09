@@ -259,6 +259,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='h
                             new_val = last_inputs+delta[l.index(var)]*(r+first-1)
                     elif isinstance(delta[l.index(var)],list): 
                         if not 'mesh' in var:
+                            print(var,delta)
                             new_val = [sum(x) for x in zip(last_inputs, [d*(r+first-1) for d in delta[l.index(var)]])]
                         else:
                             new_val = [sum(x) for x in zip(last_inputs, [d*(r+first-1) for d in delta[l.index(var)]])]

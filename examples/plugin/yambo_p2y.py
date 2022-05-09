@@ -103,8 +103,7 @@ def get_options():
         'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
-    if args.parent_pk:
-        options['parent_pk']=args.parent_pk
+    options['parent_pk']=args.parent_pk
 
     if args.queue_name:
         options['queue_name']=args.queue_name
@@ -122,9 +121,10 @@ def main(options):
     ###### setting the gw parameters ######
 
     Dict = DataFactory('dict')
-
-    params_gw = {}
-    params_gw = Dict(dict=params_gw)
+            
+    params_gw = Dict(dict={
+        'arguments': [],
+        'variables': {}})
 
     ###### creation of the YamboCalculation ######
 
@@ -143,7 +143,8 @@ def main(options):
     if 'account' in options:
         builder.metadata.options.account = options['account']
 
-    builder.metadata.options.prepend_text = options['prepend_text']
+    if 'prepend_text' in options:
+        builder.metadata.options.prepend_text = options['prepend_text']
 
     builder.parameters = params_gw
 
@@ -152,7 +153,6 @@ def main(options):
 
     builder.code = load_code(options['yambocode_id'])
     builder.preprocessing_code = load_code(options['yamboprecode_id'])
-
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 

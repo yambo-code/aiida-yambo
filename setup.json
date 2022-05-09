@@ -12,12 +12,15 @@
         "Topic :: Scientific/Engineering :: Physics",
         "Framework :: AiiDA"
     ],
-    "version": "2.0.0",
+    "version": "3.0.0",
     "extras_require": {
          "docs": [
             "Sphinx",
             "docutils",
             "sphinx_rtd_theme"
+          ],
+          "tests":[
+            "pytest"
           ],
          "pre-commit": [
             "pre-commit==1.11.0",
@@ -27,17 +30,16 @@
           ]
       },
     "install_requires": [
-        "aiida_core[docs,atomic_tools]>=1.6.4,<3",
+        "aiida_core[atomic_tools]>=1.6.4,<3",
         "aiida-quantumespresso>=3.0.0a6,<4.0",
        	"netcdf4",
 	    "h5py",
-        "pytest",
-        "pandas==1.2.2",
-        "numpy==1.20.1"
+        "xarray",
+        "pandas>=1.2.2",
+        "numpy>=1.20.1",
+        "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy"
         ],
-    "dependencies": {
-            "yambopy": "yambo-code/yambopy#aiida-parsing"
-            },
+    "python_requires": ">=3.7",
     "keywords": "yambo aiida workflows",
     "entry_points": {
         "aiida.calculations": [
