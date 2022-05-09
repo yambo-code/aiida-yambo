@@ -40,7 +40,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         """
         super(YamboConvergence, cls).define(spec)
 
-        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True})
+        spec.expose_inputs(YamboWorkflow, namespace='ywfl', namespace_options={'required': True,'populate_defaults': False})
 
         spec.input('precalc_inputs', valid_type=Dict, required = False)
 
@@ -139,7 +139,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         overrides_ywfl['clean_workdir'] = overrides_ywfl.pop('clean_workdir',False)
 
         #########YWFL PROTOCOLS 
-        builder.ywfl = YamboWorkflow.get_builder_from_protocol(
+        ywfl_builder = YamboWorkflow.get_builder_from_protocol(
                 pw_code,
                 preprocessing_code,
                 code,
@@ -156,6 +156,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 parent_folder=parent_folder,
                 )
 
+        builder.ywfl = ywfl_builder._inputs(prune=True)
         ######### convergence settings
 
         ################ K mesh

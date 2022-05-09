@@ -170,13 +170,13 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         super(YamboWorkflow, cls).define(spec)
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': False}, 
+        spec.expose_inputs(PwBaseWorkChain, namespace='scf', namespace_options={'required': False,'populate_defaults': False}, 
                             exclude = ['parent_folder'])
 
-        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': False}, 
+        spec.expose_inputs(PwBaseWorkChain, namespace='nscf', namespace_options={'required': False,'populate_defaults': False},
                             exclude = ['parent_folder'])
 
-        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False}, 
+        spec.expose_inputs(YamboRestart, namespace='yres', namespace_options={'required': False,'populate_defaults': False}, 
                             exclude = ['parent_folder'])
 
         spec.expose_inputs(YamboRestart, namespace='qp', namespace_options={'required': False,'populate_defaults': False}, 
