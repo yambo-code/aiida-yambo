@@ -12,7 +12,7 @@ from aiida.orm import Dict, Str, Bool, KpointsData, RemoteData, List, load_node,
 from aiida.engine import WorkChain, while_ , if_
 from aiida.engine import ToContext
 from aiida.engine import submit
-
+from aiida import orm
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.common.types import ElectronicType, SpinType
 
