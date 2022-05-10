@@ -33,4 +33,4 @@ Here an example of typical script to run a YamboRestart workchain:
 .. include:: ../../../../examples/test_wf/yambo_restart.py
    :literal:
 
-the outputs are the same of a YamboCalculation.
+the outputs inherithed from the YamboCalculation.

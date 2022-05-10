@@ -11,9 +11,9 @@ the success of an input calculation is guaranteed by the RestartWorkchain used a
 
 Example usage.
 
-.. include:: ../../../../examples/test_wf/yambo_wfl.py
+.. include:: ../../../../examples/test_wf/yambo_workflow.py
    :literal:
 
 As you may notice, here the builder has a new attributes, referring to scf, nscf and yambo parts: this means that we are actually providing the inputs for 
 respectively PwBaseWorkchain and YamboRestart. 
-The only 'pure' YamboWorkflow input is now the ``parent_folder``. 
+The only 'strict' YamboWorkflow input is now the ``parent_folder``. 
