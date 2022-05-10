@@ -3,12 +3,14 @@
 YamboRestart
 ------------
 
-This is the basic workflow and will run a single yambo calculation, wrapping the YamboCalculation class.
+This is the lowest-level workchain and will run a single yambo calculation, wrapping the YamboCalculation class.
 The adding values is a restart logic, with a tolerance for failed calculations due to
 
 - Time Exhaustion on the queue: run a new calculation with 50% more time and copying the partial results obtained in the failed one.
 - Parallization errors: use the built-in parallelizer to attempt a fixing.
-- Memory errors: reduce mpi(/2) and increase threads(*2) to attempt a better memory distribution. Redefine parallelism options with the parallelizer. It can increase resources only if mpi = 1.
+- Corruption of databases: it just restart the calculation deleting the corrupted files but copying all the other outputs, for an efficient restart.
+- Memory errors: reduce mpi(/2) and increase threads(*2) to attempt a better memory distribution. Redefine parallelism options settings defaults. It can increase resources only if mpi = 1 or if the number of maximum nodes provided 
+  as input is not yet reached.
 
 After each calculation, this workflow will check the exit status(provided by the parser) and, if the calculation is failed,
 try to fix some parameters in order to resubmit the calculation and obtain results. As inputs, we have to provide
@@ -24,6 +26,7 @@ Other common YamboRestart inputs are:
 ::
    
    builder.max_walltime #max_walltime for a given machine/cluster
+   builder.max_number_of_nodes #max_number_of_nodes for a given run
    builder.max_iterations #from BaseRestartWorkchain: maximum number of attempt to succesfully done the calculation.
    builder.clean_workdir #from BaseRestartWorkchain: If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.
 
@@ -33,4 +36,4 @@ Here an example of typical script to run a YamboRestart workchain:
 .. include:: ../../../../examples/test_wf/yambo_restart.py
    :literal:
 
-the outputs inherithed from the YamboCalculation.
+the outputs are inherithed from the YamboCalculation.

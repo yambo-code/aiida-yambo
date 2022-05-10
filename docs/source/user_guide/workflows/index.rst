@@ -18,8 +18,8 @@ Simple YamboRestart workchain
 
    yamborestart
 
-A Complete YamboWorkflow
-^^^^^^^^^^^^^^^^^^^^^^^^
+Complete YamboWorkflows
+^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
