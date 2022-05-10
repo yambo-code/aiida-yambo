@@ -400,7 +400,7 @@ class YamboParser(Parser):
         Vxc = numpy.array(ndbhf['Vxc'])
         try:
             Sc = numpy.array(ndbqp['So'])
-        except KeyError:
+        except:
             Sc = 1 / Z * E_minus_Eo - Sx + Vxc
         pdata = ArrayData()
         for quantity in ndbqp.keys():
