@@ -161,7 +161,7 @@ class YamboParser(Parser):
         'p2y_completed': False, 'last_time':0,\
         'requested_time':self._calc.attributes['max_wallclock_seconds'], 'last_time_units':'seconds',\
         'memstats':[], 'para_error':False, 'memory_error':False,'timing':[],'time_error': False, 'has_gpu': False,
-        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path,'X_par_allocation_error':False,'errors':[],}
+        'yambo_version':'5.x', 'Fermi(eV)':0,'ns_db1_path':parent_save_path,'X_par_allocation_error':False,'errors':[],'corrupted_fragment':False}
         ndbqp = {}
         ndbhf = {}
         q = None
@@ -285,7 +285,9 @@ class YamboParser(Parser):
         if success == False:
 
 
-            if output_params['time_error']:
+            if output_params['corrupted_fragment']:
+                return self.exit_codes.Variable_NOT_DEFINED
+            elif output_params['time_error']:
                 return self.exit_codes.WALLTIME_ERROR
             elif output_params['para_error']:
                 return self.exit_codes.PARA_ERROR

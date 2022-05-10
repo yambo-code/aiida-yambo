@@ -122,6 +122,7 @@ def parse_log(log,output_params,timing):
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
         impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
+        corrupted_fragment = re.compile('\[ERROR\]  Writing File')
         time_probably = re.compile('Alloc Xo%blc_d')
         X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
         reading_explosion_of_memory = re.compile('Reading')
@@ -142,6 +143,9 @@ def parse_log(log,output_params,timing):
                 output_params['para_error'] = True
             elif time_probably.findall(line):
                 output_params['errors'].append('time_most_prob')
+            elif corrupted_fragment.findall(line):
+                output_params['errors'].append('corrupted_fragment')
+                output_params['corrupted_fragment'].append(re.findall("ndb.pp_fragment_[0-9]+",line))
         try:
             if  reading_explosion_of_memory.findall(log.lines[-1]):
                 output_params['memory_error'] = True

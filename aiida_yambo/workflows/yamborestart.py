@@ -277,7 +277,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options, self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
         
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO', True) # to link the dbs in aiida.out 
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
         
@@ -294,7 +294,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         """
         new_para, new_resources, pop_list  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
-        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
+        self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()), sublevel='variables',pop_list= pop_list)
 
         '''new_para = check_para_namelists(new_para, self.inputs.code_version.value)
@@ -303,7 +303,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             self.report('adjusting parallelism namelist... please check yambo documentation')'''
 
         
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
@@ -325,7 +325,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         new_para, new_resources, pop_list  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
                                                 self.inputs.max_number_of_nodes, self.ctx.iteration)
         self.ctx.inputs.metadata.options.resources = new_resources
-        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
+        self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables',pop_list= pop_list)
 
             
@@ -335,10 +335,28 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             self.report('adjusting parallelism namelist... please check yambo documentation')'''
 
 
-        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs'] :
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
 
         self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance and set PAR_def_mode= "balanced"')
+        return ProcessHandlerReport(True)
+
+    @process_handler(priority =  562, exit_codes = [YamboCalculation.exit_codes.Variable_NOT_DEFINED])
+    def _handle_variable_NOT_DEFINED(self, calculation):
+        """
+        Handle calculations Variable NOT DEFINED error, happens with ndb.pp_fragments.
+        redo the calculation, trying to delete the wrong fragment and recompute it.
+        """
+
+        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
+
+        if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
+            corrupted_fragment = calculation.outputs.output_parameters.get_dict()['corrupted_fragment']
+            self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
+            self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nrm aiida.out/"+str(corrupted_fragment)
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
+
+        self.report_error_handled(calculation, 'Variable NOT DEFINED error detected, so we restart and recompute the corrupted fragment')
         return ProcessHandlerReport(True)

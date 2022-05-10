@@ -108,6 +108,8 @@ class YamboCalculation(CalcJob):
                 message='x_par allocation memory error')
         spec.exit_code(507, 'NaN_AS_OUTPUT',
                 message='NaN error')
+        spec.exit_code(508, 'Variable_NOT_DEFINED',
+                message='Variable NOT DEFINED error, happens with ndb.pp_fragments.')
 
 
         #outputs definition:
