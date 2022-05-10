@@ -58,5 +58,5 @@ should be the nscf one.
 .. include:: ../../../../examples/plugin/yambo_p2y.py
    :literal:
 
-The fundamental input that tells the plugin to only run a p2y calculation is the settings key ``INITALISE``: if True, the only code running 
-will be p2y. If False, an automatic procedure is implemented to decide what executables are needed to complete the calculation. 
+The fundamental input that tells the plugin to only run a p2y calculation is the settings key ``INITALISE``: if True, the SAVE folder is created and initialized using the p2y and yambo executables. 
+An automatic procedure is implemented to decide what executables are needed to complete the calculation. 
