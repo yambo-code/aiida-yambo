@@ -51,8 +51,8 @@ so, a complete settings Dict will be:
                                              'COPY_DBS': True,
                                              })
 
-Primer on Yambo parallelizations 
---------------------------------
+Yambo in Parallel 
+-----------------
 
 The computational effort done during a Yambo calculation requires an extensive and wise use of parallelization schemes on various quantities
 that are computed during the simulation. A tutorial for user-defined parallelism instructions can be found at http://www.yambo-code.org/wiki/index.php?title=GW_parallel_strategies. In any case, when yambo 
