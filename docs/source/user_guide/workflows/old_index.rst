@@ -31,4 +31,18 @@ YamboConvergence: automated convergence
    :maxdepth: 4
 
    yamboconvergence
-   
+
+Alternative use of YamboConvergence: fixed-path investigation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 4
+
+   yambo2d_extr
+
+Post processing utilities
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 4
+
+   post_proc_conv
+
