@@ -637,7 +637,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
 
-        bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
+        if not 'BSEBands' in bse_params['variables'].keys():
+            bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
         if not 'BSEQptR' in bse_params['variables'].keys():
             bse_params['variables']['BSEQptR'] = [[BSE_map['q_ind'],BSE_map['q_ind']],'']
 
