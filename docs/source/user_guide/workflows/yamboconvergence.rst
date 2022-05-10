@@ -32,8 +32,11 @@ As you can see, we have to provide workflow_settings, which encode some workflow
         'bands_nscf_update': 'full-step'},)
 
 The workflow submitted here looks for convergence on different parameters. The iter is specified
-with the input list ``parameters_space``. This is a list of dictionaries, each one representing a given phase of the investigation. The quantity that tries
-to converge is the gap('what') between given bands evaluated at fixed k-points. It is possible to choose also and indirect gap(notice that,
+with the input list ``parameters_space``. This is a list of dictionaries, each one representing a given phase of the investigation. 
+If `type` is cheap, the converged parameters are re-set to starting one when convergence is performed on the other parameters. This in order to have faster calculations.
+Instead, if `type` is heavy, the parameters already converged are taken as the converged value. In this way, at the end of the convergence you will have already done the calculation
+and you can start from there with post processing. 
+The quantity that tries to converge is the gap('what') between given bands evaluated at fixed k-points. It is possible to choose also and indirect gap(notice that,
 changing the k-point mesh, the k-points will change index). The workflow will take care of it and doesn't stop until all the quantities are
 converged(or the maximum restarts are reached).
 
