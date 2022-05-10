@@ -103,8 +103,7 @@ def get_options():
         'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
-    if args.parent_pk:
-        options['parent_pk']=args.parent_pk
+    options['parent_pk']=args.parent_pk
 
     if args.queue_name:
         options['queue_name']=args.queue_name
@@ -124,27 +123,21 @@ def main(options):
     Dict = DataFactory('dict')
 
     params_gw = {
-            'HF_and_locXC': True,
-            'dipoles': True,
-            'ppa': True,
-            'gw0': True,
-            'em1d': True,
+        'arguments': [
+            'dipoles',
+            'HF_and_locXC',
+            'dipoles',
+            'gw0',
+            'ppa',],
+        'variables': {
             'Chimod': 'hartree',
-            #'EXXRLvcs': 40,
-            #'EXXRLvcs_units': 'Ry',
-            'BndsRnXp': [1, 10],
-            'NGsBlkXp': 2,
-            'NGsBlkXp_units': 'Ry',
-            'GbndRnge': [1, 10],
-            'DysSolver': "n",
-            'QPkrange': [[1, 1, 8, 9]],
-            'DIP_CPU': "1 1 1",
-            'DIP_ROLEs': "k c v",
-            'X_CPU': "1 1 1 1",
-            'X_ROLEs': "q k c v",
-            'SE_CPU': "1 1 1",
-            'SE_ROLEs': "q qp b",
-        }
+            'DysSolver': 'n',
+            'GTermKind': 'BG',
+            'NGsBlkXp': [2, 'Ry'],
+            'BndsRnXp': [[1, 50], ''],
+            'GbndRnge': [[1, 50], ''],
+            'QPkrange': [[[1, 1, 8, 9]], ''],}}
+
     params_gw = Dict(dict=params_gw)
 
     ###### creation of the YamboCalculation ######
@@ -164,7 +157,8 @@ def main(options):
     if 'account' in options:
         builder.metadata.options.account = options['account']
 
-    builder.metadata.options.prepend_text = options['prepend_text']
+    if 'prepend_text' in options:
+        builder.metadata.options.prepend_text = options['prepend_text']
 
     builder.parameters = params_gw
 
@@ -173,7 +167,6 @@ def main(options):
 
     builder.code = load_code(options['yambocode_id'])
     builder.preprocessing_code = load_code(options['yamboprecode_id'])
-
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 

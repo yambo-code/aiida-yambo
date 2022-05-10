@@ -253,6 +253,31 @@ def main(options):
     builder = YamboConvergence.get_builder()
 
 
+    bse_params = {'arguments':['em1s','bse','bss','optics', 'dipoles',],
+                'variables':{
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'NGsBlkXs': [2, 'Ry'],
+                'BSENGBlk': [2, 'Ry'],
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'BEnSteps': [10,''],
+                #'BSEQptR': [[q,q],''],
+                #'BSEBands': [[v,c],''],
+                'BEnRange': [[0.0, 10.0],'eV'],
+                'BDmRange': [[0.1, 0.1],'eV'],
+                'BLongDir': [[1.0, 1.0, 1.0],''],
+                'LongDrXp': [[1.0, 1.0, 1.0],''],
+                'LongDrXd': [[1.0, 1.0, 1.0],''],
+                'LongDrXs': [[1.0, 1.0, 1.0],''],
+                'BndsRnXs': [[1,50], ''],
+                },}
+
+    builder.ywfl.yres.yambo.parameters = Dict(dict=bse_params)
+
+
     ##################scf+nscf part of the builder
     builder.ywfl.scf.pw.structure = structure
     builder.ywfl.nscf.pw.structure = structure
@@ -313,7 +338,6 @@ def main(options):
     
     builder.ywfl.yres.yambo.metadata.options = builder.ywfl.scf.pw.metadata.options
 
-    builder.ywfl.yres.yambo.parameters = params_gw
     builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
     builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
     builder.ywfl.yres.max_iterations = Int(3)
@@ -327,23 +351,18 @@ def main(options):
 
     builder.workflow_settings = Dict(dict={
         'type': 'cheap', #or heavy; cheap uses low parameters for the ones that we are not converging
-        'what': ['gap_'],
+        'what': ['lowest_exciton'],
         'bands_nscf_update': 'full-step'},)
+
+    builder.ywfl.QP_subset_dict= Dict(dict={
+                                            'qp_per_subset':5,
+                                            'parallel_runs':3,
+                                            'range_QP':5,
+        #'full_bands':True,
+    })
 
 
     var_to_conv_dc = [
-        {
-            'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
-            'start': [50, 50, 2],
-            'stop': [400, 400, 10],
-            'delta': [50, 50, 2],
-            'max': [1000, 1000, 36],
-            'steps': 6,
-            'max_iterations': 8,
-            'conv_thr': 1,
-            'conv_thr_units': 'eV',
-            'convergence_algorithm': 'new_algorithm_2D',
-        },
         {
             'var': ['kpoint_mesh'], 
             'start': [6,6,2], 
@@ -423,6 +442,14 @@ def main(options):
 
     builder.parameters_space = List(list = var_to_conv_dc)
     
+
+    builder.ywfl.qp = builder.ywfl.yres
+
+    builder.ywfl.qp.yambo.parameters = params_gw
+
+
+    
+
     return builder
     
 if __name__ == "__main__":

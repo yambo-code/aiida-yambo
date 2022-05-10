@@ -418,7 +418,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             #self.report(self.ctx.final_result)
 
             df_story = pd.DataFrame.from_dict(self.ctx.workflow_manager['workflow_story'])
-            self.report('Success of '+self.ctx.workflow_settings['type']+' on {} reached in {} calculations, the result is {}' \
+            self.report('Success on {} reached in {} calculations, the result is {}' \
                         .format(self.ctx.calc_manager['var'], (self.ctx.calc_manager['steps']-self.ctx.calc_manager['skipped'])*self.ctx.calc_manager['iter'],\
                             df_story[df_story['useful'] == True].loc[:,self.ctx.workflow_manager['what']].values[-1:]))
 

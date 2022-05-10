@@ -340,5 +340,5 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
             self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
 
-        self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance and set PAR_def_mode= "memory"')
+        self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance and set PAR_def_mode= "balanced"')
         return ProcessHandlerReport(True)

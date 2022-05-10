@@ -103,8 +103,7 @@ def get_options():
         'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
-    if args.parent_pk:
-        options['parent_pk']=args.parent_pk
+    options['parent_pk']=args.parent_pk
 
     if args.queue_name:
         options['queue_name']=args.queue_name
@@ -123,26 +122,25 @@ def main(options):
 
     Dict = DataFactory('dict')
 
-    params_ip_rpa = {
-                     'optics': True,
-                     'chi': True,
-                     'Chimod': "IP",
-                     'QpntsRXd': [1.,1.],
-                     'BndsrnXd': [1.,20.],
-                     'FFTGvecs': 50,
-                     'FFTGvecs_units': 'Ry',
-                    # 'NGsBlkXd': 1,              #For Hartree
-                    # 'NGsBlkXd_units': 'RL',
-                     'EnRngeXd': [0.00,10.],
-                     'EnRngeXd_units': 'eV',
-                     'DmRngeXd': [0.15,0.3],
-                     'DmRngeXd_units': 'eV',
-                     'ETStpsXd': 1000,
-                     'LongDrXd': [1.,0.0,0.0],
-                     'X_CPU': "1 1 1 1",
-                     'X_ROLEs': "q k c v",
-                    }
-                    
+    params_gw = {
+        'arguments': [
+            'optics',
+            'optics',],
+        'variables': {
+            'Chimod': 'IP',
+            'DysSolver': 'n',
+            'GTermKind': 'BG',
+            'NGsBlkXp': [4, 'Ry'],
+            'QpntsRXd': [[1, 1], ''],
+            'BndsRnXp': [[1, 100], ''],
+            'GbndRnge': [[1, 100], ''],
+            'QPkrange': [[[1, 1, 8, 9]], ''],
+            'EnRngeXd': [[0.00,10.],'eV',],
+            'DmRngeXd': [[0.15,0.3],'eV'],
+            'ETStpsXd': [1000,''],
+            'LongDrXd': [[1.,0.0,0.0],''],
+            }}
+
     params_gw = Dict(dict=params_gw)
 
     ###### creation of the YamboCalculation ######
@@ -162,7 +160,8 @@ def main(options):
     if 'account' in options:
         builder.metadata.options.account = options['account']
 
-    builder.metadata.options.prepend_text = options['prepend_text']
+    if 'prepend_text' in options:
+        builder.metadata.options.prepend_text = options['prepend_text']
 
     builder.parameters = params_gw
 
@@ -171,7 +170,6 @@ def main(options):
 
     builder.code = load_code(options['yambocode_id'])
     builder.preprocessing_code = load_code(options['yamboprecode_id'])
-
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 

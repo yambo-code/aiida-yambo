@@ -2,11 +2,10 @@
 """Classes for calcs e wfls analysis. hybrid AiiDA and not_AiiDA...hopefully"""
 from __future__ import absolute_import
 import numpy as np
-from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, style
-import pandas as pd
 import copy
-import cmath
+import xarray
+from ase.units import Ha
 
 from yambopy.dbs.qpdb import *
 from yambopy.dbs.savedb import * 
@@ -23,7 +22,26 @@ except:
 
 from aiida_yambo.utils.defaults.create_defaults import *
 
-def QP_bands(node,mapping=None,only_scissor=False, plot=False):
+def check_kpoints_in_qe_grid(qe_grid,point):
+        maps = []
+        ind = 1 
+        found = False
+        for g in qe_grid:
+            for k in permutations(g):
+                test = abs(abs(np.array(k))-abs(np.array(point)))
+                if test.dot(test) < 1e-4:
+                    print(point,ind)
+                    found = True
+                    maps.append([point,ind])
+                    break
+                else:
+                    found = False
+
+            ind += 1
+                    
+        return maps
+
+def QP_bands(node,QP_merged=None,mapping=None,only_scissor=False, plot=False):
     
     x = node
 
@@ -32,7 +50,10 @@ def QP_bands(node,mapping=None,only_scissor=False, plot=False):
     
     lat  = YamboSaveDB.from_db_file(folder=save_dir,filename='ns.db1')  
     ydb  = YamboQPDB.from_db(filename='ndb.QP',folder=qp_dir)
-        
+    if QP_merged: 
+        qp_dir = QP_merged._repository._repo_folder.abspath+'/path'
+        ydb  = YamboQPDB.from_db(filename='ndb.QP_merged',folder=qp_dir)
+
     if mapping: 
         valence = mapping.get_dict()['valence']
         kpoints=  mapping.get_dict()['number_of_kpoints']
@@ -465,8 +486,8 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                         parsed_dict[key+'_dft'] =  level_dft
             
         except:
-            parsed_dict[key] =  False
-
+            #parsed_dict[key] =  False
+            pass
     return parsed_dict
 
 
@@ -482,4 +503,68 @@ def organize_output(output, node=None): #prepare to be stored
     
     elif isinstance(output,list):
         return List(list=output)
+
+
+def QP_analyzer(pk,QP_db,mapping):
+    ywfl = load_node(pk)
+    db = xarray.open_dataset(QP_db._repository._repo_folder.abspath+'/path/ndb.QP_merged',engine='netcdf4')
+    k_mesh = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
+    v = mapping['valence']
+    c = mapping['conduction']
+    soc = mapping['soc']
+    where_v = np.where(db.QP_table[0,:] <= v)
+    where_c = np.where(db.QP_table[0,:] >= c)
+    
+    v_min = db.QP_table[0,:].min()
+    c_max = db.QP_table[0,:].max()
+    
+    print('vmin,cmax , ',v_min.values,c_max.values)
+    
+    where_v_max_dft = np.where(db.QP_Eo[:] == db.QP_Eo[where_v[0]].max())[0]
+    where_c_min_dft = np.where(db.QP_Eo[:] == db.QP_Eo[where_c[0]].min())[0]
+    
+    where_v_max = np.where(db.QP_E[:,0] == db.QP_E[where_v[0],0].max())[0]
+    where_c_min = np.where(db.QP_E[:,0] == db.QP_E[where_c[0],0].min())[0]
+    
+    dft_gap = db.QP_Eo[where_c_min_dft][0]*Ha-db.QP_Eo[where_v_max_dft][0]*Ha
+    gw_gap = db.QP_E[where_c_min,0][0]*Ha-db.QP_E[where_v_max,0][0]*Ha
+    print('DFT gap = {} eV'.format(dft_gap.values))
+    print('GW gap = {} eV'.format(gw_gap.values))
+    
+    k_v_dft = db.QP_table[2,where_v_max_dft]
+    k_c_dft = db.QP_table[2,where_c_min_dft]
+    k_v = db.QP_table[2,where_v_max]
+    k_c = db.QP_table[2,where_c_min]
+    
+    k_coord_v = k_mesh[int(k_v)-1]
+    k_coord_c = k_mesh[int(k_c)-1]
+    
+    print(k_v.values,k_c.values)
+    print(k_coord_v,k_coord_c)
+    
+    delta_k = abs(abs(k_coord_c)-abs(k_coord_v))
+    print(delta_k)
+    
+    l = check_kpoints_in_qe_grid(k_mesh,delta_k)
+    
+    print(l)
+    plt.plot(db.QP_table[2,where_v[0]],db.QP_E[where_v[0],0]*Ha,'o')
+    plt.plot(db.QP_table[2,where_c[0]],db.QP_E[where_c[0],0]*Ha,'o')
+
+    #plt.ylim(-0.2,-0.1)
+    
+    BSE_mapper = {
+        'nscf_pk':find_pw_parent(ywfl).pk,
+        'v_min':int(v_min.values),
+        'c_max':int(c_max.values),
+        'q_ind':l[0][1],
+        'candidate_for_BSE':gw_gap.values>=0,
+        'gap_GW':np.round(gw_gap.values,4),
+        'gap_DFT':np.round(dft_gap.values,4),
+        'QP':QP_db.pk,
+        'SOC':soc,
+    
+    }
+    
+    return BSE_mapper
 
