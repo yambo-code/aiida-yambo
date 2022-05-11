@@ -39,3 +39,55 @@ protocols:
         meta_parameters:
             ratio_bands_electrons: 100
             ratio_PW_cutoff: 0.4
+    bse_fast:
+        description: 'Under converged for most materials, but fast'
+        yambo:
+            parameters:
+                arguments: [
+                'dipoles', 
+                'ppa', 
+                'HF_and_locXC',
+                'gw0'
+                ]
+                variables: {
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'GTermKind': 'BG',
+                'X_and_IO_nCPU_LinAlg_INV': [1, ''],
+                }
+    bse_moderate:
+        description: 'Meta converged for most materials, higher computational cost than fast'
+        meta_parameters:
+            ratio_bands_electrons: 50
+            ratio_PW_cutoff: 0.2
+        yambo:
+            parameters:
+                arguments: [
+                'dipoles', 
+                'ppa', 
+                'HF_and_locXC',
+                'gw0'
+                ]
+                variables: {
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'GTermKind': 'BG',
+                'X_and_IO_nCPU_LinAlg_INV': [1, ''],
+                }
+    bse_accurate:
+        description: 'Converged for most materials, higher computational cost than moderate'
+        meta_parameters:
+            ratio_bands_electrons: 100
+            ratio_PW_cutoff: 0.4
+        yambo:
+            parameters:
+                arguments: [
+                'em1s','bse','bss','optics','rim_cut', 'dipoles',
+                ]
+                variables: {
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'BSEQptR': [[1,1],''],
+                }

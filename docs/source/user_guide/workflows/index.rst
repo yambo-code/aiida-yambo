@@ -31,4 +31,11 @@ YamboConvergence: automated convergence
    :maxdepth: 4
 
    yamboconvergence
+
+Protocols: automated inputs creation 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 4
+
+   protocols
    

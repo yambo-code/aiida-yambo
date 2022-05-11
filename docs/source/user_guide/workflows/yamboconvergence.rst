@@ -9,8 +9,16 @@ the convergence with respect to parameters like empty states used to evaluate th
 If you implement a logic for convergence evaluation to guide the iter of these multiple parameter-dependent calculations, you can obtain an automatic flow
 that allows you to obtain good G0W0/BSE results. This is what YamboConvergence does. The purpose of this new proposed algorithm is to obtain an accurate converged 
 result doing the least possible number of calculations. This is possible if a reliable description of the convergence space is achieved, resulting also in a 
-precise guess for the converged point, i.e. the converged parameters. The algorithm is specifically designed to solve the coupled convergence between 
-summation over empty states (`BndsRnXp` or `BndsRnXs` and `GbndRnge` for example) and PW expansion (`NGsBlkXp` or `NGsBlkXs`), but it can be used also to 
+precise guess for the converged point, i.e. the converged parameters. The description of the space is performed by fitting some calculations that the workchain runs. 
+Following heuristics, a simple functional form of the space is assumed:
+
+\begin{equation}
+    \label{multi_over_x}
+    f(\textbf{x}) = \prod_i^N \left( \frac{A_i}{x_i^{\alpha_i}} + b_i \right)
+\end{equation}
+
+The algorithm is specifically designed to solve the coupled convergence between 
+summation over empty states (``BndsRnXp`` or ``BndsRnXs`` and ``GbndRnge`` for example) and PW expansion (``NGsBlkXp`` or ``NGsBlkXs``), but it can be used also to 
 accelerate convergence tests with respect to the k-point mesh or ``FFTGvecs``, as we shall see later. 
 Moreover, the quantities that we can converge are the ones that can be parsed by the 
 ``YamboWorkflow`` workchain: quasiparticle levels/gaps, and excitonic energies.
@@ -42,3 +50,14 @@ converged(or the maximum restarts are reached).
 
 The complete workflow will return the results of the convergence iterations, as well as a final converged calculation, from which we can parse the
 converged parameters, and a complete story of all the calculations of the workflow with all the information provided.
+
+To show how the convergence algorithm works, here we plot the convergences performed on 2D-hBN imposing a convergence threshold of 1% on the final gap. The convergence is 
+performed with respect to ``NGsBlkXp`` (G_cut in the plot) and ``BndsRnXp`` == ``GbndRnge`` (Nb in the plot). 
+
+.. image:: ./images/2D_conv_hBN.png
+
+We can observe that first simulations (black squares) are performed on a starting grid, the blue one. The algorithm decides then to perform another set of calculations on 
+a shifted grid, as the fit perofmed to predict the space was not enough accurate. Next, a converged point is predicted, corresponding to the blue square, and it is explicitely computed. 
+Using also the informations on that point, the algorithm understands that a new converged point can be the red one. This is then computed and verified to be the real converged one. In this 
+way, convergence is efficiently achieved. 
+ 

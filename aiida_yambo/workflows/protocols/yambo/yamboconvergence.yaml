@@ -25,7 +25,7 @@ default_inputs:
         protocol: 'fast'
     workflow_settings:
                     {
-                        'type': '1D_convergence',
+                        'type': 'cheap',
                         'what': ['gap_GG'],
                         'bands_nscf_update': 'all-at-once',
                         'skip_pre': False,

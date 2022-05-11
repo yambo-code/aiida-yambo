@@ -150,6 +150,11 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         parameters['variables']['BndsRnXp'] = [[1, bands], '']
         parameters['variables']['GbndRnge'] = parameters['variables']['BndsRnXp']
 
+        if 'bse' in protocol:
+            parameters['variables']['BndsRnXs'] = parameters['variables'].pop('BndsRnXp')
+            parameters['variables']['NGsBlkXs'] = parameters['variables'].pop('NGsBlkXp')
+            parameters['variables']['BSENGBlk'] = parameters['variables']['NGsBlkXs']
+
         # If overrides are provided, they are considered absolute
         if overrides:
             parameter_arguments_overrides = overrides.get('yambo', {}).get('parameters', {}).get('arguments', [])

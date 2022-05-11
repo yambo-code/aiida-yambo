@@ -98,6 +98,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         code,
         protocol_qe='moderate',
         protocol='moderate',
+        calc_type='gw',
         structure=None,
         overrides={},
         NLCC=False,
@@ -147,6 +148,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 protocol_qe=protocol_qe,
                 protocol=protocol,
                 overrides=overrides_ywfl,
+                calc_type=calc_type,
                 NLCC=NLCC,
                 RIM_v=RIM_v,
                 RIM_W=RIM_W,
@@ -158,6 +160,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         builder.ywfl = ywfl_builder._inputs(prune=True)
         ######### convergence settings
+
+        if calc_type=='bse':
+            builder.workflow_settings['what'] = ['lowest_exciton']
 
         ################ K mesh
         builder.ywfl['nscf']['kpoints'] = KpointsData()

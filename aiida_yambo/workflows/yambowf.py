@@ -238,6 +238,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         code,
         protocol_qe='fast',
         protocol='fast',
+        calc_type='gw',
         structure=None,
         overrides={},
         parent_folder=None,
@@ -332,10 +333,15 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             builder.parent_folder = parent_folder
             parent_folder = 'YWFL_super_parent'
 
+
+        if calc_type=='bse':
+            protocol_ = 'bse_'+protocol
+        else:
+            protocol_ = protocol
         yres_builder = YamboRestart.get_builder_from_protocol(
                 preprocessing_code=preprocessing_code,
                 code=code,
-                protocol=protocol,
+                protocol=protocol_,
                 parent_folder=parent_folder,
                 overrides=overrides_yres,
                 NLCC=NLCC,
@@ -350,12 +356,17 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         else: 
             yambo_bandsX = 0 
         
+        if 'BndsRnXs' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
+            yambo_bandsXs = builder.yres['yambo']['parameters'].get_dict()['variables']['BndsRnXs'][0][-1]
+        else: 
+            yambo_bandsXs = 0 
+        
         if 'GbndRnge' in builder.yres['yambo']['parameters'].get_dict()['variables'].keys():
             yambo_bandsSc = builder.yres['yambo']['parameters'].get_dict()['variables']['GbndRnge'][0][-1]
         else: 
             yambo_bandsSc = 0 
         
-        gwbands = max(yambo_bandsX,yambo_bandsSc)
+        gwbands = max(yambo_bandsX,yambo_bandsSc,yambo_bandsXs)
 
         parameters_scf = builder.scf['pw']['parameters'].get_dict()
         parameters_nscf = builder.nscf['pw']['parameters'].get_dict()
@@ -550,7 +561,14 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.ctx.calc_to_do = 'workflow is finished'
         
         elif self.ctx.calc_to_do == 'QP splitter':
+            
             QP = {}
+            
+            for k,v in QP.items():
+                if not QP[k].is_finished_ok:
+                    self.report('some calculation failed')
+                    return self.exit_codes.ERROR_WORKCHAIN_FAILED
+
             if self.ctx.qp_splitter == 0:
                 calc = self.ctx.calc
                 if not calc.is_finished_ok:
