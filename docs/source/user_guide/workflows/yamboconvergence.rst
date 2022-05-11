@@ -14,6 +14,7 @@ Following heuristics, a simple functional form of the space is assumed:
 
 .. math:: f(\textbf{x}) = \prod_i^N \left( \frac{A_i}{x_i^{\alpha_i}} + b_i \right)
 
+In this way it is straightforward to compute first and second partial derivates, and impose constraints on them to find the converged region of the space. 
 The algorithm is specifically designed to solve the coupled convergence between 
 summation over empty states (``BndsRnXp`` or ``BndsRnXs`` and ``GbndRnge`` for example) and PW expansion (``NGsBlkXp`` or ``NGsBlkXs``), but it can be used also to 
 accelerate convergence tests with respect to the k-point mesh or ``FFTGvecs``, as we shall see later. 

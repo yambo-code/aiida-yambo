@@ -116,12 +116,12 @@ def set_parallelism(instructions_, inputs):
         # 
         #main parameters...
         for i in instructions['manual'].keys():
-            BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXp', [0])
+            BndsRnXp_hint = instructions['manual'][i].pop('BndsRnXp', [0])
             if BndsRnXp_hint == [0]: BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXs', [0])
-            GbndRnge_hint = instructions['automatic'][i].pop('GbndRnge', [0])
-            NGsBlkXp_hint = instructions['automatic'][i].pop('NGsBlkXp', [0])
-            if NGsBlkXp_hint == [0]: instructions['automatic'][i].pop('NGsBlkXs', [0])
-            kpoints_hint = instructions['automatic'][i].pop('kpoints', [0])
+            GbndRnge_hint = instructions['manual'][i].pop('GbndRnge', [0])
+            NGsBlkXp_hint = instructions['manual'][i].pop('NGsBlkXp', [0])
+            if NGsBlkXp_hint == [0]: instructions['manual'][i].pop('NGsBlkXs', [0])
+            kpoints_hint = instructions['manual'][i].pop('kpoints', [0])
 
             X = (yambo_bandsX >= min(BndsRnXp_hint) and yambo_bandsX <= max(BndsRnXp_hint)) or len(BndsRnXp_hint)==1 
             Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
