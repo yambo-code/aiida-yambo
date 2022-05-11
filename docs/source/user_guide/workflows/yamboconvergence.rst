@@ -12,10 +12,7 @@ result doing the least possible number of calculations. This is possible if a re
 precise guess for the converged point, i.e. the converged parameters. The description of the space is performed by fitting some calculations that the workchain runs. 
 Following heuristics, a simple functional form of the space is assumed:
 
-\begin{equation}
-    \label{multi_over_x}
-    f(\textbf{x}) = \prod_i^N \left( \frac{A_i}{x_i^{\alpha_i}} + b_i \right)
-\end{equation}
+.. math:: f(\textbf{x}) = \prod_i^N \left( \frac{A_i}{x_i^{\alpha_i}} + b_i \right)
 
 The algorithm is specifically designed to solve the coupled convergence between 
 summation over empty states (``BndsRnXp`` or ``BndsRnXs`` and ``GbndRnge`` for example) and PW expansion (``NGsBlkXp`` or ``NGsBlkXs``), but it can be used also to 
@@ -52,7 +49,7 @@ The complete workflow will return the results of the convergence iterations, as 
 converged parameters, and a complete story of all the calculations of the workflow with all the information provided.
 
 To show how the convergence algorithm works, here we plot the convergences performed on 2D-hBN imposing a convergence threshold of 1% on the final gap. The convergence is 
-performed with respect to ``NGsBlkXp`` (G_cut in the plot) and ``BndsRnXp`` == ``GbndRnge`` (Nb in the plot). 
+performed with respect to ``NGsBlkXp`` (G_cut in the plot) and ``BndsRnXp`` = ``GbndRnge`` (Nb in the plot). 
 
 .. image:: ./images/2D_conv_hBN.png
 
