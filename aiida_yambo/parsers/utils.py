@@ -122,28 +122,28 @@ def parse_log(log,output_params,timing):
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
         impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
-        corrupted_fragment = re.compile('\[ERROR\]  Writing File')
+        corrupted_fragment = re.compile('\[ERROR\] Writing File')
         time_probably = re.compile('Alloc Xo%blc_d')
         X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
         reading_explosion_of_memory = re.compile('Reading')
         for line in log.lines:
             if warning.match(line):
                 output_params['warnings'].append(warning.match(line).string)
-            elif memory.match(line):
+            if memory.match(line):
                 output_params['memstats'].append(memory.match(line).string)
-            elif memory_old.match(line):
+            if memory_old.match(line):
                     output_params['memstats'].append(memory_old.match(line).string)
-            elif  alloc1_error.findall(line):
+            if  alloc1_error.findall(line):
                 output_params['memory_error'] = True
                 output_params['errors'].append('memory_general')
-            elif  alloc3_error.findall(line):
+            if  alloc3_error.findall(line):
                 output_params['memory_error'] = True
                 output_params['errors'].append('memory_general')
-            elif  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
+            if  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
                 output_params['para_error'] = True
-            elif time_probably.findall(line):
+            if time_probably.findall(line):
                 output_params['errors'].append('time_most_prob')
-            elif corrupted_fragment.findall(line):
+            if corrupted_fragment.findall(line):
                 output_params['errors'].append('corrupted_fragment')
                 output_params['corrupted_fragment'].append(re.findall("ndb.pp_fragment_[0-9]+",line))
         try:
