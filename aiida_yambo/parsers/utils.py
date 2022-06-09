@@ -145,7 +145,7 @@ def parse_log(log,output_params,timing):
                 output_params['errors'].append('time_most_prob')
             if corrupted_fragment.findall(line):
                 output_params['errors'].append('corrupted_fragment')
-                output_params['corrupted_fragment'].append(re.findall("ndb.pp_fragment_[0-9]+",line))
+                output_params['corrupted_fragment'] = re.findall("ndb.pp_fragment_[0-9]+",line)
         try:
             if  reading_explosion_of_memory.findall(log.lines[-1]):
                 output_params['memory_error'] = True

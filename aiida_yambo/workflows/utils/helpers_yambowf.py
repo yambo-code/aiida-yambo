@@ -507,7 +507,7 @@ def organize_output(output, node=None): #prepare to be stored
 
 def QP_analyzer(pk,QP_db,mapping):
     ywfl = load_node(pk)
-    db = xarray.open_dataset(QP_db._repository._repo_folder.abspath+'/path/ndb.QP_merged',engine='netcdf4')
+    db = xarray.open_dataset(QP_db._repository._repo_folder.abspath+'/path/'+QP_db.filename,engine='netcdf4')
     k_mesh = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
     v = mapping['valence']
     c = mapping['conduction']

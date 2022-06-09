@@ -355,7 +355,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         redo the calculation, trying to delete the wrong fragment and recompute it.
         """
 
-        self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
+        #self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
 
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             corrupted_fragment = calculation.outputs.output_parameters.get_dict()['corrupted_fragment']

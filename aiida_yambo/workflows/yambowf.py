@@ -7,6 +7,7 @@ import time
 from aiida import orm
 from aiida.orm import RemoteData,BandsData
 from aiida.orm import Dict,Int,List
+from ase import units
 
 from aiida.engine import WorkChain, while_, if_
 from aiida.engine import ToContext
@@ -26,8 +27,40 @@ SingleFileData = DataFactory('singlefile')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
+def sanity_check_QP(v,c,input_db,output_db):
+    d = xarray.open_dataset(input_db,engine='netcdf4')
+    wrong = np.where(abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha>5)
+    v,c = 29,31
+    v_cond = np.where((d.QP_table[0] == v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+    c_cond = np.where((d.QP_table[0] == c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+    fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0]],deg=1)
+    fit_c = np.polyfit(d.QP_Eo[c_cond[0]],d.QP_E[c_cond[0]],deg=1)
+    for i in wrong[0]:
+        print(d.QP_Eo[i].data*units.Ha,d.QP_E[i,0].data*units.Ha)
+        if d.QP_table[0,i]>v:
+            d.QP_E[i,0] = fit_c[0,0]*d.QP_Eo[i]+fit_c[0,1]
+        else:
+            d.QP_E[i,0] = fit_v[0,0]*d.QP_Eo[i]+fit_v[0,1]
+    
+    d.to_netcdf(output_db)
+
+    return output_db
+
 @calcfunction
-def merge_QP(filenames_List,output_name): #just to have something that works, but it is not correct to proceed this way
+def merge_QP(filenames_List,output_name,ywfl_pk): #just to have something that works, but it is not correct to proceed this way
+        ywfl = load_node(ywfl_pk.value)
+        fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
+        SOC = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['spin_orbit_calculation']
+        nelectrons = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['number_of_electrons']
+        kpoints = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
+        bands = find_pw_parent(ywfl).outputs.output_band.get_bands()
+        
+        if SOC:
+            valence = int(nelectrons) - 1
+            conduction = valence + 2
+        else:
+            valence = int(nelectrons/2) + int(nelectrons%2)
+        conduction = valence + 1
         string_run = 'yambopy mergeqp'
         for i in filenames_List.get_list():
             j = load_node(i).outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP'
@@ -36,7 +69,8 @@ def merge_QP(filenames_List,output_name): #just to have something that works, bu
         print(string_run)
         os.system(string_run)
         time.sleep(10)
-        QP_db = SingleFileData(output_name.value)
+        qp_fixed = sanity_check_QP(valence,conduction,output_name.value,output_name.value.replace('merged','fixed'))
+        QP_db = SingleFileData(qp_fixed)
         return QP_db
 
 def QP_mapper(ywfl,tol=1,full_bands=False):
@@ -381,7 +415,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_scf['SYSTEM'].pop('nbnd',0) #safety measure, for some system creates chaos in conjunction with smearing
 
 
-        parameters_nscf['SYSTEM']['nbnd'] = max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands)
+        parameters_nscf['SYSTEM']['nbnd'] = int(max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands))
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
         builder.scf['pw']['parameters'] = Dict(dict = parameters_scf)
 
@@ -579,6 +613,20 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 
                 self.ctx.yambo_inputs.yambo.parameters = take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1).inputs.parameters
                 self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
+
+                if 'parallelism' in self.ctx.QP_subsets.keys():
+                    new_para = self.ctx.QP_subsets['parallelism']
+                    self.ctx.yambo_inputs.yambo.parameters = update_dict(self.ctx.yambo_inputs.yambo.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
+
+                if 'resources' in self.ctx.QP_subsets.keys():
+                    new_resources = self.ctx.QP_subsets['resources']
+                    self.ctx.yambo_inputs.yambo.metadata.options.resources = new_resources
+                
+                if 'prepend' in self.ctx.QP_subsets.keys():
+                    new_prepend = self.ctx.QP_subsets['prepend']
+                    self.ctx.yambo_inputs.yambo.metadata.options.prepend_text = new_prepend
+                
+
                 self.ctx.yambo_inputs.clean_workdir = Bool(True)
                 mapping = gap_mapping_from_nscf(find_pw_parent(take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1)).pk)
                 self.ctx.mapping = mapping
@@ -629,7 +677,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         splitted = store_List(self.ctx.splitted_QP)
         self.out('splitted_QP_calculations', splitted)
         output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
-        self.ctx.QP_db = merge_QP(splitted,output_name)
+        self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk))
         
         self.out('merged_QP',self.ctx.QP_db)
 
