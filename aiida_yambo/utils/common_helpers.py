@@ -385,7 +385,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
         return 0, 0
 
 def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
-    print('START')
+    #print('START')
     nscf = load_node(nscf_pk)
     bands = nscf.outputs.output_band.get_array('bands')
     occ = nscf.outputs.output_band.get_array('occupations')
@@ -398,17 +398,17 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     try:
         try:
             nscf.inputs.pw__structure.get.ase()
-            print('HERE0')
+            #print('HERE0')
         except:
             nscf.inputs.structure.get.ase()
-            print('HERE1')
+            #print('HERE1')
         cell = structure.get_cell()
         k = cell.bandpath()
         high_symmetry = k.special_points
-        print('HERE2')
+        #print('HERE2')
     except:
         high_symmetry = []
-        print('HERE3')
+        #print('HERE3')
     if valence%2 != 0:
         valence = int(valence+0.5) #may be a metal
     else:
@@ -462,9 +462,9 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
         if i == 'homo' or i == 'lumo' or i == 'gap_':
             pass
         else:
-            print(i)
+            #print(i)
             name, additional = build_list_QPkrange(mapping, i, nscf_pk, bands, fermi,valence)
-            print(name,additional)
+            #print(name,additional)
             if additional == 0: 
                 pass
             else:

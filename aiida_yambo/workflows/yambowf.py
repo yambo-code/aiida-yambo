@@ -702,6 +702,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
 
         BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
+        self.ctx.BSE_map = BSE_map
 
         if not 'BSEBands' in bse_params['variables'].keys():
             bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
@@ -730,6 +731,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     if self.ctx.bse.is_finished_ok:
                         parsed_bse = additional_parsed(self.ctx.bse, self.inputs.additional_parsing.get_list(), mapping)
                         parsed.update(parsed_bse)
+                        if hasattr(self.ctx, 'BSE_map'):
+                            parsed.update(self.ctx.BSE_map)
                     else:
                         self.report("workflow NOT completed successfully")
                         return self.exit_codes.ERROR_WORKCHAIN_FAILED
