@@ -2,12 +2,20 @@ default_inputs:
     meta_parameters:
         conv_thr_k: 10
         conv_thr_bG: 10
+        conv_thr_FFT: 10
         conv_thr_units: 'percentage of relative error'
+        FFTGvecs: {
+            'start_ratio': 0.25,
+            'stop_ratio': 0.7,
+            'delta_ratio': 0.1,
+            'max_ratio': 1,
+        }
         bands: {
             'start': 200,
             'stop': 800,
             'delta': 200,
             'max': 2000,
+            'ratio':[5,10,20],
         }
         G_vectors: {
             'start': 8,
@@ -47,6 +55,7 @@ protocols:
                 'stop': 1000,
                 'delta': 200,
                 'max': 2000,
+                'ratio':[5,10,20],
             }
             G_vectors: {
                 'start': 8,
@@ -68,5 +77,26 @@ protocols:
             conv_thr_k: 1
             conv_thr_bG: 1
             conv_thr_units: 'percentage of relative error'
+        ywfl:
+            protocol:'moderate'
+    molecule:
+        description: 'Moderate protocol for a GW convergence in molecules'
+        meta_parameters:
+            conv_thr_k: 10
+            conv_thr_bG: 10
+            conv_thr_units: 'percentage of relative error'
+            bands: {
+                'start': 500,
+                'stop': 5000,
+                'delta': 500,
+                'max': 8000,
+                'ratio':[5,10,20],
+            }
+            G_vectors: {
+                'start': 10,
+                'stop': 24,
+                'delta': 2,
+                'max': 40,
+            }
         ywfl:
             protocol:'moderate'

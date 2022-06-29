@@ -182,10 +182,17 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         k_delta = list(k_delta)
 
         ################ Bands
+        nelectrons, PW_cutoff = periodical(structure.get_ase())
+
         b_start=meta_parameters['bands']['start']
         b_stop=meta_parameters['bands']['stop']
         b_max=meta_parameters['bands']['max']
         b_delta=meta_parameters['bands']['delta']
+
+        b_start=max(int(nelectrons/2 * meta_parameters['bands']['ratio'][0]),meta_parameters['bands']['start']) 
+        b_stop=max(int(nelectrons/2 * meta_parameters['bands']['ratio'][1]),meta_parameters['bands']['stop'])
+        b_max=max(int(nelectrons/2 * meta_parameters['bands']['ratio'][2]), meta_parameters['bands']['max'])
+        
 
         yambo_parameters = builder.ywfl['yres']['yambo']['parameters'].get_dict()
         for b in ['BndsRnXp','GbndRnge']:
@@ -199,9 +206,32 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         yambo_parameters['variables']['NGsBlkXp'] = [G_start,'Ry']
 
+        ################ FFTGVecs
+
+        FFT_start=int(meta_parameters['FFTGvecs']['start_ratio']*PW_cutoff)
+        FFT_stop=int(meta_parameters['FFTGvecs']['stop_ratio']*PW_cutoff)
+        FFT_max=int(meta_parameters['FFTGvecs']['max_ratio']*PW_cutoff)
+        FFT_delta=int(meta_parameters['FFTGvecs']['delta_ratio']*PW_cutoff)
+
+
+        #########################
+
         builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
 
-        builder.parameters_space =  List(list=[  {
+        builder.parameters_space =  List(list=[
+            {
+                           'var':['FFTGvecs'],
+                           'start': FFT_start,
+                           'stop':FFT_stop ,
+                           'delta':FFT_delta,
+                           'max':FFT_max,
+                           'steps': 4, 
+                           'max_iterations': 4, \
+                           'conv_thr': meta_parameters['conv_thr_FFT'],
+                           'conv_thr_units':'%',
+                           'convergence_algorithm':'new_algorithm_1D',
+                           },
+            {
                            'var':['kpoint_mesh'],
                            'start': k_start,
                            'stop': k_stop ,
@@ -214,7 +244,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                            'convergence_algorithm':'new_algorithm_1D',
                            },  
                            
-                           {
+            {
                            'var':['BndsRnXp','GbndRnge','NGsBlkXp'],
                            'start': [b_start,b_start,G_start],
                            'stop':[b_stop,b_stop,G_stop] ,
@@ -228,6 +258,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                            },
                         
                         ])
+
+        if protocol == 'molecule':
+            builder.parameters_space = List(list=builder.parameters_space.get_list()[::2])
         
         builder.workflow_settings = Dict(dict=inputs['workflow_settings'])
 
@@ -565,15 +598,26 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             self.ctx.space_index = self.ctx.calc_manager['steps']*self.ctx.calc_manager['max_iterations']
             if self.ctx.space_index  >= len(self.ctx.params_space['BndsRnXp']): self.ctx.space_index = 0
             #self.report('Max #bands needed in this iteration = {}'.format(max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])))
-        
-        if 'BndsRnXp' in self.ctx.workflow_manager['parameter_space'].keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
-            yambo_bandsX = max(self.ctx.workflow_manager['parameter_space']['BndsRnXp'][:self.ctx.space_index-1])
+
+        if 'new' in self.ctx.calc_manager['convergence_algorithm']: 
+            self.ctx.space_index = 0
+            if 'BndsRnXp' in self.ctx.params_space.keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
+                yambo_bandsX = max(self.ctx.params_space['BndsRnXp'][:])
+            else:
+                yambo_bandsX = 0 
+            if 'GbndRnge' in self.ctx.params_space.keys() and 'GbndRnge' in self.ctx.calc_manager['var']:
+                yambo_bandsSc = max(self.ctx.params_space['GbndRnge'][:])
+            else:
+                yambo_bandsSc = 0
         else:
-            yambo_bandsX = 0 
-        if 'GbndRnge' in self.ctx.workflow_manager['parameter_space'].keys() and 'GbndRnge' in self.ctx.calc_manager['var']:
-            yambo_bandsSc = max(self.ctx.workflow_manager['parameter_space']['GbndRnge'][:self.ctx.space_index-1])
-        else:
-            yambo_bandsSc = 0
+            if 'BndsRnXp' in self.ctx.params_space.keys() and 'BndsRnXp' in self.ctx.calc_manager['var']:
+                yambo_bandsX = max(self.ctx.params_space['BndsRnXp'][:self.ctx.space_index-1])
+            else:
+                yambo_bandsX = 0 
+            if 'GbndRnge' in self.ctx.params_space.keys() and 'GbndRnge' in self.ctx.calc_manager['var']:
+                yambo_bandsSc = max(self.ctx.params_space['GbndRnge'][:self.ctx.space_index-1])
+            else:
+                yambo_bandsSc = 0
 
         self.ctx.gwbands = max(yambo_bandsX,yambo_bandsSc)
         if 'BndsRnXp' in self.ctx.calc_manager['var'] or 'GbndRnge' in self.ctx.calc_manager['var']:

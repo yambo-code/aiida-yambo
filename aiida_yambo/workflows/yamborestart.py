@@ -144,6 +144,8 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         screening_PW_cutoff = int(PW_cutoff*meta_parameters['ratio_PW_cutoff'])
         screening_PW_cutoff -= screening_PW_cutoff%2 
         parameters['variables']['NGsBlkXp'] = [max(1,screening_PW_cutoff),'Ry']
+
+        parameters['variables']['FFTGvecs'] = [int(PW_cutoff*meta_parameters['ratio_FFTGvecs']),'Ry']
         
         bands = int(nelectrons * meta_parameters['ratio_bands_electrons']/2) #want something also Volume dependent.
 

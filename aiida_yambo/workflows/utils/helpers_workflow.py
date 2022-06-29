@@ -131,7 +131,7 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='h
                 
             continue
 
-        if 'newton' in wfl_type:
+        if 'newton' in wfl_type and not 'space' in i.keys():
             start = i['start']
             stop = i['stop']
             metrics = i['delta']
@@ -290,7 +290,10 @@ def create_space(starting_inputs={}, workflow_dict={}, calc_dict={}, wfl_type='h
 
             else:
                 for r in range(len(i['space'])):
-                    new_val = i['space'][r][l.index(var)]
+                    if 'kpoint_mesh' in i['var'] and len(i['var'])==1:
+                        new_val = i['space'][r]
+                    else:
+                        new_val = i['space'][r][l.index(var)]
                 
                     space[var].append(new_val)
         first = 1

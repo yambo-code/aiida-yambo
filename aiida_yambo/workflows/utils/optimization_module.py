@@ -405,7 +405,19 @@ class Convergence_evaluator():
         
             elif 'newton_2D_extra' in self.convergence_algorithm:
                 finish = self.max_iterations == (self.iter)*(self.steps-self.skipped)
-                if finish: is_converged_fit, hint = self.newton_2D(what=i,extrapolation=True)
+                if finish: 
+                    if self.max_iterations > 4:
+                        is_converged_fit, hint = self.newton_2D(what=i,extrapolation=True)
+                    else:
+                        pass
+                
+                hint.update(hint_dummy)
+            
+                is_converged, is_converged_fit, oversteps =  finish, finish, []
+            
+            elif 'newton_1D_extra' in self.convergence_algorithm:
+                finish = self.max_iterations == (self.iter)*(self.steps-self.skipped)
+                if finish: is_converged_fit, hint = self.newton_1D(what=i,extrapolation=True)
                 hint.update(hint_dummy)
             
                 is_converged, is_converged_fit, oversteps =  finish, finish, []

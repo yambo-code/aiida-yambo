@@ -117,7 +117,7 @@ def set_parallelism(instructions_, inputs):
         #main parameters...
         for i in instructions['manual'].keys():
             BndsRnXp_hint = instructions['manual'][i].pop('BndsRnXp', [0])
-            if BndsRnXp_hint == [0]: BndsRnXp_hint = instructions['automatic'][i].pop('BndsRnXs', [0])
+            if BndsRnXp_hint == [0]: BndsRnXp_hint = instructions['manual'][i].pop('BndsRnXs', [0])
             GbndRnge_hint = instructions['manual'][i].pop('GbndRnge', [0])
             NGsBlkXp_hint = instructions['manual'][i].pop('NGsBlkXp', [0])
             if NGsBlkXp_hint == [0]: instructions['manual'][i].pop('NGsBlkXs', [0])

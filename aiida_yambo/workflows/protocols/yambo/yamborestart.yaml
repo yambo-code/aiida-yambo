@@ -3,6 +3,7 @@ default_inputs:
     meta_parameters:
         ratio_bands_electrons: 25
         ratio_PW_cutoff: 0.1
+        ratio_FFTGvecs: 0.3
     yambo:
         metadata:
             options:
@@ -34,12 +35,18 @@ protocols:
         meta_parameters:
             ratio_bands_electrons: 50
             ratio_PW_cutoff: 0.2
+            ratio_FFTGvecs: 0.5
     accurate:
         description: 'Converged for most materials, higher computational cost than moderate'
         meta_parameters:
             ratio_bands_electrons: 100
             ratio_PW_cutoff: 0.4
+            ratio_FFTGvecs: 0.8
     bse_fast:
+        meta_parameters:
+            ratio_bands_electrons: 25
+            ratio_PW_cutoff: 0.1
+            ratio_FFTGvecs: 0.3
         description: 'Under converged for most materials, but fast'
         yambo:
             parameters:
@@ -60,6 +67,7 @@ protocols:
         meta_parameters:
             ratio_bands_electrons: 50
             ratio_PW_cutoff: 0.2
+            ratio_FFTGvecs: 0.5
         yambo:
             parameters:
                 arguments: [
@@ -79,6 +87,7 @@ protocols:
         meta_parameters:
             ratio_bands_electrons: 100
             ratio_PW_cutoff: 0.4
+            ratio_FFTGvecs: 0.8
         yambo:
             parameters:
                 arguments: [
