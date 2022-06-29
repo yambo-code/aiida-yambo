@@ -166,12 +166,26 @@ def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
 
     return groups
 
-def QP_list_merger(l=[],qp_per_subset=10):
+def QP_list_merger(l=[],qp_per_subset=10,from_kmapper=False):
     ll=[]
     lg = []
     split = False
     First = True
     order=0
+    if from_kmapper:
+        d = []
+        bi = l[0][-2]
+        bf = l[0][-1]
+        if bf-bi <= qp_per_subset:
+            pass
+        else:
+            for i in range(bi,1+bf,qp_per_subset):
+                for j in l:
+                    o = [j[0],j[1],i,i+qp_per_subset-1]
+                    if o[-1]>bf: o[-1]=bf
+                    ll.append(o)
+     
+            return ll
     for i in l:
         #print(i,(i[1]-i[0]+1)*(i[3]-i[2]+1),order)
         if First: 
@@ -638,7 +652,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
-                        self.ctx.QP_subsets['subsets'] = QP_list_merger(self.ctx.QP_subsets['explicit'],self.ctx.QP_subsets['qp_per_subset'])
+                        split=False
+                        if 'split_bands' in self.ctx.QP_subsets.keys():
+                            split =  self.ctx.QP_subsets['split_bands']
+                        self.ctx.QP_subsets['subsets'] = QP_list_merger(self.ctx.QP_subsets['explicit'],self.ctx.QP_subsets['qp_per_subset'],from_kmapper=split)
                     elif 'boundaries' in self.ctx.QP_subsets.keys():
                         self.ctx.QP_subsets['subsets'] = QP_subset_groups(1,mapping['number_of_kpoints'],self.ctx.QP_subsets['boundaries']['bi'],self.ctx.QP_subsets['boundaries']['bf'],self.ctx.QP_subsets['qp_per_subset'])
                 self.report('subsets: {}'.format(self.ctx.QP_subsets['subsets']))
