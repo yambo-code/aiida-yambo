@@ -259,7 +259,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                         
                         ])
 
-        if protocol == 'molecule':
+        if protocol == 'molecule' or structure.pbc.count(True)==0:
             builder.parameters_space = List(list=builder.parameters_space.get_list()[::2])
         
         builder.workflow_settings = Dict(dict=inputs['workflow_settings'])

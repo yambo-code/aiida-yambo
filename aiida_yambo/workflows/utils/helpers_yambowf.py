@@ -304,11 +304,17 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     
     QP = []
     if 'QPkrange' in new_params['variables'].keys():
-        for i in new_params['variables']['QPkrange'][0]:
-            if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
+        if (new_params['variables']['QPkrange'][0][0],int):
+            if new_params['variables']['QPkrange'][0][0] > number_of_kpoints or new_params['variables']['QPkrange'][0][1] > number_of_kpoints:
                 pass
             else:
-                QP.append(i)
+                QP.append(new_params['variables']['QPkrange'][0])
+        else:
+            for i in new_params['variables']['QPkrange'][0]:
+                if i[0] > number_of_kpoints or i[1] > number_of_kpoints:
+                    pass
+                else:
+                    QP.append(i)
         try:
             QP = [QP[0]]
         except:

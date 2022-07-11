@@ -30,7 +30,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 def sanity_check_QP(v,c,input_db,output_db):
     d = xarray.open_dataset(input_db,engine='netcdf4')
     wrong = np.where(abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha>5)
-    v,c = 29,31
+    #v,c = 29,31
     v_cond = np.where((d.QP_table[0] == v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
     c_cond = np.where((d.QP_table[0] == c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
     fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0]],deg=1)

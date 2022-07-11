@@ -73,7 +73,7 @@ def set_parallelism(instructions_, inputs):
 
     pop_list = []
     
-    print(instructions)
+    #print(instructions)
     if instructions['automatic']: # and ('gw0' or 'HF_and_locXC' in runlevels):
         #standard
 
@@ -150,8 +150,8 @@ def set_parallelism(instructions_, inputs):
 def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hyperparameters
     
     calc_dict = {}
-    calc_dict.update(calc_info)
     calc_dict.update(wfl_settings)
+    calc_dict.update(calc_info)
     calc_dict['iter']  = 0
     calc_dict['G_iter']  = 1
     calc_dict['success'] = False
@@ -165,9 +165,13 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['functional_form'] = calc_dict.pop('functional_form','power_law')
     
     calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','dummy') #1D, multivariate_optimization...
-
-    #if calc_dict['convergence_algorithm'] != '1D_convergence': 
-    #    calc_dict['steps'] = len(calc_dict['space'])
+    if len(calc_dict['var']) == 3 and isinstance(calc_dict['var'],list) and calc_dict['convergence_algorithm'] == 'dummy':
+        calc_dict['convergence_algorithm'] = 'new_algorithm_2D'
+        calc_dict['steps'] = 6
+    if len(calc_dict['var']) == 1 and isinstance(calc_dict['var'],list) and 'start' in calc_dict.keys() \
+        and calc_dict['convergence_algorithm'] == 'dummy' and calc_dict['var'][0] =='kpoint_mesh' :
+        calc_dict['convergence_algorithm'] = 'new_algorithm_1D'
+        calc_dict['steps'] = 4
     
     return calc_dict
 
