@@ -183,6 +183,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         ################ Bands
         nelectrons, PW_cutoff = periodical(structure.get_ase())
+        PW_cutoff = int(builder.ywfl['nscf']['pw']['parameters'].get_dict()['SYSTEM']['ecutwfc'])
 
         b_start=meta_parameters['bands']['start']
         b_stop=meta_parameters['bands']['stop']
