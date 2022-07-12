@@ -30,7 +30,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 def sanity_check_QP(v,c,input_db,output_db):
     d = xarray.open_dataset(input_db,engine='netcdf4')
     wrong = np.where(abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha>5)
-    v,c = 29,31
+    #v,c = 29,31
     v_cond = np.where((d.QP_table[0] == v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
     c_cond = np.where((d.QP_table[0] == c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
     fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0]],deg=1)
@@ -360,9 +360,19 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 initial_magnetic_moments=initial_magnetic_moments,
                 )
 
+        molecule = False
+        if protocol == 'molecule' or structure.pbc.count(True)==0: molecule=True
+
         builder.nscf['kpoints'] = KpointsData()
         builder.nscf['kpoints'].set_cell_from_structure(builder.scf['pw']['structure'])
-        builder.nscf['kpoints'].set_kpoints_mesh_from_density(meta_parameters['k_density'],force_parity=True)
+        if not molecule:
+            builder.nscf['kpoints'].set_kpoints_mesh_from_density(meta_parameters['k_density'],force_parity=True)
+        else:
+            builder.scf['kpoints'].set_kpoints_mesh([1,1,1])
+            builder.nscf['kpoints'].set_kpoints_mesh([1,1,1])
+            builder.scf['pw']['settings'] = Dict(dict={'gamma_only':True})
+            builder.nscf['pw']['settings'] = Dict(dict={'gamma_only':True})
+
 
         builder.scf['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
         builder.nscf['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo

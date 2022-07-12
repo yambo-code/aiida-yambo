@@ -24,8 +24,8 @@ default_inputs:
             'max': 40,
         }
         kmesh_density: {
-            'start': 0.4,
-            'stop': 0.15,
+            'start': 0.5,
+            'stop': 0.2,
             'delta': 2,
             'max': 0.1,
         }
@@ -65,7 +65,7 @@ protocols:
             }
             kmesh_density: {
                 'start': 0.5,
-                'stop': 0.2,
+                'stop': 0.15,
                 'delta': 2,
                 'max': 0.1,
             }
@@ -88,7 +88,7 @@ protocols:
             bands: {
                 'start': 500,
                 'stop': 5000,
-                'delta': 500,
+                'delta': 200,
                 'max': 8000,
                 'ratio':[5,10,20],
             }
