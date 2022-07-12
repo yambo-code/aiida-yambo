@@ -197,7 +197,7 @@ class The_Predictor_1D():
         #print('fitting all simulations.')
 
         popt,pcov = curve_fit(f,xdata=xdata,
-                      ydata=ydata,sigma=1/xdata,
+                      ydata=ydata,sigma=1/xdata**(3-alpha), #so we give more importance to high if the fit is slow...c
                       bounds=([-np.inf,-np.inf],[np.inf,np.inf]))
         
         MAE_int = np.average((abs(f(xdata,popt[0],popt[1])-ydata)),weights=xdata)
