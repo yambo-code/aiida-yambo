@@ -73,7 +73,6 @@ def set_parallelism(instructions_, inputs):
 
     pop_list = []
     
-    #print(instructions)
     if instructions['automatic']: # and ('gw0' or 'HF_and_locXC' in runlevels):
         #standard
 

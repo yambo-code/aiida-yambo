@@ -51,16 +51,14 @@ protocols:
         yambo:
             parameters:
                 arguments: [
-                'dipoles', 
-                'ppa', 
-                'HF_and_locXC',
-                'gw0'
+                'em1s','bse','bss','optics','rim_cut', 'dipoles',
                 ]
                 variables: {
-                'Chimod': 'hartree',
-                'DysSolver': 'n',
-                'GTermKind': 'BG',
-                'X_and_IO_nCPU_LinAlg_INV': [1, ''],
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'BSEQptR': [[1,1],''],
                 }
     bse_moderate:
         description: 'Meta converged for most materials, higher computational cost than fast'
@@ -71,16 +69,14 @@ protocols:
         yambo:
             parameters:
                 arguments: [
-                'dipoles', 
-                'ppa', 
-                'HF_and_locXC',
-                'gw0'
+                'em1s','bse','bss','optics','rim_cut', 'dipoles',
                 ]
                 variables: {
-                'Chimod': 'hartree',
-                'DysSolver': 'n',
-                'GTermKind': 'BG',
-                'X_and_IO_nCPU_LinAlg_INV': [1, ''],
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'BSEQptR': [[1,1],''],
                 }
     bse_accurate:
         description: 'Converged for most materials, higher computational cost than moderate'

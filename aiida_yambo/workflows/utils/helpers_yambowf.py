@@ -304,7 +304,7 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
     
     QP = []
     if 'QPkrange' in new_params['variables'].keys():
-        if (new_params['variables']['QPkrange'][0][0],int):
+        if isinstance(new_params['variables']['QPkrange'][0][0],int):
             if new_params['variables']['QPkrange'][0][0] > number_of_kpoints or new_params['variables']['QPkrange'][0][1] > number_of_kpoints:
                 pass
             else:
