@@ -254,6 +254,7 @@ class The_Predictor_1D():
         else:
             thr = self.conv_thr
             
+        if self.var_[0] == 'kpoint_mesh': thr = thr/2
         
         self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-5)
         
@@ -325,6 +326,9 @@ class The_Predictor_1D():
             thr = self.conv_thr*abs(reference)/100
         else:
             thr = self.conv_thr
+        
+        if self.var_[0] == 'kpoint_mesh': thr = thr/2
+
         
         #print(thr)
         d = 1%thr
