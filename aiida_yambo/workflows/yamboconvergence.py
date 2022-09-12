@@ -190,9 +190,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         b_max=meta_parameters['bands']['max']
         b_delta=meta_parameters['bands']['delta']
 
-        b_start=max(int(nelectrons/2 * meta_parameters['bands']['ratio'][0]),meta_parameters['bands']['start']) 
-        b_stop=max(int(nelectrons/2 * meta_parameters['bands']['ratio'][1]),meta_parameters['bands']['stop'])
-        b_max=max(int(nelectrons/2 * meta_parameters['bands']['ratio'][2]), meta_parameters['bands']['max'])
+        b_start=max(int(max(6,nelectrons/2) * meta_parameters['bands']['ratio'][0]),meta_parameters['bands']['start']) 
+        b_stop=max(int(max(6,nelectrons/2) * meta_parameters['bands']['ratio'][1]),meta_parameters['bands']['stop'])
+        b_max=max(int(max(6,nelectrons/2) * meta_parameters['bands']['ratio'][2]), meta_parameters['bands']['max'])
         
 
         yambo_parameters = builder.ywfl['yres']['yambo']['parameters'].get_dict()
@@ -532,9 +532,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        #if hasattr(self.ctx,'infos'): 
-            #infos = store_Dict(self.ctx.infos)
-            #self.out('infos',infos)
+        if hasattr(self.ctx,'hint'): 
+            infos = store_Dict(self.ctx.infos)
+            self.out('infos',infos)
         try:
             calc = load_node(self.ctx.final_result['uuid'])
             if self.ctx.workflow_manager['fully_success']: calc.set_extra('converged', True)

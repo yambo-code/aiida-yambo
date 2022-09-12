@@ -370,6 +370,7 @@ class The_Predictor_2D():
             
             if save : plt.savefig('plot_next.png')
         
+        self.next_step['E_ref'] = reference
         print(self.next_step)
 
         return self.next_step

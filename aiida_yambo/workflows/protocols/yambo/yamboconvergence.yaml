@@ -13,12 +13,12 @@ default_inputs:
         bands: {
             'start': 200,
             'stop': 800,
-            'delta': 200,
+            'delta': 100,
             'max': 2000,
-            'ratio':[5,10,20],
+            'ratio':[10,25,50],
         }
         G_vectors: {
-            'start': 8,
+            'start': 6,
             'stop': 18,
             'delta': 2,
             'max': 40,
@@ -53,12 +53,12 @@ protocols:
             bands: {
                 'start': 400,
                 'stop': 1000,
-                'delta': 200,
+                'delta': 100,
                 'max': 2000,
                 'ratio':[5,10,20],
             }
             G_vectors: {
-                'start': 8,
+                'start': 6,
                 'stop': 20,
                 'delta': 2,
                 'max': 40,
@@ -71,8 +71,8 @@ protocols:
             }
         ywfl:
             protocol:'moderate'
-    accurate:
-        description: 'Accurate protocol for a GW convergence: grid -> same as moderate; thresholds -> accurate (1 percent)'
+    precise:
+        description: 'precise protocol for a GW convergence: grid -> same as moderate; thresholds -> precise (1 percent)'
         meta_parameters:
             conv_thr_k: 1
             conv_thr_bG: 1

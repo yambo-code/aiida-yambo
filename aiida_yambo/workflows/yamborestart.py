@@ -147,7 +147,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
 
         parameters['variables']['FFTGvecs'] = [int(PW_cutoff*meta_parameters['ratio_FFTGvecs']),'Ry']
         
-        bands = int(nelectrons * meta_parameters['ratio_bands_electrons']/2) #want something also Volume dependent.
+        bands = int(max(6,nelectrons/2) * meta_parameters['ratio_bands_electrons']) #want something also Volume dependent.
 
         parameters['variables']['BndsRnXp'] = [[1, bands], '']
         parameters['variables']['GbndRnge'] = parameters['variables']['BndsRnXp']
@@ -210,6 +210,15 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         if new_para:
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
             self.report('adjusting parallelism namelist... please check yambo documentation')
+        
+        try:
+            new_para = check_variables(self.ctx.inputs.parameters.get_dict())
+            if new_para:
+                self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
+                self.report('adjusting bse namelist... please check yambo documentation')
+        except:
+            self.report('Issue in check_variables.')
+
         
         try:
             nscf_parent = find_pw_parent(take_calc_from_remote(self.inputs.parent_folder,level=-1))
