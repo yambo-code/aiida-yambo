@@ -268,7 +268,7 @@ class YppCalculation(CalcJob):
 
             elif not hasattr(self.inputs,'QP_calculations') and ypp_parent:
                 ypp_parent_calc = take_calc_from_remote(self.inputs.parent_folder)
-                for file in os.listdir(ypp_parent_calc.outputs.retrieved._repository._repo_folder.abspath+'/path/'):
+                for file in ypp_parent_calc.outputs.retrieved.base.repository.list_object_names():
                     if 'ndb.QP' in file:
                     #qp = load_node(calc).outputs.QP_db
                         #local_copy_list.append((qp.uuid, qp.filename, 'ndb.QP_'+str(j)))
