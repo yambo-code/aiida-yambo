@@ -1,46 +1,33 @@
+#!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
 import os
 from aiida.plugins import DataFactory, CalculationFactory
-from aiida.orm import List, Dict
+from aiida.orm import List, Dict, Str,UpfData
 from aiida.engine import submit
-from aiida_yambo.workflows.yamborestart import YamboRestart
+from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
+from ase import Atoms
 import argparse
+from aiida_yambo.calculations.ypp import YppCalculation
 
 def get_options():
 
-    parser = argparse.ArgumentParser(description='YAMBO calculation.')
+    parser = argparse.ArgumentParser(description='YPP calculation.')
     parser.add_argument(
-        '--yambocode',
+        '--yppcode',
         type=str,
-        dest='yambocode_id',
+        dest='yppcode_id',
         required=True,
-        help='The yambo(main code) codename to use')
+        help='The ypp(main code) codename to use')
 
     parser.add_argument(
         '--parent',
         type=int,
         dest='parent_pk',
         required=True,
-        help='The parent to use')
-        
-    parser.add_argument(
-        '--yamboprecode',
-        type=str,
-        dest='yamboprecode_id',
-        required=True,
-        help='The precode to use')
-
-
-    parser.add_argument(
-        '--restarts',
-        type=int,
-        dest='max_iterations',
-        required=False,
-        default=2,
-        help='maximum number of restarts')
+        help='The YamboCalculation parent to use')
 
     parser.add_argument(
         '--time',
@@ -102,9 +89,7 @@ def get_options():
 
     ###### setting the machine options ######
     options = {
-        'yambocode_id': args.yambocode_id,
-        'yamboprecode_id': args.yamboprecode_id,
-        'max_iterations': args.max_iterations,
+        'yppcode_id': args.yppcode_id,
         'max_wallclock_seconds': args.max_wallclock_seconds,
         'resources': {
             "num_machines": args.num_machines,
@@ -114,8 +99,8 @@ def get_options():
         'prepend_text': u"export OMP_NUM_THREADS="+str(args.num_cores_per_mpiproc),
         }
 
-    
-    options['parent_pk']=args.parent_pk
+    if args.parent_pk:
+        options['parent_pk']=args.parent_pk
 
     if args.queue_name:
         options['queue_name']=args.queue_name
@@ -130,63 +115,43 @@ def get_options():
 
 def main(options):
 
-    ###### setting the gw parameters ######
+    params_gw = {'arguments':['wannier',],
+                 'variables':{}}
 
-    Dict = DataFactory('core.dict')
 
-    params_gw = {
-        'arguments': [
-            'dipoles',
-            'HF_and_locXC',
-            'dipoles',
-            'gw0',
-            'ppa',],
-        'variables': {
-            'Chimod': 'hartree',
-            'DysSolver': 'n',
-            'GTermKind': 'BG',
-            'NGsBlkXp': [2, 'Ry'],
-            'BndsRnXp': [[1, 50], ''],
-            'GbndRnge': [[1, 50], ''],
-            'QPkrange': [[[1, 1, 8, 9]], ''],}}
+    params_gw = Dict(dict=params_gw)
 
-    params_gw = Dict(params_gw)
 
-    ###### creation of the YamboRestart ######
+    builder = YppCalculation.get_builder()
 
-    builder = YamboRestart.get_builder()
-    builder.yambo.metadata.options.max_wallclock_seconds = \
+    ##################yambo part of the builder
+    builder.metadata.options.max_wallclock_seconds = \
             options['max_wallclock_seconds']
-    builder.yambo.metadata.options.resources = \
+    builder.metadata.options.resources = \
             dict = options['resources']
 
     if 'queue_name' in options:
-        builder.yambo.metadata.options.queue_name = options['queue_name']
+        builder.metadata.options.queue_name = options['queue_name']
 
     if 'qos' in options:
-        builder.yambo.metadata.options.qos = options['qos']
+        builder.metadata.options.qos = options['qos']
 
     if 'account' in options:
         builder.metadata.options.account = options['account']
-        
-    builder.yambo.metadata.options.prepend_text = options['prepend_text']
 
-    builder.yambo.parameters = params_gw
+    builder.parameters = params_gw
 
-    builder.yambo.settings = Dict({'INITIALISE': False, 'COPY_DBS': False})
+    builder.code = load_code(options['yppcode_id'])
 
-    builder.yambo.code = load_code(options['yambocode_id'])
-    builder.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
 
     builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
-
-    builder.max_iterations = Int(options['max_iterations'])
+    
 
     return builder
-
 
 if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboRestart workchain; with pk=< {} >".format(running.pk))
+    print("Submitted YppCalculation; with pk=< {} >".format(running.pk))
+

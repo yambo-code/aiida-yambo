@@ -217,9 +217,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         #########################
 
-        builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
+        builder.ywfl['yres']['yambo']['parameters'] = Dict(yambo_parameters)
 
-        builder.parameters_space =  List(list=[
+        builder.parameters_space =  List([
             {
                            'var':['FFTGvecs'],
                            'start': FFT_start,
@@ -261,9 +261,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                         ])
 
         if protocol == 'molecule' or structure.pbc.count(True)==0:
-            builder.parameters_space = List(list=builder.parameters_space.get_list()[::2])
+            builder.parameters_space = List(builder.parameters_space.get_list()[::2])
         
-        builder.workflow_settings = Dict(dict=inputs['workflow_settings'])
+        builder.workflow_settings = Dict(inputs['workflow_settings'])
 
         return builder
         
@@ -285,9 +285,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         if hasattr(self.ctx.calc_inputs,'additional_parsing'):
             l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
-            self.ctx.calc_inputs.additional_parsing = List(list=list(dict.fromkeys(l)))
+            self.ctx.calc_inputs.additional_parsing = List(list(dict.fromkeys(l)))
         else:
-            self.ctx.calc_inputs.additional_parsing = List(list=list(self.ctx.workflow_settings['what']))
+            self.ctx.calc_inputs.additional_parsing = List(list(self.ctx.workflow_settings['what']))
 
         if hasattr(self.inputs, "group_label"):
             self.ctx.workflow_manager['group'] = load_group(self.inputs.group_label.value)
@@ -533,8 +533,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
         if hasattr(self.ctx,'hint'): 
-            infos = store_Dict(self.ctx.infos)
-            self.out('infos',infos)
+            if hasattr(self.ctx.hint,'infos'):
+                infos = store_Dict(self.ctx.infos)
+                self.out('infos',infos)
         try:
             calc = load_node(self.ctx.final_result['uuid'])
             if self.ctx.workflow_manager['fully_success']: calc.set_extra('converged', True)

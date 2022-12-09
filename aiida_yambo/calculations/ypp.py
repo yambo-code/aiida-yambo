@@ -31,7 +31,7 @@ from yambopy.io.inputfile import YamboIn
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 YamboCalculation = CalculationFactory('yambo.yambo')
-SingleFileData = DataFactory('singlefile')
+SingleFileData = DataFactory('core.singlefile')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Nicola Spallanzani" \

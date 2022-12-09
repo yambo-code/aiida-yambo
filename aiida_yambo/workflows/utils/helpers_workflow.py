@@ -494,7 +494,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
 
     #here should be a default list of convergence "parameters_space".
     if isinstance(parameters_space,list):
-        parameters_space = List(list=parameters_space)
+        parameters_space = List(parameters_space)
     for i in parameters_space.get_list():
         new_conv = copy.deepcopy(i)
         new_conv['max_iterations'] = i.pop('max_iterations', 3)
@@ -732,11 +732,11 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 print('old_hints:',hints)
                 if 'new_grid' in hints.keys():
                     if hints['new_grid']: 
-                        y.analyse(old_hints={})
+                        y.analyse(old_hints={},thr_fx=calc_dict['thr_fx'],thr_fy=calc_dict['thr_fy'],thr_fxy=calc_dict['thr_fxy'])
                     else:
-                        y.analyse(old_hints=hints)
+                        y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx'],thr_fy=calc_dict['thr_fy'],thr_fxy=calc_dict['thr_fxy'])
                 else:
-                    y.analyse(old_hints=hints) #just convergence as before
+                    y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx'],thr_fy=calc_dict['thr_fy'],thr_fxy=calc_dict['thr_fxy']) #just convergence as before
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index
@@ -760,11 +760,11 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 print('old_hints:',hints)
                 if 'new_grid' in hints.keys():
                     if hints['new_grid']: 
-                        y.analyse(old_hints={})
+                        y.analyse(old_hints={},thr_fx=calc_dict['thr_fx'])
                     else:
-                        y.analyse(old_hints=hints)
+                        y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx'])
                 else:
-                    y.analyse(old_hints=hints) #just convergence as before
+                    y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx']) #just convergence as before
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index

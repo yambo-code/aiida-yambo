@@ -29,7 +29,7 @@ from aiida_yambo.utils.common_helpers import *
 from yambopy.io.inputfile import YamboIn
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
-SingleFileData = DataFactory('singlefile')
+SingleFileData = DataFactory('core.singlefile')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
@@ -213,7 +213,7 @@ class YamboCalculation(CalcJob):
         try:
             precode_param_dict = self.inputs.precode_parameters
         except:
-            precode_param_dict = Dict(dict={})
+            precode_param_dict = Dict({})
         # check the precode parameters given in input
         input_cmdline = settings.pop('CMDLINE', None)
         import re

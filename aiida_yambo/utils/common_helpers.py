@@ -124,12 +124,12 @@ def update_dict(_dict, whats, hows, sublevel=None, pop_list=[]):
         for what,how in zip(whats,hows):    
             new = _dict.get_dict()
             new[sublevel][what] = how
-            _dict = Dict(dict=new)
+            _dict = Dict(new)
         if pop_list != []:
             for i in pop_list:
                 new = _dict.get_dict()
                 new[sublevel].pop(i)
-                _dict = Dict(dict=new)
+                _dict = Dict(new)
     else:
         if not isinstance(whats, list):
             whats = [whats]
@@ -138,12 +138,12 @@ def update_dict(_dict, whats, hows, sublevel=None, pop_list=[]):
         for what,how in zip(whats,hows):    
             new = _dict.get_dict()
             new[what] = how
-            _dict = Dict(dict=new)
+            _dict = Dict(new)
         if pop_list != []:
             for i in pop_list:
                 new = _dict.get_dict()
                 new.pop(i)
-                _dict = Dict(dict=new)
+                _dict = Dict(new)
     
     return _dict
 
@@ -251,12 +251,12 @@ def take_number_kpts(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last
             return kpts
     
 def store_List(a_list):
-    the_List = List(list=a_list)
+    the_List = List(a_list)
     the_List.store()
     return the_List
 
 def store_Dict(a_dict):
-    the_Dict = Dict(dict=a_dict)
+    the_Dict = Dict(a_dict)
     the_Dict.store()
     return the_Dict
 
@@ -529,8 +529,8 @@ def check_identical_calculation(YamboWorkflow_inputs,
                 parent_nscf_try = find_pw_parent(load_node(old).called[0], calc_type=['nscf'])
                 same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
                 try:
-                    y = load_node(old).outputs.retrieved._repository._repo_folder.abspath+'/path/'
-                    if 'ns.db1' in  os.listdir(y) and same_k:
+                    y = load_node(old).outputs.retrieved.base.repository
+                    if 'ns.db1' in  list_object_names() and same_k:
                         parent_nscf = old
                         
                 except:
@@ -616,8 +616,8 @@ def check_same_pw(node, k_mesh_to_calc, already_done, bands = None):
             if bands : enough_b = node.inputs.nscf__pw__parameters.get_dict()['SYSTEM']['nbnd'] >= bands
             if node.is_finished_ok:
                 try:
-                    y = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
-                    if 'ns.db1' in  os.listdir(y) and same_k and not node.outputs.remote_folder.is_empty:
+                    y = load_node(old).outputs.retrieved.base.repository
+                    if 'ns.db1' in  list_object_names() and same_k and not node.outputs.remote_folder.is_empty:
                         if enough_b:
                             parent_nscf = node.pk      
 

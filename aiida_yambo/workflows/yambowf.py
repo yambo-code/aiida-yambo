@@ -22,8 +22,12 @@ from aiida_yambo.utils.defaults.create_defaults import *
 
 from aiida_yambo.workflows.utils.helpers_yambowf import *
 from aiida.plugins import DataFactory
-LegacyUpfData = DataFactory('upf')
-SingleFileData = DataFactory('singlefile')
+
+import pathlib
+import tempfile
+
+LegacyUpfData = DataFactory('core.upf')
+SingleFileData = DataFactory('core.singlefile')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
@@ -62,16 +66,28 @@ def merge_QP(filenames_List,output_name,ywfl_pk): #just to have something that w
             valence = int(nelectrons/2) + int(nelectrons%2)
             conduction = valence + 1
         string_run = 'yambopy mergeqp'
-        for i in filenames_List.get_list():
-            j = load_node(i).outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP'
-            string_run+=' '+j
-        string_run+=' -o '+output_name.value
-        print(string_run)
-        os.system(string_run)
-        time.sleep(10)
-        qp_fixed = sanity_check_QP(valence,conduction,output_name.value,output_name.value.replace('merged','fixed'))
-        QP_db = SingleFileData(qp_fixed)
-        return QP_db
+        
+        # Create temporary directory
+        filename='ndb.QP'
+        with tempfile.TemporaryDirectory() as dirpath:
+            # Open the output file from the AiiDA storage and copy content to the temporary file
+            for i in filenames_List.get_list():
+                # Create the file with the desired name
+                temp_file = pathlib.Path(dirpath) / str(i)
+                with load_node(i).outputs.QP_db.base.repository.open(filename, 'rb') as handle:
+                    temp_file.write_bytes(handle.read())
+
+                string_run+=' '+str(temp_file)
+            string_run+=' -o '+dirpath+'/'+output_name.value
+            print(string_run)
+            os.system(string_run)
+            time.sleep(10)
+            qp_fixed = sanity_check_QP(valence,conduction,dirpath+'/'+output_name.value,dirpath+'/'+output_name.value.replace('merged','fixed'))
+            QP_db = SingleFileData(qp_fixed)
+
+            return QP_db
+        
+        return
 
 def QP_mapper(ywfl,tol=1,full_bands=False):
     fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
@@ -370,8 +386,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         else:
             builder.scf['kpoints'].set_kpoints_mesh([1,1,1])
             builder.nscf['kpoints'].set_kpoints_mesh([1,1,1])
-            builder.scf['pw']['settings'] = Dict(dict={'gamma_only':True})
-            builder.nscf['pw']['settings'] = Dict(dict={'gamma_only':True})
+            builder.scf['pw']['settings'] = Dict({'gamma_only':True})
+            builder.nscf['pw']['settings'] = Dict({'gamma_only':True})
 
 
         builder.scf['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
@@ -440,8 +456,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
 
         parameters_nscf['SYSTEM']['nbnd'] = int(max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands))
-        builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
-        builder.scf['pw']['parameters'] = Dict(dict = parameters_scf)
+        builder.nscf['pw']['parameters'] = Dict(parameters_nscf)
+        builder.scf['pw']['parameters'] = Dict(parameters_scf)
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
 
@@ -703,7 +719,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.report('run merge QP')
         splitted = store_List(self.ctx.splitted_QP)
         self.out('splitted_QP_calculations', splitted)
-        output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
+        output_name = Str('ndb.QP_merged')
         self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk))
         
         self.out('merged_QP',self.ctx.QP_db)
@@ -736,7 +752,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         if not 'BSEQptR' in bse_params['variables'].keys():
             bse_params['variables']['BSEQptR'] = [[BSE_map['q_ind'],BSE_map['q_ind']],'']
 
-        self.ctx.yambo_inputs.yambo.parameters = Dict(dict=bse_params)
+        self.ctx.yambo_inputs.yambo.parameters = Dict(bse_params)
         
         future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 

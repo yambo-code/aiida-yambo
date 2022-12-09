@@ -164,6 +164,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['functional_form'] = calc_dict.pop('functional_form','power_law')
     
     calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','dummy') #1D, multivariate_optimization...
+
     if len(calc_dict['var']) == 3 and isinstance(calc_dict['var'],list) and calc_dict['convergence_algorithm'] == 'dummy':
         calc_dict['convergence_algorithm'] = 'new_algorithm_2D'
         calc_dict['steps'] = 6
@@ -171,6 +172,14 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
         and calc_dict['convergence_algorithm'] == 'dummy' and calc_dict['var'][0] =='kpoint_mesh' :
         calc_dict['convergence_algorithm'] = 'new_algorithm_1D'
         calc_dict['steps'] = 4
+    
+    if calc_dict['convergence_algorithm'] == 'new_algorithm_2D':
+        calc_dict['thr_fx'] = calc_dict.pop('thr_fx',5e-5)
+        calc_dict['thr_fy'] = calc_dict.pop('thr_fy',5e-5)
+        calc_dict['thr_fxy'] = calc_dict.pop('thr_fxy',1e-8)
+    if calc_dict['convergence_algorithm'] == 'new_algorithm_1D':
+        calc_dict['thr_fx'] = calc_dict.pop('thr_fx',5e-5)
+
     
     return calc_dict
 
@@ -220,7 +229,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
                 input_dict['variables'][var] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables'][var][-1]]
                 values_dict[var]=input_dict['variables'][var][0]
 
-            inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
+            inp_to_update.yres.yambo.parameters = Dict(input_dict)
 
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update)

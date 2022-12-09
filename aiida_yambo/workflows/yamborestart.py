@@ -177,10 +177,10 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         builder = cls.get_builder()
         builder.yambo['preprocessing_code'] = preprocessing_code
         builder.yambo['code'] = code
-        builder.yambo['parameters'] = Dict(dict=parameters)
+        builder.yambo['parameters'] = Dict(parameters)
         builder.yambo['metadata'] = metadata
         if 'settings' in inputs['yambo']:
-            builder.yambo['settings'] = Dict(dict=inputs['yambo']['settings'])
+            builder.yambo['settings'] = Dict(inputs['yambo']['settings'])
         builder.clean_workdir = Bool(inputs['clean_workdir'])
 
         if not parent_folder:

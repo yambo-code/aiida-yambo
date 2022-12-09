@@ -176,18 +176,18 @@ def main(options):
     atoms.set_cell(the_cell, scale_atoms=False)
     atoms.set_pbc([True,True,True])
 
-    StructureData = DataFactory('structure')
+    StructureData = DataFactory('core.structure')
     structure = StructureData(ase=atoms)
 
     ###### setting the kpoints mesh ######
 
-    KpointsData = DataFactory('array.kpoints')
+    KpointsData = DataFactory('core.array.kpoints')
     kpoints = KpointsData()
     kpoints.set_kpoints_mesh([6,6,2])
 
     ###### setting the scf parameters ######
 
-    Dict = DataFactory('dict')
+    Dict = DataFactory('core.dict')
     params_scf = {
         'CONTROL': {
             'calculation': 'scf',
@@ -248,7 +248,7 @@ def main(options):
             'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
 
-    params_gw = Dict(dict=params_gw)
+    params_gw = Dict(params_gw)
 
     builder = YamboConvergence.get_builder()
 
@@ -280,8 +280,8 @@ def main(options):
     builder.ywfl.scf.pw.metadata.options.prepend_text = options['prepend_text']
     builder.ywfl.scf.pw.metadata.options.mpirun_extra_params = []
     
-    builder.ywfl.nscf.pw.parameters = Dict(dict=params_nscf)
-    builder.ywfl.scf.pw.parameters = Dict(dict=params_scf)
+    builder.ywfl.nscf.pw.parameters = Dict(params_nscf)
+    builder.ywfl.scf.pw.parameters = Dict(params_scf)
     builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 
     builder.ywfl.scf.pw.code = load_code(options['pwcode_id'])
@@ -314,8 +314,8 @@ def main(options):
     builder.ywfl.yres.yambo.metadata.options = builder.ywfl.scf.pw.metadata.options
 
     builder.ywfl.yres.yambo.parameters = params_gw
-    builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
-    builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.ywfl.yres.yambo.precode_parameters = Dict({})
+    builder.ywfl.yres.yambo.settings = Dict({'INITIALISE': False, 'COPY_DBS': False})
     builder.ywfl.yres.max_iterations = Int(3)
     builder.ywfl.yres.max_number_of_nodes = Int(0)
 
@@ -323,9 +323,9 @@ def main(options):
     builder.ywfl.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
 
-    builder.ywfl.additional_parsing = List(list=['gap_'])
+    builder.ywfl.additional_parsing = List(['gap_'])
 
-    builder.workflow_settings = Dict(dict={
+    builder.workflow_settings = Dict({
         'type': 'cheap', #or heavy; cheap uses low parameters for the ones that we are not converging
         'what': ['gap_'],
         'bands_nscf_update': 'full-step'},)
@@ -372,7 +372,7 @@ def main(options):
             "num_cores_per_mpiproc":1,
         }
 
-    parallelism_instructions_manual = Dict(dict={'manual' : {                                                            
+    parallelism_instructions_manual = Dict({'manual' : {                                                            
                                                               'std_1':{
                                                                      'BndsRnXp':[1,100],
                                                                      'NGsBlkXp':[2,18],
@@ -386,7 +386,7 @@ def main(options):
                                                                      'resources':dict_res_high,
                                                                      },}})
 
-    parallelism_instructions_auto = Dict(dict={'automatic' : {                                                            
+    parallelism_instructions_auto = Dict({'automatic' : {                                                            
                                                               'std_1':{
                                                                      'BndsRnXp':[1,100],
                                                                      'NGsBlkXp':[1,18],
@@ -406,7 +406,7 @@ def main(options):
     for i in range(len(var_to_conv_dc)):
         print('{}-th variable will be {}'.format(i+1,var_to_conv_dc[i]['var']))
 
-    builder.parameters_space = List(list = var_to_conv_dc)
+    builder.parameters_space = List(var_to_conv_dc)
     
     return builder
     
