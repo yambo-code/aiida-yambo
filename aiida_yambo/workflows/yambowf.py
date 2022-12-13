@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from curses import meta
+#from curses import meta
 import os
 import time
 
