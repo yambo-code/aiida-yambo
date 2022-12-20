@@ -119,12 +119,17 @@ def parse_log(log,output_params,timing):
         alloc1_error = re.compile('\[ERROR\]Allocation')
         alloc2_error = re.compile('\[MEMORY\] Alloc')
         alloc3_error = re.compile('\[MEMORY\]out of memory')
+        alloc4_error = re.compile('\[MEMORY\] out of memory')
         incomplete_para_error = re.compile('\[ERROR\]Incomplete')
         impossible_para_error = re.compile('\[ERROR\]Impossible')
         impossible_para_error2 = re.compile('\[ERROR\]USER parallel')
+        incomplete_para_error_ = re.compile('\[ERROR\] Incomplete')
+        impossible_para_error_ = re.compile('\[ERROR\] Impossible')
+        impossible_para_error2_ = re.compile('\[ERROR\] USER parallel')
         corrupted_fragment = re.compile('\[ERROR\] Writing File')
         time_probably = re.compile('Alloc Xo%blc_d')
         X_par_mem = re.compile('\[ERROR\]Allocation of X_par%blc_d failed')
+        X_par_mem_ = re.compile('\[ERROR\] Allocation of X_par%blc_d failed')
         reading_explosion_of_memory = re.compile('Reading')
         for line in log.lines:
             if warning.match(line):
@@ -139,7 +144,12 @@ def parse_log(log,output_params,timing):
             if  alloc3_error.findall(line):
                 output_params['memory_error'] = True
                 output_params['errors'].append('memory_general')
+            if  alloc4_error.findall(line):
+                output_params['memory_error'] = True
+                output_params['errors'].append('memory_general')
             if  incomplete_para_error.findall(line) or impossible_para_error.findall(line) or impossible_para_error2.findall(line):
+                output_params['para_error'] = True
+            if  incomplete_para_error_.findall(line) or impossible_para_error_.findall(line) or impossible_para_error2_.findall(line):
                 output_params['para_error'] = True
             if time_probably.findall(line):
                 output_params['errors'].append('time_most_prob')
@@ -161,7 +171,7 @@ def parse_log(log,output_params,timing):
             pass
         
         try:
-            if  X_par_mem.findall(log.lines[-1]):
+            if  X_par_mem.findall(log.lines[-1]) or X_par_mem_.findall(log.lines[-1]):
                 output_params['memory_error'] = True
                 output_params['errors'].append('X_par_allocation')
         except:

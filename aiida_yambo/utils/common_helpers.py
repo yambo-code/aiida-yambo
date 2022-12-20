@@ -390,7 +390,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     nscf = load_node(nscf_pk)
     bands = nscf.outputs.output_band.get_array('bands')
     # if spin-resolved, i.e. magnetization is provided, it considers only the first spin (up)
-    if len(np.shape(bands)>2):
+    if len(np.shape(bands))>2:
         s_res = True 
         bands = bands[0,:,:]
     occ = nscf.outputs.output_band.get_array('occupations')
