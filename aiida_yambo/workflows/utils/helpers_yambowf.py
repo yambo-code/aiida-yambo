@@ -402,7 +402,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
     lumo_k = mapping['lumo_k']
 
     for what in parsing_List:
-        try:
+        if 1: #try:
             if isinstance(what,list): 
                 key = what[0]
             else:
@@ -491,7 +491,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                         parsed_dict[key] =  level_gw
                         parsed_dict[key+'_dft'] =  level_dft
             
-        except:
+        #except:
             #parsed_dict[key] =  False
             pass
     return parsed_dict

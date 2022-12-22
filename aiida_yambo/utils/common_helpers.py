@@ -114,8 +114,8 @@ def find_table_ind(kpoint,band,_array_ndb):
         index_b = 0
         index_k = -2 #spin resolved..
 
-    b = kk[-1]==band
-    c = kk[0]==kpoint
+    b = kk[index_b]==band
+    c = kk[index_k]==kpoint
     g = (c == True) & (b == True)
     for i in range(len(g)):
         if g[i] == True:
