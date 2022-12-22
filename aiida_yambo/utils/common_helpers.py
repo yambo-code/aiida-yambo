@@ -329,7 +329,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                 return quantity,[[maps[quantity[-2]],maps[quantity[-2]],
                         valence,valence],
                         [maps[quantity[-1]],maps[quantity[-1]],
-                         valence + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))]]
+                         valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))]]
         else: #high-symmetry
                 m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase())
@@ -342,12 +342,12 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                          valence,valence],]
                 elif '_c' in quantity:
                     return quantity,[[maps[quantity[0]],maps[quantity[0]],
-                         valence + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
+                         valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
                 
                 return quantity,[[maps[quantity[-1]],maps[quantity[-1]],
                          valence,valence],
                         [maps[quantity[-1]],maps[quantity[-1]],
-                         valence + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
+                         valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
             
     elif isinstance(quantity,list):
         if 'gap_' in quantity[0]:
@@ -361,7 +361,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
             return quantity[0],[[maps[quantity[0][-2]],maps[quantity[0][-2]],
                     valence,valence],
                     [maps[quantity[0][-1]],maps[quantity[0][-1]],
-                    valence + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
+                    valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
         else:
             m,maps = k_path_dealer().check_kpoints_in_qe_grid(s.outputs.output_band.get_kpoints(),
                                        s.inputs.structure.get_ase(),k_list={quantity[0]:np.array(quantity[1]),
@@ -374,7 +374,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                      valence,valence],]
             elif '_c' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     valence + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
+                     valence 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
             
             
             return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
