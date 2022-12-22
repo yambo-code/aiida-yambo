@@ -532,7 +532,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        if hasattr(self.ctx,'hint'): 
+        if hasattr(self.ctx,'infos'): 
             infos = store_Dict(self.ctx.infos)
             self.out('infos',infos)
         try:
