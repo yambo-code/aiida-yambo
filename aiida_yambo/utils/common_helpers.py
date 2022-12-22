@@ -110,7 +110,7 @@ def find_table_ind(kpoint,band,_array_ndb):
     #in the qp table:
     index_b = -1
     index_k = 0
-    if len(np.shape(kk)[0]) == 4:
+    if np.shape(kk)[0] == 4:
         index_b = 0
         index_k = -2 #spin resolved..
 
