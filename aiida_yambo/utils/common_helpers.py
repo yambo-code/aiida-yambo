@@ -107,6 +107,13 @@ def find_pw_type(calc):
 
 def find_table_ind(kpoint,band,_array_ndb):
     kk = _array_ndb.get_array('qp_table')
+    #in the qp table:
+    index_b = -1
+    index_k = 0
+    if len(np.shape(kk)[0]) == 4:
+        index_b = 0
+        index_k = -2 #spin resolved..
+
     b = kk[-1]==band
     c = kk[0]==kpoint
     g = (c == True) & (b == True)
