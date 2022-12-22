@@ -449,6 +449,7 @@ def gap_mapping_from_nscf(nscf_pk, additional_parsing_List=[]):
     else:
         gap_type = 'direct'
 
+    if s_res: soc = True
     mapping = {
     'dft_predicted': dft_predicted,
     'valence': valence,
