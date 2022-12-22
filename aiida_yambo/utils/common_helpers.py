@@ -374,7 +374,7 @@ def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
                      valence,valence],]
             elif '_c' in quantity[0]:
                 return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
-                     valence 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
+                     valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved'])),valence + 1 + 1*(int(mapping['soc'])-int(mapping['spin-resolved']))],]
             
             
             return quantity[0],[[maps[quantity[0]],maps[quantity[0]],
