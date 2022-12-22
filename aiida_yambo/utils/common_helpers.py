@@ -307,7 +307,7 @@ def find_gw_info(inputs):
 def understand_valence_metal_wise(bands, fermi, index, valence):
     hp_valence = len(np.where((bands[index-1]-fermi)<=1e-2)[0])
     if hp_valence < valence - 1: hp_valence = valence
-    return hp_valence
+    return valence #deactivated.
 
 def build_list_QPkrange(mapping, quantity, nscf_pk, bands, fermi, valence):
     s = load_node(nscf_pk)
