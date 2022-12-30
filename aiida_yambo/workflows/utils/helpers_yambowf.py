@@ -569,6 +569,8 @@ def QP_analyzer(pk,QP_db,mapping):
         'gap_DFT':np.round(dft_gap.values,4),
         'QP':QP_db.pk,
         'SOC':soc,
+        'k_ind_v':int(k_v),
+        'k_ind_c':int(k_c),
     
     }
     
