@@ -97,6 +97,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         NLCC=False,
         RIM_v=False,
         RIM_W=False,
+        BG_term=False,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -139,6 +140,12 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             parameters['arguments'].append('RIM_W')
             parameters['variables']['CUTGeo'] = 'slab Z'
             parameters['variables']['RandGvecW'] = [13, 'RL']
+
+        # BG_terminator check:
+        if BG_term:
+            parameters['variables']['GTermKind'] = 'BG'
+        else:
+            parameters['variables'].pop('GTermKind',0)
 
         #if protocols GW
         screening_PW_cutoff = int(PW_cutoff*meta_parameters['ratio_PW_cutoff'])
