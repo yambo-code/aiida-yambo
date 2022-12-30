@@ -702,6 +702,8 @@ def search_in_group(YamboWorkflow_inputs,
 
 @calcfunction
 def store_quantity(quantity):
+    #to be changed, but in this way data are created by a calcfunction and not by the WFL.
     quantity.store()
+    return
 
     

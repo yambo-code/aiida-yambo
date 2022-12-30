@@ -400,7 +400,8 @@ class The_Predictor_1D():
         else:
             if self.next_step[self.var_[0]] > self.max:
                 self.next_step['new_grid'] = True
-            
+        
+        self.next_step['E_ref'] = reference
         print('guessed next step: {} \n\n\n'.format(self.next_step))
 
         return self.next_step
@@ -486,6 +487,7 @@ class The_Predictor_1D():
                     self.point_reached = True
                     
                 self.check_the_point(old_hints)
+
                 if reference == 'extra':
                     reference = self.extra
                 else:

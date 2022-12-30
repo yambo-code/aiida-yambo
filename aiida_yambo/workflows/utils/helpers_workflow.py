@@ -743,7 +743,7 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 #if y.check_passed:
                 hint = y.next_step
                 hint['extrapolation'] = y.extra
-                hint['extrapolation_units'] = 'eV'
+                hint['extrapolation_units'] = 'eV' 
                 #else:
                 #    hint = {'new_grid':True}
         

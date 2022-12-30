@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from curses import meta
+#from curses import meta
 import os
 import time
 
@@ -60,7 +60,7 @@ def merge_QP(filenames_List,output_name,ywfl_pk): #just to have something that w
             conduction = valence + 2
         else:
             valence = int(nelectrons/2) + int(nelectrons%2)
-        conduction = valence + 1
+            conduction = valence + 1
         string_run = 'yambopy mergeqp'
         for i in filenames_List.get_list():
             j = load_node(i).outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP'
@@ -753,7 +753,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 #self.report('parsing additional quantities')
                 mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, self.inputs.additional_parsing.get_list())
                 parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
-                self.out('nscf_mapping', store_Dict(mapping))
+                mapping_Dict = store_Dict(mapping)
+                self.out('nscf_mapping', mapping_Dict)
                 if hasattr(self.ctx,'bse'):
                     if self.ctx.bse.is_finished_ok:
                         parsed_bse = additional_parsed(self.ctx.bse, self.inputs.additional_parsing.get_list(), mapping)

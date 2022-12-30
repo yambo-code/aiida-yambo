@@ -36,10 +36,10 @@ protocols:
             ratio_bands_electrons: 50
             ratio_PW_cutoff: 0.2
             ratio_FFTGvecs: 0.5
-    accurate:
+    precise:
         description: 'Converged for most materials, higher computational cost than moderate'
         meta_parameters:
-            ratio_bands_electrons: 100
+            ratio_bands_electrons: 75
             ratio_PW_cutoff: 0.4
             ratio_FFTGvecs: 0.8
     bse_fast:
@@ -78,10 +78,10 @@ protocols:
                 'Lkind': 'full',
                 'BSEQptR': [[1,1],''],
                 }
-    bse_accurate:
+    bse_precise:
         description: 'Converged for most materials, higher computational cost than moderate'
         meta_parameters:
-            ratio_bands_electrons: 100
+            ratio_bands_electrons: 75
             ratio_PW_cutoff: 0.4
             ratio_FFTGvecs: 0.8
         yambo:

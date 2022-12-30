@@ -45,3 +45,19 @@ def check_para_namelists(params, version):
         return None
     else:
         return new_params
+
+def check_variables(params):
+    
+    new_params = {}
+
+    var = {'BndsRnXp':'BndsRnXs','NGsBlkXp':'NGsBlkXs','NGsBlkXs':'BSENGBlk'}
+
+    if 'em1s' in params['arguments']:
+        for k,v in var:
+            if k in params['variables'].keys() and v not in params['variables'].keys():
+                new_params[v] = params['variables'].pop(k)
+
+    if new_params == {}:
+        return None
+    else:
+        return new_params

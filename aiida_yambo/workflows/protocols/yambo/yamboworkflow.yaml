@@ -13,9 +13,9 @@ protocols:
             k_density: 0.3
         yres:
             protocol:'moderate'
-    accurate:
+    precise:
         description: 'Converged for most materials, higher computational cost than moderate'
         meta_parameters:
             k_density: 0.2
         yres:
-            protocol:'accurate'
+            protocol:'precise'
