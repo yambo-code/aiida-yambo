@@ -283,7 +283,6 @@ class YamboParser(Parser):
         if success and 'gw0' in input_params['arguments'] and not ndbqp and not initialise:
             success = False
         elif success and 'bse' in input_params['arguments'] and not initialise and not (chi or eels_array or eps_array or alpha_array):
-            d
             success = False
 
         if success == False:
