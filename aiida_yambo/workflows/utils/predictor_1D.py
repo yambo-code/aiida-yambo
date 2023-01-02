@@ -444,7 +444,7 @@ class The_Predictor_1D():
         error = 10
         power_laws = [1,2]
         
-        if 'kpoint_mesh' in self.var_: power_laws = [0.5,1,2]
+        if 'kpoint_mesh' in self.var_: power_laws = [1,2]
 
         for i in power_laws:
                 self.check_passed = self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,)

@@ -136,34 +136,19 @@ def QP_mapper(ywfl,tol=1,full_bands=False):
     
     return QP
 
-def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_for_subset):
-    if bb_f-bb_i<nnk_f-nnk_i:
-        n = int(min(qp_for_subset,nnk_f-nnk_i+1)/3)+1
-        m = bb_f-bb_i+1
-    else:
-        m = int(min(qp_for_subset,bb_f-bb_i+1)/3)+1
-        n = nnk_f-nnk_i+1
-
-    print(n,m)
-
-    #n=58  #length of a set
-    #m=3
-    groups=[]
-    sets_k = int((nnk_f-nnk_i)/n+1)
-    sets_b = int((bb_f-bb_i)/m+1)
-    print(sets_k,sets_b)
-    for i in range(sets_k):
-        k_i=1+i*n + (nnk_i-1)
-        k_f=k_i+n-1 
-        if k_f > nnk_f: k_f = nnk_f
-        for j in range(sets_b):
-            b_i=1+j*m + (bb_i-1)
-            b_f=b_i+m-1
-            if b_f > bb_f: b_f = bb_f
-
-            print(k_i,k_f,b_i,b_f)
-            groups.append([[k_i,k_f,b_i,b_f]])
-
+def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_per_subset):
+    
+    groups, L = [],[]
+    
+    for k in range(nnk_i,nnk_f+1):
+        for b in range(bb_i,bb_f+1):
+            L.append([k,k,b,b])
+            
+            if len(L)==qp_per_subset:
+                groups.append(L)
+                L=[]
+    if len(L)>0:
+        groups.append(L)
     return groups
 
 def QP_list_merger(l=[],qp_per_subset=10,from_kmapper=False):
@@ -667,7 +652,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                             split =  self.ctx.QP_subsets['split_bands']
                         self.ctx.QP_subsets['subsets'] = QP_list_merger(self.ctx.QP_subsets['explicit'],self.ctx.QP_subsets['qp_per_subset'],from_kmapper=split)
                     elif 'boundaries' in self.ctx.QP_subsets.keys():
-                        self.ctx.QP_subsets['subsets'] = QP_subset_groups(1,mapping['number_of_kpoints'],self.ctx.QP_subsets['boundaries']['bi'],self.ctx.QP_subsets['boundaries']['bf'],self.ctx.QP_subsets['qp_per_subset'])
+                        self.ctx.QP_subsets['subsets'] = QP_subset_groups(self.ctx.QP_subsets['boundaries'].pop('ki',1),self.ctx.QP_subsets['boundaries'].pop('kf',mapping['number_of_kpoints']),self.ctx.QP_subsets['boundaries']['bi'],self.ctx.QP_subsets['boundaries']['bf'],self.ctx.QP_subsets['qp_per_subset'])
                 self.report('subsets: {}'.format(self.ctx.QP_subsets['subsets']))
 
             for i in range(1,1+self.ctx.QP_subsets['parallel_runs']):

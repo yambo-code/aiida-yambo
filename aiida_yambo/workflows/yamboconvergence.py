@@ -271,6 +271,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         """Initialize the workflow"""
         self.ctx.small_space = False
         self.ctx.ratio = []   #ratio between Ecut and EmaxC
+        self.ctx.infos = {}   #converged parameters
         self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')        
         self.ctx.remaining_iter = self.inputs.parameters_space.get_list()
         self.ctx.remaining_iter.reverse()
@@ -367,12 +368,14 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                                                                         )
                 self.ctx.workflow_manager['parameter_space'] = copy.deepcopy(self.ctx.params_space)
             self.report('Next parameters: {}'.format(self.ctx.calc_manager['var']))
-            self.ctx.hint = {}
+            
             if self.ctx.workflow_manager['type'] == 'cheap':
                 self.report('Mode is "cheap", so we reset the other parameters to the initial ones.')
                 self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+                self.ctx.infos.update(self.ctx.hint)
             else:
                 self.report('Mode is "heavy", so we mantain the other parameters as the converged ones, if any.')
+            self.ctx.hint = {}
             
             return True
       
@@ -471,7 +474,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 #self.report('hint: {}'.format(self.ctx.hint))
                 self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
                 self.ctx.extrapolated = self.ctx.hint.pop('extrapolation', None)
-                self.ctx.infos = self.ctx.hint
+                self.ctx.infos.update(self.ctx.hint)
 
                 if 'converge_b_ratio' in self.ctx.hint.keys(): 
                     self.ctx.calc_manager['iter'] = 0
@@ -506,7 +509,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                         self.ctx.final_result = post_analysis_update(self.ctx.calc_inputs,\
                         self.ctx.calc_manager, oversteps, self.ctx.none_encountered,success='new_grid', workflow_dict=self.ctx.workflow_manager)
                 #self.report('hint: {}'.format(self.ctx.hint))
-                self.ctx.infos = self.ctx.hint
+                self.ctx.infos.update(self.ctx.hint)
                 if 'converge_b_ratio' in self.ctx.hint.keys(): 
                     #self.ctx.calc_manager['iter'] = 0
                     #self.ctx.calc_manager['G_iter'] +=1
@@ -532,7 +535,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
-        if hasattr(self.ctx,'hint'): 
+        if hasattr(self.ctx,'infos'): 
             infos = store_Dict(self.ctx.infos)
             self.out('infos',infos)
         try:

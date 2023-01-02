@@ -190,7 +190,10 @@ class YamboParser(Parser):
             success = False
             return self.exit_codes.PARSER_ANOMALY
             #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-
+        
+        eels_array = None
+        eps_array = None
+        alpha_array = None
         for result in results.yambofiles:
             if results is None:
                 continue
@@ -201,16 +204,16 @@ class YamboParser(Parser):
             if result.type=='report':
                 parse_report(result, output_params)
 
-            #if 'eel' in result.filename:
-            #    eels_array = self._aiida_array(result.data)
-            #    self.out(self._eels_array_linkname, eels_array)
-            #elif 'eps' in result.filename:
-            #    eps_array = self._aiida_array(result.data)
-            #    self.out(self._eps_array_linkname, eps_array)
-            #elif 'alpha' in result.filename:
-            #    alpha_array = self._aiida_array(result.data)
-            #    self.out(self._alpha_array_linkname,alpha_array)
 
+            if 'eel' in result.filename:
+                eels_array = self._aiida_array_bse(result.data)
+                self.out(self._eels_array_linkname, eels_array)
+            elif 'eps' in result.filename:
+                eps_array = self._aiida_array_bse(result.data)
+                self.out(self._eps_array_linkname, eps_array)
+            elif 'alpha' in result.filename:
+                alpha_array = self._aiida_array_bse(result.data)
+                self.out(self._alpha_array_linkname,alpha_array)
             
             if 'ndb.QP' == result.filename:
                 ndbqp = copy.deepcopy(result.data)
@@ -279,7 +282,7 @@ class YamboParser(Parser):
 
         if success and 'gw0' in input_params['arguments'] and not ndbqp and not initialise:
             success = False
-        elif success and 'bse' in input_params['arguments'] and not chi and not initialise:
+        elif success and 'bse' in input_params['arguments'] and not initialise and not (chi or eels_array or eps_array or alpha_array):
             success = False
 
         if success == False:
@@ -297,6 +300,16 @@ class YamboParser(Parser):
                 return self.exit_codes.MEMORY_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
+
+    def _aiida_array_bse(self, data):
+        arraydata = ArrayData()
+        full = data.pop('0')
+        for i in data.keys():
+            for k in full.keys():
+                full[k].append(data[i][k][0])
+        for ky in full.keys():
+            arraydata.set_array(ky.replace('-','_').replace('`','_prime_').replace('/','_'), np.array(full[ky]))
+        return arraydata
 
     def _aiida_array(self, data):
         arraydata = ArrayData()
