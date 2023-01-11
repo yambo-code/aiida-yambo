@@ -73,7 +73,7 @@ def merge_QP(filenames_List,output_name,ywfl_pk): #just to have something that w
         QP_db = SingleFileData(qp_fixed)
         return QP_db
 
-def QP_mapper(ywfl,tol=1,full_bands=False):
+def QP_mapper(ywfl,tol=1,full_bands=False,spectrum_tol=1):
     fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
     SOC = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['spin_orbit_calculation']
     nelectrons = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['number_of_electrons']
@@ -133,8 +133,11 @@ def QP_mapper(ywfl,tol=1,full_bands=False):
     plt.ylim(-0.25,0.25)
     
     print('Fermi level={} eV'.format(fermi))
+
+    b_min_scissored = np.where(abs(bands-mid_gap_energy)<spectrum_tol)[1].min()
+    b_max_scissored = np.where(abs(bands-mid_gap_energy)<spectrum_tol)[1].max()
     
-    return QP
+    return QP, [b_min_scissored,b_max_scissored]
 
 def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_per_subset):
     
@@ -643,7 +646,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 if 'range_QP' in self.ctx.QP_subsets.keys(): #the name can be changed..
                     Energy_region = max(self.ctx.QP_subsets['range_QP'],mapping['nscf_gap_eV']*1.2)
                     self.report('range of energy for QP: {} eV'.format(Energy_region))
-                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,tol = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False))
+                    self.ctx.QP_subsets['explicit'], self.ctx.QP_subsets['scissored'] = QP_mapper(self.ctx.calc,tol = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False),spectrum_tol=self.ctx.QP_subsets.pop('range_spectrum',Energy_region))
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
@@ -717,12 +720,16 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.ctx.BSE_map = BSE_map
 
         if not 'BSEBands' in bse_params['variables'].keys():
-            bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
+            if 'scissored' in self.ctx.QP_subsets.keys():
+                bse_params['variables']['BSEBands'] = [[self.ctx.QP_subsets['scissored'][0],self.ctx.QP_subsets['scissored'][1]],'']
+            else:
+                bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
         if not 'BSEQptR' in bse_params['variables'].keys():
             bse_params['variables']['BSEQptR'] = [[BSE_map['q_ind'],BSE_map['q_ind']],'']
 
         self.ctx.yambo_inputs.yambo.parameters = Dict(dict=bse_params)
-        
+
+        self.ctx.yambo_inputs.metadata.call_link_label = 'BSE'
         future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
         return ToContext(bse = future) 
@@ -749,7 +756,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     else:
                         self.report("workflow NOT completed successfully")
                         return self.exit_codes.ERROR_WORKCHAIN_FAILED
-                
+                self.report('PARSED: {}'.format(parsed))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
                 if 'scissor' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.

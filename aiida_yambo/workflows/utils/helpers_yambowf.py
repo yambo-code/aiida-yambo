@@ -402,7 +402,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
     lumo_k = mapping['lumo_k']
 
     for what in parsing_List:
-        if 1: #try:
+        try:
             if isinstance(what,list): 
                 key = what[0]
             else:
@@ -491,7 +491,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                         parsed_dict[key] =  level_gw
                         parsed_dict[key+'_dft'] =  level_dft
             
-        #except:
+        except:
             #parsed_dict[key] =  False
             pass
     return parsed_dict
@@ -564,7 +564,7 @@ def QP_analyzer(pk,QP_db,mapping):
         'v_min':int(v_min.values),
         'c_max':int(c_max.values),
         'q_ind':l[0][1],
-        'candidate_for_BSE':gw_gap.values>=0,
+        'candidate_for_BSE':bool(gw_gap.values>=0),
         'gap_GW':np.round(gw_gap.values,4),
         'gap_DFT':np.round(dft_gap.values,4),
         'QP':QP_db.pk,

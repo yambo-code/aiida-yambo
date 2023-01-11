@@ -196,8 +196,8 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
 
         yambo_parameters = builder.ywfl['yres']['yambo']['parameters'].get_dict()
-        for b in ['BndsRnXp','GbndRnge']:
-            yambo_parameters['variables'][b] = [[1,b_start],'']
+        #for b in ['BndsRnXp','GbndRnge']:
+        #    yambo_parameters['variables'][b] = [[1,b_start],'']
         
         ################ G cutoff
         G_start=meta_parameters['G_vectors']['start']
@@ -205,7 +205,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         G_max=meta_parameters['G_vectors']['max']
         G_delta=meta_parameters['G_vectors']['delta']
 
-        yambo_parameters['variables']['NGsBlkXp'] = [G_start,'Ry']
+        #yambo_parameters['variables']['NGsBlkXp'] = [G_start,'Ry']
 
         ################ FFTGVecs
 
@@ -217,7 +217,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         #########################
 
-        builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
+        #builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
 
         builder.parameters_space =  List(list=[
             {
