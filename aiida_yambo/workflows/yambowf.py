@@ -346,8 +346,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         for override in [overrides_scf,overrides_nscf]:
             override['clean_workdir'] = override.pop('clean_workdir',False) #required to have a valid parent folder
             
-            #if 'pseudo_family' in override.keys():
-            #    if 'PseudoDojo' in override['pseudo_family']: NLCC = True
+            if 'pseudo_family' in override.keys():
+                if 'PseudoDojo' in override['pseudo_family']: NLCC = True
 
         try:
             pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
@@ -458,10 +458,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_nscf['SYSTEM']['ecutrho'] = parameters_scf['SYSTEM']['ecutrho']        
         
         parameters_nscf['CONTROL']['calculation'] = 'nscf'
-        parameters_scf['SYSTEM'].pop('nbnd',0) #safety measure, for some system creates chaos if smearing is present
+        parameters_scf['SYSTEM'].pop('nbnd',0) #safety measure, for some system creates chaos in conjunction with smearing
 
 
-        parameters_nscf['SYSTEM']['nbnd'] = int(parameters_nscf['SYSTEM'].pop('nbnd',gwbands))
+        parameters_nscf['SYSTEM']['nbnd'] = int(max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands))
         builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
         builder.scf['pw']['parameters'] = Dict(dict = parameters_scf)
 
