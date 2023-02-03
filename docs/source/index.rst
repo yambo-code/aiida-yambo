@@ -34,10 +34,16 @@ If you use this package for your research, please cite the following works:
   C. Hogan, M. Grüning, D. Varsano, A. Marini, *Many-body perturbation theory calculations using the yambo code*,
   J. Phys. Condens. Matter, 31, 325902 (2019); https://doi.org/10.1088/1361-648X/ab15d0; http://www.yambo-code.org.
 
+* S. P. Huber, S. Zoupanos, M. Uhrin, L. Talirz, L. Kahle, R. H ̈auselmann, D. Gresch, T. M ̈uller, A. V. Yakutovich,
+  C. W. Andersen, F. F. Ramirez, C. S. Adorf, F. Gargiulo,
+  S. Kumbhar, E. Passaro, C. Johnston, A. Merkys, A. Cepellotti, N. Mounet, N. Marzari, B. Kozinsky, and G. Pizzi,
+  *AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and data provenance*, Sci. Data 7, 300 (2020);
+  https://www.nature.com/articles/s41597-020-00638-4; http://www.aiida.net.
+
 * G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari,
   and B. Kozinsky, *AiiDA: automated interactive infrastructure and database
   for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
-  http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net. 
+  http://dx.doi.org/10.1016/j.commatsci.2015.09.013;  
 
 User's guide
 ++++++++++++
@@ -79,20 +85,25 @@ Foundation (Grant No. 205602).
     :height: 110px
 
 .. figure:: images/Battery2030.png
-    :width: 350px
+    :width: 340px
     :align: right
     :height: 170px
 
 .. figure:: images/bigmap_logo.png
-    :width: 250px
+    :width: 230px
     :align: left
-    :height: 250px
+    :height: 230px
 
 .. figure:: images/s3center.png
     :width: 250px
     :align: right
     :height: 250px
 
+.. figure:: images/Flag_of_Europe.png
+    :width: 250px
+    :align: left
+    :height: 170px
+    
 .. figure:: images/MARVEL.png
     :width: 250px
     :align: right
