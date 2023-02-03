@@ -34,10 +34,5 @@ Foundation (Grant No. 205602).
 
 
 ![MARVEL](miscellaneous/logos/MARVEL.png) ![MaX](miscellaneous/logos/MaX.png)
-![bigmap](miscellaneous/logos/bigmap_logo.png)
-
-<img sre-"battery2030 (miscellaneous/logos/Battery2030.png" alt-"battery2030
-style="width: 350px; height: 170px"/›
-
-<img sre-"cnr (miscellaneous/logos/s3center.png" alt-"cnr
-style="width: 350px; height: 170px"/›
+![battery2030](miscellaneous/logos/Battery2030.png){height=50%, width=50%} ![bigmap](miscellaneous/logos/bigmap_logo.png)
+![cnr](miscellaneous/logos/s3center.png){height=30%, width=30%}
