@@ -96,4 +96,4 @@ Foundation (Grant No. 205602).
 .. figure:: images/MARVEL.png
     :width: 250px
     :align: right
-    :height: 250px
+    :height: 190px
