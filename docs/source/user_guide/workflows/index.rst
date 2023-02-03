@@ -1,6 +1,6 @@
 .. _sec.yambo_workflows:
 
-WorkChains for AiiDA-Yambo
+WorkChains for aiida-yambo
 --------------------------
 
 Description

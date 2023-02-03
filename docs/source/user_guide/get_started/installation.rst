@@ -58,8 +58,8 @@ To setup a code there is also the possibility to define a YAML-format file
 :: 
 
     ---
-    label: "yambo.4.5"
-    description: "yambo v4.5"
+    label: "yambo-5.1"
+    description: "yambo v5.1"
     input_plugin: "yambo.yambo"
     on_computer: true
     remote_abs_path: "path_to_yambo_folder/bin/yambo"
