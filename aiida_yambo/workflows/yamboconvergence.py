@@ -335,6 +335,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
         elif not self.ctx.calc_manager['success'] and \
                     self.ctx.calc_manager['iter'] > self.ctx.calc_manager['max_iterations']:
+            self.report('{} - {}'.format(self.ctx.calc_manager['iter'],self.ctx.calc_manager['max_iterations']))
             self.report('Workflow failed due to some failed calculation in the investigation of {}'.format(self.ctx.calc_manager['var']))
 
             return False
@@ -440,6 +441,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
         
+        self.report(quantities)
         errors = self.ctx.final_result.pop('errors')
         if errors: 
             self.ctx.none_encountered = True
@@ -527,7 +529,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 #self.report('workflow_manager_PS: {}'.format(self.ctx.workflow_manager['parameter_space']))
         #self.report(self.ctx.params_space)
 
-        
+        self.report(self.ctx.hint)
         self.ctx.workflow_manager['first_calc'] = False
         
     def report_wf(self):

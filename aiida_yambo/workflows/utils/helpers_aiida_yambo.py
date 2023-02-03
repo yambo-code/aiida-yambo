@@ -25,7 +25,10 @@ else:
 ################################################################################
 ################################################################################
 
-def set_parallelism(instructions_, inputs):
+def set_parallelism(instructions_, inputs, k_quantity):
+
+    #kquantity is the inverse of the kpoint density... in this way it increases with the mesh. 
+    #easier to be managed by the predictor_1D.
 
     new_parallelism, new_resources = False, False
     instructions = copy.deepcopy(instructions_)
@@ -88,12 +91,14 @@ def set_parallelism(instructions_, inputs):
             NGsBlkXp_hint = instructions['automatic'][i].pop('NGsBlkXp', [0])
             if NGsBlkXp_hint == [0]: instructions['automatic'][i].pop('NGsBlkXs', [0])
             kpoints_hint = instructions['automatic'][i].pop('kpoints', [0])
+            kpoints_density_hint = instructions['automatic'][i].pop('kpoints_density', [0])
 
             X = (yambo_bandsX >= min(BndsRnXp_hint) and yambo_bandsX <= max(BndsRnXp_hint)) or len(BndsRnXp_hint)==1 
             Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
             G = (yambo_cutG >= min(NGsBlkXp_hint) and yambo_cutG <= max(NGsBlkXp_hint)) or len(NGsBlkXp_hint)==1 
             K = (kpoints >= min(kpoints_hint) and kpoints <= max(kpoints_hint)) or len(kpoints_hint)==1 
-            if X and Sc and G and K:
+            K_density = (k_quantity >= min(kpoints_density_hint) and k_quantity <= max(kpoints_density_hint)) or k_quantity==0 
+            if X and Sc and G and K and K_density:
                 new_parallelism = {'PAR_def_mode': instructions['automatic'][i].pop('mode','balanced')}
                 new_resources = instructions['automatic'][i]['resources']
                 break
@@ -121,12 +126,14 @@ def set_parallelism(instructions_, inputs):
             NGsBlkXp_hint = instructions['manual'][i].pop('NGsBlkXp', [0])
             if NGsBlkXp_hint == [0]: instructions['manual'][i].pop('NGsBlkXs', [0])
             kpoints_hint = instructions['manual'][i].pop('kpoints', [0])
+            kpoints_density_hint = instructions['manual'][i].pop('kpoints_density', [0])
 
             X = (yambo_bandsX >= min(BndsRnXp_hint) and yambo_bandsX <= max(BndsRnXp_hint)) or len(BndsRnXp_hint)==1 
             Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
             G = (yambo_cutG >= min(NGsBlkXp_hint) and yambo_cutG <= max(NGsBlkXp_hint)) or len(NGsBlkXp_hint)==1 
             K = (kpoints >= min(kpoints_hint) and kpoints <= max(kpoints_hint)) or len(kpoints_hint)==1 
-            if X and Sc and G and K:
+            K_density = (k_quantity >= min(kpoints_density_hint) and k_quantity <= max(kpoints_density_hint)) or k_quantity==0 
+            if X and Sc and G and K and K_density:
                 new_parallelism = instructions['manual'][i]['parallelism']
                 new_resources = instructions['manual'][i]['resources']
                 break
@@ -180,6 +187,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
     already_done = False
     values_dict = {}
     parallelism_instructions = workflow_dict['parallelism_instructions']
+    k_quantity = 0 
 
     if not isinstance(calc_dict['var'],list):
         calc_dict['var'] = [calc_dict['var']]
@@ -223,7 +231,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
             inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
 
     #if len(parallelism_instructions.keys()) >= 1:
-    new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update)
+    new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update, k_quantity)
 
     if new_para and new_res:
         inp_to_update.yres.yambo.parameters = update_dict(inp_to_update.yres.yambo.parameters, list(new_para.keys()), 
@@ -266,6 +274,9 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
             try:
                 if 'mesh' in n:
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
+                elif 'density' in n:
+                    pw = find_pw_parent(ywf_node)
+                    value = get_distance_from_kmesh(pw)
                 else:
                     value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
                     if n in ['BndsRnXp','GbndRnge']:
