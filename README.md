@@ -34,5 +34,6 @@ Foundation (Grant No. 205602).
 
 
 ![MARVEL](miscellaneous/logos/MARVEL.png) ![MaX](miscellaneous/logos/MaX.png)
-![battery2030](miscellaneous/logos/Battery2030.png){height=50%, width=50%} ![bigmap](miscellaneous/logos/bigmap_logo.png)
-![cnr](miscellaneous/logos/s3center.png){height=30%, width=30%}
+![bigmap](miscellaneous/logos/bigmap_logo.png)
+<img src="https://www.google.com/url?sa=i&url=https%3A%2F%2Fbattery2030.eu%2F&psig=AOvVaw07s8xUjtFEIily54D8uX-X&ust=1675509692023000&source=images&cd=vfe&ved=0CBAQjRxqFwoTCKCSspKe-fwCFQAAAAAdAAAAABAD"  width="60" height="30">
+<img src="https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.nano.cnr.it%2Fcontact%2F&psig=AOvVaw1VU-pSV4pV0k_DDMhJQHOn&ust=1675509623444000&source=images&cd=vfe&ved=0CBAQjRxqFwoTCLifjvKd-fwCFQAAAAAdAAAAABAD"  width="30" height="30">
