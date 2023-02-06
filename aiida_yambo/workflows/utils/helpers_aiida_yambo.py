@@ -219,6 +219,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_SAVE', False) #no yambo here
             inp_to_update.yres.yambo.settings = update_dict(inp_to_update.yres.yambo.settings, 'COPY_DBS', False)  #no yambo here
             values_dict[var]=k_quantity
+            if var == 'kpoint_mesh': k_quantity = 0
         else:
             
             if var in ['BndsRnXp','GbndRnge']:

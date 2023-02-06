@@ -9,7 +9,7 @@ The documentation for this package can be found on Read the Docs at https://aiid
 
 ## Installation instructions:
 
-Requirements: AiiDA (version >= 1.0.0b1), netCDF4
+Requirements: AiiDA (version >=1.6.4,<3), and other python packages specified in the setup.json file.
 
 Installation via pip
 

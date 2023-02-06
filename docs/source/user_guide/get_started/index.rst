@@ -6,9 +6,10 @@ Get started
 Overview
 ^^^^^^^^
 `AiiDA Yambo`_ is a package that allows to automate many-body perturbation theory calculations using the Yambo code in the AiiDA framework.
-For now, it is possible to compute independent particle optical spectra and G0W0 quasiparticle corrections. This is the starting point to compute fully converged
-quasiparticle band structures, quantities that are directly related with optical experiments such as direct and inverse photoemission. 
-In the future it will be possible also to compute other quantities that are already available from the Yambo code (such as excitonic effects and real time spectroscopy).
+Currently, the aiida-yambo plugin supports 
+quasiparticle (G0W0 and COSHEX level) 
+and optical properties (IP-RPA and BSE) simulations, 
+as well as interfaces with different codes (e.g., Quantum ESPRESSO and Wannier90). 
 
 We show below a few examples on how to submit Yambo calculations using AiiDA.
 
@@ -29,15 +30,15 @@ Installation
    installation
 
 
-First steps: DFT to Yambo initialization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+First steps: ground state properties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
    dft_p2y
    
-Plugin tutorial: a G0W0 calculation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A first G0W0 calculation
+^^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
