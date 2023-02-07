@@ -5,6 +5,7 @@ import warnings
 
 from aiida.orm import RemoteData
 from aiida.orm import Str, Dict, Int, Bool, StructureData
+from aiida import orm
 
 from aiida.common import ValidationError
 
@@ -178,8 +179,15 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         if not 'QPkrange' in parameters['variables'].keys() and 'gw0' in parameters['arguments']:
             parameters['variables']['QPkrange'] = [[[1, 1, 32, 32,]], ''] #fictitious
 
-        print('Summary of the main inputs:\nBndsRnXp = {}\nGbndRnge = {}\nNGsBlkXp = {} {}\n'\
-            .format(parameters['variables']['BndsRnXp'][0][1],parameters['variables']['GbndRnge'][0][1],parameters['variables']['NGsBlkXp'][0],parameters['variables']['NGsBlkXp'][1]))
+        if not 'bse' in protocol:
+            print('Summary of the main inputs:\nBndsRnXp = {}\nGbndRnge = {}\nNGsBlkXp = {} {}\nFFTGvecs = {} {}\n'\
+                .format(parameters['variables']['BndsRnXp'][0][1],parameters['variables']['GbndRnge'][0][1],parameters['variables']['NGsBlkXp'][0],parameters['variables']['NGsBlkXp'][1],\
+                parameters['variables']['FFTGvecs'][0],parameters['variables']['FFTGvecs'][1]))
+        else:
+            print('Summary of the main inputs:\nBndsRnXs = {}\nNGsBlkXs = {} {}\nBSENGBlk = {} {}\nFFTGvecs = {} {}\n'\
+                .format(parameters['variables']['BndsRnXs'][0][1],parameters['variables']['NGsBlkXs'][0],parameters['variables']['NGsBlkXs'][1],\
+                parameters['variables']['BSENGBlk'][0],parameters['variables']['BSENGBlk'][1],\
+                parameters['variables']['FFTGvecs'][0],parameters['variables']['FFTGvecs'][1]))
 
         builder = cls.get_builder()
         builder.yambo['preprocessing_code'] = preprocessing_code

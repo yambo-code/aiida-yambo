@@ -161,8 +161,17 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     messages = []
 
     yambo_bandsX = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+    yambo_bandsX_bse = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('BndsRnXs',[[0],''])[0][-1]
     yambo_bandsSc = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
-    gwbands = max(yambo_bandsX,yambo_bandsSc)
+    yambo_bands_QP_X = 0
+    yambo_bands_QP_Sc = 0
+
+    if hasattr(workchain_inputs,'qp'):
+        yambo_bands_QP_X = workchain_inputs.qp.yambo.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+        yambo_bands_QP_Sc = workchain_inputs.qp.yambo.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
+
+
+    gwbands = max(yambo_bandsX,yambo_bandsSc,yambo_bandsX_bse,yambo_bands_QP_X,yambo_bands_QP_Sc)
     message_bands = 'GW bands are: {}'.format(gwbands)
     messages.append(message_bands)
     scf_params, nscf_params = None, None
