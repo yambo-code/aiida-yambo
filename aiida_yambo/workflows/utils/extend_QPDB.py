@@ -79,7 +79,7 @@ def build_ndbQP(db_path,DFT_pk,Nb=[1,1],Nk=1,verbose=False):
     #data['PARS'] = (('D_'+str(6).zfill(10)), [Nk,len(Nb),len(QP),0,0,0])
     data['PARS'] = (('D_'+str(6).zfill(10)), [len(Nb),Nk,len(QP),0,0,0])
     data['QP_QP_@_state_1_K_range'] =(('D_'+str(2).zfill(10)),[1,Nk])
-    data['QP_QP_@_state_1_b_range'] =(('D_'+str(2).zfill(10)),[1,len(Nb)]) 
+    data['QP_QP_@_state_1_b_range'] =(('D_'+str(2).zfill(10)),[Nb[0],Nb[1]]) 
     
     ds = xarray.Dataset(
         data,

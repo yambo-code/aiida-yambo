@@ -173,7 +173,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             parameter_variables_overrides = overrides.get('yambo', {}).get('parameters', {}).get('variables', {})
             parameters['variables'] = recursive_merge(parameters['variables'], parameter_variables_overrides)
 
-            metadata_overrides = overrides.get('metadata', {})
+            metadata_overrides = overrides.get('yambo', {}).get('metadata', {})
             metadata = recursive_merge(metadata, metadata_overrides)
 
         if not 'QPkrange' in parameters['variables'].keys() and 'gw0' in parameters['arguments']:

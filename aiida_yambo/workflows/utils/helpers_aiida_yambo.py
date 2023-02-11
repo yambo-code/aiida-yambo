@@ -202,13 +202,14 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
         if var == 'kpoint_mesh' or var == 'kpoint_density':
             k_quantity = parameters[var].pop(0)
             k_quantity_shift = inp_to_update.nscf.kpoints.get_kpoints_mesh()[1]
-
             inp_to_update.nscf.kpoints = KpointsData()
             inp_to_update.nscf.kpoints.set_cell_from_structure(inp_to_update.scf.pw.structure) #to count the PBC...
             if isinstance(k_quantity,tuple) or isinstance(k_quantity,list):
                 inp_to_update.nscf.kpoints.set_kpoints_mesh(k_quantity,k_quantity_shift) 
             else:
                 inp_to_update.nscf.kpoints.set_kpoints_mesh_from_density(1/k_quantity, force_parity=True)
+                calc_dict['kdensity'] = calc_dict.pop('kdensity',[])
+                calc_dict['kdensity'].append(k_quantity)
 
             try:
                 inp_to_update.parent_folder =  find_pw_parent(take_calc_from_remote(inp_to_update.parent_folder), calc_type=['scf']).outputs.remote_folder 
@@ -276,8 +277,9 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                 if 'mesh' in n:
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
                 elif 'density' in n:
-                    pw = find_pw_parent(ywf_node)
-                    value = get_distance_from_kmesh(pw)
+                    #pw = find_pw_parent(ywf_node)
+                    #value = get_distance_from_kmesh(pw)
+                    value = self.calc_dict['kdensity'].pop(0)
                 else:
                     value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
                     if n in ['BndsRnXp','GbndRnge']:

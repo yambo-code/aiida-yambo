@@ -315,6 +315,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         electronic_type=ElectronicType.METAL,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
+        pseudo_family = None,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.

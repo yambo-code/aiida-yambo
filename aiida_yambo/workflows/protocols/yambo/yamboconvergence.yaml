@@ -3,7 +3,7 @@ default_inputs:
         conv_thr_k: 10
         conv_thr_bG: 10
         conv_thr_FFT: 10
-        conv_thr_units: 'percentage of relative error'
+        conv_thr_units: '%'
         FFTGvecs: {
             'start_ratio': 0.25,
             'stop_ratio': 0.7,

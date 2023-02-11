@@ -84,7 +84,7 @@ Foundation (Grant No. 205602).
     :align: left
     :height: 110px
 
-.. figure:: images/Battery2030.png
+.. figure:: images/battery2030_reduced.png
     :width: 340px
     :align: right
     :height: 170px
@@ -105,6 +105,6 @@ Foundation (Grant No. 205602).
     :height: 170px
     
 .. figure:: images/MARVEL.png
-    :width: 250px
+    :width: 212px
     :align: right
-    :height: 130px
+    :height: 110px

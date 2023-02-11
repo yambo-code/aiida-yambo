@@ -71,14 +71,12 @@ There are a lot of possibilities to run QP calculations, to be provided in the Q
         },
     }
 
-(4) provide a range of (DFT) energies where to consider the bands and the k-points to be computed, useful if we don't know the system;
-        of we want BSE for given energies -- usually, BSE spectra is well converged for 75% of this range. These are generated as 
-        explicit QP, then splitted.
-        It is possible to provide also: 'range_spectrum', which find the bands to be included in the BSE calculation, including the other bands 
-        outside the range_QP window as scissored -- automatically by yambo in the BSE calc. So the final QP will have 
-        rangeQP bands, but the BSE calc will have all the range_spectrum bands.
-        These ranges are windows of 2*range, centered at the Fermi level. 
-        If you set the key 'full_bands'=True, all the kpoints are included for each bands. otherwise, only the qp in the window.
+(4) provide a range of (DFT) energies where to consider the bands and the k-points to be computed, useful if we don't know the system; 
+if we want BSE for given energies -- usually, BSE spectra is well converged for 75% of this range. These are generated as explicit QP, then splitted.
+It is possible to provide also: 'range_spectrum', which find the bands to be included in the BSE calculation, including the other bands 
+outside the range_QP window as scissored -- automatically by yambo in the BSE calc. So the final QP will have rangeQP bands, but the BSE calc will have all the range_spectrum bands. 
+These ranges are windows of 2*range, centered at the Fermi level. 
+If you set the key 'full_bands'=True, all the kpoints are included for each bands. otherwise, only the qp in the window.
 ::
    QP_subset_dict= {
         'range_QP':3, #eV         , default=nscf_gap_eV*1.2
@@ -86,14 +84,15 @@ There are a lot of possibilities to run QP calculations, to be provided in the Q
 
     }
     
-For (2) and (4) there are additional options:
-   (a) 'split_bands': split also in bands, not only kpoints the subset. default is True.
-   (b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed
-        as FD+scissored corrections (see paper M. Bonacci et al., Towards high-throughput many-body perturbation theory: efficient algorithms and automated workflows, arXiv:2301.06407). 
-        Useful in G0W0 interpolations
-        e.g. within the aiida-yambo-wannier90 plugin.
-   (b.1) 'consider_only': bands to be only considered explcitely, so the other ones are deleted from the explicit subsets;
-   (b.2) 'T_smearing': the fake smearing temperature of the correction.
+In the case of (2) and (4) there are additional options: (a) 'split_bands': split also in bands, not only kpoints the subset. default is True.
+(b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed as 
+FD+scissored corrections (see supplementary information of the paper: M. Bonacci et al., 
+`Towards high-throughput many-body perturbation theory: efficient algorithms and automated workflows`, arXiv:2301.06407). 
+Useful in G0W0 interpolations e.g. within the aiida-yambo-wannier90 plugin. 
+(b.1) 'consider_only': bands to be only considered explcitely, so the other ones are deleted from the explicit subsets; 
+(b.2) 'T_smearing': the fake smearing temperature of the correction.
+
+For example:
 ::
    QP_subset_dict.update({
         'split_bands':True, #default
@@ -120,8 +119,7 @@ of the BSE Hamiltonian (following the QP subsect dictionary as the previous sect
 Following aiida_yambo/examples_hBN/workflows/yambo_workflow_QP_BSE.py example, we see that now the GW-QP inputs are all under the qp attribute.
 
 In this example, for simplicity, we just put these qp inputs as the BSE (yres) ones - so resources, code etc. - , and then we change the parameters to be the one of G0W0:
-::
-   
+:: 
    builder.qp = builder.yres
 
    params_gw = {
@@ -142,3 +140,44 @@ In this example, for simplicity, we just put these qp inputs as the BSE (yres) o
 
    params_gw = Dict(dict=params_gw)
    builder.qp.yambo.parameters = params_gw
+
+
+Outputs inspection:
+-------------------
+
+Outputs can be inspected via:
+::
+    load_node(<pk>).outputs.output_ywfl_parameters.get_dict()
+
+you will obtain something like:
+::
+    {'gap_': 1.1034224483307,
+    'homo': -0.35414132157192,
+    'lumo': 0.74928112675883,
+    'gap_GG': 3.0791768224843,
+    'homo_G': -0.35414132157192,
+    'lumo_G': 2.7250355009124,
+    'gap_dft': 0.57213595875502,
+    'homo_dft': 0.0,
+    'lumo_dft': 0.57213595875502,
+    'gap_GG_dft': 2.5341893678784,
+    'homo_G_dft': 0.0,
+    'lumo_G_dft': 2.5341893678784}
+
+
+There is also an automatic dictionary creation for what concerns useful NSCF info, which 
+can be observed using load_node(<pk>).outputs.nscf_mapping.get_dict():
+::
+    {'soc': False,
+    'gap_': [[1, 1, 4, 4], [13, 13, 5, 5]],
+    'gap_GG': [[1, 1, 4, 4], [1, 1, 5, 5]],
+    'homo_k': 1,
+    'lumo_k': 13,
+    'valence': 4,
+    'gap_type': 'indirect',
+    'conduction': 5,
+    'nscf_gap_eV': 0.572,
+    'dft_predicted': 'semiconductor/insulator',
+    'spin-resolved': False,
+    'number_of_kpoints': 16}
+

@@ -3,10 +3,9 @@
 YamboConvergence: automated GW ans BSE convergences
 ===================================================
 
-RISCRIVERE!
-The  The highest level workflow is represented by the ``YamboConvergence`` workchain, 
+The highest level workflow is represented by the ``YamboConvergence`` workchain, 
 which implements the full automation of the convergence algorithm described in M. Bonacci et al., 
-Towards high-throughput many-body perturbation theory: efficient algorithms and automated workflows, arXiv:2301.06407. 
+`Towards high-throughput many-body perturbation theory: efficient algorithms and automated workflows`, arXiv:2301.06407. 
 Simulations are organized on the fly, without any external user intervention. 
 The purpose of this new proposed convergence algorithm is to obtain an accurate converged 
 result doing the least possible number of calculations. This is possible if a reliable description of the convergence space is achieved, resulting also in a 
@@ -132,7 +131,7 @@ So, it is possible to define parameter-dependent resources and parallelism instr
 
     dict_res_medium = {
             "num_machines": 1,
-            "num_mpiprocs_per_machine":16,
+            "num_mpiprocs_per_machine":16, 
             "num_cores_per_mpiproc":1,
         }
     
@@ -163,6 +162,12 @@ It is possible also to define automatic parallelization directives:
             "num_cores_per_mpiproc":1,
         }
 
+    dict_res_medium = {
+            "num_machines": 4,
+            "num_mpiprocs_per_machine":16,
+            "num_cores_per_mpiproc":1,
+        }
+
     builder.parallelism_instructions = Dict(dict={'automatic' : {                                                            
                                                               'std_1':{
                                                                      'BndsRnXp':[1,100],
@@ -176,3 +181,23 @@ It is possible also to define automatic parallelization directives:
                                                                      'mode':'memory',                  #memory savings
                                                                      'resources':dict_res_high,
                                                                      },}})
+
+
+Output analysis
+---------------
+
+The final converged parameters can be obtained from the output node 'infos':
+::
+    load_node(<pk>).outputs.infos.get_dict()
+
+in this way you can obtain something like:
+::
+    {
+    "BndsRnXp": 50.0,
+    "E_ref": 5.4920627477806,
+    "GbndRnge": 50.0,
+    "NGsBlkXp": 2.0,
+    "gap_": 5.5143629702825,
+    }
+
+You can also access from shell the results by executing the command ``verdi data dict show <pk-of-infos-node>``.
