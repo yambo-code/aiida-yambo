@@ -6,7 +6,6 @@ Home-page: https://github.com/yambo-code/yambo-aiida
 Author: Miki Bonacci, Michael Atambo, Antimo Marrazzo, Prandini Gianluca
 Author-email: miki.bonacci@unimore.it
 License: MIT
-Description: UNKNOWN
 Keywords: yambo aiida workflows
 Platform: UNKNOWN
 Classifier: Programming Language :: Python
@@ -18,3 +17,7 @@ Requires-Python: >=3.7
 Provides-Extra: docs
 Provides-Extra: tests
 Provides-Extra: pre-commit
+License-File: LICENSE.txt
+
+UNKNOWN
+
