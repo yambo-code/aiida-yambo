@@ -303,8 +303,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         pw_code,
         preprocessing_code,
         code,
-        protocol_qe='fast',
-        protocol='fast',
+        protocol_qe='moderate',
+        protocol='moderate',
         calc_type='gw',
         structure=None,
         overrides={},
@@ -315,6 +315,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         electronic_type=ElectronicType.METAL,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
+        pseudo_family = None,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -700,7 +701,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     b_i=self.ctx.QP_subsets['boundaries']['bi']
                     b_f=self.ctx.QP_subsets['boundaries']['bf']
 
-                    self.ctx.QP_subsets['explicit'] = QP_list_merger([[k_i,k_f,b_i,b_f]],
+                    self.ctx.QP_subsets['subsets'] = QP_list_merger([[k_i,k_f,b_i,b_f]],
                                                                       self.ctx.QP_subsets['qp_per_subset'],
                                                                       consider_only=consider_only)
 

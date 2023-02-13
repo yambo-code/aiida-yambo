@@ -6,9 +6,10 @@ Get started
 Overview
 ^^^^^^^^
 `AiiDA Yambo`_ is a package that allows to automate many-body perturbation theory calculations using the Yambo code in the AiiDA framework.
-For now, it is possible to compute independent particle optical spectra and G0W0 quasiparticle corrections. This is the starting point to compute fully converged
-quasiparticle band structures, quantities that are directly related with optical experiments such as direct and inverse photoemission. 
-In the future it will be possible also to compute other quantities that are already available from the Yambo code (such as excitonic effects and real time spectroscopy).
+Currently, the aiida-yambo plugin supports 
+quasiparticle (G0W0 and COSHEX level) 
+and optical properties (IP-RPA and BSE) simulations, 
+as well as interfaces with different codes (e.g., Quantum ESPRESSO and Wannier90). 
 
 We show below a few examples on how to submit Yambo calculations using AiiDA.
 
@@ -28,16 +29,27 @@ Installation
 
    installation
 
+A script-based tutorial and a jupyter-based tutorial
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-First steps: DFT to Yambo initialization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In the following, we will show how to run calculations for bulk hBN using scripts, 
+launching them from the command line; 
+these can be found in the examples/examples_hBN folder.
+However, we prepared also an interactive and self-explained version of the tutorial, based on jupyter 
+notebooks. This time, the studied system will be the bulk Silicon, as you can see in the examples/examples_Silicon folder. 
+(In this latter version, we will make use of the protocol automatic 
+inputs generation, still an experimental features for MBPT simulations within Yambo.)
+
+
+First steps: ground state properties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
    dft_p2y
    
-Plugin tutorial: a G0W0 calculation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A first G0W0 calculation
+^^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 

@@ -300,12 +300,22 @@ def main(options):
     except:
         pass
 
-    builder.QP_subset_dict= Dict(dict={
-                                            'qp_per_subset':20,
-                                            'parallel_runs':4,
-                                            'range_QP':5,
+    QP_subset_dict= {
+        'range_QP':6, #eV         , default=nscf_gap_eV*1.2
+        'range_spectrum':10, #eV
+
+    }
+
+    QP_subset_dict.update({
+        'split_bands':True, #default
+        'extend_QP': True, #default is False
+        'consider_only':[8,9],
+        'T_smearing':1e-2, #default
+        'qp_per_subset': 20,
+        'parallel_runs':4,
     })
 
+    builder.QP_subset_dict= Dict(dict=QP_subset_dict)
     builder.qp = builder.yres
 
     params_gw = {

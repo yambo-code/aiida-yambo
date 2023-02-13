@@ -19,6 +19,7 @@ def create_grid_1D(edges=[],delta=[],alpha=1/3,add = [],var=['BndsRnXp',],shift=
         for i in range(3):
             b_min[i] += shift*delta[i]
             b_max[i] += shift*delta[i]
+                
 
         A = b_min
         B = b_max
@@ -55,13 +56,16 @@ def create_grid_1D(edges=[],delta=[],alpha=1/3,add = [],var=['BndsRnXp',],shift=
         except:
             raise Exception(edges,delta)
 
+            
         A = b_min
         B = b_max
 
-        E = alpha*(b_max-b_min)+b_min
-        F = (1-alpha)*(b_max-b_min)+b_min
+        E = alpha*(B-A)+A
+        F = (1-alpha)*(B-A)+A
+        
+        print(E,F)
 
-        space_b = np.arange(b_min, b_max+1,delta[0])
+        space_b = np.arange(A, B+1,delta[0])
 
         E = space_b[abs(space_b-E).argmin()]
         F = space_b[abs(space_b-F).argmin()]
@@ -155,36 +159,6 @@ class The_Predictor_1D():
         #print('Params',self.parameters)
         
     
-    def addplot_info_1D(self,fig,ax,
-                               x,y,
-                               marker='s',
-                               lw = 7,
-                               label='',
-                               just_points=False):       
-        
-        if not just_points:
-            ax.legend(fontsize=13)
-            dictionary_labels = {}
-
-            ax.set_xlabel(self.var[0],fontdict={'fontsize':20})
-            ax.tick_params(axis='both',labelsize=20)
-
-            ax.grid()
-
-            try:
-                if 'BndsRnXp' in self.var or 'GbndRnge' in self.var:
-                    l_ = list(set(self.result.BndsRnXp.values))
-                    l_.sort()
-                    #l__ = list(set(result.BndsRnXp.values))
-                    l__ = list(set(np.round(self.bb_Ry,0)))
-                    l__.sort()
-                    ax2 = ax.twiny()
-                    ax2.set_xticks(l_[::3])
-                    ax2.set_xbound(ax.get_xbound())
-                    ax2.set_xticklabels(l__[::3],fontdict={'size':20})
-                    ax2.set_xlabel('KS states (Ry)',fontdict={'size':20})
-            except:
-                pass
             
 ################################################################
 
@@ -217,8 +191,12 @@ class The_Predictor_1D():
             l = [1,2,3]
             for i in range(3):
                 if self.delta[i] != 0:
-                    l[i] = np.arange(np.min(self.p[:,i]),np.max(self.p[:,i])*10,self.delta[i])
-                    length = len(l[i])
+                    if i == 0:
+                        l[i] = np.arange(np.min(self.p[:,i]),np.max(self.p[:,i])*10,self.delta[i])
+                        length = len(l[i])
+                    else:
+                        l[i] = l[0]*(np.min(self.p[:,i])/np.min(self.p[:,0]))
+                        length = len(l[i])
                 else:
                     l[i] = 0 
             for i in range(3):
@@ -229,6 +207,7 @@ class The_Predictor_1D():
             self.kx_fit = l[0]
             self.ky_fit = l[1]
             self.kz_fit = l[2]
+
 
             l_min = min(len(l[0]),len(l[1]),len(l[2])) #this is needed to match if some kx,ky,kz created with np.arange have different lengths
             self.kx_fit = l[0][:l_min]
@@ -290,22 +269,6 @@ class The_Predictor_1D():
         self.Z_fit = f(self.X_fit,popt[0],popt[1])
         
         self.Zx_fit = fx(self.X_fit,popt[0])
-        
-        if plot:
-            lw=3
-            print('res min {}, res max {}'.format(min(self.res),max(self.res)))
-            fig,ax = plt.subplots(figsize=[8,8])
-            
-            ax.plot(self.X_fit,self.Z_fit,
-                    '-o',lw = lw,ms = 8,color='blue')
-
-            ax.plot(xdata,ydata,
-                    marker='o',ms=8,lw=0,color='black',label='simulations')
-            
-            ax.legend()
-                        
-            if save : plt.savefig('plot_fit_1D.png')
-
             
         return True
     
@@ -361,36 +324,22 @@ class The_Predictor_1D():
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var:
             self.next_step['GbndRnge'] = copy.deepcopy(self.next_step['BndsRnXp'])
         
-        if plot:
-            lw = 3
-            fig,ax = plt.subplots(figsize=[8,8])
-            
-            ax.plot(self.X_fit,self.Z_fit,
-                    '-o',lw = lw,ms = 8,color='grey',label='excluded points')
-            
-            ax.plot(self.X_fit[condition], self.Z_fit[condition],
-                                      marker='o',lw = lw,ms=8,
-                                      label='converged points',)
-            
-            ax.plot(self.parameters,self.r,
-                    marker='o',ms=8,lw=0,color='black',label='simulations')
-            
-            
-            ax.plot(conv_bands, conv_z,'red',
-                                      marker='o',ms=8,lw=0,
-                                      label='converged guess',
-                   )   
-            
-            ax.legend()
-            
-            if save : plt.savefig('plot_next_1D.png')
-        
         if self.var_[0] == 'kpoint_mesh':
             kx = self.kx_fit[self.X_fit==conv_bands]
+            A = self.starting_mesh[1]/self.starting_mesh[0]
+            B = self.starting_mesh[2]/self.starting_mesh[0]
             factor = (kx-self.starting_mesh[0])/self.delta[0]
             ky = factor*self.delta[1] + self.starting_mesh[1]
             kz = factor*self.delta[2] + self.starting_mesh[2]
-        
+            
+            #in order to get compatible kx,ky,kz with respect to the starting ones.
+            ky = int(kx*A + kx*A%1)
+            kz = int(kx*B + kx*B%1)
+
+            if self.delta[0] == 0: kx = 1
+            if self.delta[1] == 0: ky = 1            
+            if self.delta[2] == 0: kz = 1
+
             self.next_step[self.var_[0]] = [int(kx),int(ky),int(kz)]
         
             for k in range(3):
@@ -413,7 +362,7 @@ class The_Predictor_1D():
             abs(old_hints[self.what] - self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])][self.what].values[0])
             self.index = [int(self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])].index.values[0])]
 
-
+            explicit_gw_result=self.result[(self.result['kx']==old_hints['kpoint_mesh'][0])][self.what].values[0]
             print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))
 
             if old_hints['kpoint_mesh'][0] == self.next_step[self.var_[0]][0]:
@@ -426,7 +375,8 @@ class The_Predictor_1D():
             self.old_discrepancy = \
             abs(old_hints[self.what] - self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])][self.what].values[0])
             self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])].index.values[0])]
-
+            
+            explicit_gw_result=self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]])][self.what].values[0]
             print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))
 
             if old_hints[self.var_[0]] == self.next_step[self.var_[0]]:
@@ -435,7 +385,7 @@ class The_Predictor_1D():
                 self.point_reached = False
                 print('new point predicted.')
               
-        return
+        return explicit_gw_result
     
     
     def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis'):
@@ -486,7 +436,7 @@ class The_Predictor_1D():
                     old_hints = self.next_step
                     self.point_reached = True
                     
-                self.check_the_point(old_hints)
+                converged_value = self.check_the_point(old_hints)
 
                 if reference == 'extra':
                     reference = self.extra
@@ -506,5 +456,9 @@ class The_Predictor_1D():
             self.next_step['new_grid'] = True
         else:
             self.next_step['new_grid'] = False
+        
+        #converged:
+        if self.check_passed and self.point_reached: #set the value as the explicit GW computed one
+            self.next_step[self.what] = converged_value
 
         return True

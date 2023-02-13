@@ -2,61 +2,60 @@
 
 .. _my-ref-to-yambo-tutorial:
 
-First steps into MBPT calculations
-==================================
+First steps towards MBPT: ground state properties of hexagonal boron nitride
+============================================================================
 
 .. toctree::
    :maxdepth: 2
 
-The following tutorial shows how to run all the necessary steps to obtain a the databases needed to start a Yambo calculation.
-The starting point is a self-consistent calculation of the electronic density, and then a calculation of the electronic wavefunctions through
-a non-self-consistent DFT calculation. So, the first AiiDA plugin used here is the QuantumEspresso one. 
-Then, it is necessary to convert the results in Yambo-readable format, i.e. NetCDF format: this is done using the p2y executable, included in the
-yambo package and executed from the same yambo plugin. 
-In order to keep the tutorial light in terms of computational resources and time of execution, calculations are
-not fully converged with respect to parameters such as k-points, empty bands or G-vectors.
-The example here considers the bulk hexagonal boron nitride hBN. 
+The following part explains how to run the density functional theory (DFT) simulations, using as example
+the hexagonal boron nitride (hBN). 
+The starting point is a self-consistent field (SCF) calculation of the electronic density, 
+and then a calculation of the electronic wavefunctions through a non-self-consistent (NSCF) DFT calculation. 
+So, the first AiiDA plugin used here is the QuantumEspresso one. 
+
+A step-by-step guide for input creation and management is provided in the jupyter-notebook version of the tutorial for Silicon.
 
 SCF step (Quantum ESPRESSO)
 ----------------------------
 
-Using the AiiDA quantumespresso.pw plugin, we begin with submitting an SCF calculation.
+Using the aiida-quantumespresso plugin, we begin with the submission of an SCF calculation.
 We are going to use the ``pk`` of the SCF calculation in the next steps. Remember that the ``pk`` is the number that identifies the node in the AiiDA database. 
 We use the PwBaseWorkChain to submit a pw calculation, in such  a way to have automatic
 error handling and restarting from failed runs. 
 
-For details on how to use the quantumespresso.pw plugin, please refer to the respective documentation page. Remember to replace the codename
+For details on how to use the aiida-quantumespresso plugin, please refer to the corresponding documentation. Remember to replace the codename
 and pseudo-family with those configured in your AiiDA installation. NB: Yambo can be used only with norm-conserving pseudopotentials!
 
+The example script to run an scf calculation is the one contained in aiida_yambo/examples_hBN/ground_state/scf_baseWorkchain.py:
 
-.. include:: ../../../../examples/plugin/scf_baseWorkchain.py
+
+.. include:: ../../../../examples_hBN/ground_state/scf_baseWorkchain.py
    :literal:
 
-As you can notice, we use the "argparse" module to provide some inputs from the shell, like the code and the pseudos to be used in
+As you can notice, we use the "argparse" module to provide some inputs from the command line, like the code and the pseudos to be used in
 the simulation. In practice, the command to be run would be like:
 
 ::
 
-    verdi run name_of_the_script.py --code <pk of the pw code> --pseudo <name of the pseudofamily>
+    verdi run scf_baseWorkchain.py --code <pk of the pw code> --pseudo <name of the pseudofamily>
 
-this is just our choice to build the calculation, it is possible also to do it interactively (jupyter notebooks) or adapting the script to 
-have no input to provide.
-
+this is just one choice used to submit the calculation, it is possible also to do it interactively via jupyter notebooks, as shown in 
+the dedicated examples for silicon.
+ 
 NSCF step (Quantum ESPRESSO) for G0W0
 -------------------------------------
-Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation.
+Using the ``pk``  of the  SCF calculation, we now run a NSCF calculation as the starting point for the GW calculation. 
+Following the aiida_yambo/examples_hBN/ground_state/nscf_baseWorkchain.py example, we observe that the script is the same for the scf step, 
+except adding the following line: 
 
-.. include:: ../../../../examples/plugin/nscf_baseWorkchain.py
-   :literal:
+::
+   builder.pw.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
+where we are setting the ``pk``  of the  SCF calculation (options['parent_pk'], parsed from input with the argparse module).
+Moreover, the parameters dictionary now contains usual inputs for NSCF calculations, namely the correct 'calculation': 'nscf' and 
+'nbnd' parameters. 
 
-P2Y step (Yambo)
--------------------------------------
-Now we use the Yambo plugin to run the p2y code, converting the Quantum ESPRESSO files into a NetCDF Yambo database. The parent folder now
-should be the nscf one.
+::
 
-.. include:: ../../../../examples/plugin/yambo_p2y.py
-   :literal:
-
-The fundamental input that tells the plugin to only run a p2y calculation is the settings key ``INITALISE``: if True, the SAVE folder is created and initialized using the p2y and yambo executables. 
-An automatic procedure is implemented to decide what executables are needed to complete the calculation. 
+    verdi run nscf_baseWorkchain.py --code <pk of the pw code> --pseudo <name of the pseudofamily> --parent <scf pk>
