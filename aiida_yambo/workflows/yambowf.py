@@ -35,6 +35,12 @@ def sanity_check_QP(v,c,input_db,output_db,create=True):
     #v,c = 29,31
     v_cond = np.where((d.QP_table[0] == v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
     c_cond = np.where((d.QP_table[0] == c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+
+    #align to zero wrt to the maximum of valence... fixes the error in Fermi re-evaluation
+    #in the BSE RD/ndb.QP. for now.
+    d.QP_E[:,0] = d.QP_E[:,0] - np.max(d.QP_E[v_cond[0],0])
+
+    #fix with a fit
     fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0]],deg=1)
     fit_c = np.polyfit(d.QP_Eo[c_cond[0]],d.QP_E[c_cond[0]],deg=1)
     for i in wrong[0]:
