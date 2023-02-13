@@ -32,10 +32,12 @@ Installation
 A script-based tutorial and a jupyter-based tutorial
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In the following, we will show how to run calculations for bulk hBN using scripts, i.e. from the command line; 
+In the following, we will show how to run calculations for bulk hBN using scripts, 
+launching them from the command line; 
 these can be found in the examples/examples_hBN folder.
-However, we prepared also an interactive and self-explained version of tutorials, based on jupyter notebooks and the bulk Silicon, 
-in the examples/examples_Silicon folder. (In the latter version, we will make use of the protocol automatic 
+However, we prepared also an interactive and self-explained version of the tutorial, based on jupyter 
+notebooks. This time, the studied system will be the bulk Silicon, as you can see in the examples/examples_Silicon folder. 
+(In this latter version, we will make use of the protocol automatic 
 inputs generation, still an experimental features for MBPT simulations within Yambo.)
 
 
