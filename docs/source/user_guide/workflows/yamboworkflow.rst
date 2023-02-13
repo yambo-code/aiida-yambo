@@ -60,14 +60,14 @@ There are a lot of possibilities to run QP calculations, to be provided in the Q
                    ],
     }
 
-(3) provide boundaries for the bands to be computed: [k_i,k_f,b_i,b_f];
+(3) provide boundaries for the bands to be computed: [ki,kf,bi,bf];
 ::
    QP_subset_dict= {
         'boundaries':{
-            'k_i':1,    #default=1
-            'k_f':20,   #default=NK_ibz
-            'b_i':8,
-            'b_f':9,
+            'ki':1,    #default=1
+            'kf':20,   #default=NK_ibz
+            'bi':8,
+            'bf':9,
         },
     }
 
