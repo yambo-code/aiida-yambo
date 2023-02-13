@@ -701,7 +701,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     b_i=self.ctx.QP_subsets['boundaries']['bi']
                     b_f=self.ctx.QP_subsets['boundaries']['bf']
 
-                    self.ctx.QP_subsets['explicit'] = QP_list_merger([k_i,k_f,b_i,b_f],
+                    self.ctx.QP_subsets['subsets'] = QP_list_merger([[k_i,k_f,b_i,b_f]],
                                                                       self.ctx.QP_subsets['qp_per_subset'],
                                                                       consider_only=consider_only)
 
