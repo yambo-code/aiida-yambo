@@ -330,18 +330,33 @@ def main(options):
         'what': ['gap_'],
         'bands_nscf_update': 'full-step'},)
 
-
-    var_to_conv_dc =  [{'var':['BndsRnXp','GbndRnge'],'delta': [10,10], 'steps': 3, 'max_iterations': 3, \
-                                 'conv_thr': 1,'conv_window': 3},
-                       {'var':['NGsBlkXp'],'delta':[2], 'steps': 3, 'max_iterations': 6, \
-                                'conv_thr': 1,},
-                       {'var':['BndsRnXp','GbndRnge'],'delta': [10,10], 'steps': 3, 'max_iterations': 8, \
-                                 'conv_thr': 1,'conv_window': 3},
-                       {'var':['NGsBlkXp'],'delta': [2], 'steps': 3, 'max_iterations': 3, \
-                                'conv_thr':1,},  ]                
-    '''                   {'var':'kpoint_mesh','delta': [6,6,2], 'max_iterations': 3, \
-                                 'conv_thr': 0.5,},]
-    ''' 
+    #inputs for builder.parameters_space, see below
+    var_to_conv = [
+        {
+            'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
+            'start': [50, 50, 2],
+            'stop': [400, 400, 10],
+            'delta': [50, 50, 2],
+            'max': [1000, 1000, 36],
+            'steps': 6,
+            'max_iterations': 8,
+            'conv_thr': 1,
+            'conv_thr_units': 'eV',
+            'convergence_algorithm': 'new_algorithm_2D',
+        },
+        {
+            'var': ['kpoint_mesh'], 
+            'start': [6,6,2], 
+            'stop': [12,12,4], 
+            'delta': [1, 1, 1], #spacing along given RL directions for the evaluations of the Delta.
+            'max': [14,14,10], 
+            'steps': 4, 
+            'max_iterations': 4, 
+            'conv_thr': 25, 
+            'conv_thr_units': '%', 
+            'convergence_algorithm': 'new_algorithm_1D',
+            },
+            ] 
     
 
     dict_para_medium = {}
@@ -403,10 +418,10 @@ def main(options):
 
     builder.parallelism_instructions = parallelism_instructions_auto
 
-    for i in range(len(var_to_conv_dc)):
-        print('{}-th variable will be {}'.format(i+1,var_to_conv_dc[i]['var']))
+    for i in range(len(var_to_conv)):
+        print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 
-    builder.parameters_space = List(list = var_to_conv_dc)
+    builder.parameters_space = List(list = var_to_conv)
     
     return builder
     

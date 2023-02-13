@@ -118,39 +118,6 @@ def get_options():
 
 def main(options):
 
-    builder.code = load_code(options['yambocode_id'])
-    builder.preprocessing_code = load_code(options['yamboprecode_id'])
-
-    builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
-    
-    ###### creation of the YamboCalculation builder instance ######
-
-    builder = YamboCalculation.get_builder()
-    builder.metadata.options.max_wallclock_seconds = \
-            options['max_wallclock_seconds']
-    builder.metadata.options.resources = \
-            dict = options['resources']
-
-    if 'queue_name' in options:
-        builder.metadata.options.queue_name = options['queue_name']
-
-    if 'qos' in options:
-        builder.metadata.options.qos = options['qos']
-
-    if 'account' in options:
-        builder.metadata.options.account = options['account']
-
-    if 'prepend_text' in options:
-        builder.metadata.options.prepend_text = options['prepend_text']
-
-    
-    builder.settings = Dict(dict={
-            'INITIALISE': False, # if True, run only p2y and yambo initialization
-            'COPY_DBS': False,   # if True, copy the out folder of a previous yambo calculation
-            'COPY_SAVE': False,  # if True, copy the SAVE folder of a previous yambo calculation
-            'RESTART_YAMBO': False, # if True, soft-link the out folder of a previous yambo calculation
-        })
-
     ###### setting the gw parameters ######
 
     Dict = DataFactory('dict')
@@ -173,8 +140,35 @@ def main(options):
 
     params_gw = Dict(dict=params_gw)
 
+    ###### creation of the YamboCalculation ######
+
+    builder = YamboCalculation.get_builder()
+    builder.metadata.options.max_wallclock_seconds = \
+            options['max_wallclock_seconds']
+    builder.metadata.options.resources = \
+            dict = options['resources']
+
+    if 'queue_name' in options:
+        builder.metadata.options.queue_name = options['queue_name']
+
+    if 'qos' in options:
+        builder.metadata.options.qos = options['qos']
+
+    if 'account' in options:
+        builder.metadata.options.account = options['account']
+
+    if 'prepend_text' in options:
+        builder.metadata.options.prepend_text = options['prepend_text']
+
     builder.parameters = params_gw
 
+    builder.precode_parameters = Dict(dict={})
+    builder.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+
+    builder.code = load_code(options['yambocode_id'])
+    builder.preprocessing_code = load_code(options['yamboprecode_id'])
+
+    builder.parent_folder = load_node(options['parent_pk']).outputs.remote_folder
 
     return builder
 
@@ -183,4 +177,4 @@ if __name__ == "__main__":
     options = get_options()
     builder = main(options)
     running = submit(builder)
-    print("Submitted YamboCalculation with pk=< {} >".format(running.pk))
+    print("Submitted YamboCalculation; with pk=< {} >".format(running.pk))

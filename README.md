@@ -18,6 +18,11 @@ pip install -e yambo-aiida
 reentry scan
 ```
 
+# Tutorials:
+You can find tutorials at the documentation webpage (see above). These 
+are both in script-based version (examples/examples_hBN folder) and (jupyter-) notebook-based 
+version (examples/examples_Silicon folder).
+
 # License  
 The terms of the yambo-aiida license can be found in the LICENSE.txt file.
 

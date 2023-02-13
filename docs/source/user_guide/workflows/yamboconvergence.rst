@@ -201,3 +201,14 @@ in this way you can obtain something like:
     }
 
 You can also access from shell the results by executing the command ``verdi data dict show <pk-of-infos-node>``.
+
+The full convergence history can be parsed using the python Pandas library:
+::
+    import pandas as pd
+    history = run.outputs.history.get_dict()
+    history_table = pd.DataFrame(history)
+    history_table
+
+The final converged value being
+::
+    history_table[history_table['useful']==True]

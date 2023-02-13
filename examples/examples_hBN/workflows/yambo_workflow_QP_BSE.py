@@ -208,28 +208,34 @@ def main(options):
         },
     }
 
+    bse_params = {'arguments':['em1s','bse','bss','optics', 'dipoles',],
+                'variables':{
+                'BSEmod': 'resonant',
+                'BSKmod': 'SEX',
+                'BSSmod': 'd',
+                'Lkind': 'full',
+                'NGsBlkXs': [2, 'Ry'],
+                'BSENGBlk': [2, 'Ry'],
+                'Chimod': 'hartree',
+                'DysSolver': 'n',
+                'BEnSteps': [10,''],
+                #'BSEQptR': [[q,q],''],
+                #'BSEBands': [[v,c],''],
+                'BEnRange': [[0.0, 10.0],'eV'],
+                'BDmRange': [[0.1, 0.1],'eV'],
+                'BLongDir': [[1.0, 1.0, 1.0],''],
+                'LongDrXp': [[1.0, 1.0, 1.0],''],
+                'LongDrXd': [[1.0, 1.0, 1.0],''],
+                'LongDrXs': [[1.0, 1.0, 1.0],''],
+                'BndsRnXs': [[1,50], ''],
+                },}
 
-    params_gw = {
-        'arguments': [
-            'dipoles',
-            'HF_and_locXC',
-            'dipoles',
-            'gw0',
-            'ppa',],
-        'variables': {
-            'Chimod': 'hartree',
-            'DysSolver': 'n',
-            'GTermKind': 'BG',
-            'NGsBlkXp': [2, 'Ry'],
-            'BndsRnXp': [[1, 50], ''],
-            'GbndRnge': [[1, 50], ''],
-            'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
-
-    params_gw = Dict(dict=params_gw)
-
+    
 
     builder = YamboWorkflow.get_builder()
+
+    builder.yres.yambo.parameters = Dict(dict=bse_params)
 
 
     ##################scf+nscf part of the builder
@@ -281,12 +287,11 @@ def main(options):
     if 'account' in options:
         builder.yres.yambo.metadata.options.account = options['account']
 
-    builder.yres.yambo.parameters = params_gw
     builder.yres.yambo.precode_parameters = Dict(dict={})
     builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
     builder.yres.max_iterations = Int(2)
 
-    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM'])
+    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM','lowest_exciton','brightest_exciton'])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])
@@ -295,12 +300,44 @@ def main(options):
     except:
         pass
 
+    QP_subset_dict= {
+        'range_QP':6, #eV         , default=nscf_gap_eV*1.2
+        'range_spectrum':10, #eV
 
-    builder.QP_subset_dict= Dict(dict={
-                                            'qp_per_subset':20,
-                                            'parallel_runs':4,
-                                            'range_QP':5,
+    }
+
+    QP_subset_dict.update({
+        'split_bands':True, #default
+        'extend_QP': True, #default is False
+        'consider_only':[8,9],
+        'T_smearing':1e-2, #default
+        'qp_per_subset': 20,
+        'parallel_runs':4,
     })
+
+    builder.QP_subset_dict= Dict(dict=QP_subset_dict)
+    builder.qp = builder.yres
+
+    params_gw = {
+        'arguments': [
+            'dipoles',
+            'HF_and_locXC',
+            'dipoles',
+            'gw0',
+            'ppa',],
+        'variables': {
+            'Chimod': 'hartree',
+            'DysSolver': 'n',
+            'GTermKind': 'BG',
+            'NGsBlkXp': [2, 'Ry'],
+            'BndsRnXp': [[1, 50], ''],
+            'GbndRnge': [[1, 50], ''],
+            'QPkrange': [[[1, 1, 8, 9]], ''],}}
+
+
+    params_gw = Dict(dict=params_gw)
+    builder.qp.yambo.parameters = params_gw
+
 
     return builder
 

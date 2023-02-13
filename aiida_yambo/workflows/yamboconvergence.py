@@ -471,6 +471,10 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
             if self.ctx.workflow_manager['true_iter'] == [] and not 'converge_b_ratio' in self.ctx.hint.keys(): #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
+                    #self.report('hint: {}'.format(self.ctx.hint))
+                    self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
+                    self.ctx.extrapolated = self.ctx.hint.pop('extrapolation', None)
+                    self.ctx.infos.update(self.ctx.hint)
                     return 
 
             self.report(self.ctx.calc_manager)
