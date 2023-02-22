@@ -185,7 +185,9 @@ class YamboCalculation(CalcJob):
         if verbose_timing is not None:
             if not isinstance(verbose_timing, bool):
                 raise InputValidationError("T_VERBOSE must be " " a boolean")
-            
+        
+        iteration = settings.pop('ITERATION', None)
+
         parameters = self.inputs.parameters
 
         if not initialise:
@@ -390,7 +392,7 @@ class YamboCalculation(CalcJob):
         if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
-
+        
         if settings:
             raise InputValidationError(
                 "The following keys have been found in "

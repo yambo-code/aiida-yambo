@@ -353,8 +353,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         for override in [overrides_scf,overrides_nscf]:
             override['clean_workdir'] = override.pop('clean_workdir',False) #required to have a valid parent folder
             
-            if 'pseudo_family' in override.keys():
-                if 'PseudoDojo' in override['pseudo_family']: NLCC = True
+            #if 'pseudo_family' in override.keys():
+            #    if 'PseudoDojo' in override['pseudo_family']: NLCC = True
 
         try:
             pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))

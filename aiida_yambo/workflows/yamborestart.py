@@ -162,6 +162,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         if overrides:
             parameter_arguments_overrides = overrides.get('yambo', {}).get('parameters', {}).get('arguments', [])
             parameters['arguments'] += parameter_arguments_overrides
+            parameters['arguments'] = list(set(parameters['arguments']))
             
             parameter_variables_overrides = overrides.get('yambo', {}).get('parameters', {}).get('variables', {})
             parameters['variables'] = recursive_merge(parameters['variables'], parameter_variables_overrides)
@@ -300,6 +301,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         
         self.ctx.inputs.metadata.options = fix_time(self.ctx.inputs.metadata.options, self.ctx.iteration, self.inputs.max_walltime)
         self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)
         
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO', True) # to link the dbs in aiida.out 
@@ -321,6 +323,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()), sublevel='variables',pop_list= pop_list)
 
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)
         '''new_para = check_para_namelists(new_para, self.inputs.code_version.value)
         if new_para:
             self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
@@ -346,6 +349,8 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         if cpu_per_task(mpi/node) is already set to 1, we can increase the number of nodes,
         accordingly to the inputs permissions.
         """
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)
+        
         new_para, new_resources, pop_list  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
                                                 self.inputs.max_number_of_nodes, self.ctx.iteration)
         self.ctx.inputs.metadata.options.resources = new_resources
@@ -362,7 +367,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
             #self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'RESTART_YAMBO',True) # to link the dbs in aiida.out
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                     
 
         self.report_error_handled(calculation, 'memory error detected, so we change mpi-openmpi balance and set PAR_def_mode= "balanced"')
         return ProcessHandlerReport(True)
@@ -375,12 +380,13 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         """
 
         #self.ctx.inputs.metadata.options.prepend_text = "export OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
-
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)
+        
         if calculation.outputs.output_parameters.get_dict()['yambo_wrote_dbs']:
             corrupted_fragment = calculation.outputs.output_parameters.get_dict()['corrupted_fragment']
             self.ctx.inputs.parent_folder = calculation.outputs.remote_folder
             self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nrm aiida.out/"+str(corrupted_fragment)
-            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                   
+            self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_DBS', True)                     
 
         self.report_error_handled(calculation, 'Variable NOT DEFINED error detected, so we restart and recompute the corrupted fragment')
         return ProcessHandlerReport(True)
