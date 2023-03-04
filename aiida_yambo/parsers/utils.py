@@ -209,11 +209,12 @@ def parse_scheduler_stderr(stderr, output_params):
     m3 = re.compile('dumped')
     t1 = re.compile('walltime')
     t2 = re.compile('time')
+    t3 = re.compile('TIME')
     for line in stderr.readlines():
         if m1.findall(line) or m1_1.findall(line) or m2.findall(line) or m3.findall(line):
             output_params['memory_error'] = True
             output_params['errors'].append('memory_general') 
-        elif t1.findall(line) or t2.findall(line):
+        elif t1.findall(line) or t2.findall(line) or t3.findall(line):
             output_params['time_error'] = True
 
 def yambo_wrote_dbs(output_params):
