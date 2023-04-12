@@ -593,16 +593,16 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     final_result = {}
     
     if 'new_algorithm' in calc_manager['convergence_algorithm']:
-        workflow_dict['workflow_story'].at[:,'useful']=False
+        workflow_dict['workflow_story'].loc[:,'useful']=False
         print(oversteps)
         if success == 'new_grid': 
             return {}
         elif success:
-            workflow_dict['workflow_story'].at[oversteps[0],'useful']=True
+            workflow_dict['workflow_story'].loc[oversteps[0],'useful']=True
     else:
         for i in oversteps: 
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['workflow_story']['uuid']==i].index
-            workflow_dict['workflow_story'].at[gs,'useful']=False
+            workflow_dict['workflow_story'].loc[gs,'useful']=False
     
     if len(oversteps)>0 and calc_manager['convergence_algorithm']=='dummy':
         for i in range(calc_manager['iter']*(calc_manager['steps']-calc_manager['skipped'])-len(oversteps)):
@@ -610,8 +610,8 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['uuid']==i].index
-            workflow_dict['workflow_story'].at[gs,'failed']=True
-            workflow_dict['workflow_story'].at[gs,'useful']=False
+            workflow_dict['workflow_story'].loc[gs,'failed']=True
+            workflow_dict['workflow_story'].loc[gs,'useful']=False
 
     #try:
     if len(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)]) > 0:
