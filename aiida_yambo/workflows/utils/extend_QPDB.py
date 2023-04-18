@@ -35,7 +35,7 @@ def build_ndbQP(db_path,DFT_pk,Nb=[1,1],Nk=1,verbose=False):
     pw = find_pw_parent(load_node(DFT_pk))
     bands = pw.outputs.output_band.get_bands()
     kpoints = pw.outputs.output_band.get_kpoints().reshape(3,Nk)
-    kpoints = db.QP_kpts.data[:]
+    #kpoints = db.QP_kpts.data[:]
     fermi = pw.outputs.output_parameters.get_dict()['fermi_energy']
     print('Fermi=',fermi)
     
@@ -50,8 +50,8 @@ def build_ndbQP(db_path,DFT_pk,Nb=[1,1],Nk=1,verbose=False):
     
     v_cond = np.where((db.QP_table[0] == v) & (abs(db.QP_E[:,0]-db.QP_Eo[:])*units.Ha<5))
     c_cond = np.where((db.QP_table[0] == c) & (abs(db.QP_E[:,0]-db.QP_Eo[:])*units.Ha<5))
-    fit_v = np.polyfit(db.QP_Eo[v_cond[0]],db.QP_E[v_cond[0]],deg=1)
-    fit_c = np.polyfit(db.QP_Eo[c_cond[0]],db.QP_E[c_cond[0]],deg=1)
+    fit_v = np.polyfit(db.QP_Eo[v_cond[0]],db.QP_E[v_cond[0],0],deg=1)
+    fit_c = np.polyfit(db.QP_Eo[c_cond[0]],db.QP_E[c_cond[0],0],deg=1)
     
     QP = np.zeros((Nk*len(Nb),2))
     Z = np.zeros((Nk*len(Nb),2))
@@ -101,7 +101,7 @@ def Apply_FD_scissored_correction(start,corrections,scissor,mu,e_ref=0,T=1e-6,un
     e_ref = e_ref/unit
     return FD_even(start,mu,e_ref,T)*(corrections+start)+(1-FD_even(start,mu,e_ref,T))*(start*scissor[0]+scissor[1])
 
-def update_FD_and_scissor(db_dft,db_gw,conduction,mu,scissors=[[1,0],[1,0]],e_ref=0,T=1e-6,verbose=False):
+def update_FD_and_scissor(db_dft,db_gw,conduction,mu,scissors=[[1,0],[1,0]],e_ref=0,T=1e-6,verbose=False,full_bands=True):
     '''
     update with FD*realGW for the region of interest, then scissor(DFT) for the 
     outside region. 
@@ -129,14 +129,19 @@ def update_FD_and_scissor(db_dft,db_gw,conduction,mu,scissors=[[1,0],[1,0]],e_re
         b24 = np.where((db_dft.QP_table[0].isin([b]))  & (db_dft.QP_table[2].isin([k]))) 
 
         corr = dss.QP_E.data[b24,0]- dss.QP_Eo.data[b24]
-               
+        
+
         if b<conduction:
             corr[0] = Apply_FD_scissored_correction(dss.QP_Eo.data[b24],corr,scissors[0],mu,e_ref,T)
         else:
             corr[0] = Apply_FD_scissored_correction(dss.QP_Eo.data[b24],corr,scissors[1],mu,e_ref,T)
-    
+
         dss.QP_E.data[b24,0] = corr[0]
-            
+    #align to zero wrt to the maximum of valence... fixes the error in Fermi re-evaluation
+    #in the BSE RD/ndb.QP. for now.
+    v_cond = np.where(dss.QP_table[0] == conduction-1)
+    #dss.QP_E[:,0] = dss.QP_E[:,0] - np.max(ds.QP_E[v_cond[0],0])
+
     return dss
 
 def FD_and_scissored_db(out_db_path,pw,Nb,Nk,v_max,c_min,fit_v,fit_c,conduction,e_ref=None,mu=None,T=1e-2):

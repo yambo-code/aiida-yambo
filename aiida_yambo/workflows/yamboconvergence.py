@@ -438,7 +438,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
     def data_analysis(self):
         
-        self.report('Data analysis, we will try to parse some result and decide what next')
+        self.report('Data analysis, we will try to parse some result and decide what next.')
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)

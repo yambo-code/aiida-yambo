@@ -266,6 +266,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         :param action: a string message with the action taken
         """
         arguments = [calculation.process_label, calculation.pk, calculation.exit_status, calculation.exit_message]
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)
         self.report('{}<{}> failed with exit status {}: {}'.format(*arguments))
         self.report('Action taken: {}'.format(action))
 
@@ -280,13 +281,14 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
             return ProcessHandlerReport(True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
    
     @process_handler(priority = 590, exit_codes = [YamboCalculation.exit_codes.NO_SUCCESS])
-    def _handle_walltime_error(self, calculation):
+    def _handle_unknown_error(self, calculation):
         """
         Handle calculations for an unknown reason; 
         we copy the SAVE already created, if any.
         """
         
-        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_SAVE', True)                   
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'COPY_SAVE', True)
+        self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)                   
         
         self.report_error_handled(calculation, 'Trying to copy the SAVE folder and restart')
         return ProcessHandlerReport(True)

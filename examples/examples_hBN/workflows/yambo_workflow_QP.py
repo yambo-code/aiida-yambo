@@ -356,15 +356,17 @@ def main(options):
     
     for (2) and (4) there are additional options:
         (a) 'split_bands': split also in bands, not only kpoints the subset. default is True.
-        (b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed
-            as FD+scissored corrections (see paper HT M Bonacci et al. 2023). Useful in G0W0 interpolations
+        (b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed, introduced
+            here as FD+scissored corrections (see paper HT M Bonacci et al. 2023). Useful in G0W0 interpolations
             e.g. within the aiida-yambo-wannier90 plugin.
             (b.1) 'consider_only': bands to be only considered explcitely, so the other ones are deleted from the explicit subsets;
             (b.2) 'T_smearing': the fake smearing temperature of the correction.
+            (b.3) 'Nb': n, #number of bands to be included in the final extended QP db(from 1st to nth)
 
     QP_subset_dict.update({
         'split_bands':True, #default
         'extend_QP': True, #default is False
+        'Nb': n, #number of bands to be included in the final extended QP db(from 1st to nth)
         'consider_only':[8,9],
         'T_smearing':1e-2, #default
     })

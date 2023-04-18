@@ -29,16 +29,31 @@ SingleFileData = DataFactory('singlefile')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
+def clean(node):
+    cleaned_calcs = []
+
+    for called_descendant in node.called_descendants:
+        if isinstance(called_descendant, orm.CalcJobNode):
+                try:
+                    if not called_descendant.is_finished_ok:
+                        called_descendant.outputs.remote_folder._clean()  # pylint: disable=protected-access
+                        cleaned_calcs.append(called_descendant.pk)
+                except:
+                    pass
+
+    if cleaned_calcs:
+        return "cleaned remote folders of calculations: {}".format(join(map(str, cleaned_calcs)))
+
 def sanity_check_QP(v,c,input_db,output_db,create=True):
     d = xarray.open_dataset(input_db,engine='netcdf4')
     wrong = np.where(abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha>5)
     #v,c = 29,31
-    v_cond = np.where((d.QP_table[0] == v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
-    c_cond = np.where((d.QP_table[0] == c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+    v_cond = np.where((d.QP_table[0] <= v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+    c_cond = np.where((d.QP_table[0] >= c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
 
     #fix with a fit
-    fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0]],deg=1)
-    fit_c = np.polyfit(d.QP_Eo[c_cond[0]],d.QP_E[c_cond[0]],deg=1)
+    fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0],0],deg=1)
+    fit_c = np.polyfit(d.QP_Eo[c_cond[0]],d.QP_E[c_cond[0],0],deg=1)
     for i in wrong[0]:
         print(d.QP_Eo[i].data*units.Ha,d.QP_E[i,0].data*units.Ha)
         if d.QP_table[0,i]>v:
@@ -67,8 +82,8 @@ def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have some
         qp_rules = qp_settings.get_dict()
 
         if SOC:
-            valence = int(nelectrons) - 1
-            conduction = valence + 2
+            valence = int(nelectrons)
+            conduction = valence + 1
         else:
             valence = int(nelectrons/2) + int(nelectrons%2)
             conduction = valence + 1
@@ -98,7 +113,7 @@ def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have 
         qp_rules = qp_settings.get_dict()
 
         if SOC:
-            valence = int(nelectrons) - 1
+            valence = int(nelectrons)
             conduction = valence + 2
         else:
             valence = int(nelectrons/2) + int(nelectrons%2)
@@ -112,10 +127,12 @@ def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have 
                     'extend_db':True,
                     ''T_smearing': 1e-2, #smearing for the FD corrections...see the paper MBonacci et al. Towards HT... 
                     'consider_only':[v_min,c_max]
+                    'Nb': n, #number of bands to be included in the extended QP db (from 1st to nth)
                     -->'v_min':, #used to evaluate v_max energy and v_min that you want to compute explicitly
                     --->'c_max':, #used to evaluate c_min energy and c_max that you want to compute explicilty
                 }
             """
+            qp_rules['Nb'] = qp_rules.pop('Nb',conduction + valence)
             db_FD_scissored = FD_and_scissored_db(out_db_path=qp_fixed,pw=pw,Nb=qp_rules['Nb'],Nk=nk,v_max=min(qp_rules['consider_only']),c_min=max(qp_rules['consider_only']),fit_v=fit_v[0],
                    fit_c=fit_c[0],conduction=conduction,T=qp_rules.pop('T_smearing',1e-2))
             db_FD_scissored.to_netcdf(output_name.replace('fixed','extended'))
@@ -262,6 +279,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         spec.input("parent_folder", valid_type=RemoteData, required = False,
                     help = 'scf, nscf or yambo remote folder')
+        
+        spec.input("clean_failed", valid_type=Bool, default=lambda: Bool(False))
   
 
 ##################################### OUTLINE ####################################
@@ -293,6 +312,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.output('scissor', valid_type = List, required = False)
 
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
+                             message='The workchain failed with an unrecoverable error.')
+        spec.exit_code(301, 'ERROR_SPLITTED_QP_FAILED',
                              message='The workchain failed with an unrecoverable error.')
     
     @classmethod
@@ -748,9 +769,16 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         return False
 
     def run_post_process(self):
+        
+        #check if all QP splitted calculations were ok:
+        for splitted in self.ctx.splitted_QP:
+            if not load_node(splitted).is_finished_ok:
+                self.report('some splitted QP failed, exiting... ')
+                return self.exit_codes.ERROR_SPLITTED_QP_FAILED
         #merge
         self.report('run merge QP')
         splitted = store_List(self.ctx.splitted_QP)
+        
         self.out('splitted_QP_calculations', splitted)
         output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
         
@@ -851,6 +879,13 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.out_many(self.exposed_outputs(calc,YamboRestart))
                 
             self.report("workflow completed successfully")
+            if self.inputs.clean_failed: 
+                message = clean(calc.caller)
+                self.report(message)
         else:
             self.report("workflow NOT completed successfully")
+            #message = clean(calc.caller)
+            #self.report(message)
             return self.exit_codes.ERROR_WORKCHAIN_FAILED
+
+

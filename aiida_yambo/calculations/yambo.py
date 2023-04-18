@@ -64,7 +64,7 @@ class YamboCalculation(CalcJob):
         spec.input('metadata.options.logostring', valid_type=six.string_types, default="""
 #
 # Y88b    /   e           e    e      888~~\    ,88~-_
-#  Y88b  /   d8b         d8b  d8b     888   |  d888   \
+#  Y88b  /   d8b         d8b  d8b     888   |  d888   \\
 #   Y88b/   /Y88b       d888bdY88b    888 _/  88888    |
 #    Y8Y   /  Y88b     / Y88Y Y888b   888  \  88888    |
 #     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /
@@ -373,7 +373,7 @@ class YamboCalculation(CalcJob):
         #logic of the execution
         #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]   
         try:
-            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns_db1_path', None)
+            parent_save_path = parent_calc.outputs.output_parameters.get_dict().pop('ns_db1_path', None)
         except:
             parent_save_path = None
 

@@ -617,8 +617,11 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     if len(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)]) > 0:
         last_ok_uuid = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['uuid']
         #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
-        start_from_converged(inputs, last_ok_uuid,mesh='kpoint_mesh' in calc_manager['var'])
-    
+        mesh = 'kpoint_mesh' in calc_manager['var'] or 'kpoint_density' in calc_manager['var']
+        start_from_converged(inputs, last_ok_uuid,mesh=mesh)
+        if 'kpoint_density' in calc_manager['var']:
+            calc_manager['kdensity'] = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['kpoint_density']
+
         if 'kpoint_mesh' in calc_manager['var'] or 'kpoint_density' in calc_manager['var']:
             set_parent(inputs, load_node(last_ok_uuid)) 
     else: 
