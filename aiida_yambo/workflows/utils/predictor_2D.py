@@ -422,7 +422,7 @@ class The_Predictor_2D():
         if not self.check_passed:
             self.point_reached = False
             self.next_step = {'new_grid':True}
-            return 'd'+2
+            return
         else:
             self.determine_next_calculation(plot=plot, colormap=colormap,save=save_next,reference=reference)
         
