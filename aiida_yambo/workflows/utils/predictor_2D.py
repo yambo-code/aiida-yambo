@@ -245,36 +245,6 @@ class The_Predictor_2D():
 
        
         self.gradient_angle = popt[0]*popt[2]*np.sign(self.Z_fit[-1,-1])
-
-        
-        if plot:
-            lw=10
-            #print('res min {}, res max {}'.format(min(self.res),max(self.res)))
-            fig,ax = plt.subplots(figsize=[8,8])
-            
-            self.plot_scatter_contour_2D(fig,ax,
-                                      self.X_fit,self.Y_fit,self.Z_fit,
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = lw,
-                                      colormap=colormap,
-                                      just_points=True,bar=True)
-            
-            #self.plot_scatter_contour_2D(fig,ax,
-            #                          getattr(self,self.var_[0]), getattr(self,self.var_[1]),self.res,
-            #                          vmin=min(self.res),vmax=max(self.res),
-            #                          marker='o',lw = 7,
-            #                          colormap=colormap,label='all simulations',
-            #                          just_points=True)
-            
-            self.plot_scatter_contour_2D(fig,ax,
-                                      xdata[0],xdata[1],'black',
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = lw,
-                                      colormap=colormap,label='simulations',
-                                      just_points=False)
-                        
-            if save : plt.savefig('plot_fit.png')
-
             
         return True
     
@@ -335,42 +305,6 @@ class The_Predictor_2D():
         if 'BndsRnXp' in self.var and 'GbndRnge' in self.var and len(self.var) > 2:
             self.next_step['GbndRnge'] = copy.deepcopy(self.next_step['BndsRnXp'])
         
-        if plot:
-            lw = 10
-            fig,ax = plt.subplots(figsize=[8,8])
-            
-            self.plot_scatter_contour_2D(fig,ax,
-                                      self.X_fit,self.Y_fit,'grey',
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = lw,
-                                      colormap=colormap,label='excluded points',
-                                      just_points=True)
-            
-            self.plot_scatter_contour_2D(fig,ax,
-                                      self.X_fit[condition], self.Y_fit[condition],self.Z_fit[condition],
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = lw,
-                                      colormap=colormap,
-                                      label='converged points',
-                                      just_points=True,bar = True)
-            
-            self.plot_scatter_contour_2D(fig,ax,
-                                      self.parameters[0,:], self.parameters[1,:],'black',
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = lw,
-                                      colormap=colormap,
-                                      just_points=True)  
-            
-            
-            self.plot_scatter_contour_2D(fig,ax,
-                                      conv_bands, conv_G,'red',
-                                      vmin=min(self.res),vmax=max(self.res),
-                                      marker='o',lw = lw,
-                                      colormap=colormap,label='cheapest point',
-                                      just_points=False)   
-            
-            if save : plt.savefig('plot_next.png')
-        
         self.next_step['E_ref'] = reference
         print(self.next_step)
 
@@ -383,12 +317,6 @@ class The_Predictor_2D():
         
         self.index = [int(self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
             (self.result[self.var_[1]]==old_hints[self.var_[1]])].index.values[0])]
-        
-        
-        print('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL')
-        print(old_hints)
-        print(self.next_step)
-        print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
 
         print('Discrepancy with old prediction: {} eV'.format(self.old_discrepancy))
             
@@ -397,8 +325,12 @@ class The_Predictor_2D():
         else:
             self.point_reached = False
             print('new point predicted.')
-              
-        return
+        
+
+        explicit_gw_result=self.result[(self.result[self.var_[0]]==old_hints[self.var_[0]]) & \
+            (self.result[self.var_[1]]==old_hints[self.var_[1]])][self.what].values[0]
+
+        return explicit_gw_result
     
     
     def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis',thr_fx=5e-5,thr_fy=5e-5,thr_fxy=1e-8):
@@ -448,7 +380,9 @@ class The_Predictor_2D():
                 if self.next_step['already_computed']: 
                     old_hints = self.next_step
                     self.point_reached = True
-                self.check_the_point(old_hints)
+
+                converged_value = self.check_the_point(old_hints)
+                
                 if reference == 'extra':
                     reference = self.extra
                 else:
@@ -472,5 +406,9 @@ class The_Predictor_2D():
             self.next_step['new_grid'] = True
         else:
             self.next_step['new_grid'] = False
+
+        #converged:
+        if self.check_passed and self.point_reached: #set the value as the explicit GW computed one
+            self.next_step[self.what] = converged_value
 
         return True

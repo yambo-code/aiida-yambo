@@ -184,7 +184,6 @@ class YamboParser(Parser):
             if 'ns.db1' in os.listdir(dirpath):
                 output_params['ns_db1_path'] = dirpath
 
-
             for filename in os.listdir(dirpath):
                 
                 if 'stderr' in filename:
@@ -194,9 +193,7 @@ class YamboParser(Parser):
                 elif 'ndb.BS_diago' in filename: #BSE in AiiDA 2.x still not supported
                     q, chi, excitonic_states = parse_BS(dirpath+'/',
                                                                 filename,
-                                                                output_params['ns_db1_path'])
-
-            
+                                                                output_params['ns_db1_path'])            
             
             try:
                 results = YamboFolder(dirpath)
@@ -258,22 +255,6 @@ class YamboParser(Parser):
             
             yambo_wrote_dbs(output_params)
 
-            # we store  all the information from the ndb.* files rather than in separate files
-            # if possible, else we default to separate files. #to check MB
-            if ndbqp and ndbhf:  #
-                self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
-            else:
-                if ndbqp:
-                    self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
-                if ndbhf:
-                    self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
-            
-            if chi:  #
-                self.out(self._ndb_CHI_linkname,self._aiida_array(chi))
-            
-            if excitonic_states:  #
-                self.out(self._ndb_EXC_linkname,self._aiida_array(excitonic_states))
-
         if output_params['game_over']:
             success = True
         elif output_params['p2y_completed'] and initialise:
@@ -284,7 +265,7 @@ class YamboParser(Parser):
                   / float(output_params['requested_time'])
         
         if success == False:
-            if delta_time > -2 and delta_time < 0.1:
+            if delta_time > -2 and delta_time < 0.16:
                     output_params['time_error']=True
 
         params=Dict(output_params)
@@ -292,7 +273,7 @@ class YamboParser(Parser):
 
         if success and 'gw0' in input_params['arguments'] and not ndbqp and not initialise:
             success = False
-        elif success and 'bse' in input_params['arguments'] and not chi and not initialise:
+        elif success and 'bse' in input_params['arguments'] and not initialise and not (chi or eels_array or eps_array or alpha_array):
             success = False
 
         if success == False:
@@ -310,6 +291,33 @@ class YamboParser(Parser):
                 return self.exit_codes.MEMORY_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
+        
+        else: 
+            # we store  all the information from the ndb.* files rather than in separate files
+            # if possible, else we default to separate files. #to check MB
+            if ndbqp and ndbhf:  #
+                self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
+            else:
+                if ndbqp:
+                    self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
+                if ndbhf:
+                    self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
+            
+            if chi:  #
+                self.out(self._ndb_CHI_linkname,self._aiida_array(chi))
+            
+            if excitonic_states:  #
+                self.out(self._ndb_EXC_linkname,self._aiida_array(excitonic_states))
+
+    def _aiida_array_bse(self, data):
+        arraydata = ArrayData()
+        full = data.pop('0')
+        for i in data.keys():
+            for k in full.keys():
+                full[k].append(data[i][k][0])
+        for ky in full.keys():
+            arraydata.set_array(ky.replace('-','_').replace('`','_prime_').replace('/','_'), np.array(full[ky]))
+        return arraydata
 
     def _aiida_array(self, data):
         arraydata = ArrayData()

@@ -106,6 +106,14 @@ def get_options():
         default=None,
         help='account name')
 
+    parser.add_argument(
+        '--QP',
+        type=int,
+        dest='QP',
+        required=False,
+        default=0,
+        help='do you want to compute a set of QP?')
+
     args = parser.parse_args()
 
     ###### setting the machine options ######
@@ -115,6 +123,7 @@ def get_options():
         'pwcode_id': args.pwcode_id,
         'pseudo_family': args.pseudo_family,
         'max_wallclock_seconds': args.max_wallclock_seconds,
+        'QP':args.QP,
         'resources': {
             "num_machines": args.num_machines,
             "num_mpiprocs_per_machine": args.num_mpiprocs_per_machine,
@@ -296,11 +305,108 @@ def main(options):
         pass
 
 
-    builder.QP_subset_dict= Dict({
-                                            'qp_per_subset':2,
-                                            'parallel_runs':2,
-                                            'range_QP':5,
+    ############ QP JUNGLE ##################
+    '''
+    The idea is to split the QP calculation in several subsets, then merge it in a final database -- with yambopy functionalities.
+    There are a lot of possibilities to run QP calculations, to be provided in the QP_subset_dict input of the YamboWorkflow: 
+    
+    (1) provide subset of already wanted QP, already in subsets (i.e. already splitted);
+
+    QP_subset_dict= {
+        'subsets':[
+            [[1,1,8,9],[2,2,8,9]], #first subset
+            [[3,3,8,9],[4,4,8,9]], #second subset
+                   ],
+    }
+
+
+    (2) provide explicit QP, i.e. a list of single QP to be splitted;
+
+    QP_subset_dict= {
+        'explicit':[
+            [1,1,8,9],[2,2,8,9],[3,3,8,9],[4,4,8,9], #to be splitted
+                   ],
+    }
+
+    (3) provide boundaries for the bands to be computed: [ki,kf,bi,bf];
+
+    QP_subset_dict= {
+        'boundaries':{
+            'ki':1,    #default=1
+            'kf':20,   #default=NK_ibz
+            'bi':8,
+            'bf':9,
+        },
+    }
+
+    (4) provide a range of (DFT) energies where to consider the bands and the k-points to be computed, useful if we don't know the system;
+        of we want BSE for given energies -- usually, BSE spectra is well converged for 75% of this range. These are generated as 
+        explicit QP, then splitted.
+        It is possible to provide also: 'range_spectrum', which find the bands to be included in the BSE calculation, including the other bands 
+        outside the range_QP window as scissored -- automatically by yambo in the BSE calc. So the final QP will have 
+        rangeQP bands, but the BSE calc will have all the range_spectrum bands.
+        These ranges are windows of 2*range, centered at the Fermi level. 
+        If you set the key 'full_bands'=True, all the kpoints are included for each bands. otherwise, only the qp in the window.
+
+    QP_subset_dict= {
+        'range_QP':3, #eV         , default=nscf_gap_eV*1.2
+        'range_spectrum':10, #eV
+
+    }
+    
+    for (2) and (4) there are additional options:
+        (a) 'split_bands': split also in bands, not only kpoints the subset. default is True.
+        (b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed, introduced
+            here as FD+scissored corrections (see paper HT M Bonacci et al. 2023). Useful in G0W0 interpolations
+            e.g. within the aiida-yambo-wannier90 plugin.
+            (b.1) 'consider_only': bands to be only considered explcitely, so the other ones are deleted from the explicit subsets;
+            (b.2) 'T_smearing': the fake smearing temperature of the correction.
+            (b.3) 'Nb': n, #number of bands to be included in the final extended QP db(from 1st to nth)
+
+    QP_subset_dict.update({
+        'split_bands':True, #default
+        'extend_QP': True, #default is False
+        'Nb': n, #number of bands to be included in the final extended QP db(from 1st to nth)
+        'consider_only':[8,9],
+        'T_smearing':1e-2, #default
     })
+    
+    computation options: 
+
+    (a) 'qp_per_subset':20; #how many qp in each splitted subset.
+    (b) 'parallel_runs':4; to be submitted at the same time remotely. then the remote is deleted, as the qp is stored locally,
+    (c) 'resources':para_QP, #see below
+    (d) 'parallelism':res_QP, #see below
+    '''
+
+    para_QP = {}
+    para_QP['SE_CPU'] = '2 2 4'
+    para_QP['SE_ROLEs'] = 'q qp b'
+    res_QP = {
+                            'num_machines': 1,
+                            'num_mpiprocs_per_machine': 16,
+                            'num_cores_per_mpiproc': 1,
+                }
+    
+    
+    QP_subset_dict= {
+        'range_QP':10, #eV         , default=nscf_gap_eV*1.2
+        'full_bands':True,
+        'consider_only':[7,8,9,10], #eV
+        'qp_per_subset': 20,
+        'parallel_runs':4,
+
+    }
+    
+    QP_subset_dict.update({
+        'resources':res_QP, #default is the same as previous GW
+        'parallelism': para_QP, #default is the same as previous GW
+
+    })
+
+
+    if options['QP']:
+        builder.QP_subset_dict= Dict(dict=QP_subset_dict) #set this if you want to compute also QP after the single GW calculation.
 
     return builder
 

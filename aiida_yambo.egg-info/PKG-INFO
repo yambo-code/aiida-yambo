@@ -16,7 +16,6 @@ Classifier: Framework :: AiiDA
 Requires-Python: >=3.7
 Provides-Extra: docs
 Provides-Extra: pre-commit
-Provides-Extra: tests
 License-File: LICENSE.txt
 
 UNKNOWN

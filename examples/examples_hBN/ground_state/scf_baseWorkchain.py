@@ -111,7 +111,7 @@ def get_options():
 
 def main(options):
 
-    ###### setting the lattice structure ######
+    ###### setting the lattice structure of bulk hBN ######
 
     alat = 2.4955987320 # Angstrom
     the_cell = [[1.000000*alat,   0.000000,   0.000000],

@@ -330,8 +330,8 @@ def main(options):
         'what': ['gap_'],
         'bands_nscf_update': 'full-step'},)
 
-
-    var_to_conv_dc = [
+    #inputs for builder.parameters_space, see below
+    var_to_conv = [
         {
             'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
             'start': [10,10,1],
@@ -349,9 +349,9 @@ def main(options):
         },
         {
             'var': ['kpoint_mesh'], 
-            'start': [2,2,1], 
-            'stop': [5,5,4], 
-            'delta': [1, 1, 1], 
+            'start': [6,6,2], 
+            'stop': [12,12,4], 
+            'delta': [1, 1, 1], #spacing along given RL directions for the evaluations of the Delta.
             'max': [14,14,10], 
             'steps': 4, 
             'max_iterations': 4, 
@@ -422,10 +422,10 @@ def main(options):
 
     #builder.parallelism_instructions = parallelism_instructions_auto
 
-    for i in range(len(var_to_conv_dc)):
-        print('{}-th variable will be {}'.format(i+1,var_to_conv_dc[i]['var']))
+    for i in range(len(var_to_conv)):
+        print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 
-    builder.parameters_space = List(var_to_conv_dc)
+    builder.parameters_space = List(list = var_to_conv)
     
     return builder
     
