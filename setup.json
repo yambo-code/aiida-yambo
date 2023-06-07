@@ -15,7 +15,7 @@
     "version": "3.0.0",
     "extras_require": {
          "docs": [
-            "Sphinx",
+            "sphinx==1.4.8",
             "docutils",
             "sphinx_rtd_theme"
           ],
