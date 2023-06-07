@@ -160,7 +160,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         builder.ywfl = ywfl_builder._inputs(prune=True)
         ######### convergence settings
-
+        if protocol == 'molecule':
+            protocol = 'moderate'
+            
         if calc_type=='bse':
             builder.workflow_settings['what'] = ['lowest_exciton']
 
@@ -168,17 +170,17 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         builder.ywfl['nscf']['kpoints'] = KpointsData()
         builder.ywfl['nscf']['kpoints'].set_cell_from_structure(builder.ywfl['nscf']['pw']['structure'])
 
-        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kmesh_density']['max'],force_parity=True)
+        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kpoint_density']['max'],force_parity=True)
         k_end = builder.ywfl['nscf']['kpoints'].get_kpoints_mesh()[0]
         
-        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kmesh_density']['stop'],force_parity=True)
+        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kpoint_density']['stop'],force_parity=True)
         k_stop = builder.ywfl['nscf']['kpoints'].get_kpoints_mesh()[0]
 
-        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kmesh_density']['start'],force_parity=True)
+        builder.ywfl['nscf']['kpoints'].set_kpoints_mesh_from_density(meta_parameters['kpoint_density']['start'],force_parity=True)
         k_start = builder.ywfl['nscf']['kpoints'].get_kpoints_mesh()[0]
         
         k_delta = np.zeros(3,dtype='int64')
-        k_delta[np.where(builder.ywfl['nscf']['pw']['structure'].pbc)] = int(meta_parameters['kmesh_density']['delta'])
+        k_delta[np.where(builder.ywfl['nscf']['pw']['structure'].pbc)] = int(meta_parameters['kpoint_density']['delta'])
         k_delta = list(k_delta)
 
         ################ Bands
@@ -196,8 +198,8 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
 
         yambo_parameters = builder.ywfl['yres']['yambo']['parameters'].get_dict()
-        for b in ['BndsRnXp','GbndRnge']:
-            yambo_parameters['variables'][b] = [[1,b_start],'']
+        #for b in ['BndsRnXp','GbndRnge']:
+        #    yambo_parameters['variables'][b] = [[1,b_start],'']
         
         ################ G cutoff
         G_start=meta_parameters['G_vectors']['start']
@@ -205,7 +207,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         G_max=meta_parameters['G_vectors']['max']
         G_delta=meta_parameters['G_vectors']['delta']
 
-        yambo_parameters['variables']['NGsBlkXp'] = [G_start,'Ry']
+        #yambo_parameters['variables']['NGsBlkXp'] = [G_start,'Ry']
 
         ################ FFTGVecs
 
@@ -217,7 +219,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         #########################
 
-        builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
+        #builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
 
         builder.parameters_space =  List(list=[
             {
@@ -260,8 +262,8 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                         
                         ])
 
-        if protocol == 'molecule' or structure.pbc.count(True)==0:
-            builder.parameters_space = List(list=builder.parameters_space.get_list()[::2])
+        if structure.pbc.count(True)==0:
+            builder.parameters_space = List(list=builder.parameters_space.get_list()[::2]) #no k points.
         
         builder.workflow_settings = Dict(dict=inputs['workflow_settings'])
 
@@ -335,6 +337,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
         elif not self.ctx.calc_manager['success'] and \
                     self.ctx.calc_manager['iter'] > self.ctx.calc_manager['max_iterations']:
+            self.report('{} - {}'.format(self.ctx.calc_manager['iter'],self.ctx.calc_manager['max_iterations']))
             self.report('Workflow failed due to some failed calculation in the investigation of {}'.format(self.ctx.calc_manager['var']))
 
             return False
@@ -440,6 +443,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
         
+        self.report(quantities)
         errors = self.ctx.final_result.pop('errors')
         if errors: 
             self.ctx.none_encountered = True
@@ -467,6 +471,10 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
             if self.ctx.workflow_manager['true_iter'] == [] and not 'converge_b_ratio' in self.ctx.hint.keys(): #variables to be converged are finished
                     self.ctx.workflow_manager['fully_success'] = True
+                    #self.report('hint: {}'.format(self.ctx.hint))
+                    self.ctx.extrapolated = self.ctx.hint.pop('extra', None)
+                    self.ctx.extrapolated = self.ctx.hint.pop('extrapolation', None)
+                    self.ctx.infos.update(self.ctx.hint)
                     return 
 
             self.report(self.ctx.calc_manager)
@@ -527,7 +535,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 #self.report('workflow_manager_PS: {}'.format(self.ctx.workflow_manager['parameter_space']))
         #self.report(self.ctx.params_space)
 
-        
+        self.report(self.ctx.hint)
         self.ctx.workflow_manager['first_calc'] = False
         
     def report_wf(self):
@@ -536,6 +544,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
         if hasattr(self.ctx,'infos'): 
+            self.ctx.infos.pop('new_grid',0)
+            self.ctx.infos.pop('already_computed',0)
+            self.ctx.infos.pop('extrapolation_units',0)
             infos = store_Dict(self.ctx.infos)
             self.out('infos',infos)
         try:
@@ -722,6 +733,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                                                             ['GbndRnge','BndsRnXp'], [[[1,self.ctx.gwbands],''],[[1,self.ctx.gwbands],'']],sublevel='variables')
             #self.report(self.ctx.pre_inputs.yres.yambo.parameters.get_dict())
             self.ctx.pre_inputs.yres.yambo.settings = update_dict(self.ctx.pre_inputs.yres.yambo.settings, 'INITIALISE', True)
+                
             if hasattr(self.ctx.pre_inputs, 'additional_parsing'):
                 delattr(self.ctx.pre_inputs, 'additional_parsing')
 

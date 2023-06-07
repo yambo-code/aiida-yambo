@@ -161,8 +161,17 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
     messages = []
 
     yambo_bandsX = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+    yambo_bandsX_bse = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('BndsRnXs',[[0],''])[0][-1]
     yambo_bandsSc = workchain_inputs.yres.yambo.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
-    gwbands = max(yambo_bandsX,yambo_bandsSc)
+    yambo_bands_QP_X = 0
+    yambo_bands_QP_Sc = 0
+
+    if hasattr(workchain_inputs,'qp'):
+        yambo_bands_QP_X = workchain_inputs.qp.yambo.parameters.get_dict()['variables'].pop('BndsRnXp',[[0],''])[0][-1]
+        yambo_bands_QP_Sc = workchain_inputs.qp.yambo.parameters.get_dict()['variables'].pop('GbndRnge',[[0],''])[0][-1]
+
+
+    gwbands = max(yambo_bandsX,yambo_bandsSc,yambo_bandsX_bse,yambo_bands_QP_X,yambo_bands_QP_Sc)
     message_bands = 'GW bands are: {}'.format(gwbands)
     messages.append(message_bands)
     scf_params, nscf_params = None, None
@@ -402,7 +411,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
     lumo_k = mapping['lumo_k']
 
     for what in parsing_List:
-        if 1: #try:
+        try:
             if isinstance(what,list): 
                 key = what[0]
             else:
@@ -491,7 +500,7 @@ def additional_parsed(calc, additional_parsing_List, mapping): #post proc
                         parsed_dict[key] =  level_gw
                         parsed_dict[key+'_dft'] =  level_dft
             
-        #except:
+        except:
             #parsed_dict[key] =  False
             pass
     return parsed_dict
@@ -564,7 +573,7 @@ def QP_analyzer(pk,QP_db,mapping):
         'v_min':int(v_min.values),
         'c_max':int(c_max.values),
         'q_ind':l[0][1],
-        'candidate_for_BSE':gw_gap.values>=0,
+        'candidate_for_BSE':bool(gw_gap.values>=0),
         'gap_GW':np.round(gw_gap.values,4),
         'gap_DFT':np.round(dft_gap.values,4),
         'QP':QP_db.pk,

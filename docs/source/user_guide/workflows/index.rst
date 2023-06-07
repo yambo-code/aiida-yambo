@@ -1,38 +1,41 @@
 .. _sec.yambo_workflows:
 
-WorkChains for AiiDA-Yambo
+WorkChains for aiida-yambo
 --------------------------
 
 Description
 ^^^^^^^^^^^
-This plugin provides several workflows for performing automated MBPT with `Yambo`.
+The plugin provides several workflows for performing automated MBPT with `Yambo`.
 The following shows how to use the workflows provided by the  `aiida yambo` plugin.
 The hierarchy of the workflows can be represented from the following picture: 
 
-.. image:: ./images/del.png 
+.. figure:: ./images/Flow_plugin.png 
+    :width: 300px
+    :align: center
+    :height: 500px
 
-Simple YamboRestart workchain
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+YamboRestart
+^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
    yamborestart
 
-Complete YamboWorkflows
-^^^^^^^^^^^^^^^^^^^^^^^
+YamboWorkflow
+^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
    yamboworkflow
 
-YamboConvergence: automated convergence 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+YamboConvergence 
+^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
 
    yamboconvergence
 
-Protocols: automated inputs creation 
+Protocols: automated input creation 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 4
