@@ -1,5 +1,5 @@
-aiida-core>=1.6.4
+aiida-core>=2
 aiida-quantumespresso>=3.0.0a5
 sphinx==1.4.8
-jinja2~=2.10
+jinja2>=3
 yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy
