@@ -34,10 +34,11 @@
         "aiida_core[atomic_tools]>=1.6.4,<3",
         "aiida-quantumespresso>=3.0.0a6,<4.0",
        	"netcdf4",
-	    "h5py",
+	"h5py",
         "xarray==2022.3.0",
         "pandas==1.2.2",
         "numpy>=1.20.1",
+	"furo==2023.5.20",
         "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy"
         ],
     "python_requires": ">=3.7",
