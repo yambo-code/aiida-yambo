@@ -1,4 +1,3 @@
-aiida-core>=2
 aiida-quantumespresso>=3.0.0a5
 sphinx==1.4.8
 jinja2>=3
