@@ -3,5 +3,5 @@ aiida-quantumespresso>=3.0.0a5
 sphinx==1.4.8
 jinja2>=3
 xarray==2022.3.0
-pandas>=1.4
+pandas==2.0.0
 yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy
