@@ -33,6 +33,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'furo',
 ]
 
 intersphinx_mapping = {
@@ -56,7 +57,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'yambo-aiida'
+project = u'aiida-yambo'
 copyright = u'2015-{}, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and CNR NANO Modena, Italy. All rights reserved.'.format(
     time.localtime().tm_year)
 # The version info for the project you're documenting, acts as replacement for
@@ -321,6 +322,8 @@ else:
 #    settings.IN_DOC_MODE = True
 #    settings.BACKEND = "django"
 #    settings.AIIDADB_PROFILE = "default"
+
+html_theme = 'furo'
 
 # Warnings to ignore when using the -n (nitpicky) option
 # We should ignore any python built-in exception, for instance

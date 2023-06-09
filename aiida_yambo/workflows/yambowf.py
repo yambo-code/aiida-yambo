@@ -6,7 +6,7 @@ import time
 
 from aiida import orm
 from aiida.orm import RemoteData,BandsData
-from aiida.orm import Dict,Int,List
+from aiida.orm import Dict,Int,List,Bool
 from ase import units
 
 from aiida.engine import WorkChain, while_, if_
@@ -21,13 +21,15 @@ from aiida_yambo.workflows.yamborestart import YamboRestart
 from aiida_yambo.utils.defaults.create_defaults import *
 
 from aiida_yambo.workflows.utils.helpers_yambowf import *
+from aiida_yambo.workflows.utils.extend_QPDB import *
+
 from aiida.plugins import DataFactory
 LegacyUpfData = DataFactory('upf')
 SingleFileData = DataFactory('singlefile')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
-def sanity_check_QP(v,c,input_db,output_db):
+def sanity_check_QP(v,c,input_db,output_db,create=True):
     d = xarray.open_dataset(input_db,engine='netcdf4')
     wrong = np.where(abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha>5)
     #v,c = 29,31
@@ -42,19 +44,22 @@ def sanity_check_QP(v,c,input_db,output_db):
         else:
             d.QP_E[i,0] = fit_v[0,0]*d.QP_Eo[i]+fit_v[0,1]
     
-    d.to_netcdf(output_db)
+    if create: d.to_netcdf(output_db)
 
-    return output_db
+    return output_db,fit_v,fit_c
 
 @calcfunction
-def merge_QP(filenames_List,output_name,ywfl_pk): #just to have something that works, but it is not correct to proceed this way
+def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have something that works, but it is not correct to proceed this way
         ywfl = load_node(ywfl_pk.value)
-        fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
-        SOC = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['spin_orbit_calculation']
-        nelectrons = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['number_of_electrons']
-        kpoints = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
-        bands = find_pw_parent(ywfl).outputs.output_band.get_bands()
-        
+        pw = find_pw_parent(ywfl)
+        fermi = pw.outputs.output_parameters.get_dict()['fermi_energy']
+        SOC = pw.outputs.output_parameters.get_dict()['spin_orbit_calculation']
+        nelectrons = pw.outputs.output_parameters.get_dict()['number_of_electrons']
+        kpoints = pw.outputs.output_band.get_kpoints()
+        bands = pw.outputs.output_band.get_bands()
+        nk = pw.outputs.output_parameters.get_dict()['number_of_k_points']
+        qp_rules = qp_settings.get_dict()
+
         if SOC:
             valence = int(nelectrons) - 1
             conduction = valence + 2
@@ -69,11 +74,52 @@ def merge_QP(filenames_List,output_name,ywfl_pk): #just to have something that w
         print(string_run)
         os.system(string_run)
         time.sleep(10)
-        qp_fixed = sanity_check_QP(valence,conduction,output_name.value,output_name.value.replace('merged','fixed'))
+        qp_fixed,fit_v,fit_c = sanity_check_QP(valence,conduction,output_name.value,output_name.value.replace('merged','fixed'))
+
         QP_db = SingleFileData(qp_fixed)
         return QP_db
 
-def QP_mapper(ywfl,tol=1,full_bands=False):
+@calcfunction
+def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have something that works, but it is not correct to proceed this way
+        ywfl = load_node(ywfl_pk.value)
+        pw = find_pw_parent(ywfl)
+        fermi = pw.outputs.output_parameters.get_dict()['fermi_energy']
+        SOC = pw.outputs.output_parameters.get_dict()['spin_orbit_calculation']
+        nelectrons = pw.outputs.output_parameters.get_dict()['number_of_electrons']
+        kpoints = pw.outputs.output_band.get_kpoints()
+        bands = pw.outputs.output_band.get_bands()
+        nk = pw.outputs.output_parameters.get_dict()['number_of_k_points']
+        qp_rules = qp_settings.get_dict()
+
+        if SOC:
+            valence = int(nelectrons) - 1
+            conduction = valence + 2
+        else:
+            valence = int(nelectrons/2) + int(nelectrons%2)
+            conduction = valence + 1
+        output_name = QP._repository._repo_folder.abspath + '/path/ndb.QP_fixed'
+        qp_fixed,fit_v,fit_c = sanity_check_QP(valence,conduction,output_name,output_name,create=False)
+        if qp_rules.pop('extend_db', False):
+            """
+            In the qp settings dict, I should add:
+                {
+                    'extend_db':True,
+                    ''T_smearing': 1e-2, #smearing for the FD corrections...see the paper MBonacci et al. Towards HT... 
+                    'consider_only':[v_min,c_max]
+                    -->'v_min':, #used to evaluate v_max energy and v_min that you want to compute explicitly
+                    --->'c_max':, #used to evaluate c_min energy and c_max that you want to compute explicilty
+                }
+            """
+            db_FD_scissored = FD_and_scissored_db(out_db_path=qp_fixed,pw=pw,Nb=qp_rules['Nb'],Nk=nk,v_max=min(qp_rules['consider_only']),c_min=max(qp_rules['consider_only']),fit_v=fit_v[0],
+                   fit_c=fit_c[0],conduction=conduction,T=qp_rules.pop('T_smearing',1e-2))
+            db_FD_scissored.to_netcdf(output_name.replace('fixed','extended'))
+            
+            QP_db_extended = SingleFileData(output_name.replace('fixed','extended'))
+            return QP_db_extended
+
+
+
+def QP_mapper(ywfl,tol=1,full_bands=False,spectrum_tol=1):
     fermi = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['fermi_energy']
     SOC = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['spin_orbit_calculation']
     nelectrons = find_pw_parent(ywfl).outputs.output_parameters.get_dict()['number_of_electrons']
@@ -133,8 +179,11 @@ def QP_mapper(ywfl,tol=1,full_bands=False):
     plt.ylim(-0.25,0.25)
     
     print('Fermi level={} eV'.format(fermi))
+
+    b_min_scissored = np.where(abs(bands-mid_gap_energy)<spectrum_tol)[1].min()
+    b_max_scissored = np.where(abs(bands-mid_gap_energy)<spectrum_tol)[1].max()
     
-    return QP
+    return QP, [b_min_scissored,b_max_scissored]
 
 def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_per_subset):
     
@@ -148,44 +197,28 @@ def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_per_subset):
                 groups.append(L)
                 L=[]
     if len(L)>0:
-        groups.append(L)
+        if len(L[0])>0:
+            groups.append(L)
     return groups
 
-def QP_list_merger(l=[],qp_per_subset=10,from_kmapper=False):
-    ll=[]
-    lg = []
-    split = False
-    First = True
-    order=0
-    if from_kmapper:
-        d = []
-        bi = l[0][-2]
-        bf = l[0][-1]
-        if bf-bi <= qp_per_subset:
-            pass
-        else:
-            for i in range(bi,1+bf,qp_per_subset):
-                for j in l:
-                    o = [j[0],j[1],i,i+qp_per_subset-1]
-                    if o[-1]>bf: o[-1]=bf
-                    ll.append(o)
-     
-            return ll
-    for i in l:
-        #print(i,(i[1]-i[0]+1)*(i[3]-i[2]+1),order)
-        if First: 
-            lg.append(i)
-            First = False
-            order +=(i[1]-i[0]+1)*(i[3]-i[2]+1)
-        elif order + (i[1]-i[0]+1)*(i[3]-i[2]+1) < qp_per_subset:
-            lg.append(i)
-            order +=(i[1]-i[0]+1)*(i[3]-i[2]+1)
-        else:
-            ll.append(lg)
-            lg = [i]
-            order = (i[1]-i[0]+1)*(i[3]-i[2]+1) 
-    ll.append(lg)
-    return ll
+def QP_list_merger(l=[],qp_per_subset=10,consider_only=[-1]):
+    
+    subgroup = []
+    groups = []
+    for qp_set in l:
+        for k in list(range(qp_set[0],qp_set[1]+1)):
+            for b in list(range(qp_set[2],qp_set[3]+1)):
+
+                if (b in consider_only) or (consider_only[0]==-1):
+                    subgroup.append([k,k,b,b])
+                    if len(subgroup)==qp_per_subset:
+                        groups.append(subgroup)
+                        subgroup=[]
+
+    if len(subgroup)<=qp_per_subset and len(subgroup)>0:
+        groups.append(subgroup)
+            
+    return groups
 
 
 class YamboWorkflow(ProtocolMixin, WorkChain):
@@ -216,7 +249,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                             exclude = ['parent_folder'])
 
         spec.input("additional_parsing", valid_type=List, required = False,
-                    help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1], excitons: [lowest, brightes]')
+                    help = 'list of additional quantities to be parsed: gap, homo, lumo, or used defined quantities -with names-[k1,k2,b1,b2], [k1,b1], gap_GG, lowest_exciton')
         
         spec.input("QP_subset_dict", valid_type=Dict, required = False,
                     help = 'subset of QP that you want to compute, useful if you need to obtain a large number of QP corrections')
@@ -249,6 +282,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         spec.output('splitted_QP_calculations', valid_type = List, required = False)
         spec.output('merged_QP', valid_type = SingleFileData, required = False)
+        spec.output('extended_QP', valid_type = SingleFileData, required = False)
         
         spec.output('scissor', valid_type = List, required = False)
 
@@ -269,8 +303,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         pw_code,
         preprocessing_code,
         code,
-        protocol_qe='fast',
-        protocol='fast',
+        protocol_qe='moderate',
+        protocol='moderate',
         calc_type='gw',
         structure=None,
         overrides={},
@@ -281,6 +315,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         electronic_type=ElectronicType.METAL,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
+        pseudo_family = None,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -324,6 +359,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             overrides_yres['nelectrons'] = nelectrons
             overrides_yres['PW_cutoff'] = PW_cutoff
 
+        pseudo_family = inputs.pop('pseudo_family',None)
         #########SCF and NSCF PROTOCOLS 
         builder.scf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
@@ -333,6 +369,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
+                pseudo_family=pseudo_family,
                 )
 
         builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
@@ -343,6 +380,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
+                pseudo_family=pseudo_family,
                 )
 
         molecule = False
@@ -640,19 +678,39 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 mapping = gap_mapping_from_nscf(find_pw_parent(take_calc_from_remote(self.ctx.yambo_inputs['parent_folder'],level=-1)).pk)
                 self.ctx.mapping = mapping
 
+                split = self.ctx.QP_subsets.pop('split_bands',True)
+                consider_only = self.ctx.QP_subsets.pop('consider_only',[-1]) #[1,64], a range.
+                self.ctx.QP_subsets['consider_only'] = consider_only
+
                 if 'range_QP' in self.ctx.QP_subsets.keys(): #the name can be changed..
                     Energy_region = max(self.ctx.QP_subsets['range_QP'],mapping['nscf_gap_eV']*1.2)
                     self.report('range of energy for QP: {} eV'.format(Energy_region))
-                    self.ctx.QP_subsets['explicit'] = QP_mapper(self.ctx.calc,tol = Energy_region,full_bands=self.ctx.QP_subsets.pop('full_bands',False))
+                    self.ctx.QP_subsets['explicit'], self.ctx.QP_subsets['scissored'] = QP_mapper(self.ctx.calc,
+                                                                                                tol = Energy_region,
+                                                                                                full_bands=self.ctx.QP_subsets.pop('full_bands',False),
+                                                                                                spectrum_tol=self.ctx.QP_subsets.pop('range_spectrum',
+                                                                                                Energy_region))
+                if 'boundaries' in self.ctx.QP_subsets.keys():
+                    #self.ctx.QP_subsets['explicit'] = QP_subset_groups(k_i=self.ctx.QP_subsets['boundaries'].pop('ki',1),
+                    #                                                  k_f=self.ctx.QP_subsets['boundaries'].pop('kf',mapping['number_of_kpoints']),
+                    #                                                  b_i=self.ctx.QP_subsets['boundaries']['bi'],
+                    #                                                  b_f=self.ctx.QP_subsets['boundaries']['bf'],
+                    #                                                  )
+                    k_i=self.ctx.QP_subsets['boundaries'].pop('ki',1)
+                    k_f=self.ctx.QP_subsets['boundaries'].pop('kf',mapping['number_of_kpoints'])
+                    b_i=self.ctx.QP_subsets['boundaries']['bi']
+                    b_f=self.ctx.QP_subsets['boundaries']['bf']
+
+                    self.ctx.QP_subsets['subsets'] = QP_list_merger([[k_i,k_f,b_i,b_f]],
+                                                                      self.ctx.QP_subsets['qp_per_subset'],
+                                                                      consider_only=consider_only)
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
-                        split=False
-                        if 'split_bands' in self.ctx.QP_subsets.keys():
-                            split =  self.ctx.QP_subsets['split_bands']
-                        self.ctx.QP_subsets['subsets'] = QP_list_merger(self.ctx.QP_subsets['explicit'],self.ctx.QP_subsets['qp_per_subset'],from_kmapper=split)
-                    elif 'boundaries' in self.ctx.QP_subsets.keys():
-                        self.ctx.QP_subsets['subsets'] = QP_subset_groups(self.ctx.QP_subsets['boundaries'].pop('ki',1),self.ctx.QP_subsets['boundaries'].pop('kf',mapping['number_of_kpoints']),self.ctx.QP_subsets['boundaries']['bi'],self.ctx.QP_subsets['boundaries']['bf'],self.ctx.QP_subsets['qp_per_subset'])
+                        self.ctx.QP_subsets['subsets'] = QP_list_merger(self.ctx.QP_subsets['explicit'],
+                                                                        self.ctx.QP_subsets['qp_per_subset'],
+                                                                        consider_only=consider_only)
+
                 self.report('subsets: {}'.format(self.ctx.QP_subsets['subsets']))
 
             for i in range(1,1+self.ctx.QP_subsets['parallel_runs']):
@@ -689,9 +747,19 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         splitted = store_List(self.ctx.splitted_QP)
         self.out('splitted_QP_calculations', splitted)
         output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
-        self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk))
         
-        self.out('merged_QP',self.ctx.QP_db)
+        self.ctx.QP_subsets['extend_db'] = self.ctx.QP_subsets.pop('extend_db',False)
+
+        if self.ctx.QP_subsets['extend_db']:
+            self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
+            self.ctx.QP_db_extended = extend_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets),QP=self.ctx.QP_db)
+            self.out('merged_QP',self.ctx.QP_db)
+            self.report('run extend QP')
+            self.out('extended_QP',self.ctx.QP_db_extended)
+        else:
+            self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
+            self.out('merged_QP',self.ctx.QP_db)
+
 
         return
 
@@ -707,6 +775,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.ctx.yambo_inputs = self.exposed_inputs(YamboRestart, 'yres') 
         bse_params = self.ctx.yambo_inputs.yambo.parameters.get_dict()
 
+        if isinstance(self.ctx.QP_db,tuple): self.ctx.QP_db = self.ctx.QP_db[1]
+            
         self.ctx.yambo_inputs.yambo.QP_corrections = self.ctx.QP_db
         bse_params['variables']['KfnQPdb'] = "E < ./ndb.QP"
 
@@ -717,12 +787,16 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         self.ctx.BSE_map = BSE_map
 
         if not 'BSEBands' in bse_params['variables'].keys():
-            bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
+            if 'scissored' in self.ctx.QP_subsets.keys():
+                bse_params['variables']['BSEBands'] = [[self.ctx.QP_subsets['scissored'][0],self.ctx.QP_subsets['scissored'][1]],'']
+            else:
+                bse_params['variables']['BSEBands'] = [[BSE_map['v_min'],BSE_map['c_max']],'']
         if not 'BSEQptR' in bse_params['variables'].keys():
             bse_params['variables']['BSEQptR'] = [[BSE_map['q_ind'],BSE_map['q_ind']],'']
 
         self.ctx.yambo_inputs.yambo.parameters = Dict(dict=bse_params)
-        
+
+        self.ctx.yambo_inputs.metadata.call_link_label = 'BSE'
         future = self.submit(YamboRestart, **self.ctx.yambo_inputs)
 
         return ToContext(bse = future) 
@@ -749,7 +823,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     else:
                         self.report("workflow NOT completed successfully")
                         return self.exit_codes.ERROR_WORKCHAIN_FAILED
-                
+                self.report('PARSED: {}'.format(parsed))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
 
                 if 'scissor' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.

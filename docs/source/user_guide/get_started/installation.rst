@@ -2,13 +2,7 @@
 Getting the plugin
 ------------------
 
-The plugin can be installed from the Python Package Index (PyPI) using pip
-
-::
-
-    pip install aiida-yambo
-
-or downloaded from the official github repository
+The plugin can be downloaded from the official github repository
 
 ::
 
@@ -16,7 +10,16 @@ or downloaded from the official github repository
     cd aiida_yambo
     pip install -e aiida-yambo
 
-in order to successfully install the plugin, follow the relative AiiDA-core documentation.
+or installed from the Python Package Index (PyPI) using pip
+
+::
+
+    pip install aiida-yambo
+
+
+in order to successfully install the plugin, follow the related `AiiDA documentation`_.
+
+.. _AiiDA documentation : http://aiida-core.readthedocs.io/en/latest/index.html
 
 Setup Yambo on AiiDA
 ---------------------
@@ -58,8 +61,8 @@ To setup a code there is also the possibility to define a YAML-format file
 :: 
 
     ---
-    label: "yambo.4.5"
-    description: "yambo v4.5"
+    label: "yambo-5.1"
+    description: "yambo v5.1"
     input_plugin: "yambo.yambo"
     on_computer: true
     remote_abs_path: "path_to_yambo_folder/bin/yambo"
@@ -72,7 +75,8 @@ To setup a code there is also the possibility to define a YAML-format file
 
 To store the code, just type ``verdi code setup --config file.yml``.
 
-Tip: for SLURM schedulers, we suggest to set, in the computer(so, for all codes) or code(if you need case-sensitive) prepend text
+Tip: for SLURM schedulers we suggest to set, in the prepend text of the computer (so, for all codes) 
+or of the code (if you need case-sensitive) the following command:
 
 ::
 
@@ -80,5 +84,5 @@ Tip: for SLURM schedulers, we suggest to set, in the computer(so, for all codes)
 
 
 This will automatically set the right number of threads. For PBS/Torque, you need to set the 
-environment variable `OMP_NUM_THREADS `by using the custom_scheduler_commands in the options 
+environment variable `OMP_NUM_THREADS `by using the prepend_text key in the `options` python dictionary 
 of the calculation.  

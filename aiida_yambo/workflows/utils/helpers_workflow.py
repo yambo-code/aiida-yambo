@@ -54,7 +54,7 @@ def collect_inputs(inputs, kpoints, ideal_iter):
         for var in l:
             #print(var)
             if var not in starting_inputs.keys():
-                if 'mesh' in var:
+                if 'mesh' or 'density' in var:
                     starting_inputs[var] = kpoints.get_kpoints_mesh()[0]
                 else:
                     starting_inputs[var] = inputs['variables'][var]
