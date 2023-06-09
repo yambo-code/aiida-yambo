@@ -2,4 +2,5 @@ aiida-quantumespresso>=3.0.0a5
 sphinx==1.4.8
 versioneer
 versioneer[toml]
+Cython
 yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy
