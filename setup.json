@@ -36,7 +36,7 @@
        	"netcdf4",
 	"h5py",
         "xarray",
-        "pandas",
+        "pandas>=2",
         "numpy>=1.20.1",
 	"furo==2023.5.20",
         "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy"
