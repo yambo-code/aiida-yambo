@@ -108,6 +108,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         electronic_type=ElectronicType.INSULATOR,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
+        pseudo_family = None,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -156,6 +157,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
                 parent_folder=parent_folder,
+                pseudo_family=pseudo_family,
                 )
 
         builder.ywfl = ywfl_builder._inputs(prune=True)
@@ -219,11 +221,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         #########################
 
-<<<<<<< HEAD
-        builder.ywfl['yres']['yambo']['parameters'] = Dict(yambo_parameters)
-=======
         #builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
->>>>>>> dev-spin-resolved
 
         builder.parameters_space =  List([
             {

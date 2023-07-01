@@ -1,4 +1,4 @@
-aiida_core[atomic_tools]<3,>=2.0.0
+aiida_core[atomic_tools]<3,>=2
 aiida-quantumespresso<4.5,>=3.0.0a6
 netcdf4
 h5py

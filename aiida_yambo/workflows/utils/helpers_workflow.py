@@ -567,7 +567,8 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict,success=
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
                     ['useful','failed'])
 
-            workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
+            #workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
+            workflow_dict['workflow_story'] = pd.concat([workflow_dict['workflow_story'],workflow_df], ignore_index=True)
    
     for i in range(1,len(workflow_dict['workflow_story'])+1):
         try:                

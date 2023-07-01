@@ -59,7 +59,7 @@ class YamboCalculation(CalcJob):
 
        # self._SCRATCH_FOLDER = 'SAVE'
         spec.input('metadata.options.scratch_folder', valid_type=six.string_types, default='SAVE')
-
+        spec.input('metadata.options.withmpi', valid_type=bool, default=True)
 
         spec.input('metadata.options.logostring', valid_type=six.string_types, default="""
 #
@@ -242,7 +242,7 @@ class YamboCalculation(CalcJob):
             precode_params_list = precode_params_list + input_cmdline
 
         # TODO: check that remote data must be on the same computer
-
+        
         ##############################
         # END OF INITIAL INPUT CHECK #
         ##############################
@@ -389,7 +389,8 @@ class YamboCalculation(CalcJob):
         else:
             calcinfo.codes_info = [c1, c2, c3]
         
-        if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+        #if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+        extra_retrieved.append('SAVE/ns.db1') #then always delete it? but how? TODO
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
         

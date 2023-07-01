@@ -109,7 +109,7 @@ def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have some
             os.system(string_run)
             time.sleep(10)
             qp_fixed = sanity_check_QP(valence,conduction,dirpath+'/'+output_name.value,dirpath+'/'+output_name.value.replace('merged','fixed'))
-            QP_db = SingleFileData(qp_fixed)
+            QP_db = SingleFileData(qp_fixed[0])
 
             return QP_db
         
@@ -401,7 +401,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             overrides_yres['nelectrons'] = nelectrons
             overrides_yres['PW_cutoff'] = PW_cutoff
 
-        pseudo_family = inputs.pop('pseudo_family',None)
+        #pseudo_family = inputs.pop('pseudo_family',None)
         #########SCF and NSCF PROTOCOLS 
         builder.scf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
@@ -411,7 +411,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
-                pseudo_family=pseudo_family,
+                #pseudo_family=pseudo_family,
                 )
 
         builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
@@ -422,7 +422,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
-                pseudo_family=pseudo_family,
+                #pseudo_family=pseudo_family,
                 )
 
         molecule = False
@@ -507,6 +507,13 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         parameters_nscf['SYSTEM']['nbnd'] = int(max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands))
         builder.nscf['pw']['parameters'] = Dict(parameters_nscf)
         builder.scf['pw']['parameters'] = Dict(parameters_scf)
+
+        if pseudo_family:
+            family = orm.load_group(pseudo_family)
+            #builder.<sublevels_up_to .pw>.pseudos = family.get_pseudos(structure=structure) 
+            builder.scf['pw']['pseudos'] = family.get_pseudos(structure=structure) 
+            builder.nscf['pw']['pseudos'] = family.get_pseudos(structure=structure) 
+
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
 
@@ -796,7 +803,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         
         self.out('splitted_QP_calculations', splitted)
         output_name = Str('ndb.QP_merged')
-        self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk))
+        self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
         
         self.ctx.QP_subsets['extend_db'] = self.ctx.QP_subsets.pop('extend_db',False)
 
