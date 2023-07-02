@@ -903,7 +903,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 
             self.report("workflow completed successfully")
             
-            if hasattr(self.inputs,"clean_failed"):
+            if hasattr(self.inputs, "clean_failed"):
                 if self.inputs.clean_failed: 
                     message = clean(calc.caller)
                     self.report(message)
