@@ -1,10 +1,10 @@
-aiida_core[atomic_tools]<3,>=2
 aiida-quantumespresso<4.5,>=3.0.0a6
-netcdf4
+aiida_core[atomic_tools]<3,>=2
 h5py
-xarray
-pandas>=1.2.2
+netcdf4
 numpy>=1.20.1
+pandas>=1.2.2
+xarray
 yambopy@ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy
 
 [docs]
@@ -14,9 +14,9 @@ sphinx_rtd_theme
 
 [pre-commit]
 pre-commit==1.11.0
-yapf==0.24.0
 prospector==0.12.11
 pylint==1.9.3
+yapf==0.24.0
 
 [tests]
 pytest
