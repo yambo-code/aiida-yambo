@@ -378,6 +378,11 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             if self.ctx.workflow_manager['type'] == 'cheap':
                 self.report('Mode is "cheap", so we reset the other parameters to the initial ones.')
                 self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+                if hasattr(self.ctx.calc_inputs,'additional_parsing'):
+                    l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
+                    self.ctx.calc_inputs.additional_parsing = List(list(dict.fromkeys(l)))
+                else:
+                    self.ctx.calc_inputs.additional_parsing = List(list(self.ctx.workflow_settings['what']))
                 self.ctx.infos.update(self.ctx.hint)
             else:
                 self.report('Mode is "heavy", so we mantain the other parameters as the converged ones, if any.')

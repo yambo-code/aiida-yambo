@@ -392,15 +392,20 @@ class The_Predictor_1D():
         
         self.check_passed = True
         error = 10
-        power_laws = [1,2]
+        power_laws = [1,2,3]
         
         if 'kpoint_mesh' in self.var_: power_laws = [1,2]
 
+        ii = 1
         for i in power_laws:
                 self.check_passed = self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,thr_fx=thr_fx)
                 if self.MAE_fit<error: 
                     ii = i
                     error = self.MAE_fit
+                #THERE SHoULD BE SoME ERRoR FLAG.
+                
+                
+                
 
         print('Best power law: {}'.format(ii))  
         
