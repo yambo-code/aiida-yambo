@@ -102,7 +102,7 @@ class TestWf(PluginTestCase):
             "num_mpiprocs_per_machine": 16,
             'default_mpiprocs_per_machine': 16
         })
-        StructureData = DataFactory('structure')
+        StructureData = DataFactory('core.structure')
         cell = [[15.8753100000, 0.0000000000, 0.0000000000],
                 [0.0000000000, 15.8753100000, 0.0000000000],
                 [0.0000000000, 0.0000000000, 2.4696584760]]
@@ -117,7 +117,7 @@ class TestWf(PluginTestCase):
             self.calc_pw, label='remote_folder', link_type=LinkType.CREATE)
 
         outputs = Dict(
-            dict={
+            {
                 "lsda": False,
                 "number_of_bands": 80,
                 "number_of_electrons": 8.0,
@@ -159,7 +159,7 @@ class TestWf(PluginTestCase):
         self.struc = StructureData(ase=cell)
         self.struc.store()
         self.parameters = Dict(
-            dict={
+            {
                 "BndsRnXp": [1.0, 48.0],
                 "Chimod": "Hartree",
                 "DysSolver": "n",
@@ -181,14 +181,14 @@ class TestWf(PluginTestCase):
                 "rim_cut": True
             })
         self.yambo_settings = Dict(
-            dict={
+            {
                 "ADDITIONAL_RETRIEVE_LIST": [
                     "r-*", "o-*", "l-*", "l_*", "LOG/l-*_CPU_1",
                     "aiida/ndb.QP", "aiida/ndb.HF_and_locXC"
                 ]
             })
         self.p2y_settings = Dict(
-            dict={
+            {
                 "ADDITIONAL_RETRIEVE_LIST": [
                     'r-*', 'o-*', 'l-*', 'l_*', 'LOG/l-*_CPU_1',
                     'aiida/ndb.QP', 'aiida/ndb.HF_and_locXC'
@@ -197,7 +197,7 @@ class TestWf(PluginTestCase):
                 True
             })
         self.yambo_calc_set = Dict(
-            dict={
+            {
                 'resources': {
                     "num_machines": 1,
                     "num_mpiprocs_per_machine": 16
@@ -211,7 +211,7 @@ class TestWf(PluginTestCase):
                 }
             })
         self.p2y_calc_set = Dict(
-            dict={
+            {
                 'resources': {
                     "num_machines": 1,
                     "num_mpiprocs_per_machine": 2

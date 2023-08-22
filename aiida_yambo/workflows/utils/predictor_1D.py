@@ -162,7 +162,7 @@ class The_Predictor_1D():
             
 ################################################################
 
-    def fit_space_1D(self,fit=False,alpha=1,beta=1,reference = None,verbose=True,plot=False,dim=100,b=None,g=None,save=False):
+    def fit_space_1D(self,fit=False,alpha=1,beta=1,reference = None,verbose=True,plot=False,dim=100,b=None,g=None,save=False,thr_fx=5e-5):
         
         f = lambda x,a,b: (a/x**alpha + b)
         fx = lambda x,a: -alpha*a/(x**(alpha+1))
@@ -235,7 +235,7 @@ class The_Predictor_1D():
             
         if self.var_[0] == 'kpoint_mesh': thr = thr/2
         
-        self.condition_conv_calc = np.where(abs(self.Zx_fit)<5e-5)
+        self.condition_conv_calc = np.where(abs(self.Zx_fit)<thr_fx)
         
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata),self.X_fit[self.condition_conv_calc][0])
@@ -388,23 +388,28 @@ class The_Predictor_1D():
         return explicit_gw_result
     
     
-    def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis'):
+    def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis',thr_fx=5e-5):
         
         self.check_passed = True
         error = 10
-        power_laws = [1,2]
+        power_laws = [1,2,3]
         
         if 'kpoint_mesh' in self.var_: power_laws = [1,2]
 
+        ii = 1
         for i in power_laws:
-                self.check_passed = self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,)
+                self.check_passed = self.fit_space_1D(fit=True,alpha=i,beta=1,plot=False,dim=10,thr_fx=thr_fx)
                 if self.MAE_fit<error: 
                     ii = i
                     error = self.MAE_fit
+                #THERE SHoULD BE SoME ERRoR FLAG.
+                
+                
+                
 
         print('Best power law: {}'.format(ii))  
         
-        self.check_passed = self.fit_space_1D(fit=True,alpha=ii,beta=1,verbose=True,plot=plot,save=save_fit)
+        self.check_passed = self.fit_space_1D(fit=True,alpha=ii,beta=1,verbose=True,plot=plot,save=save_fit,thr_fx=thr_fx)
         
         if not self.check_passed:
             self.point_reached = False

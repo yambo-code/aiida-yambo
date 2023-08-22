@@ -146,7 +146,7 @@ class The_Predictor_2D():
             
 ################################################################
 
-    def fit_space_2D(self,fit=False,alpha=1,beta=1,reference = None,verbose=True,plot=False,dim=100,colormap='gist_rainbow_r',b=None,g=None,save=False):
+    def fit_space_2D(self,fit=False,alpha=1,beta=1,reference = None,verbose=True,plot=False,dim=100,colormap='gist_rainbow_r',b=None,g=None,save=False,thr_fx=5e-5,thr_fy=5e-5,thr_fxy=1e-8):
         
         f = lambda x,a,b,c,d: (a/x[0]**alpha + b)*( c/x[1]**beta + d)
         fx = lambda x,a,c,d: -alpha*a/(x[0]**(alpha+1))*( c/x[1] + d)
@@ -201,16 +201,17 @@ class The_Predictor_2D():
             thr = self.conv_thr*abs(reference)/100
         else:
             thr = self.conv_thr
-            
         
-        self.condition_conv_calc = np.where((abs(self.Zx_fit)<5e-5) & \
-                            (abs(self.Zy_fit)<5e-5) & \
-                            (abs(self.Zxy_fit)<1e-8))
+        self.condition_conv_calc = np.where((abs(self.Zx_fit)<thr_fx) & \
+                            (abs(self.Zy_fit)<thr_fy) & \
+                            (abs(self.Zxy_fit)<thr_fxy))
         
         self.old_X_fit =self.X_fit
         self.old_Y_fit =self.Y_fit
         self.old_Z_fit =self.Z_fit
         
+        print(self.Zx_fit)
+        print(self.X_fit[self.condition_conv_calc])
         if len(self.X_fit[self.condition_conv_calc]) == 0 : return False
         if not b: b = max(max(xdata[0]),self.X_fit[self.condition_conv_calc][0]*1.25)
         if not g: g = max(max(xdata[1]),self.Y_fit[self.condition_conv_calc][0]*1.25)
@@ -332,7 +333,7 @@ class The_Predictor_2D():
         return explicit_gw_result
     
     
-    def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis'):
+    def analyse(self,old_hints={},reference = None, plot= False,save_fit=False,save_next = False,colormap='viridis',thr_fx=5e-5,thr_fy=5e-5,thr_fxy=1e-8):
         
         self.check_passed = True
         error = 10
@@ -341,14 +342,14 @@ class The_Predictor_2D():
         for i in power_laws:
             for j in power_laws:
                 print(i,j)
-                self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis',reference=reference)
+                self.fit_space_2D(fit=True,alpha=i,beta=j,plot=False,dim=10, colormap='viridis',reference=reference,thr_fx=thr_fx,thr_fy=thr_fy,thr_fxy=thr_fxy)
                 if self.MAE_fit<error: 
                     ii,jj = i,j
                     error = self.MAE_fit
 
         print('\nBest power laws: {}, {}\n'.format(ii,jj))            
         
-        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=False,plot=plot,save=save_fit,colormap=colormap,reference=reference)
+        self.check_passed = self.fit_space_2D(fit=True,alpha=ii,beta=jj,verbose=False,plot=plot,save=save_fit,colormap=colormap,reference=reference,thr_fx=thr_fx,thr_fy=thr_fy,thr_fxy=thr_fxy)
         
         if not self.check_passed:
             self.point_reached = False

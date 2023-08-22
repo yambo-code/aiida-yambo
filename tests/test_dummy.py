@@ -28,7 +28,7 @@ def fixture_computer_localhost(fixture_work_directory):
 def test_naive_parser(fixture_computer_localhost):
     example_out = {"errors": [], "warnings": [], "yambo_wrote": False}
     from aiida.orm import Dict
-    exampleparam = Dict(dict=example_out)
+    exampleparam = Dict(example_out)
     exampleparam.store()
     from aiida.orm import load_node
     assert load_node(exampleparam.pk)

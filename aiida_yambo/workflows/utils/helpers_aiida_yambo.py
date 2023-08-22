@@ -97,7 +97,7 @@ def set_parallelism(instructions_, inputs, k_quantity):
             Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
             G = (yambo_cutG >= min(NGsBlkXp_hint) and yambo_cutG <= max(NGsBlkXp_hint)) or len(NGsBlkXp_hint)==1 
             K = (kpoints >= min(kpoints_hint) and kpoints <= max(kpoints_hint)) or len(kpoints_hint)==1 
-            K_density = (k_quantity >= min(kpoints_density_hint) and k_quantity <= max(kpoints_density_hint)) or k_quantity==0 
+            K_density = (k_quantity >= min(kpoints_density_hint) and k_quantity <= max(kpoints_density_hint)) or len(kpoints_density_hint)==1 
             if X and Sc and G and K and K_density:
                 new_parallelism = {'PAR_def_mode': instructions['automatic'][i].pop('mode','balanced')}
                 new_resources = instructions['automatic'][i]['resources']
@@ -132,7 +132,7 @@ def set_parallelism(instructions_, inputs, k_quantity):
             Sc = (yambo_bandsSc >= min(GbndRnge_hint) and yambo_bandsX <= max(GbndRnge_hint)) or len(GbndRnge_hint)==1 
             G = (yambo_cutG >= min(NGsBlkXp_hint) and yambo_cutG <= max(NGsBlkXp_hint)) or len(NGsBlkXp_hint)==1 
             K = (kpoints >= min(kpoints_hint) and kpoints <= max(kpoints_hint)) or len(kpoints_hint)==1 
-            K_density = (k_quantity >= min(kpoints_density_hint) and k_quantity <= max(kpoints_density_hint)) or k_quantity==0 
+            K_density = (k_quantity >= min(kpoints_density_hint) and k_quantity <= max(kpoints_density_hint)) or len(kpoints_density_hint)==1
             if X and Sc and G and K and K_density:
                 new_parallelism = instructions['manual'][i]['parallelism']
                 new_resources = instructions['manual'][i]['resources']
@@ -171,6 +171,7 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
     calc_dict['functional_form'] = calc_dict.pop('functional_form','power_law')
     
     calc_dict['convergence_algorithm'] = calc_dict.pop('convergence_algorithm','dummy') #1D, multivariate_optimization...
+
     if len(calc_dict['var']) == 3 and isinstance(calc_dict['var'],list) and calc_dict['convergence_algorithm'] == 'dummy':
         calc_dict['convergence_algorithm'] = 'new_algorithm_2D'
         calc_dict['steps'] = 6
@@ -178,6 +179,14 @@ def calc_manager_aiida_yambo(calc_info={}, wfl_settings={}): #tuning of these hy
         and calc_dict['convergence_algorithm'] == 'dummy' and calc_dict['var'][0] =='kpoint_mesh' :
         calc_dict['convergence_algorithm'] = 'new_algorithm_1D'
         calc_dict['steps'] = 4
+    
+    if calc_dict['convergence_algorithm'] == 'new_algorithm_2D':
+        calc_dict['thr_fx'] = calc_dict.pop('thr_fx',5e-5)
+        calc_dict['thr_fy'] = calc_dict.pop('thr_fy',5e-5)
+        calc_dict['thr_fxy'] = calc_dict.pop('thr_fxy',1e-8)
+    if calc_dict['convergence_algorithm'] == 'new_algorithm_1D':
+        calc_dict['thr_fx'] = calc_dict.pop('thr_fx',5e-5)
+
     
     return calc_dict
 
@@ -230,7 +239,7 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
                 input_dict['variables'][var] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables'][var][-1]]
                 values_dict[var]=input_dict['variables'][var][0]
 
-            inp_to_update.yres.yambo.parameters = Dict(dict=input_dict)
+            inp_to_update.yres.yambo.parameters = Dict(input_dict)
 
     #if len(parallelism_instructions.keys()) >= 1:
     new_para, new_res, pop_list = set_parallelism(parallelism_instructions, inp_to_update, k_quantity)
@@ -279,7 +288,14 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                 elif 'density' in n:
                     #pw = find_pw_parent(ywf_node)
                     #value = get_distance_from_kmesh(pw)
-                    value = self.calc_dict['kdensity'].pop(0)
+                    if 'kdensity' in calc_dict.keys():
+                        value = calc_dict['kdensity'].pop(0)
+                    else: #you starts from another parameter...
+                        pw = find_pw_parent(ywf_node)
+                        value = get_distance_from_kmesh(pw)
+                    if not value: #the search for kdistance failed.
+                        pw = find_pw_parent(ywf_node)
+                        value = get_distance_from_kmesh(pw)
                 else:
                     value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
                     if n in ['BndsRnXp','GbndRnge']:
@@ -305,12 +321,16 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
 
 def start_from_converged(inputs, node_uuid, mesh=False):
     node = load_node(node_uuid)
-    for i in range(1,len(node.called)+1):
+    #for i in range(1,len(node.called)+1):
+    for i in range(len(node.called)):
         try:
-            inputs.yres.yambo.parameters = node.called[-i].get_builder_restart().yambo['parameters']
+            #inputs.yres.yambo.parameters = node.called[-i].get_builder_restart().yambo['parameters']
+            inputs.yres.yambo.parameters = node.called[i].get_builder_restart().yambo['parameters']
             if mesh: inputs.nscf.kpoints = node.inputs.nscf__kpoints
-            inputs.yres.yambo.metadata.options.resources = node.called[-i].called[-1].get_options()['resources']
-            inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[-i].called[-1].get_options()['max_wallclock_seconds']
+            #inputs.yres.yambo.metadata.options.resources = node.called[-i].called[-1].get_options()['resources']
+            #inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[-i].called[-1].get_options()['max_wallclock_seconds']
+            inputs.yres.yambo.metadata.options.resources = node.called[i].called[0].get_options()['resources']
+            inputs.yres.yambo.metadata.options.max_wallclock_seconds = node.called[i].called[0].get_options()['max_wallclock_seconds']
             break
         except:
             pass

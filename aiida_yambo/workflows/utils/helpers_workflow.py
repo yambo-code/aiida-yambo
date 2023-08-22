@@ -494,7 +494,7 @@ def convergence_workflow_manager(parameters_space, wfl_settings, inputs, kpoints
 
     #here should be a default list of convergence "parameters_space".
     if isinstance(parameters_space,list):
-        parameters_space = List(list=parameters_space)
+        parameters_space = List(parameters_space)
     for i in parameters_space.get_list():
         new_conv = copy.deepcopy(i)
         new_conv['max_iterations'] = i.pop('max_iterations', 3)
@@ -567,7 +567,8 @@ def update_story_global(calc_manager, quantities, inputs, workflow_dict,success=
             workflow_df = pd.DataFrame([workflow_story_list], columns = ['global_step']+list(quantities.columns)+['parameters_studied']+\
                     ['useful','failed'])
 
-            workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
+            #workflow_dict['workflow_story'] = workflow_dict['workflow_story'].append(workflow_df, ignore_index=True)
+            workflow_dict['workflow_story'] = pd.concat([workflow_dict['workflow_story'],workflow_df], ignore_index=True)
    
     for i in range(1,len(workflow_dict['workflow_story'])+1):
         try:                
@@ -593,16 +594,16 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
     final_result = {}
     
     if 'new_algorithm' in calc_manager['convergence_algorithm']:
-        workflow_dict['workflow_story'].at[:,'useful']=False
+        workflow_dict['workflow_story'].loc[:,'useful']=False
         print(oversteps)
         if success == 'new_grid': 
             return {}
         elif success:
-            workflow_dict['workflow_story'].at[oversteps[0],'useful']=True
+            workflow_dict['workflow_story'].loc[oversteps[0],'useful']=True
     else:
         for i in oversteps: 
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['workflow_story']['uuid']==i].index
-            workflow_dict['workflow_story'].at[gs,'useful']=False
+            workflow_dict['workflow_story'].loc[gs,'useful']=False
     
     if len(oversteps)>0 and calc_manager['convergence_algorithm']=='dummy':
         for i in range(calc_manager['iter']*(calc_manager['steps']-calc_manager['skipped'])-len(oversteps)):
@@ -610,15 +611,18 @@ def post_analysis_update(inputs, calc_manager, oversteps, none_encountered, work
                 workflow_dict['parameter_space'][j].pop(0)
     for i in none_encountered: 
             gs = workflow_dict['workflow_story']['global_step'][workflow_dict['uuid']==i].index
-            workflow_dict['workflow_story'].at[gs,'failed']=True
-            workflow_dict['workflow_story'].at[gs,'useful']=False
+            workflow_dict['workflow_story'].loc[gs,'failed']=True
+            workflow_dict['workflow_story'].loc[gs,'useful']=False
 
     #try:
     if len(workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)]) > 0:
         last_ok_uuid = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['uuid']
         #last_ok_wfl = get_caller(last_ok_uuid, depth = 1)
-        start_from_converged(inputs, last_ok_uuid,mesh='kpoint_mesh' in calc_manager['var'])
-    
+        mesh = 'kpoint_mesh' in calc_manager['var'] or 'kpoint_density' in calc_manager['var']
+        start_from_converged(inputs, last_ok_uuid,mesh=mesh)
+        if 'kpoint_density' in calc_manager['var']:
+            calc_manager['kdensity'] = workflow_dict['workflow_story'][(workflow_dict['workflow_story']['useful'] == True) & (workflow_dict['workflow_story']['failed'] == False)].iloc[-1]['kpoint_density']
+
         if 'kpoint_mesh' in calc_manager['var'] or 'kpoint_density' in calc_manager['var']:
             set_parent(inputs, load_node(last_ok_uuid)) 
     else: 
@@ -732,11 +736,11 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 print('old_hints:',hints)
                 if 'new_grid' in hints.keys():
                     if hints['new_grid']: 
-                        y.analyse(old_hints={})
+                        y.analyse(old_hints={},thr_fx=calc_dict['thr_fx'],thr_fy=calc_dict['thr_fy'],thr_fxy=calc_dict['thr_fxy'])
                     else:
-                        y.analyse(old_hints=hints)
+                        y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx'],thr_fy=calc_dict['thr_fy'],thr_fxy=calc_dict['thr_fxy'])
                 else:
-                    y.analyse(old_hints=hints) #just convergence as before
+                    y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx'],thr_fy=calc_dict['thr_fy'],thr_fxy=calc_dict['thr_fxy']) #just convergence as before
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index
@@ -760,11 +764,11 @@ def analysis_and_decision(calc_dict, workflow_manager,parameter_space=[],hints={
                 print('old_hints:',hints)
                 if 'new_grid' in hints.keys():
                     if hints['new_grid']: 
-                        y.analyse(old_hints={})
+                        y.analyse(old_hints={},thr_fx=calc_dict['thr_fx'])
                     else:
-                        y.analyse(old_hints=hints)
+                        y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx'])
                 else:
-                    y.analyse(old_hints=hints) #just convergence as before
+                    y.analyse(old_hints=hints,thr_fx=calc_dict['thr_fx']) #just convergence as before
                 is_converged = y.check_passed and y.point_reached
                 print(y.check_passed, y.point_reached)
                 oversteps = y.index

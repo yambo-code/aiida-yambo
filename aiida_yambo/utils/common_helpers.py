@@ -92,14 +92,23 @@ def old_find_pw_parent(parent_calc, calc_type = ['scf', 'nscf']):
 
 def get_distance_from_kmesh(calc):
     mesh = calc.inputs.kpoints.get_kpoints_mesh()[0]
+    print(mesh)
     k = KpointsData()
     k.set_cell_from_structure(calc.inputs.structure) #these take trace of PBC...if set in the inputs.!!
     for i in range(4,400):
          k.set_kpoints_mesh_from_density(1/(i*0.25))
+         print(k.get_kpoints_mesh()[0])
          if k.get_kpoints_mesh()[0]==mesh:
              print('ok, {} is the density'.format(i*0.25))
              print(k.get_kpoints_mesh()[0],mesh)
              return i*0.25
+         else: #try the same algorithm but using force_parity=True.
+            k.set_kpoints_mesh_from_density(1/(i*0.25),force_parity=True)
+            print(k.get_kpoints_mesh()[0])
+            if k.get_kpoints_mesh()[0]==mesh:
+                print('ok, {} is the density'.format(i*0.25))
+                print(k.get_kpoints_mesh()[0],mesh)
+                return i*0.25 
 
 def find_pw_type(calc):
     type = calc.inputs.parameters.get_dict()['CONTROL']['calculation']
@@ -131,12 +140,12 @@ def update_dict(_dict, whats, hows, sublevel=None, pop_list=[]):
         for what,how in zip(whats,hows):    
             new = _dict.get_dict()
             new[sublevel][what] = how
-            _dict = Dict(dict=new)
+            _dict = Dict(new)
         if pop_list != []:
             for i in pop_list:
                 new = _dict.get_dict()
                 new[sublevel].pop(i)
-                _dict = Dict(dict=new)
+                _dict = Dict(new)
     else:
         if not isinstance(whats, list):
             whats = [whats]
@@ -145,12 +154,12 @@ def update_dict(_dict, whats, hows, sublevel=None, pop_list=[]):
         for what,how in zip(whats,hows):    
             new = _dict.get_dict()
             new[what] = how
-            _dict = Dict(dict=new)
+            _dict = Dict(new)
         if pop_list != []:
             for i in pop_list:
                 new = _dict.get_dict()
                 new.pop(i)
-                _dict = Dict(dict=new)
+                _dict = Dict(new)
     
     return _dict
 
@@ -258,12 +267,12 @@ def take_number_kpts(calc_node_pk):  # calc_node_pk = node_conv_wfl.outputs.last
             return kpts
     
 def store_List(a_list):
-    the_List = List(list=a_list)
+    the_List = List(a_list)
     the_List.store()
     return the_List
 
 def store_Dict(a_dict):
-    the_Dict = Dict(dict=a_dict)
+    the_Dict = Dict(a_dict)
     the_Dict.store()
     return the_Dict
 
@@ -544,9 +553,9 @@ def check_identical_calculation(YamboWorkflow_inputs,
                 same_k = k_mesh_to_calc == load_node(old).inputs.nscf__kpoints.get_kpoints_mesh()
                 try:
                     y = load_node(old).outputs.retrieved._repository._repo_folder.abspath+'/path/'
-                    if 'ns.db1' in  os.listdir(y) and same_k:
-                        parent_nscf = old
-                        
+                    #if 'ns.db1' in  os.listdir(y) and same_k:
+                    if same_k:
+                        parent_nscf = old            
                 except:
                     pass
                 if parent_nscf: break
@@ -631,7 +640,8 @@ def check_same_pw(node, k_mesh_to_calc, already_done, bands = None):
             if node.is_finished_ok:
                 try:
                     y = node.outputs.retrieved._repository._repo_folder.abspath+'/path/'
-                    if 'ns.db1' in  os.listdir(y) and same_k and not node.outputs.remote_folder.is_empty:
+                    #if 'ns.db1' in  os.listdir(y) and same_k and not node.outputs.remote_folder.is_empty:
+                    if same_k and not node.outputs.remote_folder.is_empty:
                         if enough_b:
                             parent_nscf = node.pk      
 

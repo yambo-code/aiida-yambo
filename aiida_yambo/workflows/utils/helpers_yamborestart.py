@@ -58,7 +58,7 @@ def fix_memory(resources, failed_calc, exit_status, max_nodes, iteration):
     #mesh = nscf.inputs.kpoints.get_kpoints_mesh()[0]
     #kpoints = gap_mapping_from_nscf(nscf.pk,)['number_of_kpoints']
     increase_nodes = False
-    if max_nodes > resources['num_machines'] and iteration < 2:
+    if max_nodes > resources['num_machines']: # and iteration < 2:
         increase_nodes = True
 
     #tot_cores = resources['num_machines']*resources['num_mpiprocs_per_machine']*resources['num_cores_per_mpiproc']

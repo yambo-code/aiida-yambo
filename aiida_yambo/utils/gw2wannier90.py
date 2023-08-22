@@ -69,12 +69,12 @@ def k_mapper(dense_mesh, coarse_mesh,VbM,Cbm):
     for i in k_list:
         qp_list.append([i,i,VbM,Cbm])
 
-    return Dict(dict={'QPkrange': [qp_list, '']})
+    return Dict({'QPkrange': [qp_list, '']})
 
 @calcfunction
 def gw2wannier90(
     seedname=Str('aiida'), 
-    options = List(list=['mmn','amn']), 
+    options = List(['mmn','amn']), 
     output_path=Str(''),
     nnkp_file = None, 
     pw2wannier_parent = None,):

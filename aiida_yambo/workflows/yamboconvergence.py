@@ -108,6 +108,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         electronic_type=ElectronicType.INSULATOR,
         spin_type=SpinType.NONE,
         initial_magnetic_moments=None,
+        pseudo_family = None,
         **_
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -156,6 +157,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
                 parent_folder=parent_folder,
+                pseudo_family=pseudo_family,
                 )
 
         builder.ywfl = ywfl_builder._inputs(prune=True)
@@ -221,7 +223,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         #builder.ywfl['yres']['yambo']['parameters'] = Dict(dict=yambo_parameters)
 
-        builder.parameters_space =  List(list=[
+        builder.parameters_space =  List([
             {
                            'var':['FFTGvecs'],
                            'start': FFT_start,
@@ -262,10 +264,11 @@ class YamboConvergence(ProtocolMixin, WorkChain):
                         
                         ])
 
-        if structure.pbc.count(True)==0:
-            builder.parameters_space = List(list=builder.parameters_space.get_list()[::2]) #no k points.
+        if protocol == 'molecule' or structure.pbc.count(True)==0:
+            builder.parameters_space = List(builder.parameters_space.get_list()[::2]) #no k points.
+
         
-        builder.workflow_settings = Dict(dict=inputs['workflow_settings'])
+        builder.workflow_settings = Dict(inputs['workflow_settings'])
 
         return builder
         
@@ -288,9 +291,9 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
         if hasattr(self.ctx.calc_inputs,'additional_parsing'):
             l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
-            self.ctx.calc_inputs.additional_parsing = List(list=list(dict.fromkeys(l)))
+            self.ctx.calc_inputs.additional_parsing = List(list(dict.fromkeys(l)))
         else:
-            self.ctx.calc_inputs.additional_parsing = List(list=list(self.ctx.workflow_settings['what']))
+            self.ctx.calc_inputs.additional_parsing = List(list(self.ctx.workflow_settings['what']))
 
         if hasattr(self.inputs, "group_label"):
             self.ctx.workflow_manager['group'] = load_group(self.inputs.group_label.value)
@@ -375,6 +378,11 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             if self.ctx.workflow_manager['type'] == 'cheap':
                 self.report('Mode is "cheap", so we reset the other parameters to the initial ones.')
                 self.ctx.calc_inputs = self.exposed_inputs(YamboWorkflow, 'ywfl')
+                if hasattr(self.ctx.calc_inputs,'additional_parsing'):
+                    l = self.ctx.workflow_settings['what']+self.ctx.calc_inputs.additional_parsing.get_list()
+                    self.ctx.calc_inputs.additional_parsing = List(list(dict.fromkeys(l)))
+                else:
+                    self.ctx.calc_inputs.additional_parsing = List(list(self.ctx.workflow_settings['what']))
                 self.ctx.infos.update(self.ctx.hint)
             else:
                 self.report('Mode is "heavy", so we mantain the other parameters as the converged ones, if any.')
@@ -438,7 +446,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
 
     def data_analysis(self):
         
-        self.report('Data analysis, we will try to parse some result and decide what next')
+        self.report('Data analysis, we will try to parse some result and decide what next.')
         quantities = take_quantities(self.ctx.calc_manager, self.ctx.workflow_manager)
         self.ctx.final_result = update_story_global(self.ctx.calc_manager, quantities, self.ctx.calc_inputs,\
                          workflow_dict=self.ctx.workflow_manager)
@@ -543,6 +551,10 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         self.report('Final step. It is {} that the workflow was successful'.format(str(self.ctx.workflow_manager['fully_success'])))
         story = store_Dict(self.ctx.workflow_manager['workflow_story'])
         self.out('history', story)
+        if hasattr(self.ctx,'hint'): 
+            if hasattr(self.ctx.hint,'infos'):
+                infos = store_Dict(self.ctx.infos)
+                self.out('infos',infos)
         if hasattr(self.ctx,'infos'): 
             self.ctx.infos.pop('new_grid',0)
             self.ctx.infos.pop('already_computed',0)
