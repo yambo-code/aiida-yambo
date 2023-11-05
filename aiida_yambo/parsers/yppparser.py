@@ -29,6 +29,8 @@ from six.moves import range
 import cmath
 import netCDF4
 
+import pathlib
+import tempfile
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -39,7 +41,7 @@ __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Michael Atambo (michaelontita.atambo@unimore.it)", \
               " and the AiiDA team. The parser relies on the yamboparser module by Henrique Pereira Coutada Miranda."
 
-SingleFileData = DataFactory('singlefile')
+SingleFileData = DataFactory('core.singlefile')
 
 class YppParser(Parser):
     """This class is a wrapper class for the Parser class for Yambo calculators from yambopy.
@@ -127,7 +129,7 @@ class YppParser(Parser):
             
         # select the folder object
         try:
-            out_folder = self.retrieved
+            retrieved = self.retrieved
         except exceptions.NotExistent:
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
@@ -149,61 +151,71 @@ class YppParser(Parser):
         ndbqp = {}
         ndbhf = {}
 
-        count_merged = 0
-        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path/'):
-            if 'ndb.QP_merged' in file:
-                count_merged +=1
-        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path/'):
-            if 'stderr' in file:
-                with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
-                    parse_scheduler_stderr(stderr, output_params)
-            if 'unsorted' in file:
-                unsorted_eig = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
-                self.out(self._unsorted_eig_wannier,unsorted_eig)
-                #self.report('stored the unsorted.eig file as SingleFileData')
-            if 'ndb.QP_merged' in file:
-                if count_merged>1:
-                    return self.exit_codes.MERGE_NOT_COMPLETE
-                else:
-                    QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+file)
-                    self.out(self._QP_merged_linkname,QP_db)  
-        try:
-            results = YamboFolder(out_folder._repository._repo_folder.abspath)
-        except Exception as e:
-            success = False
-            return self.exit_codes.PARSER_ANOMALY
-            #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
+        # Create temporary directory
+        with tempfile.TemporaryDirectory() as dirpath:
+            # Open the output file from the AiiDA storage and copy content to the temporary file
+            for filename in retrieved.base.repository.list_object_names():
+		# Create the file with the desired name
+		temp_file = pathlib.Path(dirpath) / filename
+		with retrieved.open(filename, 'rb') as handle:
+                    temp_file.write_bytes(handle.read())
 
-        for result in results.yambofiles:
-            if results is None:
-                continue
+            count_merged = 0
+            for filename in os.listdir(dirpath):
+                if 'ndb.QP_merged' in file:
+                    count_merged +=1
+            for filename in os.listdir(dirpath):
+                if 'stderr' in filename:
+                    with open(dirpath+"/"+filename,'r') as stderr:
+                        parse_scheduler_stderr(stderr, output_params)
+                if 'unsorted' in filename:
+                    unsorted_eig = SingleFileData(dirpath+"/"+filename)
+                    self.out(self._unsorted_eig_wannier,unsorted_eig)
+                    #self.report('stored the unsorted.eig file as SingleFileData')
+                if 'ndb.QP_merged' in filename:
+                    if count_merged>1:
+                        return self.exit_codes.MERGE_NOT_COMPLETE
+                    else:
+                        QP_db = SingleFileData(dirpath+"/"+filename)
+                        self.out(self._QP_merged_linkname,QP_db)  
 
-            #This should be automatic in yambopy...
-            if result.type=='log':
-                parse_log(result, output_params, timing = verbose_timing)
-            if result.type=='report':
-                parse_report(result, output_params)
-
-            if 'electrons' in input_params['arguments'] and 'interpolated' in result.filename:
-                if self._aiida_bands_data(result.data, cell, result.kpoints):
-                    arr = self._aiida_bands_data(result.data, cell,
-                                                 result.kpoints)
-                    if type(arr) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
-                        self.out(self._quasiparticle_bands_linkname,arr)
-                    if type(arr) == ArrayData:  #
-                        self.out(self._qp_array_linkname,arr)
+            try:
+                results = YamboFolder(dirpath)
+            except Exception as e:
+                success = False
+                return self.exit_codes.PARSER_ANOMALY
+                #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
+    
+            for result in results.yambofiles:
+                if results is None:
+                    continue
+    
+                #This should be automatic in yambopy...
+                if result.type=='log':
+                    parse_log(result, output_params, timing = verbose_timing)
+                if result.type=='report':
+                    parse_report(result, output_params)
+    
+                if 'electrons' in input_params['arguments'] and 'interpolated' in result.filename:
+                    if self._aiida_bands_data(result.data, cell, result.kpoints):
+                        arr = self._aiida_bands_data(result.data, cell,
+                                                     result.kpoints)
+                        if type(arr) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
+                            self.out(self._quasiparticle_bands_linkname,arr)
+                        if type(arr) == ArrayData:  #
+                            self.out(self._qp_array_linkname,arr)
         
-        yambo_wrote_dbs(output_params)
+            yambo_wrote_dbs(output_params)
 
-        # we store  all the information from the ndb.* files rather than in separate files
-        # if possible, else we default to separate files. #to check MB
-        if ndbqp and ndbhf:  #
-            self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
-        else:
-            if ndbqp:
-                self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
-            if ndbhf:
-                self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
+            # we store  all the information from the ndb.* files rather than in separate files
+            # if possible, else we default to separate files. #to check MB
+            if ndbqp and ndbhf:  #
+                self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
+            else:
+                if ndbqp:
+                    self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
+                if ndbhf:
+                    self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
 
         if output_params['game_over']:
             success = True
@@ -218,7 +230,7 @@ class YppParser(Parser):
             if delta_time > -2 and delta_time < 0.1:
                     output_params['time_error']=True
 
-        params=Dict(dict=output_params)
+        params=Dict(output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
 
         if success == False:

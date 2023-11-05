@@ -24,25 +24,50 @@ from aiida_yambo.workflows.utils.helpers_yambowf import *
 from aiida_yambo.workflows.utils.extend_QPDB import *
 
 from aiida.plugins import DataFactory
-LegacyUpfData = DataFactory('upf')
-SingleFileData = DataFactory('singlefile')
+
+import pathlib
+import tempfile
+
+LegacyUpfData = DataFactory('core.upf')
+SingleFileData = DataFactory('core.singlefile')
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
+
+def clean(node):
+    cleaned_calcs = []
+
+    for called_descendant in node.called_descendants:
+        if isinstance(called_descendant, orm.CalcJobNode):
+                try:
+                    if not called_descendant.is_finished_ok:
+                        called_descendant.outputs.remote_folder._clean()  # pylint: disable=protected-access
+                        cleaned_calcs.append(called_descendant.pk)
+                except:
+                    pass
+
+    if cleaned_calcs:
+        return "cleaned remote folders of calculations: {}".format(join(map(str, cleaned_calcs)))
 
 def sanity_check_QP(v,c,input_db,output_db,create=True):
     d = xarray.open_dataset(input_db,engine='netcdf4')
     wrong = np.where(abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha>5)
     #v,c = 29,31
-    v_cond = np.where((d.QP_table[0] == v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
-    c_cond = np.where((d.QP_table[0] == c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
-    fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0]],deg=1)
-    fit_c = np.polyfit(d.QP_Eo[c_cond[0]],d.QP_E[c_cond[0]],deg=1)
+    v_cond = np.where((d.QP_table[0] <= v) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+    c_cond = np.where((d.QP_table[0] >= c) & (abs(d.QP_E[:,0]-d.QP_Eo[:])*units.Ha<5))
+
+    #fix with a fit
+    fit_v = np.polyfit(d.QP_Eo[v_cond[0]],d.QP_E[v_cond[0],0],deg=1)
+    fit_c = np.polyfit(d.QP_Eo[c_cond[0]],d.QP_E[c_cond[0],0],deg=1)
     for i in wrong[0]:
         print(d.QP_Eo[i].data*units.Ha,d.QP_E[i,0].data*units.Ha)
         if d.QP_table[0,i]>v:
             d.QP_E[i,0] = fit_c[0,0]*d.QP_Eo[i]+fit_c[0,1]
         else:
             d.QP_E[i,0] = fit_v[0,0]*d.QP_Eo[i]+fit_v[0,1]
+    
+    #align to zero wrt to the maximum of valence... fixes the error in Fermi re-evaluation
+    #in the BSE RD/ndb.QP. for now.
+    d.QP_E[:,0] = d.QP_E[:,0] - np.max(d.QP_E[v_cond[0],0])
     
     if create: d.to_netcdf(output_db)
 
@@ -61,23 +86,34 @@ def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have some
         qp_rules = qp_settings.get_dict()
 
         if SOC:
-            valence = int(nelectrons) - 1
-            conduction = valence + 2
+            valence = int(nelectrons)
+            conduction = valence + 1
         else:
             valence = int(nelectrons/2) + int(nelectrons%2)
             conduction = valence + 1
         string_run = 'yambopy mergeqp'
-        for i in filenames_List.get_list():
-            j = load_node(i).outputs.QP_db._repository._repo_folder.abspath+'/path/ndb.QP'
-            string_run+=' '+j
-        string_run+=' -o '+output_name.value
-        print(string_run)
-        os.system(string_run)
-        time.sleep(10)
-        qp_fixed,fit_v,fit_c = sanity_check_QP(valence,conduction,output_name.value,output_name.value.replace('merged','fixed'))
+        
+        # Create temporary directory
+        filename='ndb.QP'
+        with tempfile.TemporaryDirectory() as dirpath:
+            # Open the output file from the AiiDA storage and copy content to the temporary file
+            for i in filenames_List.get_list():
+                # Create the file with the desired name
+                temp_file = pathlib.Path(dirpath) / str(i)
+                with load_node(i).outputs.QP_db.base.repository.open(filename, 'rb') as handle:
+                    temp_file.write_bytes(handle.read())
 
-        QP_db = SingleFileData(qp_fixed)
-        return QP_db
+                string_run+=' '+str(temp_file)
+            string_run+=' -o '+dirpath+'/'+output_name.value
+            print(string_run)
+            os.system(string_run)
+            time.sleep(10)
+            qp_fixed = sanity_check_QP(valence,conduction,dirpath+'/'+output_name.value,dirpath+'/'+output_name.value.replace('merged','fixed'))
+            QP_db = SingleFileData(qp_fixed[0])
+
+            return QP_db
+        
+        return
 
 @calcfunction
 def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have something that works, but it is not correct to proceed this way
@@ -92,7 +128,7 @@ def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have 
         qp_rules = qp_settings.get_dict()
 
         if SOC:
-            valence = int(nelectrons) - 1
+            valence = int(nelectrons)
             conduction = valence + 2
         else:
             valence = int(nelectrons/2) + int(nelectrons%2)
@@ -106,10 +142,12 @@ def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have 
                     'extend_db':True,
                     ''T_smearing': 1e-2, #smearing for the FD corrections...see the paper MBonacci et al. Towards HT... 
                     'consider_only':[v_min,c_max]
+                    'Nb': n, #number of bands to be included in the extended QP db (from 1st to nth)
                     -->'v_min':, #used to evaluate v_max energy and v_min that you want to compute explicitly
                     --->'c_max':, #used to evaluate c_min energy and c_max that you want to compute explicilty
                 }
             """
+            qp_rules['Nb'] = qp_rules.pop('Nb',conduction + valence)
             db_FD_scissored = FD_and_scissored_db(out_db_path=qp_fixed,pw=pw,Nb=qp_rules['Nb'],Nk=nk,v_max=min(qp_rules['consider_only']),c_min=max(qp_rules['consider_only']),fit_v=fit_v[0],
                    fit_c=fit_c[0],conduction=conduction,T=qp_rules.pop('T_smearing',1e-2))
             db_FD_scissored.to_netcdf(output_name.replace('fixed','extended'))
@@ -256,6 +294,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
         spec.input("parent_folder", valid_type=RemoteData, required = False,
                     help = 'scf, nscf or yambo remote folder')
+        
+        spec.input("clean_failed", valid_type=Bool, default=lambda: Bool(False))
   
 
 ##################################### OUTLINE ####################################
@@ -287,6 +327,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         spec.output('scissor', valid_type = List, required = False)
 
         spec.exit_code(300, 'ERROR_WORKCHAIN_FAILED',
+                             message='The workchain failed with an unrecoverable error.')
+        spec.exit_code(301, 'ERROR_SPLITTED_QP_FAILED',
                              message='The workchain failed with an unrecoverable error.')
     
     @classmethod
@@ -347,8 +389,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         for override in [overrides_scf,overrides_nscf]:
             override['clean_workdir'] = override.pop('clean_workdir',False) #required to have a valid parent folder
             
-            if 'pseudo_family' in override.keys():
-                if 'PseudoDojo' in override['pseudo_family']: NLCC = True
+            #if 'pseudo_family' in override.keys():
+            #    if 'PseudoDojo' in override['pseudo_family']: NLCC = True
 
         try:
             pw_parent = find_pw_parent(take_calc_from_remote(parent_folder))
@@ -359,7 +401,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             overrides_yres['nelectrons'] = nelectrons
             overrides_yres['PW_cutoff'] = PW_cutoff
 
-        pseudo_family = inputs.pop('pseudo_family',None)
+        #pseudo_family = inputs.pop('pseudo_family',None)
         #########SCF and NSCF PROTOCOLS 
         builder.scf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
@@ -369,7 +411,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
-                pseudo_family=pseudo_family,
+                #pseudo_family=pseudo_family,
                 )
 
         builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
@@ -380,7 +422,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
-                pseudo_family=pseudo_family,
+                #pseudo_family=pseudo_family,
                 )
 
         molecule = False
@@ -393,8 +435,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         else:
             builder.scf['kpoints'].set_kpoints_mesh([1,1,1])
             builder.nscf['kpoints'].set_kpoints_mesh([1,1,1])
-            builder.scf['pw']['settings'] = Dict(dict={'gamma_only':True})
-            builder.nscf['pw']['settings'] = Dict(dict={'gamma_only':True})
+            builder.scf['pw']['settings'] = Dict({'gamma_only':True})
+            builder.nscf['pw']['settings'] = Dict({'gamma_only':True})
 
 
         builder.scf['pw']['parameters']['SYSTEM']['force_symmorphic'] = True #required in yambo
@@ -463,8 +505,15 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
 
 
         parameters_nscf['SYSTEM']['nbnd'] = int(max(parameters_nscf['SYSTEM'].pop('nbnd',0),gwbands))
-        builder.nscf['pw']['parameters'] = Dict(dict = parameters_nscf)
-        builder.scf['pw']['parameters'] = Dict(dict = parameters_scf)
+        builder.nscf['pw']['parameters'] = Dict(parameters_nscf)
+        builder.scf['pw']['parameters'] = Dict(parameters_scf)
+
+        if pseudo_family:
+            family = orm.load_group(pseudo_family)
+            #builder.<sublevels_up_to .pw>.pseudos = family.get_pseudos(structure=structure) 
+            builder.scf['pw']['pseudos'] = family.get_pseudos(structure=structure) 
+            builder.nscf['pw']['pseudos'] = family.get_pseudos(structure=structure) 
+
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
 
@@ -742,11 +791,19 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         return False
 
     def run_post_process(self):
+        
+        #check if all QP splitted calculations were ok:
+        for splitted in self.ctx.splitted_QP:
+            if not load_node(splitted).is_finished_ok:
+                self.report('some splitted QP failed, exiting... ')
+                return self.exit_codes.ERROR_SPLITTED_QP_FAILED
         #merge
         self.report('run merge QP')
         splitted = store_List(self.ctx.splitted_QP)
+        
         self.out('splitted_QP_calculations', splitted)
-        output_name = Str(self.ctx.calc.outputs.retrieved._repository._repo_folder.abspath+'/path/ndb.QP_merged')
+        output_name = Str('ndb.QP_merged')
+        self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
         
         self.ctx.QP_subsets['extend_db'] = self.ctx.QP_subsets.pop('extend_db',False)
 
@@ -845,6 +902,15 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 self.out_many(self.exposed_outputs(calc,YamboRestart))
                 
             self.report("workflow completed successfully")
+            
+            if hasattr(self.inputs, "clean_failed"):
+                if self.inputs.clean_failed: 
+                    message = clean(calc.caller)
+                    self.report(message)
         else:
             self.report("workflow NOT completed successfully")
+            #message = clean(calc.caller)
+            #self.report(message)
             return self.exit_codes.ERROR_WORKCHAIN_FAILED
+
+

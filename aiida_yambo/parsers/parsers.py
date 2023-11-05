@@ -29,7 +29,10 @@ from six.moves import range
 import cmath
 import netCDF4
 
-SingleFileData = DataFactory('singlefile')
+import pathlib
+import tempfile
+
+SingleFileData = DataFactory('core.singlefile')
 
 __copyright__ = u"Copyright (c), 2014-2015, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -135,7 +138,7 @@ class YamboParser(Parser):
             
         # select the folder object
         try:
-            out_folder = self.retrieved
+            retrieved = self.retrieved
         except exceptions.NotExistent:
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
@@ -168,101 +171,89 @@ class YamboParser(Parser):
         chi = {}
         excitonic_states = {}
 
-
-        if 'ns.db1' in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
-            output_params['ns_db1_path'] = out_folder._repository._repo_folder.abspath+'/path'
-
-
-        for file in os.listdir(out_folder._repository._repo_folder.abspath+'/path'):
-            
-            if 'stderr' in file:
-                with open(out_folder._repository._repo_folder.abspath+'/path/'+file,'r') as stderr:
-                    parse_scheduler_stderr(stderr, output_params)
-            
-            elif 'ndb.BS_diago' in file:
-                q, chi, excitonic_states = parse_BS(out_folder._repository._repo_folder.abspath+'/path/',
-                                                             file,
-                                                             output_params['ns_db1_path'])
-
-        try:
-            results = YamboFolder(out_folder._repository._repo_folder.abspath)
-        except Exception as e:
-            success = False
-            return self.exit_codes.PARSER_ANOMALY
-            #raise ParsingError("Unexpected behavior of YamboFolder: %s" % e)
-        
-        eels_array = None
-        eps_array = None
-        alpha_array = None
-        for result in results.yambofiles:
-            if results is None:
-                continue
-
-            #This should be automatic in yambopy...
-            if result.type=='log':
-                parse_log(result, output_params, timing = verbose_timing)
-            if result.type=='report':
-                parse_report(result, output_params)
+        # Create temporary directory
+        with tempfile.TemporaryDirectory() as dirpath:
+            # Open the output file from the AiiDA storage and copy content to the temporary file
+            for filename in retrieved.base.repository.list_object_names():
+                # Create the file with the desired name
+                temp_file = pathlib.Path(dirpath) / filename
+                with retrieved.open(filename, 'rb') as handle:
+                    temp_file.write_bytes(handle.read())
 
 
-            if 'eel' in result.filename:
-                eels_array = self._aiida_array_bse(result.data)
-                self.out(self._eels_array_linkname, eels_array)
-            elif 'eps' in result.filename:
-                eps_array = self._aiida_array_bse(result.data)
-                self.out(self._eps_array_linkname, eps_array)
-            elif 'alpha' in result.filename:
-                alpha_array = self._aiida_array_bse(result.data)
-                self.out(self._alpha_array_linkname,alpha_array)
-            
-            if 'ndb.QP' == result.filename:
-                ndbqp = copy.deepcopy(result.data)
+            if 'ns.db1' in os.listdir(dirpath):
+                output_params['ns_db1_path'] = dirpath
+
+            for filename in os.listdir(dirpath):
                 
-                if len(numpy.where(numpy.isnan(ndbqp['E-Eo'].data))[0])>0:
-                    return self.exit_codes.NaN_AS_OUTPUT
+                if 'stderr' in filename:
+                    with retrieved.open(filename) as stderr:
+                        parse_scheduler_stderr(stderr, output_params)
+                
+                elif 'ndb.BS_diago' in filename: #BSE in AiiDA 2.x still not supported
+                    q, chi, excitonic_states = parse_BS(dirpath+'/',
+                                                                filename,
+                                                                output_params['ns_db1_path'])            
+            
+            try:
+                results = YamboFolder(dirpath)
+            except Exception as e:
+                success = False
+                return self.exit_codes.PARSER_ANOMALY
+
+            for result in results.yambofiles:
+                if results is None:
+                    continue
+
+                #This should be automatic in yambopy...
+                if result.type=='log':
+                    parse_log(result, output_params, timing = verbose_timing)
+                if result.type=='report':
+                    parse_report(result, output_params)
+
+                #if 'eel' in result.filename:
+                #    eels_array = self._aiida_array(result.data)
+                #    self.out(self._eels_array_linkname, eels_array)
+                #elif 'eps' in result.filename:
+                #    eps_array = self._aiida_array(result.data)
+                #    self.out(self._eps_array_linkname, eps_array)
+                #elif 'alpha' in result.filename:
+                #    alpha_array = self._aiida_array(result.data)
+                #    self.out(self._alpha_array_linkname,alpha_array)
+
+                
+                if 'ndb.QP' == result.filename:
+                    ndbqp = copy.deepcopy(result.data)
                     
-                QP_db = SingleFileData(out_folder._repository._repo_folder.abspath+'/path/'+result.filename)
-                self.out(self._QP_db_linkname,QP_db)
-                
+                    if len(numpy.where(numpy.isnan(ndbqp['E-Eo'].data))[0])>0:
+                        return self.exit_codes.NaN_AS_OUTPUT
+                        
+                    QP_db = SingleFileData(dirpath+'/'+result.filename)
+                    self.out(self._QP_db_linkname,QP_db)
+                    
 
-            elif 'ndb.HF_and_locXC' == result.filename:
-                ndbhf = copy.deepcopy(result.data)
+                elif 'ndb.HF_and_locXC' == result.filename:
+                    ndbhf = copy.deepcopy(result.data)
 
-            elif 'gw0___' in input_params['arguments']:
-                if self._aiida_bands_data(result.data, cell, result.kpoints):
-                    arr = self._aiida_bands_data(result.data, cell,
-                                                 result.kpoints)
-                    if type(arr) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
-                        self.out(self._quasiparticle_bands_linkname,arr)
-                    if type(arr) == ArrayData:  #
-                        self.out(self._qp_array_linkname,arr)
+                elif 'gw0___' in input_params['arguments']:
+                    if self._aiida_bands_data(result.data, cell, result.kpoints):
+                        arr = self._aiida_bands_data(result.data, cell,
+                                                    result.kpoints)
+                        if type(arr) == BandsData:  # ArrayData is not BandsData, but BandsData is ArrayData
+                            self.out(self._quasiparticle_bands_linkname,arr)
+                        if type(arr) == ArrayData:  #
+                            self.out(self._qp_array_linkname,arr)
 
-            elif 'life___' in input_params['arguments']:
-                if self._aiida_bands_data(result.data, cell, result.kpoints):
-                    arr = self._aiida_bands_data(result.data, cell,
-                                                 result.kpoints)
-                    if type(arr) == BandsData:
-                        self.out(self._alpha_array_linkname+'_bands',arr)
-                    elif type(arr) == ArrayData:
-                        self.out(self._alpha_array_linkname + '_arr', arr)
-        
-        yambo_wrote_dbs(output_params)
-
-        # we store  all the information from the ndb.* files rather than in separate files
-        # if possible, else we default to separate files. #to check MB
-        if ndbqp and ndbhf:  #
-            self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
-        else:
-            if ndbqp:
-                self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
-            if ndbhf:
-                self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
-        
-        if chi:  #
-            self.out(self._ndb_CHI_linkname,self._aiida_array(chi))
-        
-        if excitonic_states:  #
-            self.out(self._ndb_EXC_linkname,self._aiida_array(excitonic_states))
+                elif 'life___' in input_params['arguments']:
+                    if self._aiida_bands_data(result.data, cell, result.kpoints):
+                        arr = self._aiida_bands_data(result.data, cell,
+                                                    result.kpoints)
+                        if type(arr) == BandsData:
+                            self.out(self._alpha_array_linkname+'_bands',arr)
+                        elif type(arr) == ArrayData:
+                            self.out(self._alpha_array_linkname + '_arr', arr)
+            
+            yambo_wrote_dbs(output_params)
 
         if output_params['game_over']:
             success = True
@@ -274,10 +265,10 @@ class YamboParser(Parser):
                   / float(output_params['requested_time'])
         
         if success == False:
-            if delta_time > -2 and delta_time < 0.1:
+            if delta_time > -2 and delta_time < 0.16:
                     output_params['time_error']=True
 
-        params=Dict(dict=output_params)
+        params=Dict(output_params)
         self.out(self._parameter_linkname,params)  # output_parameters
 
         if success and 'gw0' in input_params['arguments'] and not ndbqp and not initialise:
@@ -300,6 +291,23 @@ class YamboParser(Parser):
                 return self.exit_codes.MEMORY_ERROR
             else:
                 return self.exit_codes.NO_SUCCESS
+        
+        else: 
+            # we store  all the information from the ndb.* files rather than in separate files
+            # if possible, else we default to separate files. #to check MB
+            if ndbqp and ndbhf:  #
+                self.out(self._ndb_linkname,self._sigma_c(ndbqp, ndbhf))
+            else:
+                if ndbqp:
+                    self.out(self._ndb_QP_linkname,self._aiida_ndb_qp(ndbqp))
+                if ndbhf:
+                    self.out(self._ndb_HF_linkname,self._aiida_ndb_hf(ndbhf))
+            
+            if chi:  #
+                self.out(self._ndb_CHI_linkname,self._aiida_array(chi))
+            
+            if excitonic_states:  #
+                self.out(self._ndb_EXC_linkname,self._aiida_array(excitonic_states))
 
     def _aiida_array_bse(self, data):
         arraydata = ArrayData()

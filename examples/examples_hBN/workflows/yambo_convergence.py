@@ -8,7 +8,7 @@ from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict
 from aiida.engine import submit
 from aiida_yambo.workflows.yamboconvergence import YamboConvergence
-from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
+#from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 import argparse
 
@@ -176,18 +176,18 @@ def main(options):
     atoms.set_cell(the_cell, scale_atoms=False)
     atoms.set_pbc([True,True,True])
 
-    StructureData = DataFactory('structure')
+    StructureData = DataFactory('core.structure')
     structure = StructureData(ase=atoms)
 
     ###### setting the kpoints mesh ######
 
-    KpointsData = DataFactory('array.kpoints')
+    KpointsData = DataFactory('core.array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
+    kpoints.set_kpoints_mesh([2,2,1])
 
     ###### setting the scf parameters ######
 
-    Dict = DataFactory('dict')
+    Dict = DataFactory('core.dict')
     params_scf = {
         'CONTROL': {
             'calculation': 'scf',
@@ -218,7 +218,7 @@ def main(options):
         'SYSTEM': {
             'ecutwfc': 80.,
             'force_symmorphic': True,
-            'nbnd': 100,
+            'nbnd': 20,
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
@@ -242,13 +242,13 @@ def main(options):
             'Chimod': 'hartree',
             'DysSolver': 'n',
             'GTermKind': 'BG',
-            'NGsBlkXp': [2, 'Ry'],
-            'BndsRnXp': [[1, 50], ''],
-            'GbndRnge': [[1, 50], ''],
+            'NGsBlkXp': [1, 'Ry'],
+            'BndsRnXp': [[1, 10], ''],
+            'GbndRnge': [[1, 10], ''],
             'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
 
-    params_gw = Dict(dict=params_gw)
+    params_gw = Dict(params_gw)
 
     builder = YamboConvergence.get_builder()
 
@@ -280,8 +280,8 @@ def main(options):
     builder.ywfl.scf.pw.metadata.options.prepend_text = options['prepend_text']
     builder.ywfl.scf.pw.metadata.options.mpirun_extra_params = []
     
-    builder.ywfl.nscf.pw.parameters = Dict(dict=params_nscf)
-    builder.ywfl.scf.pw.parameters = Dict(dict=params_scf)
+    builder.ywfl.nscf.pw.parameters = Dict(params_nscf)
+    builder.ywfl.scf.pw.parameters = Dict(params_scf)
     builder.ywfl.nscf.pw.metadata = builder.ywfl.scf.pw.metadata
 
     builder.ywfl.scf.pw.code = load_code(options['pwcode_id'])
@@ -314,8 +314,8 @@ def main(options):
     builder.ywfl.yres.yambo.metadata.options = builder.ywfl.scf.pw.metadata.options
 
     builder.ywfl.yres.yambo.parameters = params_gw
-    builder.ywfl.yres.yambo.precode_parameters = Dict(dict={})
-    builder.ywfl.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
+    builder.ywfl.yres.yambo.precode_parameters = Dict({})
+    builder.ywfl.yres.yambo.settings = Dict({'INITIALISE': False, 'COPY_DBS': False})
     builder.ywfl.yres.max_iterations = Int(3)
     builder.ywfl.yres.max_number_of_nodes = Int(0)
 
@@ -323,9 +323,9 @@ def main(options):
     builder.ywfl.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.ywfl.yres.yambo.code = load_code(options['yambocode_id'])
 
-    builder.ywfl.additional_parsing = List(list=['gap_'])
+    builder.ywfl.additional_parsing = List(['gap_'])
 
-    builder.workflow_settings = Dict(dict={
+    builder.workflow_settings = Dict({
         'type': 'cheap', #or heavy; cheap uses low parameters for the ones that we are not converging
         'what': ['gap_'],
         'bands_nscf_update': 'full-step'},)
@@ -334,15 +334,18 @@ def main(options):
     var_to_conv = [
         {
             'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
-            'start': [50, 50, 2],
-            'stop': [400, 400, 10],
-            'delta': [50, 50, 2],
-            'max': [1000, 1000, 36],
+            'start': [10,10,1],
+            'stop': [30, 30, 3],
+            'delta': [5, 5, 1],
+            'max': [1000, 1000, 40],
             'steps': 6,
             'max_iterations': 8,
-            'conv_thr': 1,
+            'conv_thr': 10,
             'conv_thr_units': 'eV',
             'convergence_algorithm': 'new_algorithm_2D',
+            'thr_fx':1e-2,
+            'thr_fy':1e-2,
+            'thr_fxy':1e-2,
         },
         {
             'var': ['kpoint_mesh'], 
@@ -352,9 +355,10 @@ def main(options):
             'max': [14,14,10], 
             'steps': 4, 
             'max_iterations': 4, 
-            'conv_thr': 25, 
-            'conv_thr_units': '%', 
+            'conv_thr': 10, 
+            'conv_thr_units': 'eV', 
             'convergence_algorithm': 'new_algorithm_1D',
+            'thr_fx':1e-2,
             },
             ] 
     
@@ -387,7 +391,7 @@ def main(options):
             "num_cores_per_mpiproc":1,
         }
 
-    parallelism_instructions_manual = Dict(dict={'manual' : {                                                            
+    parallelism_instructions_manual = Dict({'manual' : {                                                            
                                                               'std_1':{
                                                                      'BndsRnXp':[1,100],
                                                                      'NGsBlkXp':[2,18],
@@ -401,7 +405,7 @@ def main(options):
                                                                      'resources':dict_res_high,
                                                                      },}})
 
-    parallelism_instructions_auto = Dict(dict={'automatic' : {                                                            
+    parallelism_instructions_auto = Dict({'automatic' : {                                                            
                                                               'std_1':{
                                                                      'BndsRnXp':[1,100],
                                                                      'NGsBlkXp':[1,18],
@@ -416,7 +420,7 @@ def main(options):
                                                                      },}})
     
 
-    builder.parallelism_instructions = parallelism_instructions_auto
+    #builder.parallelism_instructions = parallelism_instructions_auto
 
     for i in range(len(var_to_conv)):
         print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))

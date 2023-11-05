@@ -68,7 +68,6 @@ class QEConv(WorkChain):
             self.ctx.calc_inputs.parent_folder = self.inputs.parent_folder
         except:
             pass
-        \
         self.ctx.variables = self.inputs.var_to_conv.get_list()
         self.ctx.act_var = self.ctx.variables.pop()
         #self.ctx.act_var['max_restarts'] = self.ctx.act_var['max_restarts'] #for the actual variable!
@@ -131,14 +130,14 @@ class QEConv(WorkChain):
             self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
             self.ctx.new_params['IONS'] = self.ctx.act_var['ions']
             self.ctx.new_params['CELL'] = self.ctx.act_var['cell']
-            self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
+            self.ctx.calc_inputs.pw.parameters = Dict(self.ctx.new_params)
 
         else:
             try:
                 self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
                 self.ctx.new_params.pop('IONS')
                 self.ctx.new_params.pop('CELL')
-                self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = Dict(self.ctx.new_params)
             except:
                 pass
 
@@ -159,7 +158,7 @@ class QEConv(WorkChain):
                 self.ctx.k_distance = self.ctx.k_distance + self.ctx.act_var['delta']*first
                 self.ctx.new_params = self.ctx.calc_inputs.pw.parameters.get_dict()
                 self.ctx.new_params['CONTROL']['calculation'] = self.ctx.act_var['calculation']
-                self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = Dict(self.ctx.new_params)
 
                 self.ctx.calc_inputs.kpoints = KpointsData()
                 self.ctx.calc_inputs.kpoints.set_cell(self.ctx.calc_inputs.pw.structure.cell)
@@ -182,7 +181,7 @@ class QEConv(WorkChain):
                 self.ctx.new_params['CONTROL']['calculation'] = self.ctx.act_var['calculation']
                 self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] = self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])] + self.ctx.act_var['delta']*first
 
-                self.ctx.calc_inputs.pw.parameters = Dict(dict=self.ctx.new_params)
+                self.ctx.calc_inputs.pw.parameters = Dict(self.ctx.new_params)
 
                 self.ctx.param_vals.append(self.ctx.new_params['SYSTEM'][str(self.ctx.act_var['var'])])
 

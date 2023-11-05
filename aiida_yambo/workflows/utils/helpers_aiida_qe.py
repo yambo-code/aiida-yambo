@@ -30,7 +30,7 @@ class calc_manager_aiida_qe: #the interface class to AiiDA... could be separated
             new_params['BndsRnXp'][-1] = new_params['BndsRnXp'][-1] + self.delta*first
             new_params['GbndRnge'][-1] = new_params['GbndRnge'][-1] + self.delta*first
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.gw.parameters = Dict(new_params)
 
             value = new_params['GbndRnge'][-1]
 
@@ -53,7 +53,7 @@ class calc_manager_aiida_qe: #the interface class to AiiDA... could be separated
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params['CUTBox'] = new_params['CUTBox'] + [1,1,1]*self.delta*first
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.gw.parameters = Dict(new_params)
 
             value = new_params['CUTBox'][-1]
 
@@ -61,7 +61,7 @@ class calc_manager_aiida_qe: #the interface class to AiiDA... could be separated
             new_params = inp_to_update.yres.gw.parameters.get_dict()
             new_params[str(self.var)] = new_params[str(self.var)] + self.delta*first
 
-            inp_to_update.yres.gw.parameters = Dict(dict=new_params)
+            inp_to_update.yres.gw.parameters = Dict(new_params)
 
             value = new_params[str(self.var)]
 

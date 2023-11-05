@@ -29,7 +29,7 @@ from aiida_yambo.utils.common_helpers import *
 from yambopy.io.inputfile import YamboIn
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
-SingleFileData = DataFactory('singlefile')
+SingleFileData = DataFactory('core.singlefile')
 
 __authors__ = " Miki Bonacci (miki.bonacci@unimore.it)," \
               " Gianluca Prandini (gianluca.prandini@epfl.ch)," \
@@ -59,12 +59,12 @@ class YamboCalculation(CalcJob):
 
        # self._SCRATCH_FOLDER = 'SAVE'
         spec.input('metadata.options.scratch_folder', valid_type=six.string_types, default='SAVE')
-
+        spec.input('metadata.options.withmpi', valid_type=bool, default=True)
 
         spec.input('metadata.options.logostring', valid_type=six.string_types, default="""
 #
 # Y88b    /   e           e    e      888~~\    ,88~-_
-#  Y88b  /   d8b         d8b  d8b     888   |  d888   \
+#  Y88b  /   d8b         d8b  d8b     888   |  d888   \\
 #   Y88b/   /Y88b       d888bdY88b    888 _/  88888    |
 #    Y8Y   /  Y88b     / Y88Y Y888b   888  \  88888    |
 #     Y   /____Y88b   /   YY   Y888b  888   |  Y888   /
@@ -185,7 +185,9 @@ class YamboCalculation(CalcJob):
         if verbose_timing is not None:
             if not isinstance(verbose_timing, bool):
                 raise InputValidationError("T_VERBOSE must be " " a boolean")
-            
+        
+        iteration = settings.pop('ITERATION', None)
+
         parameters = self.inputs.parameters
 
         if not initialise:
@@ -213,7 +215,7 @@ class YamboCalculation(CalcJob):
         try:
             precode_param_dict = self.inputs.precode_parameters
         except:
-            precode_param_dict = Dict(dict={})
+            precode_param_dict = Dict({})
         # check the precode parameters given in input
         input_cmdline = settings.pop('CMDLINE', None)
         import re
@@ -240,7 +242,7 @@ class YamboCalculation(CalcJob):
             precode_params_list = precode_params_list + input_cmdline
 
         # TODO: check that remote data must be on the same computer
-
+        
         ##############################
         # END OF INITIAL INPUT CHECK #
         ##############################
@@ -371,7 +373,7 @@ class YamboCalculation(CalcJob):
         #logic of the execution
         #calcinfo.codes_info = [c1, c2, c3] if not yambo_parent else [c3]   
         try:
-            parent_save_path = parent_calc_folder.outputs.output_parameters.get_dict().pop('ns_db1_path', None)
+            parent_save_path = parent_calc.outputs.output_parameters.get_dict().pop('ns_db1_path', None)
         except:
             parent_save_path = None
 
@@ -387,10 +389,11 @@ class YamboCalculation(CalcJob):
         else:
             calcinfo.codes_info = [c1, c2, c3]
         
-        if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+        #if not parent_save_path: extra_retrieved.append('SAVE/ns.db1')
+        extra_retrieved.append('SAVE/ns.db1') #then always delete it? but how? TODO
 
         calcinfo.codes_run_mode = CodeRunMode.SERIAL
-
+        
         if settings:
             raise InputValidationError(
                 "The following keys have been found in "

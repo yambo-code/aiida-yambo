@@ -22,6 +22,9 @@ except:
 
 from aiida_yambo.utils.defaults.create_defaults import *
 
+import pathlib
+import tempfile
+
 def check_kpoints_in_qe_grid(qe_grid,point):
         maps = []
         ind = 1 
@@ -134,9 +137,9 @@ def QP_bands_interface(node, mapping, only_scissor=Bool(False)):
     
     scissor, ks_bs_1, qp_bs_1, lab = QP_bands(x,mapping,only_scissor= only_scissor)
 
-    if only_scissor: return {'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
+    if only_scissor: return {'scissor':List([scissor[0],scissor[1],scissor[2]])}
         
-    BandsData = DataFactory('array.bands')
+    BandsData = DataFactory('core.array.bands')
     gw_bands_data = BandsData()
     
     gw_bands_data.set_kpoints(qp_bs_1.kpoints)
@@ -153,7 +156,7 @@ def QP_bands_interface(node, mapping, only_scissor=Bool(False)):
     print([scissor[0],scissor[1],scissor[2]])
     return {'band_structure_DFT':dft_bands_data, 
             'band_structure_GW':gw_bands_data, 
-            'scissor':List(list=[scissor[0],scissor[1],scissor[2]])}
+            'scissor':List([scissor[0],scissor[1],scissor[2]])}
 
 
 def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
@@ -234,7 +237,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
             message_nscf += ' and setting nbnd of the nscf calculation to b = {}'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
-            nscf_params = Dict(dict=nscf_params)
+            nscf_params = Dict(nscf_params)
             messages.append(message_nscf)  
     elif hasattr(workchain_inputs.nscf.pw,'parameters'):
         message_nscf = 'nscf inputs found' 
@@ -244,7 +247,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
             message_nscf += ', and setting nbnd of the nscf calculation to b = {}\n'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
-            nscf_params = Dict(dict=nscf_params)
+            nscf_params = Dict(nscf_params)
         messages.append(message_nscf)  
     elif hasattr(workchain_inputs.nscf.pw,'parameters'):
         message_nscf = 'nscf inputs found\n' 
@@ -254,7 +257,7 @@ def quantumespresso_input_validator(workchain_inputs,overrides={'pw':{}}):
             message_nscf += ', and setting nbnd of the nscf calculation to b = {}\n'.format(gwbands)
             nscf_params = nscf_params.get_dict()
             nscf_params['SYSTEM']['nbnd'] = int(gwbands)
-            nscf_params = Dict(dict=nscf_params)
+            nscf_params = Dict(nscf_params)
         else:
             nscf_params = None
         messages.append(message_nscf)       
@@ -362,7 +365,7 @@ def add_corrections(workchain_inputs, additional_parsing_List): #pre proc
 
     if 'QPkrange' in new_params['variables'].keys(): new_params['variables']['QPkrange']= [QP,'']
 
-    return mapping, Dict(dict=new_params)
+    return mapping, Dict(new_params)
 
 def parse_qp_level(calc, level_map):
 
@@ -513,73 +516,89 @@ def organize_output(output, node=None): #prepare to be stored
             if 'band_structure' in k and node:
                 pass
             else:
-                return Dict(dict=output)
+                return Dict(output)
                 break
     
     elif isinstance(output,list):
-        return List(list=output)
+        return List(output)
 
 
 def QP_analyzer(pk,QP_db,mapping):
     ywfl = load_node(pk)
-    db = xarray.open_dataset(QP_db._repository._repo_folder.abspath+'/path/'+QP_db.filename,engine='netcdf4')
-    k_mesh = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
-    v = mapping['valence']
-    c = mapping['conduction']
-    soc = mapping['soc']
-    where_v = np.where(db.QP_table[0,:] <= v)
-    where_c = np.where(db.QP_table[0,:] >= c)
-    
-    v_min = db.QP_table[0,:].min()
-    c_max = db.QP_table[0,:].max()
-    
-    print('vmin,cmax , ',v_min.values,c_max.values)
-    
-    where_v_max_dft = np.where(db.QP_Eo[:] == db.QP_Eo[where_v[0]].max())[0]
-    where_c_min_dft = np.where(db.QP_Eo[:] == db.QP_Eo[where_c[0]].min())[0]
-    
-    where_v_max = np.where(db.QP_E[:,0] == db.QP_E[where_v[0],0].max())[0]
-    where_c_min = np.where(db.QP_E[:,0] == db.QP_E[where_c[0],0].min())[0]
-    
-    dft_gap = db.QP_Eo[where_c_min_dft][0]*Ha-db.QP_Eo[where_v_max_dft][0]*Ha
-    gw_gap = db.QP_E[where_c_min,0][0]*Ha-db.QP_E[where_v_max,0][0]*Ha
-    print('DFT gap = {} eV'.format(dft_gap.values))
-    print('GW gap = {} eV'.format(gw_gap.values))
-    
-    k_v_dft = db.QP_table[2,where_v_max_dft]
-    k_c_dft = db.QP_table[2,where_c_min_dft]
-    k_v = db.QP_table[2,where_v_max]
-    k_c = db.QP_table[2,where_c_min]
-    
-    k_coord_v = k_mesh[int(k_v)-1]
-    k_coord_c = k_mesh[int(k_c)-1]
-    
-    print(k_v.values,k_c.values)
-    print(k_coord_v,k_coord_c)
-    
-    delta_k = abs(abs(k_coord_c)-abs(k_coord_v))
-    print(delta_k)
-    
-    l = check_kpoints_in_qe_grid(k_mesh,delta_k)
-    
-    print(l)
-    plt.plot(db.QP_table[2,where_v[0]],db.QP_E[where_v[0],0]*Ha,'o')
-    plt.plot(db.QP_table[2,where_c[0]],db.QP_E[where_c[0],0]*Ha,'o')
+    # Create temporary directory
+    with tempfile.TemporaryDirectory() as dirpath:
+        # Open the output file from the AiiDA storage and copy content to the temporary file    
+        try:
+            filename='ndb.QP_fixed'
+            temp_file = pathlib.Path(dirpath) / filename
+            with QP_db.base.repository.open(filename, 'rb') as handle:
+                temp_file.write_bytes(handle.read())
+        except:
+            filename='ndb.QP'
+            temp_file = pathlib.Path(dirpath) / filename
+            with QP_db.base.repository.open(filename, 'rb') as handle:
+                temp_file.write_bytes(handle.read())
 
-    #plt.ylim(-0.2,-0.1)
-    
-    BSE_mapper = {
-        'nscf_pk':find_pw_parent(ywfl).pk,
-        'v_min':int(v_min.values),
-        'c_max':int(c_max.values),
-        'q_ind':l[0][1],
-        'candidate_for_BSE':bool(gw_gap.values>=0),
-        'gap_GW':np.round(gw_gap.values,4),
-        'gap_DFT':np.round(dft_gap.values,4),
-        'QP':QP_db.pk,
-        'SOC':soc,
-    
-    }
-    
-    return BSE_mapper
+        db = xarray.open_dataset(dirpath+'/'+filename,engine='netcdf4')
+        k_mesh = find_pw_parent(ywfl).outputs.output_band.get_kpoints()
+        v = mapping['valence']
+        c = mapping['conduction']
+        soc = mapping['soc']
+        where_v = np.where(db.QP_table[0,:] <= v)
+        where_c = np.where(db.QP_table[0,:] >= c)
+        
+        v_min = db.QP_table[0,:].min()
+        c_max = db.QP_table[0,:].max()
+        
+        print('vmin,cmax , ',v_min.values,c_max.values)
+        
+        where_v_max_dft = np.where(db.QP_Eo[:] == db.QP_Eo[where_v[0]].max())[0]
+        where_c_min_dft = np.where(db.QP_Eo[:] == db.QP_Eo[where_c[0]].min())[0]
+        
+        where_v_max = np.where(db.QP_E[:,0] == db.QP_E[where_v[0],0].max())[0]
+        where_c_min = np.where(db.QP_E[:,0] == db.QP_E[where_c[0],0].min())[0]
+        
+        dft_gap = db.QP_Eo[where_c_min_dft][0]*Ha-db.QP_Eo[where_v_max_dft][0]*Ha
+        gw_gap = db.QP_E[where_c_min,0][0]*Ha-db.QP_E[where_v_max,0][0]*Ha
+        print('DFT gap = {} eV'.format(dft_gap.values))
+        print('GW gap = {} eV'.format(gw_gap.values))
+        
+        k_v_dft = db.QP_table[2,where_v_max_dft]
+        k_c_dft = db.QP_table[2,where_c_min_dft]
+        k_v = db.QP_table[2,where_v_max]
+        k_c = db.QP_table[2,where_c_min]
 
+        if len(k_v) > 1: k_v=k_v[0]
+        if len(k_c) > 1: k_c=k_c[0]
+        
+        k_coord_v = k_mesh[int(k_v)-1]
+        k_coord_c = k_mesh[int(k_c)-1]
+        
+        print(k_v.values,k_c.values)
+        print(k_coord_v,k_coord_c)
+        
+        delta_k = abs(abs(k_coord_c)-abs(k_coord_v))
+        print(delta_k)
+        
+        l = check_kpoints_in_qe_grid(k_mesh,delta_k)
+        
+        print(l)
+        plt.plot(db.QP_table[2,where_v[0]],db.QP_E[where_v[0],0]*Ha,'o')
+        plt.plot(db.QP_table[2,where_c[0]],db.QP_E[where_c[0],0]*Ha,'o')
+
+        #plt.ylim(-0.2,-0.1)
+        
+        BSE_mapper = {
+            'nscf_pk':find_pw_parent(ywfl).pk,
+            'v_min':int(v_min.values),
+            'c_max':int(c_max.values),
+            'q_ind':l[0][1],
+            'candidate_for_BSE':bool(gw_gap.values>=0),
+            'gap_GW':np.round(gw_gap.values,4),
+            'gap_DFT':np.round(dft_gap.values,4),
+            'QP':QP_db.pk,
+            'SOC':soc,
+        
+        }
+        
+        return BSE_mapper

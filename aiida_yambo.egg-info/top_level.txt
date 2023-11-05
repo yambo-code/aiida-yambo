@@ -1,2 +1,0 @@
-aiida_yambo
-docs

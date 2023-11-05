@@ -19,6 +19,7 @@ class Convergence_evaluator():
         
         self.p = []
         for k in self.p_val.keys():
+            if k == 'mesh':continue
             self.p.append(self.p_val[k])
             print(self.p_val[k])
         self.p = np.array(self.p)
@@ -152,7 +153,7 @@ class Convergence_evaluator():
         
         hint={}
         for i in self.var:
-            if not ratio: hint[i] = self.p[self.var.index(i),-len(oversteps)-1]
+            if not ratio: hint[i] = self.p[self.var.index(i),-len(oversteps)]
 
 
         if ratio: self.oversteps = oversteps
@@ -378,6 +379,9 @@ class Convergence_evaluator():
         hint_d=None
         hint={}
         hint_dummy={}
+
+        if self.convergence_algorithm == 'no_one':
+            return True and True, [], {}
 
         for i in self.quantities[:]:
             if 'newton_1D_ratio' in self.convergence_algorithm: self.ratio_evaluator(what=i)

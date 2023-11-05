@@ -8,7 +8,7 @@ from aiida.plugins import DataFactory, CalculationFactory
 from aiida.orm import List, Dict, Str,UpfData
 from aiida.engine import submit
 from aiida_yambo.workflows.yambowf import YamboWorkflow
-from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
+#from aiida_quantumespresso.utils.pseudopotential import validate_and_prepare_pseudos_inputs
 from ase import Atoms
 import argparse
 
@@ -163,18 +163,18 @@ def main(options):
     atoms.set_cell(the_cell, scale_atoms=False)
     atoms.set_pbc([True,True,True])
 
-    StructureData = DataFactory('structure')
+    StructureData = DataFactory('core.structure')
     structure = StructureData(ase=atoms)
 
     ###### setting the kpoints mesh ######
 
-    KpointsData = DataFactory('array.kpoints')
+    KpointsData = DataFactory('core.array.kpoints')
     kpoints = KpointsData()
-    kpoints.set_kpoints_mesh([6,6,2])
+    kpoints.set_kpoints_mesh([2,2,1])
 
     ###### setting the scf parameters ######
 
-    Dict = DataFactory('dict')
+    Dict = DataFactory('core.dict')
     params_scf = {
         'CONTROL': {
             'calculation': 'scf',
@@ -205,7 +205,7 @@ def main(options):
         'SYSTEM': {
             'ecutwfc': 80.,
             'force_symmorphic': True,
-            'nbnd': 100,
+            'nbnd': 20,
         },
         'ELECTRONS': {
             'mixing_mode': 'plain',
@@ -229,13 +229,13 @@ def main(options):
             'Chimod': 'hartree',
             'DysSolver': 'n',
             'GTermKind': 'BG',
-            'NGsBlkXp': [2, 'Ry'],
-            'BndsRnXp': [[1, 50], ''],
-            'GbndRnge': [[1, 50], ''],
+            'NGsBlkXp': [1, 'RL'],
+            'BndsRnXp': [[1, 10], ''],
+            'GbndRnge': [[1, 10], ''],
             'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
 
-    params_gw = Dict(dict=params_gw)
+    params_gw = Dict(params_gw)
 
 
     builder = YamboWorkflow.get_builder()
@@ -263,8 +263,8 @@ def main(options):
 
     builder.scf.pw.metadata.options.prepend_text = options['prepend_text']
 
-    builder.scf.pw.parameters = Dict(dict=params_scf)
-    builder.nscf.pw.parameters = Dict(dict=params_nscf)
+    builder.scf.pw.parameters = Dict(params_scf)
+    builder.nscf.pw.parameters = Dict(params_nscf)
 
     builder.nscf.pw.metadata = builder.scf.pw.metadata
 
@@ -291,11 +291,11 @@ def main(options):
         builder.yres.yambo.metadata.options.account = options['account']
 
     builder.yres.yambo.parameters = params_gw
-    builder.yres.yambo.precode_parameters = Dict(dict={})
-    builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
+    builder.yres.yambo.precode_parameters = Dict({})
+    builder.yres.yambo.settings = Dict({'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
     builder.yres.max_iterations = Int(2)
 
-    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM'])
+    builder.additional_parsing = List(['gap_',])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])
@@ -356,15 +356,17 @@ def main(options):
     
     for (2) and (4) there are additional options:
         (a) 'split_bands': split also in bands, not only kpoints the subset. default is True.
-        (b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed
-            as FD+scissored corrections (see paper HT M Bonacci et al. 2023). Useful in G0W0 interpolations
+        (b) 'extend_QP': it allows to extend the qp after the merging, including QP not explicitely computed, introduced
+            here as FD+scissored corrections (see paper HT M Bonacci et al. 2023). Useful in G0W0 interpolations
             e.g. within the aiida-yambo-wannier90 plugin.
             (b.1) 'consider_only': bands to be only considered explcitely, so the other ones are deleted from the explicit subsets;
             (b.2) 'T_smearing': the fake smearing temperature of the correction.
+            (b.3) 'Nb': n, #number of bands to be included in the final extended QP db(from 1st to nth)
 
     QP_subset_dict.update({
         'split_bands':True, #default
         'extend_QP': True, #default is False
+        'Nb': n, #number of bands to be included in the final extended QP db(from 1st to nth)
         'consider_only':[8,9],
         'T_smearing':1e-2, #default
     })

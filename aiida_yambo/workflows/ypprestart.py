@@ -135,10 +135,10 @@ class YppRestart(ProtocolMixin, BaseRestartWorkChain):
 
         builder = cls.get_builder()
         builder.ypp['code'] = code
-        builder.ypp['parameters'] = Dict(dict=parameters)
+        builder.ypp['parameters'] = Dict(parameters)
         builder.ypp['metadata'] = metadata
         if 'settings' in inputs['ypp']:
-            builder.ypp['settings'] = Dict(dict=inputs['ypp']['settings'])
+            builder.ypp['settings'] = Dict(inputs['ypp']['settings'])
         builder.clean_workdir = Bool(inputs['clean_workdir'])
 
         if not parent_folder:
