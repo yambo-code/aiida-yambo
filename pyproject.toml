@@ -1,0 +1,80 @@
+
+[project]
+name = "aiida-yambo"
+version = "3.0.0"
+description = "YAMBO plugin and workflows for AiiDA"
+keywords = ["yambo aiida workflows"]
+readme = "README.md"
+authors = [
+    {name = "Miki Bonacci, Michael Atambo, Antimo Marrazzo, Prandini Gianluca", email = "miki.bonacci@unimore.it"},
+]
+classifiers = [
+    "Environment :: Plugins",
+    "Framework :: AiiDA",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "aiida-quantumespresso>=3.0.0a6,<4.5",
+    "aiida_core[atomic_tools]>=2,<3",
+    "h5py",
+    "netcdf4",
+    "numpy>=1.20.1",
+    "pandas>=2",
+    "pyyaml~=6.0",
+    "xarray",
+    "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy",
+]
+license = {text = "MIT"}
+
+[project.urls]
+Homepage = "https://github.com/yambo-code/yambo-aiida"
+
+[project.optional-dependencies]
+docs = [
+    "docutils",
+    'sphinx~=6.2.1',
+    'sphinx-copybutton~=0.5.2',
+    'sphinx-book-theme~=1.0.1',
+    'sphinx-design~=0.4.1',
+    'sphinxcontrib-details-directive~=0.1.0',
+    'sphinx-autoapi~=3.0.0',
+    'myst_parser~=1.0.0',
+    'sphinx-togglebutton',
+    "versioneer",
+    "versioneer[toml]",
+    "Cython",
+    'myst-nb@git+https://github.com/executablebooks/MyST-NB.git',
+    "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy",
+
+]
+tests = [
+    "pytest",
+]
+pre-commit = [
+    "pre-commit==1.11.0",
+    "prospector==0.12.11",
+    "pylint==1.9.3",
+    "yapf==0.24.0",
+]
+
+[project.entry-points]
+[project.entry-points."aiida.calculations"]
+"yambo.yambo" = "aiida_yambo.calculations.yambo:YamboCalculation"
+"yambo.ypp" = "aiida_yambo.calculations.ypp:YppCalculation"
+
+[project.entry-points."aiida.parsers"]
+"yambo.yambo" = "aiida_yambo.parsers.parsers:YamboParser"
+"yambo.ypp" = "aiida_yambo.parsers.yppparser:YppParser"
+
+[project.entry-points."aiida.workflows"]
+"yambo.yambo.yamboconvergence" = "aiida_yambo.workflows.yamboconvergence:YamboConvergence"
+"yambo.yambo.yamborestart" = "aiida_yambo.workflows.yamborestart:YamboRestart"
+"yambo.yambo.yambowf" = "aiida_yambo.workflows.yambowf:YamboWorkflow"
+"yambo.ypp.ypprestart" = "aiida_yambo.workflows.ypprestart:YppRestart"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"

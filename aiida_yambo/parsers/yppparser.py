@@ -155,9 +155,9 @@ class YppParser(Parser):
         with tempfile.TemporaryDirectory() as dirpath:
             # Open the output file from the AiiDA storage and copy content to the temporary file
             for filename in retrieved.base.repository.list_object_names():
-		# Create the file with the desired name
-		temp_file = pathlib.Path(dirpath) / filename
-		with retrieved.open(filename, 'rb') as handle:
+                # Create the file with the desired name
+                temp_file = pathlib.Path(dirpath) / filename
+                with retrieved.open(filename, 'rb') as handle:
                     temp_file.write_bytes(handle.read())
 
             count_merged = 0
