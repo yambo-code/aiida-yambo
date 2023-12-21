@@ -120,7 +120,7 @@ def main(options):
 
     ###### setting the gw parameters ######
 
-    Dict = DataFactory('core.dict')
+    Dict = DataFactory('dict')
 
     params_gw = {
         'arguments': [
@@ -141,7 +141,7 @@ def main(options):
             'LongDrXd': [[1.,0.0,0.0],''],
             }}
 
-    params_gw = Dict(params_gw)
+    params_gw = Dict(dict=params_gw)
 
     ###### creation of the YamboCalculation ######
 
@@ -165,8 +165,8 @@ def main(options):
 
     builder.parameters = params_gw
 
-    builder.precode_parameters = Dict({})
-    builder.settings = Dict({'INITIALISE': False, 'COPY_DBS': False})
+    builder.precode_parameters = Dict(dict={})
+    builder.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
     builder.code = load_code(options['yambocode_id'])
     builder.preprocessing_code = load_code(options['yamboprecode_id'])

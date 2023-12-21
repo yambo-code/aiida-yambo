@@ -132,7 +132,7 @@ def main(options):
 
     ###### setting the gw parameters ######
 
-    Dict = DataFactory('core.dict')
+    Dict = DataFactory('dict')
 
     params_gw = {
         'arguments': [
@@ -150,7 +150,7 @@ def main(options):
             'GbndRnge': [[1, 50], ''],
             'QPkrange': [[[1, 1, 8, 9]], ''],}}
 
-    params_gw = Dict(params_gw)
+    params_gw = Dict(dict=params_gw)
 
     ###### creation of the YamboRestart ######
 
@@ -173,7 +173,7 @@ def main(options):
 
     builder.yambo.parameters = params_gw
 
-    builder.yambo.settings = Dict({'INITIALISE': False, 'COPY_DBS': False})
+    builder.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False})
 
     builder.yambo.code = load_code(options['yambocode_id'])
     builder.yambo.preprocessing_code = load_code(options['yamboprecode_id'])

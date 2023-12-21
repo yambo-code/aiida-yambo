@@ -126,18 +126,18 @@ def main(options):
     atoms.set_cell(the_cell, scale_atoms=False)
     atoms.set_pbc([True,True,True])
 
-    StructureData = DataFactory('core.structure')
+    StructureData = DataFactory('structure')
     structure = StructureData(ase=atoms)
 
     ###### setting the kpoints mesh ######
 
-    KpointsData = DataFactory('core.array.kpoints')
+    KpointsData = DataFactory('array.kpoints')
     kpoints = KpointsData()
     kpoints.set_kpoints_mesh([6,6,2])
 
     ###### setting the scf parameters ######
 
-    Dict = DataFactory('core.dict')
+    Dict = DataFactory('dict')
     params_scf = {
         'CONTROL': {
             'calculation': 'scf',
@@ -158,7 +158,7 @@ def main(options):
         },
     }
 
-    parameter_scf = Dict(params_scf)
+    parameter_scf = Dict(dict=params_scf)
 
 
     ###### creation of the workchain ######
