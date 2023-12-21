@@ -9,7 +9,7 @@ default_inputs:
             options:
                 resources:
                     num_machines: 1
-                    # num_mpiprocs_per_machine: 16
+                    num_mpiprocs_per_machine: 1
                     num_cores_per_mpiproc: 1
                 max_wallclock_seconds: 43200  # Twelve hours
                 withmpi: True
