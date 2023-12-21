@@ -166,7 +166,8 @@ class YamboConvergence(ProtocolMixin, WorkChain):
             protocol = 'moderate'
             
         if calc_type=='bse':
-            builder.workflow_settings['what'] = ['lowest_exciton']
+            builder.workflow_settings = {}
+            builder.workflow_settings['what'] = ['lowest_exciton','brightest_exciton']
 
         ################ K mesh
         builder.ywfl['nscf']['kpoints'] = KpointsData()
