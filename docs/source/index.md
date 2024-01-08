@@ -11,7 +11,6 @@ myst:
 :hidden: true
 
 installation/index
-tutorial/index
 ```
 
 ```{toctree}
@@ -53,22 +52,22 @@ To the installation section
 ```
 :::
 
-:::{grid-item-card} {fa}`info-circle;mr-1` Tutorials
+:::{grid-item-card} {fa}`info-circle;mr-1` User guide
 :text-align: center
 :shadow: md
 
-From zero to hero via interactive tutorials.
+Consult the user guide and tutorials.
 
 +++
 
-```{button-ref} tutorial/index
+```{button-ref} user_guide/index
 :ref-type: doc
 :click-parent:
 :expand:
 :color: primary
 :outline:
 
-To the tutorial section
+To the user guide and tutorials
 ```
 :::
 
