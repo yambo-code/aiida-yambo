@@ -162,7 +162,7 @@ class YppParser(Parser):
 
             count_merged = 0
             for filename in os.listdir(dirpath):
-                if 'ndb.QP_merged' in file:
+                if 'ndb.QP_merged' in filename:
                     count_merged +=1
             for filename in os.listdir(dirpath):
                 if 'stderr' in filename:
