@@ -3,8 +3,7 @@
 # YamboConvergence: automated GW ans BSE convergences
 
 The highest level workflow is represented by the ``YamboConvergence`` workchain, 
-which implements the full automation of the convergence algorithm described in M. Bonacci et al., 
-`Towards high-throughput many-body perturbation theory: efficient algorithms and automated workflows`, arXiv:2301.06407. 
+which implements the full automation of the convergence algorithm described in Bonacci, M., Qiao, J., Spallanzani, N. et al. Towards high-throughput many-body perturbation theory: efficient algorithms and automated workflows. npj Comput Mater 9, 74 (2023). https://doi.org/10.1038/s41524-023-01027-2. 
 Simulations are organized on the fly, without any external user intervention. 
 The purpose of this new proposed convergence algorithm is to obtain an accurate converged 
 result doing the least possible number of calculations. This is possible if a reliable description of the convergence space is achieved, resulting also in a 

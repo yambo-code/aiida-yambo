@@ -61,9 +61,9 @@ def sanity_check_QP(v,c,input_db,output_db,create=True):
     for i in wrong[0]:
         print(d.QP_Eo[i].data*units.Ha,d.QP_E[i,0].data*units.Ha)
         if d.QP_table[0,i]>v:
-            d.QP_E[i,0] = fit_c[0,0]*d.QP_Eo[i]+fit_c[0,1]
+            d.QP_E[i,0] = fit_c[0]*d.QP_Eo[i]+fit_c[1]
         else:
-            d.QP_E[i,0] = fit_v[0,0]*d.QP_Eo[i]+fit_v[0,1]
+            d.QP_E[i,0] = fit_v[0]*d.QP_Eo[i]+fit_v[1]
     
     #align to zero wrt to the maximum of valence... fixes the error in Fermi re-evaluation
     #in the BSE RD/ndb.QP. for now.
