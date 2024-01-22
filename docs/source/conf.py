@@ -21,7 +21,6 @@ load_profile(Profile('docs', {'process_control': {}, 'storage': {}}))
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import aiida_yambo
 
-load_documentation_profile()
 
 # -- Project information -----------------------------------------------------
 
