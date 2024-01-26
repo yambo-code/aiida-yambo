@@ -226,7 +226,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
                 self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables')
                 self.report('adjusting bse namelist... please check yambo documentation')
         except:
-            self.report('Issue in check_variables.')
+            pass #self.report('Issue in check_variables.')
 
         
         try:
