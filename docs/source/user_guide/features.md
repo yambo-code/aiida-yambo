@@ -9,7 +9,7 @@ Settings of a YamboCalculation
 The settings Dict that we provide as input of a YamboCalculation can decide the order of p2y and yambo executables. 
 To understand the possible actions, we need to explain how the plugin works in the four standard cases.
 
-The plugin currently supports four type of logic to run a calculation:
+The plugin currently supports four types of logic to run a calculation:
 
 1) p2y and yambo initialization from NSCF
      this will just run a p2y+yambo calculation to create the Yambo SAVE database and initialise it. Before the p2y+yambo run, the nscf save folder is copied into the 
@@ -57,16 +57,14 @@ Yambo in Parallel
 -----------------
 
 The computational effort done during a Yambo calculation requires an extensive and wise use of parallelization schemes on various quantities
-that are computed during the simulation. A tutorial for user-defined parallelism instructions can be found at http://www.yambo-code.org/wiki/index.php?title=GW_parallel_strategies. In any case, when yambo 
+that are computed during the simulation. A tutorial for user-defined parallelism instructions can be found at the [yambo wiki page](http://www.yambo-code.org/wiki/index.php?title=GW_parallel_strategies). In any case, when yambo 
 sees a parallelization problem before to start the real calculation, tries to use its default scheme. 
 
-**default yambo parallelization**: 
-
-    just put, in the parameters dictionary, the instruction 
+For default yambo parallelizationjust put, in the parameters dictionary, the instruction 
                 
-    ::
-
-        'PAR_def_mode': "balanced"       # [PARALLEL] Default distribution mode ("balanced"/"memory"/"workload")
+```python
+'PAR_def_mode': "balanced"       # [PARALLEL] Default distribution mode ("balanced"/"memory"/"workload")
+```
 
 
 Where are my retrieved files? 
@@ -74,22 +72,25 @@ Where are my retrieved files?
 
 In the verdi shell, type:
 
-::
-    load_node(<pk of the calc>).outputs.retrieved._repository._repo_folder.abspath
+```python
+path = load_node(<pk_of_the_calc>).outputs.retrieved._repository._repo_folder.abspath
+```
 
 Where is my remote folder? 
 --------------------------
 
 In the verdi shell, type:
 
-::
-    load_node(<pk of the calc>).outputs.remote_folder.get_remote_path()
+```python
+path = load_node(<pk_of_the_calc>).outputs.remote_folder.get_remote_path()
+```
 
 How can I recover a pw calculation from a yambo one? 
 ----------------------------------------------------
 
 In the verdi shell, type:
 
-::
-    from aiida_yambo.utils.common_helpers import find_pw_parent
-    find_pw_parent(load_node(<pk of the calc>),calc_type=['nscf'])
+```python
+from aiida_yambo.utils.common_helpers import find_pw_parent
+find_pw_parent(load_node(<pk of the calc>),calc_type=['nscf']) # or 'scf'
+```
