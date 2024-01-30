@@ -27,7 +27,7 @@ workflows/index
 ## Interactive tutorial
 
 We prepared an interactive, progressive and self-explained version of the tutorials, based on jupyter 
-notebooks. You can find the repository [here]()
+notebooks.
 The studied system will be the bulk hBN, as you can see in the examples/examples_hBN folder. We will make use of the automatic protocol inputs generation, still an experimental features for MBPT simulations within Yambo.
 
 :::{important}

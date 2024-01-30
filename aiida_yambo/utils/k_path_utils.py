@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""helpers for k_path_"""
+"""helpers for k_path"""
 from __future__ import absolute_import
 import numpy as np
 from scipy.optimize import curve_fit
