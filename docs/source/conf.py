@@ -134,8 +134,10 @@ html_theme_options = {
     'use_sidenotes': True,
     'logo': {
         'text': 'AiiDA yambo',
-        'image_light': '_static/aiida-yambo-logo.png',
-        'image_dark': '_static/aiida-yambo-logo.png',
+        #'image_light': '_static/aiida-yambo-logo.png',
+        #'image_dark': '_static/aiida-yambo-logo.png',
+        'image_light': '_static/yambo-aiida-event_logo_v1.4.svg',
+        'image_dark': '_static/yambo-aiida-event_logo_v1.4.svg',
     },
 }
 #html_static_path = ['_static']

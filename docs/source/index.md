@@ -19,9 +19,6 @@ installation/index
 user_guide/index
 ```
 
-<img src="images/AiiDA_transparent_logo.png" alt="aiida-logo" width="350" height="110">
-<img src="images/yambo-stripe.png" alt="yambo-logo" width="350" height="110">
-
 # Welcome to documentation of the *aiida-yambo* package!
 
 `AiiDA Yambo` is a package that allows to automate many-body perturbation theory calculations using the [yambo-code](https://www.yambo-code.eu) in the AiiDA framework.

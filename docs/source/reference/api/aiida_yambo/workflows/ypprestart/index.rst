@@ -1,0 +1,116 @@
+:py:mod:`aiida_yambo.workflows.ypprestart`
+==========================================
+
+.. py:module:: aiida_yambo.workflows.ypprestart
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   aiida_yambo.workflows.ypprestart.YppRestart
+
+
+
+
+.. py:class:: YppRestart(*args, **kwargs)
+
+
+   Bases: :py:obj:`aiida_quantumespresso.workflows.protocols.utils.ProtocolMixin`, :py:obj:`aiida.engine.processes.workchains.restart.BaseRestartWorkChain`
+
+   This module interacts directly with the yambo plugin to submit calculations
+
+   This module submits calculations using the yambo plugin, and manages them, including
+   restarting the calculation in case of:
+   1. Memory problems (will reduce MPI parallelism before resubmitting) -- to be fixed
+   2. Queue time exhaustions (will increase time by a fraction before resubmitting)
+   3. Parallelism errors (will reduce the MPI the parallelism before resubmitting)  -- to be fixed
+   4. Errors originating from a few select unphysical input parameters like too low bands.  -- to be fixed
+
+   .. py:attribute:: _process_class
+
+      
+
+   .. py:attribute:: _error_handler_entry_point
+      :value: 'aiida_yambo.workflow_error_handlers.ypprestart'
+
+      
+
+   .. py:method:: define(spec)
+      :classmethod:
+
+      Define the process specification.
+
+
+   .. py:method:: get_protocol_filepath()
+      :classmethod:
+
+      Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols.
+
+
+   .. py:method:: get_builder_from_protocol(code, protocol='merge_QP', overrides={}, parent_folder=None, **_)
+      :classmethod:
+
+      Return a builder prepopulated with inputs selected according to the chosen protocol.
+      :return: a process builder instance with all inputs defined ready for launch.
+
+
+   .. py:method:: setup()
+
+      setup of the calculation and run
+              
+
+
+   .. py:method:: validate_parameters()
+
+      validation of the input parameters... including settings and the namelist...
+      for example, the parallelism namelist is different from version the version... 
+      we need some input helpers to fix automatically this with respect to the version of yambo
+
+
+   .. py:method:: validate_resources()
+
+      validation of machines... completeness and with respect para options
+              
+
+
+   .. py:method:: validate_parent()
+
+      validation of the parent calculation --> should be at least nscf/p2y
+              
+
+
+   .. py:method:: should_run_ypp()
+
+      understand if it is only a post processing of ypp or you need 
+      also to run a YppCalculation
+
+
+   .. py:method:: post_processing()
+
+
+   .. py:method:: report_error_handled(calculation, action)
+
+      Report an action taken for a calculation that has failed.
+      This should be called in a registered error handler if its condition is met and an action was taken.
+      :param calculation: the failed calculation node
+      :param action: a string message with the action taken
+
+
+   .. py:method:: _handle_unrecoverable_failure(calculation)
+
+      Handle calculations with an exit status below 400 which are unrecoverable, 
+      so abort the work chain.
+
+
+   .. py:method:: _handle_walltime_error(calculation)
+
+      Handle calculations for a walltime error; 
+      we increase the simulation time and copy the database already created.
+
+
+
