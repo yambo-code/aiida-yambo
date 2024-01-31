@@ -29,10 +29,10 @@ The format is similar with respect to the other launching scripts, but here you 
 We have to provide ``workflow_settings``, which encode some of the workflow logic:
 
 ```python
-    builder.workflow_settings = Dict(dict={
-        'type': 'cheap', #or heavy; cheap uses low value for parameters (inputs ones) that we are not converging right now.
-        'what': ['gap_'], #quantity to be converged
-        'bands_nscf_update': 'full-step'},) #computes nscf band considering the full space to be explored in the iteration.
+builder.workflow_settings = Dict(dict={
+    'type': 'cheap', #or heavy; cheap uses low value for parameters (inputs ones) that we are not converging right now.
+    'what': ['gap_'], #quantity to be converged
+    'bands_nscf_update': 'full-step'},) #computes nscf band considering the full space to be explored in the iteration.
 ```
 
 The workflow submitted here looks for convergence on different parameters. The iter is specified
@@ -49,35 +49,35 @@ Going through the example, we see that a set of parameters is converged followin
 For coupled parameters convergence:
 
 ```python
-    {
-            'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
-            'start': [50, 50, 2],                           #starting values
-            'stop': [400, 400, 10],                         #maximum values for the first grid creation
-            'delta': [50, 50, 2],                           #grid spacing
-            'max': [1000, 1000, 36],                        #maximum values for the largest grid creation
-            'steps': 6,                                     #steps/calculation per iteration. For ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'], always 6
-            'max_iterations': 8,                            #maximum attempts
-            'conv_thr': 1,                                  #converge threshold
-            'conv_thr_units': 'eV',                         #converge threshold units
-            'convergence_algorithm': 'new_algorithm_2D',    #we are converging actually 2 parameters: bands and cutoff
-        }
+{
+    'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
+    'start': [50, 50, 2],                           #starting values
+    'stop': [400, 400, 10],                         #maximum values for the first grid creation
+    'delta': [50, 50, 2],                           #grid spacing
+    'max': [1000, 1000, 36],                        #maximum values for the largest grid creation
+    'steps': 6,                                     #steps/calculation per iteration. For ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'], always 6
+    'max_iterations': 8,                            #maximum attempts
+    'conv_thr': 1,                                  #converge threshold
+    'conv_thr_units': 'eV',                         #converge threshold units
+    'convergence_algorithm': 'new_algorithm_2D',    #we are converging actually 2 parameters: bands and cutoff
+}
 ```
 
 for single parameter convergence, e.g. k-points mesh:
 
 ```python
-    {
-            'var': ['kpoint_mesh'], 
-            'start': [6,6,2], 
-            'stop': [12,12,8], 
-            'delta': [1, 1, 1], 
-            'max': [14,14,10], 
-            'steps': 4, 
-            'max_iterations': 4, 
-            'conv_thr': 25, 
-            'conv_thr_units': '%',                       #convergence threshold units: The relative error with respect to the most converged value
-            'convergence_algorithm': 'new_algorithm_1D', #1D algorithm
-            }
+{
+        'var': ['kpoint_mesh'], 
+        'start': [6,6,2], 
+        'stop': [12,12,8], 
+        'delta': [1, 1, 1], 
+        'max': [14,14,10], 
+        'steps': 4, 
+        'max_iterations': 4, 
+        'conv_thr': 25, 
+        'conv_thr_units': '%',                       #convergence threshold units: The relative error with respect to the most converged value
+        'convergence_algorithm': 'new_algorithm_1D', #1D algorithm
+}
 ```
 
 In case of converge of FFTGvecs parameters:
@@ -125,35 +125,35 @@ As the value of the parameters increases, the calculations will become computati
 So, it is possible to define parameter-dependent resources and parallelism instructions by providing the ``builder.parallelism_instructions`` dictionary input:
 
 ```python
-    dict_para_medium = {}
-    dict_para_medium['X_and_IO_CPU'] = '2 1 1 8 1'
-    dict_para_medium['X_and_IO_ROLEs'] = 'q k g c v'
-    dict_para_medium['DIP_CPU'] = '1 16 1'
-    dict_para_medium['DIP_ROLEs'] = 'k c v'
-    dict_para_medium['SE_CPU'] = '1 2 8'
-    dict_para_medium['SE_ROLEs'] = 'q qp b'
+dict_para_medium = {}
+dict_para_medium['X_and_IO_CPU'] = '2 1 1 8 1'
+dict_para_medium['X_and_IO_ROLEs'] = 'q k g c v'
+dict_para_medium['DIP_CPU'] = '1 16 1'
+dict_para_medium['DIP_ROLEs'] = 'k c v'
+dict_para_medium['SE_CPU'] = '1 2 8'
+dict_para_medium['SE_ROLEs'] = 'q qp b'
 
-    dict_res_medium = {
-            "num_machines": 1,
-            "num_mpiprocs_per_machine":16, 
-            "num_cores_per_mpiproc":1,
-        }
-    
+dict_res_medium = {
+        "num_machines": 1,
+        "num_mpiprocs_per_machine":16, 
+        "num_cores_per_mpiproc":1,
+    }
 
-    builder.parallelism_instructions = Dict(dict={'manual' : {                                                            
-                                                              'std_1':{
-                                                                     'BndsRnXp':[1,100],                      
-                                                                     'NGsBlkXp':[2,18],
-                                                                     'kpoints':[3*3*3/2,12*12*12/2],        #estimation of the number of kpoints in iBZ for 3x3x3 and 12x12x12 meshes
-                                                                     'parallelism':dict_para_medium,
-                                                                     'resources':dict_res_medium,
-                                                                     },
-                                                             'std_2':{
-                                                                     'BndsRnXp':[101,1000],
-                                                                     'NGsBlkXp':[2,18],
-                                                                     'parallelism':dict_para_medium, #it can be different from the one above
-                                                                     'resources':dict_res_medium,    #it can be different from the one above
-                                                                     },}})
+
+builder.parallelism_instructions = Dict(dict={'manual' : {                                                            
+                                                            'std_1':{
+                                                                    'BndsRnXp':[1,100],                      
+                                                                    'NGsBlkXp':[2,18],
+                                                                    'kpoints':[3*3*3/2,12*12*12/2],        #estimation of the number of kpoints in iBZ for 3x3x3 and 12x12x12 meshes
+                                                                    'parallelism':dict_para_medium,
+                                                                    'resources':dict_res_medium,
+                                                                    },
+                                                            'std_2':{
+                                                                    'BndsRnXp':[101,1000],
+                                                                    'NGsBlkXp':[2,18],
+                                                                    'parallelism':dict_para_medium, #it can be different from the one above
+                                                                    'resources':dict_res_medium,    #it can be different from the one above
+                                                                    },}})
 ```
 
 in the above case, you are setting manually the parallelism (by means of "dict_para_medium").
@@ -161,31 +161,31 @@ The two different directives, 'std_1' and 'std_2', are respectively followed if 
 It is possible also to define automatic parallelization directives:
 
 ```python    
-    dict_res_medium = {
-            "num_machines": 1,
-            "num_mpiprocs_per_machine":16,
-            "num_cores_per_mpiproc":1,
-        }
+dict_res_medium = {
+        "num_machines": 1,
+        "num_mpiprocs_per_machine":16,
+        "num_cores_per_mpiproc":1,
+    }
 
-    dict_res_medium = {
-            "num_machines": 4,
-            "num_mpiprocs_per_machine":16,
-            "num_cores_per_mpiproc":1,
-        }
+dict_res_medium = {
+        "num_machines": 4,
+        "num_mpiprocs_per_machine":16,
+        "num_cores_per_mpiproc":1,
+    }
 
-    builder.parallelism_instructions = Dict(dict={'automatic' : {                                                            
-                                                              'std_1':{
-                                                                     'BndsRnXp':[1,100],
-                                                                     'NGsBlkXp':[1,18],
-                                                                     'mode':'balanced',
-                                                                     'resources':dict_res_medium,
-                                                                     },
-                                                             'std_2':{
-                                                                     'BndsRnXp':[101,1000],
-                                                                     'NGsBlkXp':[1,18],
-                                                                     'mode':'memory',                  #memory savings
-                                                                     'resources':dict_res_high,
-                                                                     },}})
+builder.parallelism_instructions = Dict(dict={'automatic' : {                                                            
+                                                            'std_1':{
+                                                                    'BndsRnXp':[1,100],
+                                                                    'NGsBlkXp':[1,18],
+                                                                    'mode':'balanced',
+                                                                    'resources':dict_res_medium,
+                                                                    },
+                                                            'std_2':{
+                                                                    'BndsRnXp':[101,1000],
+                                                                    'NGsBlkXp':[1,18],
+                                                                    'mode':'memory',                  #memory savings
+                                                                    'resources':dict_res_high,
+                                                                    },}})
 ```
 
 ## Output analysis
@@ -199,13 +199,13 @@ The final converged parameters can be obtained from the output node 'infos':
 in this way you can obtain something like:
 
 ```python
-    {
-    "BndsRnXp": 50.0,
-    "E_ref": 5.4920627477806,
-    "GbndRnge": 50.0,
-    "NGsBlkXp": 2.0,
-    "gap_": 5.5143629702825,
-    }
+{
+"BndsRnXp": 50.0,
+"E_ref": 5.4920627477806,
+"GbndRnge": 50.0,
+"NGsBlkXp": 2.0,
+"gap_": 5.5143629702825,
+}
 ```
 
 You can also access from shell the results by executing the command ``verdi data dict show <pk-of-infos-node>``.
@@ -213,14 +213,14 @@ You can also access from shell the results by executing the command ``verdi data
 The full convergence history can be parsed using the python Pandas library:
 
 ```python
-    import pandas as pd
-    history = run.outputs.history.get_dict()
-    history_table = pd.DataFrame(history)
-    history_table
+import pandas as pd
+history = run.outputs.history.get_dict()
+history_table = pd.DataFrame(history)
+history_table
 ```
 
 The final converged value being
 
 ```python
-    history_table[history_table['useful']==True]
+history_table[history_table['useful']==True]
 ```
