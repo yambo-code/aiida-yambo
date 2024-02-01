@@ -90,7 +90,7 @@ Acknoledgements
 
 This work was supported by: the Centre of Excellence "MaX - Materials Design at the Exascale" funded by European Union 
 (H2020-EINFRA-2015-1, Grant No. 676598; H2020-INFRAEDI-2018-1, Grant No. 824143; HORIZON-EUROHPC-JU-2021-COE-1 , 
-Grant No. 101093324); the European Union's Horizon 2020 research and innovation programme 
+Grant No. 101093374); the European Union's Horizon 2020 research and innovation programme 
 (BIG-MAP, Grant No. 957189, also part of the BATTERY 2030+ initiative, Grant No. 957213); 
 NCCR MARVEL, a National Centre of Competence in Research, funded by the Swiss National Science 
 Foundation (Grant No. 205602).
