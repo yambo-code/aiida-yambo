@@ -1,6 +1,6 @@
 (workchains)=
 
-# WorkChains for aiida-yambo
+# Automation: WorkChains for aiida-yambo
 
 The plugin provides several workflows for performing automated MBPT with `Yambo`.
 The following shows how to use the workflows provided by the `aiida-yambo` plugin.

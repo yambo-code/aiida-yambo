@@ -20,7 +20,6 @@ Submodules
    :maxdepth: 1
 
    common_helpers/index.rst
-   gw2wannier90/index.rst
    k_path_utils/index.rst
    parallel_namelists/index.rst
    parallelism_finder/index.rst

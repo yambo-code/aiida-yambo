@@ -21,10 +21,9 @@ For tutorials on how to run AiiDA plugins, please have a look [here](https://aii
 
 get_started/dft_p2y
 get_started/tutorial_gw
-workflows/index
 ```
 
-## Interactive tutorial
+## Interactive tutorials
 
 We prepared an interactive, progressive and self-explained version of the tutorials, based on jupyter 
 notebooks.
