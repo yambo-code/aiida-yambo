@@ -19,7 +19,7 @@ As you may notice, here the builder has a new attributes, referring to scf, nscf
 respectively PwBaseWorkchain and YamboRestart. 
 The only 'strict' YamboWorkflow input is now the ``parent_folder``. 
 Moreover, it is possible to ask the workflow to compute and parse some specific quantities, like gaps, quasiparticle levels an exciton eigenvalues. 
-This is possible by providing as input an `additional parsing list`:
+This is possible by providing as input an `additional_parsing` AiiDA List:
 
 ```bash
    builder.additional_parsing = List(list=['gap_','gap_GG','homo','lumo']) #GW
