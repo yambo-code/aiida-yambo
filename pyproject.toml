@@ -6,7 +6,7 @@ description = "YAMBO plugin and workflows for AiiDA"
 keywords = ["yambo aiida workflows"]
 readme = "README.md"
 authors = [
-    {name = "Miki Bonacci, Michael Atambo, Antimo Marrazzo, Prandini Gianluca", email = "miki.bonacci@unimore.it"},
+    {name = "Miki Bonacci, Michael Atambo, Antimo Marrazzo, Prandini Gianluca, Nicola Spallanzani", email = "miki.bonacci@psi.ch"},
 ]
 classifiers = [
     "Environment :: Plugins",
