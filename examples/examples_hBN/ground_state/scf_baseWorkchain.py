@@ -10,6 +10,16 @@ from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from ase import Atoms
 import argparse
 
+'''
+The following part explains how to run the density functional theory (DFT) self-consistent simulations, using as example
+the hexagonal boron nitride (hBN). 
+The starting point for a GW simulation is a self-consistent field (SCF) calculation of the electronic density, 
+and then a calculation of the electronic wavefunctions through a non-self-consistent (NSCF) DFT calculation. 
+So, the first AiiDA plugin used here is *aiida-quantumespresso*. 
+
+A step-by-step guide for input creation and management is provided in the jupyter-notebook version of the tutorials.
+'''
+
 def get_options():
 
     parser = argparse.ArgumentParser(description='SCF calculation.')

@@ -6,17 +6,19 @@ The following part explains how to run the density functional theory (DFT) simul
 the hexagonal boron nitride (hBN). 
 The starting point is a self-consistent field (SCF) calculation of the electronic density, 
 and then a calculation of the electronic wavefunctions through a non-self-consistent (NSCF) DFT calculation. 
-So, the first AiiDA plugin used here is the QuantumEspresso one. 
+So, the first AiiDA plugin used here is *aiida-quantumespresso*. 
 
-A step-by-step guide for input creation and management is provided in the jupyter-notebook version of the tutorial for Silicon.
 
 ## SCF step (Quantum ESPRESSO)
 
 Using the `aiida-quantumespresso` plugin, we begin with the submission of an SCF calculation.
 We are going to use the ``pk`` of the SCF 
-calculation in the next steps. Remember that 
-the ``pk`` is the number that identifies the node 
-in the AiiDA database. 
+calculation in the next step (NSCF). The ``pk`` is the number that identifies the corresponding node 
+in the AiiDA database, and can be accessed via:
+```bash
+In  [1]: given_node.pk
+Out [2]: 1234  #pk of the node here named "given_node".
+```
 We use the PwBaseWorkChain to submit a pw calculation, 
 in such  a way to have automatic
 error handling and restarting from failed runs. 

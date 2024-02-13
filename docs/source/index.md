@@ -19,12 +19,9 @@ installation/index
 user_guide/index
 ```
 
-<img src="images/AiiDA_transparent_logo.png" alt="aiida-logo" width="350" height="110">
-<img src="images/yambo-stripe.png" alt="yambo-logo" width="350" height="110">
+# Welcome to documentation of the *aiida-yambo* package!
 
-## Welcome to documentation of the *aiida-yambo* package!
-
-`AiiDA Yambo` is a package that allows to automate many-body perturbation theory calculations using the {{ yambo-code }} in the AiiDA framework.
+`AiiDA Yambo` is a package that allows to automate many-body perturbation theory calculations using the [yambo-code](https://www.yambo-code.eu) in the AiiDA framework.
 Currently, the aiida-yambo plugin supports 
 quasiparticle (G0W0, COSHEX and HFlevel) 
 and optical properties (IP-RPA and BSE) simulations, 
@@ -73,7 +70,7 @@ To the user guide and tutorials
 
 ::::
 
-## How to cite
+# How to cite
 
 If you use this package for your research, please cite the following works:
 
@@ -93,7 +90,7 @@ Acknoledgements
 
 This work was supported by: the Centre of Excellence "MaX - Materials Design at the Exascale" funded by European Union 
 (H2020-EINFRA-2015-1, Grant No. 676598; H2020-INFRAEDI-2018-1, Grant No. 824143; HORIZON-EUROHPC-JU-2021-COE-1 , 
-Grant No. 101093324); the European Union's Horizon 2020 research and innovation programme 
+Grant No. 101093374); the European Union's Horizon 2020 research and innovation programme 
 (BIG-MAP, Grant No. 957189, also part of the BATTERY 2030+ initiative, Grant No. 957213); 
 NCCR MARVEL, a National Centre of Competence in Research, funded by the Swiss National Science 
 Foundation (Grant No. 205602).
