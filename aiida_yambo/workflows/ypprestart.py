@@ -18,7 +18,6 @@ from aiida.orm import FolderData, Str, List
 from aiida_yambo.calculations.ypp import YppCalculation
 from aiida_yambo.utils.parallel_namelists import *
 from aiida_yambo.utils.common_helpers import *
-from aiida_yambo.utils.gw2wannier90 import * 
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
