@@ -838,7 +838,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         bse_params['variables']['KfnQPdb'] = "E < ./ndb.QP"
 
         self.ctx.yambo_inputs.parent_folder = self.ctx.calc.outputs.remote_folder
-        self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
+        
+        # this should be left optional. as it is now. to be set in the submission script by the user.
+        #self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
 
         BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
         self.ctx.BSE_map = BSE_map
