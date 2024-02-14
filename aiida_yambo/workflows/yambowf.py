@@ -817,6 +817,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
             self.out('merged_QP',self.ctx.QP_db)
 
+        BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
+        self.ctx.BSE_map = BSE_map
 
         return
 
@@ -842,8 +844,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         # this should be left optional. as it is now. to be set in the submission script by the user.
         #self.ctx.yambo_inputs.yambo.settings = update_dict(self.ctx.yambo_inputs.yambo.settings, 'COPY_DBS', True)
 
-        BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
-        self.ctx.BSE_map = BSE_map
+        #Done in the step before: run_post_process.
+        #BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
+        #self.ctx.BSE_map = BSE_map
 
         if not 'BSEBands' in bse_params['variables'].keys():
             if 'scissored' in self.ctx.QP_subsets.keys():

@@ -568,8 +568,17 @@ def QP_analyzer(pk,QP_db,mapping):
         k_v = db.QP_table[2,where_v_max]
         k_c = db.QP_table[2,where_c_min]
 
-        if len(k_v) > 1: k_v=k_v[0]
-        if len(k_c) > 1: k_c=k_c[0]
+        """
+        I do the following two lined because we may have this:
+        k_v=
+            <xarray.DataArray 'QP_table' (D_0000000003: 1)>
+            array([[1.]], dtype=float32)
+            Dimensions without coordinates: D_0000000003, D_0000000003
+            
+        so it is needed.
+        """
+        if len(k_v) > 1: k_v=k_v.values[0][0]
+        if len(k_c) > 1: k_c=k_c.values[0][0]
         
         k_coord_v = k_mesh[int(k_v)-1]
         k_coord_c = k_mesh[int(k_c)-1]
