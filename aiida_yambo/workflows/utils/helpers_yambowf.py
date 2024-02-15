@@ -606,8 +606,8 @@ def QP_analyzer(pk,QP_db,mapping):
             'GW_k_c_ind':int(k_c),
             'candidate_for_BSE':bool(gw_gap.values>=0),
             'gap_GW':np.round(gw_gap.values,4),
-            'gap_DFT':np.round(dft_gap.values,4),
-            'QP':QP_db.pk,
+            #'gap_DFT':np.round(dft_gap.values,4),
+            'QP_pk':QP_db.pk,
             'SOC':soc,
         
         }

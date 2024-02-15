@@ -876,6 +876,8 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 parsed = additional_parsed(calc, self.inputs.additional_parsing.get_list(), mapping)
                 mapping_Dict = store_Dict(mapping)
                 self.out('nscf_mapping', mapping_Dict)
+                if hasattr(self.ctx, 'BSE_map'):
+                    parsed.update(self.ctx.BSE_map)
                 if hasattr(self.ctx,'bse'):
                     if self.ctx.bse.is_finished_ok:
                         parsed_bse = additional_parsed(self.ctx.bse, self.inputs.additional_parsing.get_list(), mapping)
@@ -887,19 +889,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                         return self.exit_codes.ERROR_WORKCHAIN_FAILED
                 self.report('PARSED: {}'.format(parsed))
                 self.out('output_ywfl_parameters', store_Dict(parsed))
-
-                if 'scissor' in self.inputs.additional_parsing.get_list(): #in the future, also needed support for mergeqp, multiple calculations.
-                    try:
-                        if hasattr(self.ctx,'QP_db'):
-                            b = QP_bands_interface(node=Int(self.ctx.calc.pk), QP_merged = self.ctx.QP_db,mapping = Dict(dict = mapping))
-                        else:
-                            b = QP_bands_interface(node=Int(self.ctx.calc.pk), mapping = Dict(dict = mapping))
-                        self.report('electronic band structure computed by interpolation')
-                        for k,v in b.items():
-                            self.out(k, v)
-                    except:
-                        self.report('fail in the scissor evaluation')
-
+            elif hasattr(self.ctx, 'BSE_map'):
+                mapping, yambo_parameters = add_corrections(self.ctx.yambo_inputs, [])
+                mapping_Dict = store_Dict(mapping)
+                self.out('nscf_mapping', mapping_Dict)
+                self.out('output_ywfl_parameters', store_Dict(self.ctx.BSE_map))
+                
             if hasattr(self.ctx,'bse'):
                 if self.ctx.bse.is_finished_ok:
                     self.out_many(self.exposed_outputs(self.ctx.bse,YamboRestart))
