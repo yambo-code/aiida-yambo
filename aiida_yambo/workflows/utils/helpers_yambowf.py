@@ -577,9 +577,9 @@ def QP_analyzer(pk,QP_db,mapping):
             
         so it is needed.
         """
-        if len(k_v) > 1: k_v=k_v.values[0][0]
-        if len(k_c) > 1: k_c=k_c.values[0][0]
-        
+        if len(k_v) > 1: k_v=k_v.values[0]
+        if len(k_c) > 1: k_c=k_c.values[0]
+
         k_coord_v = k_mesh[int(k_v)-1]
         k_coord_c = k_mesh[int(k_c)-1]
         
@@ -602,8 +602,8 @@ def QP_analyzer(pk,QP_db,mapping):
             'v_min':int(v_min.values), # lowest valence band in BSE
             'c_max':int(c_max.values), # highest conduction band in BSE
             'q_ind':l[0][1],
-            'GW_k_v_ind':k_v,
-            'GW_k_c_ind':k_c,
+            'GW_k_v_ind':int(k_v),
+            'GW_k_c_ind':int(k_c),
             'candidate_for_BSE':bool(gw_gap.values>=0),
             'gap_GW':np.round(gw_gap.values,4),
             'gap_DFT':np.round(dft_gap.values,4),
