@@ -295,7 +295,7 @@ def main(options):
     builder.yres.yambo.settings = Dict(dict={'INITIALISE': False, 'COPY_DBS': False, 'T_VERBOSE':True,})
     builder.yres.max_iterations = Int(2)
 
-    builder.additional_parsing = List(list=['gap_','G_v','gap_GG','gap_GY','gap_GK','gap_KK','gap_GM'])
+    builder.additional_parsing = List(list=['gap_','gap_GG','gap_GK','gap_KK','gap_GM'])
 
     builder.yres.yambo.preprocessing_code = load_code(options['yamboprecode_id'])
     builder.yres.yambo.code = load_code(options['yambocode_id'])
