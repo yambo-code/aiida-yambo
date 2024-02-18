@@ -310,7 +310,7 @@ def main(options):
     The idea is to split the QP calculation in several subsets, then merge it in a final database -- with yambopy functionalities.
     There are a lot of possibilities to run QP calculations, to be provided in the QP_subset_dict input of the YamboWorkflow: 
     
-    (1) provide subset of already wanted QP, already in subsets (i.e. already splitted);
+    (1) provide subset of already QP, already in subsets (i.e. already splitted);
 
     QP_subset_dict= {
         'subsets':[
