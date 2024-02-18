@@ -326,12 +326,12 @@ def main(options):
     builder.ywfl.additional_parsing = List(list=['gap_'])
 
     builder.workflow_settings = Dict(dict={
-        'type': 'cheap', #or heavy; cheap uses low parameters for the ones that we are not converging
-        'what': ['gap_'],
-        'bands_nscf_update': 'full-step'},)
+        'type': 'cheap', # or heavy; cheap uses initial value for the parameters that we already converged.
+        'what': ['gap_'], # all the possible quantities that we may parse in the YamboWorkflow.
+    })
 
     #inputs for builder.parameters_space, see below
-    var_to_conv = [
+    builder.parameters_space = List([
         {
             'var': ['BndsRnXp', 'GbndRnge', 'NGsBlkXp'],
             'start': [50, 50, 2],
@@ -345,33 +345,29 @@ def main(options):
             'convergence_algorithm': 'new_algorithm_2D',
         },
         {
-            'var': ['kpoint_mesh'], 
-            'start': [6,6,2], 
-            'stop': [12,12,4], 
-            'delta': [1, 1, 1], #spacing along given RL directions for the evaluations of the Delta.
-            'max': [14,14,10], 
-            'steps': 4, 
-            'max_iterations': 4, 
-            'conv_thr': 25, 
-            'conv_thr_units': '%', 
-            'convergence_algorithm': 'new_algorithm_1D',
+            'var': ['FFTGvecs'],
+            'start': 21,
+            'stop': 58,
+            'delta': 8,
+            'max': 84,
+            'steps': 4,
+            'max_iterations': 4,
+            'conv_thr': 10,
+            'conv_thr_units': '%',
+            'convergence_algorithm': 'new_algorithm_1D'  #we are converging 1 parameter
             },
-            ] 
+        ])
     
 
     dict_para_medium = {}
-    dict_para_medium['X_and_IO_CPU'] = '2 1 1 8 1'
+    dict_para_medium['X_and_IO_CPU'] = '1 1 1 8 1'
     dict_para_medium['X_and_IO_ROLEs'] = 'q k g c v'
-    dict_para_medium['DIP_CPU'] = '1 16 1'
+    dict_para_medium['DIP_CPU'] = '1 8 1'
     dict_para_medium['DIP_ROLEs'] = 'k c v'
-    dict_para_medium['SE_CPU'] = '1 2 8'
+    dict_para_medium['SE_CPU'] = '1 1 8'
     dict_para_medium['SE_ROLEs'] = 'q qp b'
 
-    dict_res_medium = {
-            "num_machines": 1,
-            "num_mpiprocs_per_machine":16,
-            "num_cores_per_mpiproc":1,
-        }
+    dict_res_medium = {"num_machines": 1, "num_mpiprocs_per_machine":8, "num_cores_per_mpiproc":2,}
     
     dict_para_high = {}
     dict_para_high['X_and_IO_CPU'] = '2 1 1 8 1' 
@@ -381,20 +377,16 @@ def main(options):
     dict_para_high['SE_CPU'] = '1 2 8'
     dict_para_high['SE_ROLEs'] = 'q qp b'
 
-    dict_res_high = {
-            "num_machines": 1,
-            "num_mpiprocs_per_machine":16,
-            "num_cores_per_mpiproc":1,
-        }
+    dict_res_high = {"num_machines": 1, "num_mpiprocs_per_machine":16, "num_cores_per_mpiproc":1,}
 
     parallelism_instructions_manual = Dict(dict={'manual' : {                                                            
-                                                              'std_1':{
+                                                              'low':{
                                                                      'BndsRnXp':[1,100],
                                                                      'NGsBlkXp':[2,18],
                                                                      'parallelism':dict_para_medium,
                                                                      'resources':dict_res_medium,
                                                                      },
-                                                             'std_2':{
+                                                             'medium':{
                                                                      'BndsRnXp':[101,1000],
                                                                      'NGsBlkXp':[2,18],
                                                                      'parallelism':dict_para_high,
@@ -416,12 +408,12 @@ def main(options):
                                                                      },}})
     
 
-    builder.parallelism_instructions = parallelism_instructions_auto
+    builder.parallelism_instructions = parallelism_instructions_manual
 
-    for i in range(len(var_to_conv)):
-        print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
+    #for i in range(len(var_to_conv)):
+    #    print('{}-th variable will be {}'.format(i+1,var_to_conv[i]['var']))
 
-    builder.parameters_space = List(list = var_to_conv)
+    #builder.parameters_space = List(list = var_to_conv)
     
     return builder
     
