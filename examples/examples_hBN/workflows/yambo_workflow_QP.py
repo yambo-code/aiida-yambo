@@ -390,7 +390,7 @@ def main(options):
     QP_subset_dict= {
         'range_QP':10, #eV         , default=nscf_gap_eV*1.2
         'full_bands':True,
-        'consider_only':[7,8,9,10], #eV
+        'consider_only':[7,8,9,10],
         'qp_per_subset': 20,
         'parallel_runs':4,
 
