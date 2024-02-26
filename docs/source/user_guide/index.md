@@ -4,8 +4,6 @@
 
 In this section we presents several examples on how to run Calcjobs and WorkChains, as well as their description. 
 We start from DFT and we go through GW and BSE steps.
-For the sake of consistency, we consider the same system as the tutorials, i.e. the bulk hexagonal
-Boron Nitride (hBN).
 
 :::{important}
 These how-to guides assume you already installed and properly configured AiiDA, Quantum ESPRESSO (and its AiiDA plugin) and Yambo. 
