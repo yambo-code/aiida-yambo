@@ -7,7 +7,7 @@ The plugin can be downloaded from the official github repository
 ```bash
 $ git clone https://github.com/yambo-code/yambo-aiida.git
 $ cd aiida_yambo
-$ pip install -e aiida-yambo
+$ pip install .
 ```
 or installed from the Python Package Index (PyPI) using pip
 
