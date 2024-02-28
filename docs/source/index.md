@@ -19,7 +19,7 @@ installation/index
 user_guide/index
 ```
 
-# Welcome to documentation of the *aiida-yambo* package!
+# Welcome to the documentation of the *aiida-yambo* package!
 
 `AiiDA Yambo` is a package that allows to automate many-body perturbation theory calculations using the [yambo-code](https://www.yambo-code.eu) in the AiiDA framework.
 Currently, the aiida-yambo plugin supports 
