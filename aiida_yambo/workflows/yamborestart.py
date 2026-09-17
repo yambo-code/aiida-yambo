@@ -322,7 +322,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         """
         new_para, new_resources, pop_list  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
-        self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
+        self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources.get('num_cores_per_mpiproc', 1))
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()), sublevel='variables',pop_list= pop_list)
 
         self.ctx.inputs.settings = update_dict(self.ctx.inputs.settings,'ITERATION', self.ctx.iteration)
@@ -356,7 +356,7 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
         new_para, new_resources, pop_list  = fix_memory(self.ctx.inputs.metadata.options.resources, calculation, calculation.exit_status,
                                                 self.inputs.max_number_of_nodes, self.ctx.iteration)
         self.ctx.inputs.metadata.options.resources = new_resources
-        self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
+        self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources.get('num_cores_per_mpiproc', 1))
         self.ctx.inputs.parameters = update_dict(self.ctx.inputs.parameters, list(new_para.keys()), list(new_para.values()),sublevel='variables',pop_list= pop_list)
 
             
