@@ -144,6 +144,8 @@ class YamboCalculation(CalcJob):
 
         _dbs_accepted = {'gw0': 'ndb.QP', 'HF_and_locXC': 'ndb.HF_and_locXC','p2y':'ns.db1','bse':'ndb.BS_diago_Q*'}
 
+        _setup_db = 'ndb.kindx*'  #k/q indexes written by the yambo setup; DBsFRAGpm=+QINDX/+ALL fragments this into ndb.kindx_fragment_1..
+
         local_copy_list = []
         remote_copy_list = []
         remote_symlink_list = []
@@ -312,6 +314,7 @@ class YamboCalculation(CalcJob):
 
         if initialise:
             extra_retrieved.append('SAVE/'+_dbs_accepted['p2y'])
+            extra_retrieved.append('SAVE/'+_setup_db)
         else:
             for dbs in _dbs_accepted.keys():
                 if dbs in params_dict['arguments']:
