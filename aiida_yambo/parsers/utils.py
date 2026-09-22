@@ -166,6 +166,10 @@ def parse_log(log,output_params,timing):
                 output_params['para_error'] = True
             if  incomplete_para_error_.findall(line) or impossible_para_error_.findall(line) or impossible_para_error2_.findall(line):
                 output_params['para_error'] = True
+            if  impossible_para_error.findall(line) or impossible_para_error_.findall(line):
+                output_params['errors'].append('para_error_auto')
+            if  impossible_para_error2.findall(line) or impossible_para_error2_.findall(line):
+                output_params['errors'].append('para_error_user')
             if time_probably.findall(line):
                 output_params['errors'].append('time_most_prob')
             if corrupted_fragment.findall(line):
