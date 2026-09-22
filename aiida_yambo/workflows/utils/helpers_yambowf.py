@@ -404,8 +404,11 @@ def parse_excitons(calc, what): #post proc
         brightest = calc.outputs.array_excitonic_states.get_array('energies')[index]
         return brightest, index+1
     elif what == 'lowest':
-        lowest = calc.outputs.array_excitonic_states.get_array('energies')[0]
-        return lowest, 1 
+        energies = calc.outputs.array_excitonic_states.get_array('energies')
+        positive = np.where(energies.real > 0)[0]
+        index = positive[energies[positive].real.argmin()]
+        lowest = energies[index]
+        return lowest, index+1
 
 def additional_parsed(calc, additional_parsing_List, mapping): #post proc 
     
