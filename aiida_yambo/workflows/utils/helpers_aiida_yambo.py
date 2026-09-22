@@ -233,8 +233,18 @@ def updater(calc_dict, inp_to_update, parameters, workflow_dict,internal_iterati
         else:
             
             if var in ['BndsRnXp','GbndRnge']:
-                input_dict['variables'][var] = [[1,parameters[var].pop(0)],inp_to_update.yres.yambo.parameters['variables'][var][-1]]
-                values_dict[var]=input_dict['variables'][var][0][1]
+                if "BndsRnXs" in inp_to_update.yres.yambo.parameters.get_dict()['variables'].keys():
+                    input_dict['variables']['BndsRnXs'] = [[1,parameters[var].pop(0)],inp_to_update.yres.yambo.parameters['variables']['BndsRnXs'][-1]]
+                    values_dict[var]=input_dict['variables']['BndsRnXs'][0][1]
+                else:
+                    input_dict['variables'][var] = [[1,parameters[var].pop(0)],inp_to_update.yres.yambo.parameters['variables'][var][-1]]
+                    values_dict[var]=input_dict['variables'][var][0][1]
+            elif var == "NGsBlkXp" and "NGsBlkXs" in inp_to_update.yres.yambo.parameters.get_dict()['variables'].keys() and "BSENGBlk" in inp_to_update.yres.yambo.parameters.get_dict()['variables'].keys():
+                #we update all the parameters related to the cut-off. This is not a good implementation as we ask NGsBlkXp but we update also the others...
+                #input_dict['variables'][var] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables'][var][-1]]
+                input_dict['variables']['NGsBlkXs'] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables']['NGsBlkXs'][-1]]
+                input_dict['variables']['BSENGBlk'] = input_dict['variables']['NGsBlkXs']
+                values_dict[var]=input_dict['variables']['NGsBlkXs'][0]
             else:                
                 input_dict['variables'][var] = [parameters[var].pop(0),inp_to_update.yres.yambo.parameters['variables'][var][-1]]
                 values_dict[var]=input_dict['variables'][var][0]
@@ -281,11 +291,36 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
     for i in range(1,backtrace+1):
         l_calc = []
         ywf_node = load_node(workflow_dict['wfl_pk'][backtrace-i])
+
+
+        # super hard coded and not good. To be fixed asap.
+        BSE_conversion_BSENGBlk = False
+        BSE_conversion_BndsRnXs = False
+        BSE_conversion_NGsBlkXs = False
+
+        params = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables']
+        if 'BSENGBlk' in params.keys():
+            BSE_conversion_BSENGBlk = True
+        if 'BndsRnXs' in params.keys():
+            BSE_conversion_BndsRnXs = True
+        if 'NGsBlkXs' in params.keys():
+            BSE_conversion_NGsBlkXs = True
+
         for n in parameter_names:
+
+            if n == 'BSENGBlk' and BSE_conversion_BSENGBlk:
+                n_mod = 'BSENGBlk'
+            elif n in ['BndsRnXp','GbndRnge'] and BSE_conversion_BndsRnXs:
+                n_mod = 'BndsRnXs'
+            elif n == 'NGsBlkXp' and BSE_conversion_NGsBlkXs:
+                n_mod = 'NGsBlkXs'
+            else:
+                n_mod = n
+
             try:
-                if 'mesh' in n:
+                if 'mesh' in n_mod:
                     value = ywf_node.inputs.nscf__kpoints.get_kpoints_mesh()[0]
-                elif 'density' in n:
+                elif 'density' in n_mod:
                     #pw = find_pw_parent(ywf_node)
                     #value = get_distance_from_kmesh(pw)
                     if 'kdensity' in calc_dict.keys():
@@ -297,11 +332,12 @@ def take_quantities(calc_dict, workflow_dict, steps = 1, what = ['gap_eV'], back
                         pw = find_pw_parent(ywf_node)
                         value = get_distance_from_kmesh(pw)
                 else:
-                    value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n][0]
-                    if n in ['BndsRnXp','GbndRnge']:
+                    value = ywf_node.inputs.yres__yambo__parameters.get_dict()['variables'][n_mod][0]
+                    if n_mod in ['BndsRnXp','GbndRnge','BndsRnXs']:
                         value = value[1] 
-            except:
+            except Exception as e:
                 value = 0
+                raise ValueError("Error in taking the quantity {} from the workflow inputs. Error: {}".format(n_mod,e))
             l_calc.append(value)
             
         for j in range(len(what)):        

@@ -8,7 +8,10 @@ import copy
 import glob, os, re
 
 from yambopy.dbs.excitondb import *
-from yambopy.dbs.savedb import * 
+try:
+    from yambopy.dbs.savedb import *
+except ModuleNotFoundError:
+    from yambopy import YamboElectronsDB as YamboSaveDB
 
 def take_fermi_parser(file):  # calc_node_pk = node_conv_wfl.outputs.last_calculation
 

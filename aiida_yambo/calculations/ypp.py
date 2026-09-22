@@ -9,8 +9,6 @@ import six
 
 from aiida.engine import CalcJob
 
-from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
-
 from aiida.common.datastructures import CalcInfo
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import UniquenessError, InputValidationError, ValidationError
@@ -278,9 +276,7 @@ class YppCalculation(CalcJob):
             params_dict['variables']['Actions_and_names'] = [list_of_dbs,'']
             
         y = YamboIn().from_dictionary(params_dict)
-
         input_filename = tempfolder.get_abs_path(self.metadata.options.input_filename)
-
         y.write(input_filename, prefix=self.metadata.options.logostring)
         
 
@@ -336,6 +332,12 @@ class YppCalculation(CalcJob):
             calcinfo.retrieve_list.append('SAVE/ndb.QP_merged*')
             calcinfo.retrieve_list.append('aiida.out/ndb.QP_merged*')
         
+        sort_excitons = False
+        if 'excitons' in params_dict['arguments']:
+            sort_excitons = settings.pop('SORT_EXCITONS', False)
+            if sort_excitons:
+                calcinfo.retrieve_list.append('*sorted*')
+        
         additional = settings.pop('ADDITIONAL_RETRIEVE_LIST',[])
         if additional:
             extra_retrieved.append(additional)
@@ -353,6 +355,9 @@ class YppCalculation(CalcJob):
             "-F", self.metadata.options.input_filename, \
             '-J', self.metadata.options.output_filename, \
         ]
+
+        if sort_excitons:
+            c.cmdline_params = ['-e', 's'] + c.cmdline_params
 
         c.code_uuid = main_code.uuid
 

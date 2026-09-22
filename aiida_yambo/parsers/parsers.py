@@ -17,14 +17,13 @@ from aiida.plugins import DataFactory, CalculationFactory
 import glob, os, re
 
 from yamboparser.yambofile import *
-from yamboparser.yambofolder import *
+from yamboparser.yambofolder import YamboFolder
 
-from aiida_yambo.calculations.yambo import YamboCalculation
 from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.parsers.utils import *
 
 from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
+from aiida_quantumespresso.calculations import _uppercase_dict
 from six.moves import range
 import cmath
 import netCDF4
@@ -180,7 +179,6 @@ class YamboParser(Parser):
                 with retrieved.open(filename, 'rb') as handle:
                     temp_file.write_bytes(handle.read())
 
-
             if 'ns.db1' in os.listdir(dirpath):
                 output_params['ns_db1_path'] = dirpath
 
@@ -210,16 +208,15 @@ class YamboParser(Parser):
                     parse_log(result, output_params, timing = verbose_timing)
                 if result.type=='report':
                     parse_report(result, output_params)
-
-                #if 'eel' in result.filename:
-                #    eels_array = self._aiida_array(result.data)
-                #    self.out(self._eels_array_linkname, eels_array)
-                #elif 'eps' in result.filename:
-                #    eps_array = self._aiida_array(result.data)
-                #    self.out(self._eps_array_linkname, eps_array)
-                #elif 'alpha' in result.filename:
-                #    alpha_array = self._aiida_array(result.data)
-                #    self.out(self._alpha_array_linkname,alpha_array)
+                if 'eel' in result.filename:
+                    eels_array = self._aiida_optics_array(result.data)
+                    self.out(self._eels_array_linkname, eels_array)
+                elif 'eps' in result.filename:
+                    eps_array = self._aiida_optics_array(result.data)
+                    self.out(self._eps_array_linkname, eps_array)
+                elif 'alpha' in result.filename:
+                    alpha_array = self._aiida_optics_array(result.data)
+                    self.out(self._alpha_array_linkname,alpha_array)
 
                 
                 if 'ndb.QP' == result.filename:
@@ -311,7 +308,7 @@ class YamboParser(Parser):
 
     def _aiida_array_bse(self, data):
         arraydata = ArrayData()
-        full = data.pop('0')
+        full = data.pop(list(data.keys())[0])
         for i in data.keys():
             for k in full.keys():
                 full[k].append(data[i][k][0])
@@ -323,6 +320,16 @@ class YamboParser(Parser):
         arraydata = ArrayData()
         for ky in data.keys():
             arraydata.set_array(ky.replace('-','_minus_'), data[ky])
+        return arraydata
+    
+    def _aiida_optics_array(self, data):
+        arraydata = ArrayData()
+        full = data.pop(list(data.keys())[0])
+        for i in data.keys():
+            for k in full.keys():
+                full[k] += data[i][k]
+        for ky in full.keys():
+            arraydata.set_array(ky.replace('-','_').replace('`','_prime_').replace('/','_').replace("(","_").replace(")","").replace("[","_").replace("]",""), np.array(full[ky]))
         return arraydata
 
     def _aiida_bands_data(self, data, cell, kpoints_dict):

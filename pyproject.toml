@@ -17,7 +17,7 @@ classifiers = [
 ]
 requires-python = ">=3.7"
 dependencies = [
-    "aiida-quantumespresso>=3.0.0a6,<4.5",
+    "aiida-quantumespresso>=3.0.0a6,<6.0",
     "aiida_core[atomic_tools]>=2.4.1,<3",
     "h5py",
     "netcdf4",
@@ -25,7 +25,7 @@ dependencies = [
     "pandas>=2",
     "pyyaml~=6.0",
     "xarray",
-    "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy",
+    "yambopy @ git+https://github.com/mikibonacci/yambopy@aiida-parsing#egg=yambopy",
 ]
 license = {text = "MIT"}
 

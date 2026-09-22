@@ -24,7 +24,8 @@ from aiida_yambo.utils.common_helpers import *
 from aiida_yambo.parsers.utils import *
 
 from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
+from aiida_quantumespresso.calculations import _uppercase_dict
+
 from six.moves import range
 import cmath
 import netCDF4

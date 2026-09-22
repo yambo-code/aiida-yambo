@@ -130,7 +130,6 @@ def update_FD_and_scissor(db_dft,db_gw,conduction,mu,scissors=[[1,0],[1,0]],e_re
 
         corr = dss.QP_E.data[b24,0]- dss.QP_Eo.data[b24]
         
-
         if b<conduction:
             corr[0] = Apply_FD_scissored_correction(dss.QP_Eo.data[b24],corr,scissors[0],mu,e_ref,T)
         else:

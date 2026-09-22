@@ -8,21 +8,15 @@ import six
 
 from aiida.engine import CalcJob
 
-from aiida_quantumespresso.calculations import _lowercase_dict, _uppercase_dict
 
 from aiida.common.datastructures import CalcInfo
-from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import UniquenessError, InputValidationError, ValidationError
-from aiida.common.utils import classproperty
 
 from aiida.orm import Code
 from aiida.orm import Dict
 from aiida.orm import RemoteData, BandsData, ArrayData
 
 from aiida.plugins import DataFactory, CalculationFactory
-
-from aiida.common import AIIDA_LOGGER
-from aiida.common import LinkType
 
 from aiida_yambo.utils.common_helpers import * 
 

@@ -5,10 +5,14 @@ import numpy as np
 from matplotlib import pyplot as plt, style
 import copy
 import xarray
+import netCDF4 as nc
 from ase.units import Ha
 
 from yambopy.dbs.qpdb import *
-from yambopy.dbs.savedb import * 
+try:
+    from yambopy.dbs.savedb import *
+except ModuleNotFoundError:
+    from yambopy import YamboElectronsDB as YamboSaveDB
 from qepy.lattice import Path
 from aiida.tools.data.array.kpoints import get_kpoints_path, get_explicit_kpoints_path
 
@@ -613,3 +617,67 @@ def QP_analyzer(pk,QP_db,mapping):
         }
         
         return BSE_mapper
+
+def check_already_computed(qp_db_pk:int,b:int,k:int):
+    # create the qp instance and read it with nc
+    QP_corrections = load_node(qp_db_pk)
+
+    filename = "ndb.QP"
+    with tempfile.TemporaryDirectory() as dirpath:
+        temp_file = pathlib.Path(dirpath) / filename
+        temp_file.write_bytes(QP_corrections.get_content("rb"))
+        db = nc.Dataset(temp_file,'r')
+        table = db.variables["QP_table"][:]
+    
+    # check if the band
+    if b < 0 or k < 0:
+        raise ValueError("Band and kpoint must be positive integers.")
+    
+    where_b = np.where(table[0, :] == b)[0]
+    if len(where_b) == 0:
+        return False
+    
+    # check if the kpoint is in the filtered table
+    where_b_k = np.where(table[2, where_b] == k)[0]
+
+    if len(where_b_k) == 0:
+        return False
+    
+    return True
+
+
+
+def additional_dimension_check(src_file, dst_file):
+    src = Dataset(src_file, "r")
+    dst = Dataset(dst_file, "w")
+
+    # Create dimensions (except string1)
+    for name, dim in src.dimensions.items():
+        if name != "string1":
+            dst.createDimension(name, len(dim) if not dim.isunlimited() else None)
+
+    # Copy variables
+    for name, var in src.variables.items():
+        if name == "CUTOFF":
+            # Drop 'string1'
+            dims = tuple(d for d in var.dimensions if d != "string1")
+            new_var = dst.createVariable(name, var.dtype, dims)
+            new_var[:] = np.squeeze(var[:], axis=-1)
+        else:
+            # Skip variables with missing dimensions
+            try:
+                print(var.dtype, var.dimensions)
+                dims = tuple(d for d in var.dimensions if d != "string1")
+                new_var = dst.createVariable(name, var.dtype, dims)
+                new_var[:] = var[:]
+            except ValueError as e:
+                print(f"Skipping variable {name} due to missing dimension: {e}")
+                continue
+
+    # Copy global attributes
+    dst.setncatts({k: src.getncattr(k) for k in src.ncattrs()})
+
+    src.close()
+    dst.close()
+    
+    return

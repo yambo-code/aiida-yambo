@@ -74,7 +74,7 @@ def sanity_check_QP(v,c,input_db,output_db,create=True):
     return output_db,fit_v,fit_c
 
 @calcfunction
-def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have something that works, but it is not correct to proceed this way
+def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings,already_computed_QP_db=List([])): #just to have something that works, but it is not correct to proceed this way
         ywfl = load_node(ywfl_pk.value)
         pw = find_pw_parent(ywfl)
         fermi = pw.outputs.output_parameters.get_dict()['fermi_energy']
@@ -104,6 +104,14 @@ def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have some
                     temp_file.write_bytes(handle.read())
 
                 string_run+=' '+str(temp_file)
+
+            if len(already_computed_QP_db.get_list())>0:
+                for i in already_computed_QP_db.get_list():
+                    # Create the file with the desired name
+                    temp_file = pathlib.Path(dirpath) / str(i)
+                    temp_file.write_bytes(load_node(i).get_content("rb"))
+                    string_run+=' '+str(temp_file)
+            
             string_run+=' -o '+dirpath+'/'+output_name.value
             print(string_run)
             os.system(string_run)
@@ -117,24 +125,31 @@ def merge_QP(filenames_List,output_name,ywfl_pk,qp_settings): #just to have some
 
 @calcfunction
 def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have something that works, but it is not correct to proceed this way
-        ywfl = load_node(ywfl_pk.value)
-        pw = find_pw_parent(ywfl)
-        fermi = pw.outputs.output_parameters.get_dict()['fermi_energy']
-        SOC = pw.outputs.output_parameters.get_dict()['spin_orbit_calculation']
-        nelectrons = pw.outputs.output_parameters.get_dict()['number_of_electrons']
-        kpoints = pw.outputs.output_band.get_kpoints()
-        bands = pw.outputs.output_band.get_bands()
-        nk = pw.outputs.output_parameters.get_dict()['number_of_k_points']
-        qp_rules = qp_settings.get_dict()
+    ywfl = load_node(ywfl_pk.value)
+    pw = find_pw_parent(ywfl)
+    fermi = pw.outputs.output_parameters.get_dict()['fermi_energy']
+    SOC = pw.outputs.output_parameters.get_dict()['spin_orbit_calculation']
+    nelectrons = pw.outputs.output_parameters.get_dict()['number_of_electrons']
+    kpoints = pw.outputs.output_band.get_kpoints()
+    bands = pw.outputs.output_band.get_bands()
+    nk = pw.outputs.output_parameters.get_dict()['number_of_k_points']
+    qp_rules = qp_settings.get_dict()
 
-        if SOC:
-            valence = int(nelectrons)
-            conduction = valence + 2
-        else:
-            valence = int(nelectrons/2) + int(nelectrons%2)
-            conduction = valence + 1
-        output_name = QP._repository._repo_folder.abspath + '/path/ndb.QP_fixed'
+    if SOC:
+        valence = int(nelectrons)
+        conduction = valence + 2
+    else:
+        valence = int(nelectrons/2) + int(nelectrons%2)
+        conduction = valence + 1
+    #output_name = QP._repository._repo_folder.abspath + '/path/ndb.QP_fixed'
+    with tempfile.TemporaryDirectory() as dirpath:
+        # Open the output file from the AiiDA storage and copy content to the temporary file
+        output_name = pathlib.Path(dirpath) / 'ndb.QP_fixed'
+        with QP.base.repository.open('ndb.QP_fixed', 'rb') as handle:
+            output_name.write_bytes(handle.read())
+
         qp_fixed,fit_v,fit_c = sanity_check_QP(valence,conduction,output_name,output_name,create=False)
+    
         if qp_rules.pop('extend_db', False):
             """
             In the qp settings dict, I should add:
@@ -147,12 +162,12 @@ def extend_QP(filenames_List,output_name,ywfl_pk,qp_settings,QP): #just to have 
                     --->'c_max':, #used to evaluate c_min energy and c_max that you want to compute explicilty
                 }
             """
-            qp_rules['Nb'] = qp_rules.pop('Nb',conduction + valence)
-            db_FD_scissored = FD_and_scissored_db(out_db_path=qp_fixed,pw=pw,Nb=qp_rules['Nb'],Nk=nk,v_max=min(qp_rules['consider_only']),c_min=max(qp_rules['consider_only']),fit_v=fit_v[0],
-                   fit_c=fit_c[0],conduction=conduction,T=qp_rules.pop('T_smearing',1e-2))
-            db_FD_scissored.to_netcdf(output_name.replace('fixed','extended'))
+            qp_rules['Nb'] = qp_rules.pop('Nb', [1, conduction + valence])
+            db_FD_scissored = FD_and_scissored_db(out_db_path=qp_fixed,pw=pw,Nb=qp_rules['Nb'],Nk=nk,v_max=min(qp_rules['consider_only']),c_min=max(qp_rules['consider_only']),fit_v=fit_v,
+                    fit_c=fit_c,conduction=conduction,T=qp_rules.pop('T_smearing',1e-2))
+            db_FD_scissored.to_netcdf(str(output_name).replace('fixed','extended'))
             
-            QP_db_extended = SingleFileData(output_name.replace('fixed','extended'))
+            QP_db_extended = SingleFileData(str(output_name).replace('fixed','extended'))
             return QP_db_extended
 
 
@@ -239,19 +254,28 @@ def QP_subset_groups(nnk_i,nnk_f,bb_i,bb_f,qp_per_subset):
             groups.append(L)
     return groups
 
-def QP_list_merger(l=[],qp_per_subset=10,consider_only=[-1]):
+def QP_list_merger(l=[],qp_per_subset=10,consider_only=[-1],already_computed_QP_db:list=None):
     
     subgroup = []
     groups = []
     for qp_set in l:
         for k in list(range(qp_set[0],qp_set[1]+1)):
             for b in list(range(qp_set[2],qp_set[3]+1)):
-
-                if (b in consider_only) or (consider_only[0]==-1):
-                    subgroup.append([k,k,b,b])
-                    if len(subgroup)==qp_per_subset:
-                        groups.append(subgroup)
-                        subgroup=[]
+                
+                skip = False
+                if already_computed_QP_db is not None:
+                    for QP_db in already_computed_QP_db:
+                        if check_already_computed(QP_db, b, k):
+                            skip=True
+                        else:
+                            skip=False
+                
+                if not skip:
+                    if (b in consider_only) or (consider_only[0]==-1):
+                        subgroup.append([k,k,b,b])
+                        if len(subgroup)==qp_per_subset:
+                            groups.append(subgroup)
+                            subgroup=[]
 
     if len(subgroup)<=qp_per_subset and len(subgroup)>0:
         groups.append(subgroup)
@@ -296,6 +320,9 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     help = 'scf, nscf or yambo remote folder')
         
         spec.input("clean_failed", valid_type=Bool, default=lambda: Bool(False))
+
+        spec.input("already_computed_QP_db", valid_type=List, required=False,
+                   help="list of qp db pks already computed, so we don't need to compute all the QP in QP splitter")
   
 
 ##################################### OUTLINE ####################################
@@ -363,8 +390,6 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
         :return: a process builder instance with all inputs defined ready for launch.
         """
-        from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
-
         if isinstance(code, str):
             
             preprocessing_code = orm.load_code(preprocessing_code)
@@ -401,8 +426,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             overrides_yres['nelectrons'] = nelectrons
             overrides_yres['PW_cutoff'] = PW_cutoff
 
-        #pseudo_family = inputs.pop('pseudo_family',None)
+        if pseudo_family:
+            overrides_scf['pseudo_family'] = pseudo_family
+            overrides_nscf['pseudo_family'] = pseudo_family
+                    
         #########SCF and NSCF PROTOCOLS 
+        
         builder.scf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
@@ -411,7 +440,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
-                #pseudo_family=pseudo_family,
+                pseudo_family=pseudo_family,
                 )
 
         builder.nscf = PwBaseWorkChain.get_builder_from_protocol(
@@ -422,7 +451,7 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 electronic_type=electronic_type,
                 spin_type=spin_type,
                 initial_magnetic_moments=initial_magnetic_moments,
-                #pseudo_family=pseudo_family,
+                pseudo_family=pseudo_family,
                 )
 
         molecule = False
@@ -508,11 +537,12 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
         builder.nscf['pw']['parameters'] = Dict(parameters_nscf)
         builder.scf['pw']['parameters'] = Dict(parameters_scf)
 
-        if pseudo_family:
+        """if pseudo_family:
             family = orm.load_group(pseudo_family)
             #builder.<sublevels_up_to .pw>.pseudos = family.get_pseudos(structure=structure) 
             builder.scf['pw']['pseudos'] = family.get_pseudos(structure=structure) 
-            builder.nscf['pw']['pseudos'] = family.get_pseudos(structure=structure) 
+            builder.nscf['pw']['pseudos'] = family.get_pseudos(structure=structure) and
+        """
 
 
         print('\nkpoint mesh for nscf: {}'.format(builder.nscf['kpoints'].get_kpoints_mesh()[0]))
@@ -614,11 +644,11 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             
             self.ctx.calc = parent
 
-        except:
+        except Exception as e:
 
-            self.report('no previous pw calculation found, we will start from scratch')
+            self.report('no valid parent pw/yambo calculation found, we will start from scratch')
             self.ctx.calc_to_do = 'scf'
-        
+
         self.ctx.splitted_QP = []
         self.ctx.qp_splitter = 0
         self.report(" workflow initilization step completed.")
@@ -749,10 +779,18 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                     k_f=self.ctx.QP_subsets['boundaries'].pop('kf',mapping['number_of_kpoints'])
                     b_i=self.ctx.QP_subsets['boundaries']['bi']
                     b_f=self.ctx.QP_subsets['boundaries']['bf']
+                    
+
+                    if hasattr(self.inputs,'already_computed_QP_db'):
+                        already_computed = self.inputs.already_computed_QP_db.get_list()
+                    else:
+                        already_computed = None
 
                     self.ctx.QP_subsets['subsets'] = QP_list_merger([[k_i,k_f,b_i,b_f]],
                                                                       self.ctx.QP_subsets['qp_per_subset'],
-                                                                      consider_only=consider_only)
+                                                                      consider_only=consider_only,
+                                                                      already_computed_QP_db = already_computed
+                                                                      )
 
                 if not 'subsets' in self.ctx.QP_subsets.keys():
                     if 'explicit' in self.ctx.QP_subsets.keys():
@@ -799,11 +837,20 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
                 return self.exit_codes.ERROR_SPLITTED_QP_FAILED
         #merge
         self.report('run merge QP')
+
         splitted = store_List(self.ctx.splitted_QP)
         
         self.out('splitted_QP_calculations', splitted)
         output_name = Str('ndb.QP_merged')
-        self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
+        self.ctx.QP_db = merge_QP(
+            splitted,
+            output_name,
+            Int(self.ctx.calc.pk),
+            qp_settings=Dict(dict=self.ctx.QP_subsets),
+            already_computed_QP_db = self.inputs.get('already_computed_QP_db',orm.List([]))
+            )
+
+        self.out('merged_QP',self.ctx.QP_db)
         
         self.ctx.QP_subsets['extend_db'] = self.ctx.QP_subsets.pop('extend_db',False)
 
@@ -813,9 +860,10 @@ class YamboWorkflow(ProtocolMixin, WorkChain):
             self.out('merged_QP',self.ctx.QP_db)
             self.report('run extend QP')
             self.out('extended_QP',self.ctx.QP_db_extended)
-        else:
-            self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
-            self.out('merged_QP',self.ctx.QP_db)
+        #else:
+            #self.ctx.QP_db = merge_QP(splitted,output_name,Int(self.ctx.calc.pk),qp_settings=Dict(dict=self.ctx.QP_subsets))
+        
+        
 
         BSE_map = QP_analyzer(self.ctx.calc.pk, self.ctx.QP_db,self.ctx.mapping)
         self.ctx.BSE_map = BSE_map

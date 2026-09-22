@@ -139,6 +139,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         overrides_ywfl = overrides.pop('ywfl',{})
 
         overrides_ywfl['clean_workdir'] = overrides_ywfl.pop('clean_workdir',False)
+        
 
         #########YWFL PROTOCOLS 
         ywfl_builder = YamboWorkflow.get_builder_from_protocol(
@@ -341,7 +342,7 @@ class YamboConvergence(ProtocolMixin, WorkChain):
         
         elif not self.ctx.calc_manager['success'] and \
                     self.ctx.calc_manager['iter'] > self.ctx.calc_manager['max_iterations']:
-            self.report('{} - {}'.format(self.ctx.calc_manager['iter'],self.ctx.calc_manager['max_iterations']))
+            self.report('Iterations: {} - Max iterations: {}'.format(self.ctx.calc_manager['iter'],self.ctx.calc_manager['max_iterations']))
             self.report('Workflow failed due to some failed calculation in the investigation of {}'.format(self.ctx.calc_manager['var']))
 
             return False
