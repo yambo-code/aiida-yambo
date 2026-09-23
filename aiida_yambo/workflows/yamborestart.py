@@ -317,9 +317,18 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
     @process_handler(priority =  560, exit_codes = [YamboCalculation.exit_codes.PARA_ERROR])
     def _handle_parallelism_error(self, calculation):
         """
-        Handle calculations for a parallelism error; 
+        Handle calculations for a parallelism error;
         we try to change the parallelism options.
         """
+        errors = calculation.outputs.output_parameters.get_dict().get('errors',[])
+        resources = self.ctx.inputs.metadata.options.resources
+        automatic_structure = 'para_error_auto' in errors
+
+        if automatic_structure and resources['num_mpiprocs_per_machine'] == 1:
+            self.report_error_handled(calculation, 'yambo could not distribute {} ranks over this problem; set an explicit split with *_CPU/*_ROLEs or lower the rank count'\
+                                                    .format(resources['num_machines']*resources['num_mpiprocs_per_machine']))
+            return ProcessHandlerReport(True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+
         new_para, new_resources, pop_list  = fix_parallelism(self.ctx.inputs.metadata.options.resources, calculation)
         self.ctx.inputs.metadata.options.resources = new_resources
         self.ctx.inputs.metadata.options.prepend_text =self.ctx.inputs.metadata.options.prepend_text + "\nexport OMP_NUM_THREADS="+str(new_resources['num_cores_per_mpiproc'])
@@ -339,7 +348,11 @@ class YamboRestart(ProtocolMixin, BaseRestartWorkChain):
 
 
 
-        self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it setting PAR_def_mode= "balanced"')
+        if automatic_structure:
+            self.report_error_handled(calculation, 'parallelism error detected, so we retry with {} MPI ranks per machine'\
+                                                    .format(new_resources['num_mpiprocs_per_machine']))
+        else:
+            self.report_error_handled(calculation, 'parallelism error detected, so we try to fix it setting PAR_def_mode= "balanced"')
         return ProcessHandlerReport(True)
 
     @process_handler(priority =  561, exit_codes = [YamboCalculation.exit_codes.MEMORY_ERROR, \

@@ -39,6 +39,15 @@ def fix_parallelism(resources, failed_calc):
         pass
     '''
     
+    if 'para_error_auto' in failed_calc.outputs.output_parameters.get_dict().get('errors',[]):
+        #yambo discarded any split and proposed its own structure, which did not fit the rank count;
+        #the error comes from that proposal, so only the rank count can change the outcome
+        new_resources = copy.deepcopy(resources)
+        new_resources['num_mpiprocs_per_machine'] = max(1, resources['num_mpiprocs_per_machine']//2)
+        new_resources['num_cores_per_mpiproc'] = resources.get('num_cores_per_mpiproc',1)*2
+
+        return {}, new_resources, []
+
     pop_list = []
     for p in failed_calc.inputs.parameters.get_dict()['variables']:
         for k in ['CPU','ROLEs']:
