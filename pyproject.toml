@@ -25,7 +25,7 @@ dependencies = [
     "pandas>=2",
     "pyyaml~=6.0",
     "xarray",
-    "yambopy @ git+https://github.com/mikibonacci/yambopy@aiida-parsing#egg=yambopy",
+    "yambopy>=0.7.1",
 ]
 license = {text = "MIT"}
 
@@ -47,7 +47,7 @@ docs = [
     "versioneer[toml]",
     "Cython",
     'myst-nb@git+https://github.com/executablebooks/MyST-NB.git',
-    "yambopy @ git+https://github.com/yambo-code/yambopy@aiida-parsing#egg=yambopy",
+    "yambopy>=0.7.1",
 
 ]
 tests = [
